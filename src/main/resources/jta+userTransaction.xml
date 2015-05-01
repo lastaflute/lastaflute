@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
+	"http://dbflute.org/meta/lastadi10.dtd">
+<components>
+	<!--
+	 including dicon gives you the unnatural error in cool deploy
+	 (action's container have this dicon's container only in cool deploy)
+	 so it gets dependencies in the extension class
+	 by directly getting component from singleton container
+	 *see the blog for the details:
+	   http://d.hatena.ne.jp/jflute/20130129/1359432974
+	 -->
+	<!-- <include path="lastaflute_core.xml"/> -->
+
+	<component name="userTransaction" class="org.dbflute.lastaflute.db.jta.HookedUserTransaction"/>
+</components>

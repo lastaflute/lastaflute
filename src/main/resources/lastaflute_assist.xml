@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
+	"http://dbflute.org/meta/lastadi10.dtd">
+<components namespace="lastaflute_assist">
+	<!--
+	 you should add a lastaflute_assist++.xml in your domain application.
+	 e.g.
+	<component name="assistantDirector" class="com.example.dbflute.sastruts.sea.domainfw.direction.MythicaFwAssistantDirector"/>
+	<component name="mythicaConfig" class="com.example.dbflute.sastruts.sea.domainfw.direction.MythicaConfig$SimpleImpl"/>
+	-->
+
+	<!-- simple name here to be accessible in dicon files that include this -->
+	<component name="provider" class="org.dbflute.lastaflute.core.direction.UnifiedProvider"/>
+</components>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
+	"http://dbflute.org/meta/lastadi10.dtd">
+<components namespace="lastaflute_web">
+	<include path="lastaflute_core.xml"/>
+	<include path="lastaflute_db.xml"/>
+	<include path="convention.xml"/>
+
+	<!-- servlet -->
+	<component name="requestManager" class="org.dbflute.lastaflute.web.servlet.request.SimpleRequestManager"/>
+	<component name="responseManager" class="org.dbflute.lastaflute.web.servlet.request.SimpleResponseManager"/>
+	<component name="sessionManager" class="org.dbflute.lastaflute.web.servlet.session.SimpleSessionManager"/>
+	<component name="cookieCipher" class="org.dbflute.lastaflute.web.servlet.cookie.SimpleCookieCipher"/>
+	<component name="cookieManager" class="org.dbflute.lastaflute.web.servlet.cookie.SimpleCookieManager"/>
+
+	<!-- action -->
+	<component name="actionPathResolver" class="org.dbflute.lastaflute.web.path.ActionPathResolver"/>
+	<component name="apiManager" class="org.dbflute.lastaflute.web.api.SimpleApiManager"/>
+	<component name="tokenManager" class="org.dbflute.lastaflute.web.token.SimpleTokenManager"/>
+</components>

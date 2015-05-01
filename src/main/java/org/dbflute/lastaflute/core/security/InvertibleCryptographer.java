@@ -1,0 +1,243 @@
+/*
+ * Copyright 2014-2015 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
+package org.dbflute.lastaflute.core.security;
+
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.dbflute.lastaflute.core.security.exception.CipherFailureException;
+
+/**
+ * @author jflute (using Commons-Codec logic, thanks)
+ */
+public class InvertibleCryptographer {
+
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    public static final String ALGORITHM_AES = "AES";
+    public static final String ALGORITHM_BLOWFISH = "Blowfish";
+    public static final String ALGORITHM_DES = "DES";
+    public static final String ALGORITHM_RSA = "RSA";
+    public static final String ENCODING_UTF8 = "UTF-8";
+
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final String algorithm;
+    protected final SecretKey skey;
+    protected final String encoding;
+    protected Cipher encryptoCipher;
+    protected Cipher decryptoCipher;
+
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public InvertibleCryptographer(String algorithm, SecretKey skey, String charset) {
+        this.algorithm = algorithm;
+        this.skey = skey;
+        this.encoding = charset;
+    }
+
+    public InvertibleCryptographer(String algorithm, String skey, String charset) {
+        this.algorithm = algorithm;
+        this.skey = createSKey(skey);
+        this.encoding = charset;
+    }
+
+    protected SecretKey createSKey(String skey) {
+        return new SecretKeySpec(skey.getBytes(), algorithm);
+    }
+
+    public static InvertibleCryptographer createAesCipher(String skey) {
+        return new InvertibleCryptographer(ALGORITHM_AES, skey, ENCODING_UTF8);
+    }
+
+    public static InvertibleCryptographer createBlowfishCipher(String skey) {
+        return new InvertibleCryptographer(ALGORITHM_BLOWFISH, skey, ENCODING_UTF8);
+    }
+
+    public static InvertibleCryptographer createDesCipher(String skey) {
+        return new InvertibleCryptographer(ALGORITHM_DES, skey, ENCODING_UTF8);
+    }
+
+    public static InvertibleCryptographer createRsaCipher(String skey) {
+        return new InvertibleCryptographer(ALGORITHM_RSA, skey, ENCODING_UTF8);
+    }
+
+    // ===================================================================================
+    //                                                                          Initialize
+    //                                                                          ==========
+    protected synchronized void initialize() {
+        if (encryptoCipher != null) {
+            return;
+        }
+        assertInit();
+        doInitializeCipher();
+    }
+
+    protected void assertInit() {
+        if (skey == null) {
+            throw new IllegalStateException("Not found himitu kagi.");
+        }
+        if (encoding == null) {
+            throw new IllegalStateException("Not found charset.");
+        }
+    }
+
+    protected void doInitializeCipher() {
+        try {
+            encryptoCipher = Cipher.getInstance(algorithm);
+            encryptoCipher.init(Cipher.ENCRYPT_MODE, skey);
+            decryptoCipher = Cipher.getInstance(algorithm);
+            decryptoCipher.init(Cipher.DECRYPT_MODE, skey);
+        } catch (NoSuchAlgorithmException e) {
+            throw new CipherFailureException("Failed by unknown algorithm: " + algorithm, e);
+        } catch (NoSuchPaddingException e) {
+            throw new CipherFailureException("Failed by no such padding: " + algorithm, e);
+        } catch (InvalidKeyException e) {
+            throw new CipherFailureException("Failed by invalid key. (cannot show it for security)", e);
+        }
+    }
+
+    // ===================================================================================
+    //                                                                     Encrypt/Decrypt
+    //                                                                     ===============
+    /**
+     * Encrypt the text as invertible. <br>
+     * If the specified text is null or empty, it returns the text without encrypting.
+     * @param plainText The plain text to be encrypted. (NotNull)
+     * @return The encrypted text from the plain text. (NotNull)
+     * @throws CipherFailureException When the cipher fails.
+     */
+    public synchronized String encrypt(String plainText) {
+        assertArgumentNotNull("plainText", plainText);
+        if (encryptoCipher == null) {
+            initialize();
+        }
+        return new String(encodeHex(doEncrypt(plainText)));
+    }
+
+    protected byte[] doEncrypt(String plainText) {
+        try {
+            return encryptoCipher.doFinal(plainText.getBytes(encoding));
+        } catch (IllegalBlockSizeException e) {
+            throw new CipherFailureException("Failed by illegal block size: " + plainText, e);
+        } catch (BadPaddingException e) {
+            throw new CipherFailureException("Failed by bad padding: " + plainText, e);
+        } catch (UnsupportedEncodingException e) {
+            throw new CipherFailureException("Failed by unsupported encoding: " + encoding, e);
+        }
+    }
+
+    /**
+     * Decrypt the encrypted text (back to plain text). <br>
+     * If the specified text is null or empty, it returns the text without decrypting.
+     * @param encryptedText The encrypted text to be decrypted. (NotNull)
+     * @return The plain text from the encrypted text. (NotNull)
+     * @throws CipherFailureException When the cipher fails.
+     */
+    public synchronized String decrypt(String encryptedText) {
+        assertArgumentNotNull("encryptedText", encryptedText);
+        if (decryptoCipher == null) {
+            initialize();
+        }
+        try {
+            return new String(doDecrypt(encryptedText), encoding);
+        } catch (UnsupportedEncodingException e) {
+            throw new CipherFailureException("Failed by unsupported encoding: " + encoding, e);
+        }
+    }
+
+    protected byte[] doDecrypt(String cryptedText) {
+        try {
+            return decryptoCipher.doFinal(decodeHex(cryptedText.toCharArray()));
+        } catch (IllegalBlockSizeException e) {
+            throw new CipherFailureException("Failed by illegal block size: " + cryptedText, e);
+        } catch (BadPaddingException e) {
+            throw new CipherFailureException("Failed by bad padding: " + cryptedText, e);
+        }
+    }
+
+    // ===================================================================================
+    //                                                                  from Commons-Codec
+    //                                                                  ==================
+    protected static final char[] DIGITS_LOWER = { // hexadecimal
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' // number
+                    , 'a', 'b', 'c', 'd', 'e', 'f' }; // alphabet
+
+    protected char[] encodeHex(byte[] data) {
+        final int len = data.length;
+        final char[] out = new char[len << 1];
+        for (int i = 0, j = 0; i < len; i++) {
+            out[j++] = DIGITS_LOWER[(0xF0 & data[i]) >>> 4];
+            out[j++] = DIGITS_LOWER[0x0F & data[i]];
+        }
+        return out;
+    }
+
+    protected byte[] decodeHex(char[] data) {
+        final int len = data.length;
+        if ((len & 0x01) != 0) {
+            throw new CipherFailureException("Odd number of characters."); // not show data for security
+        }
+        final byte[] out = new byte[len >> 1];
+        for (int i = 0, j = 0; j < len; i++) {
+            int f = toDigit(data[j], j) << 4;
+            j++;
+            f = f | toDigit(data[j], j);
+            j++;
+            out[i] = (byte) (f & 0xFF);
+        }
+        return out;
+    }
+
+    protected int toDigit(char ch, int index) {
+        final int digit = Character.digit(ch, 16);
+        if (digit == -1) {
+            throw new CipherFailureException("Illegal hexadecimal character " + ch + " at index " + index);
+        }
+        return digit;
+    }
+
+    // ===================================================================================
+    //                                                                       Assist Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
+    }
+
+    // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        return "{" + algorithm + ", " + encoding + "}"; // don't show secret key for security
+    }
+}

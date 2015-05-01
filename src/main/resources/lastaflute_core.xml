@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
+	"http://dbflute.org/meta/lastadi10.dtd">
+<components namespace="lastaflute_core">
+	<include path="lastaflute_assist.xml"/>
+
+	<!-- solo singers -->
+	<component name="primaryCipher" class="org.dbflute.lastaflute.core.security.SimplePrimaryCipher"/>
+	<component name="timeManager" class="org.dbflute.lastaflute.core.time.SimpleTimeManager"/>
+	<component name="jsonManager" class="org.dbflute.lastaflute.core.json.SimpleJsonManager"/>
+	<component name="messageManager" class="org.dbflute.lastaflute.core.message.SimpleMessageManager"/>
+	<component name="messageResourcesHolder" class="org.dbflute.lastaflute.core.message.MessageResourcesHolder"/>
+	<component name="exceptionTranslator" class="org.dbflute.lastaflute.core.exception.ExceptionTranslator"/>
+	<component name="asyncManager" class="org.dbflute.lastaflute.core.magic.async.SimpleAsyncManager"/>
+</components>

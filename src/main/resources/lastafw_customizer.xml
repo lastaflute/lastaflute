@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
+	"http://dbflute.org/meta/lastadi10.dtd">
+<components>
+	<!-- _/_/_/_/_/_/_/_/ -->
+	<!-- _/   Action   _/ -->
+	<!-- _/_/_/_/_/_/_/_/ -->
+	<component name="actionCustomizer" class="org.dbflute.lastaflute.web.aspect.ActionCustomizerChain">
+	  	<postConstruct name="addCustomizer">
+			<arg>
+			  	<!-- XxxAction classes under action package can be treated as Action -->
+				<component class="org.dbflute.lastaflute.web.aspect.RomanticActionCustomizer"/>
+			</arg>
+	  	</postConstruct>
+	</component>
+</components>
