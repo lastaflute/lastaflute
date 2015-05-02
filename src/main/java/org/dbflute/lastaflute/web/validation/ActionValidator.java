@@ -274,7 +274,7 @@ public class ActionValidator {
                 priorityMap.put(propertyName, i);
             }
         }
-        final TreeMap<String, Object> orderedMap = new TreeMap<>((o1, o2) -> {
+        final TreeMap<String, Object> orderedMap = new TreeMap<String, Object>((o1, o2) -> {
             return priorityMap.getOrDefault(o1, Integer.MAX_VALUE).compareTo(priorityMap.getOrDefault(o2, Integer.MAX_VALUE));
         });
         orderedMap.putAll(vioPropMap);
