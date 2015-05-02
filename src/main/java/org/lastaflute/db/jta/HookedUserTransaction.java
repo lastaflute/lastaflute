@@ -1,0 +1,137 @@
+/*
+ * Copyright 2014-2015 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
+package org.lastaflute.db.jta;
+
+import java.util.Date;
+
+import javax.transaction.HeuristicMixedException;
+import javax.transaction.HeuristicRollbackException;
+import javax.transaction.NotSupportedException;
+import javax.transaction.RollbackException;
+import javax.transaction.SystemException;
+import javax.transaction.TransactionManager;
+
+import org.lastaflute.core.magic.TransactionTimeContext;
+import org.lastaflute.core.time.TimeManager;
+import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
+import org.lastaflute.jta.core.UserTransactionImpl;
+
+/**
+ * @author jflute
+ */
+public class HookedUserTransaction extends UserTransactionImpl {
+
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public HookedUserTransaction(TransactionManager tm) {
+        super(tm);
+    }
+
+    // ===================================================================================
+    //                                                                               Begin
+    //                                                                               =====
+    @Override
+    public void begin() throws NotSupportedException, SystemException {
+        hookBeforeBegin();
+        doBegin();
+    }
+
+    protected void hookBeforeBegin() {
+        prepareContext();
+    }
+
+    protected void doBegin() throws NotSupportedException, SystemException {
+        superBegin();
+    }
+
+    protected final void superBegin() throws NotSupportedException, SystemException {
+        super.begin();
+    }
+
+    // ===================================================================================
+    //                                                                              Commit
+    //                                                                              ======
+    @Override
+    public void commit() throws HeuristicMixedException, HeuristicRollbackException, IllegalStateException, RollbackException,
+            SecurityException, SystemException {
+        doCommit();
+        hookAfterCommit();
+    }
+
+    protected void doCommit() throws HeuristicMixedException, HeuristicRollbackException, RollbackException, SystemException {
+        superCommit();
+    }
+
+    protected final void superCommit() throws HeuristicMixedException, HeuristicRollbackException, RollbackException, SystemException {
+        super.commit();
+    }
+
+    protected void hookAfterCommit() {
+        clearContext();
+    }
+
+    // ===================================================================================
+    //                                                                           Roll-back
+    //                                                                           =========
+    @Override
+    public void rollback() throws IllegalStateException, SecurityException, SystemException {
+        doRollback();
+        hookAfterRollback();
+    }
+
+    protected void doRollback() throws SystemException {
+        superRollback();
+    }
+
+    protected void superRollback() throws SystemException {
+        super.rollback();
+    }
+
+    protected void hookAfterRollback() {
+        clearContext();
+    }
+
+    // ===================================================================================
+    //                                                                           Side Menu
+    //                                                                           =========
+    protected void prepareContext() {
+        // including dicon gives you the unnatural error in cool deploy
+        // (action's container have this dicon's container only in cool deploy)
+        // so it gets dependencies in the extension class
+        // by directly getting component from singleton container
+        // *see the blog for the details:
+        //   http://d.hatena.ne.jp/jflute/20130129/1359432974
+        final TimeManager timeManager = getTimeManager();
+        final Date transactionTime = timeManager.getFlashDate();
+        TransactionTimeContext.setTransactionTime(transactionTime);
+        if (PreparedAccessContext.isExistAccessContextOnThread()) {
+            PreparedAccessContext.beginAccessContext();
+        }
+    }
+
+    protected TimeManager getTimeManager() {
+        return ContainerUtil.getComponent(TimeManager.class);
+    }
+
+    protected void clearContext() {
+        if (PreparedAccessContext.isExistAccessContextOnThread()) {
+            PreparedAccessContext.endAccessContext();
+        }
+        TransactionTimeContext.clear();
+    }
+}

@@ -12,5 +12,5 @@
 	 -->
 	<!-- <include path="lastaflute_core.xml"/> -->
 
-	<component name="userTransaction" class="org.dbflute.lastaflute.db.jta.HookedUserTransaction"/>
+	<component name="userTransaction" class="org.lastaflute.db.jta.HookedUserTransaction"/>
 </components>

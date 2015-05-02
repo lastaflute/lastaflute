@@ -5,7 +5,7 @@
 	<include path="jta.xml"/>
 	<include path="lastaflute_assist.xml"/>
 
-	<component name="xaDataSource" class="org.dbflute.lastaflute.db.dbcp.HookedXADataSource">
+	<component name="xaDataSource" class="org.lastaflute.db.dbcp.HookedXADataSource">
 		<property name="driverClassName">
 			provider.config().getJdbcDriver()
 		</property>
@@ -16,12 +16,12 @@
 		<property name="password">provider.config().getJdbcPassword()</property>
 	</component>
 
-	<component name="connectionPool" class="org.dbflute.lastaflute.db.dbcp.HookedConnectionPool">
+	<component name="connectionPool" class="org.lastaflute.db.dbcp.HookedConnectionPool">
 		<property name="timeout">600</property>
 		<property name="maxPoolSize">provider.config().getJdbcConnectionPoolingSize()</property>
 		<property name="allowLocalTx">true</property>
 		<preDestroy name="close"/>
 	</component>
 
-	<component name="dataSource" class="org.dbflute.lastaflute.db.dbcp.HookedPooledDataSource"/>
+	<component name="dataSource" class="org.lastaflute.db.dbcp.HookedPooledDataSource"/>
 </components>

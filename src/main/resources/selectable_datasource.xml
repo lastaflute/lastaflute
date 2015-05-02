@@ -4,5 +4,5 @@
 <components>
 	<include path="convention.xml"/>
 
-	<component name="selectableDataSourceHolder" class="org.dbflute.lastaflute.db.replication.selectable.ThreadLocalSelectableDataSourceHolder"/>
+	<component name="selectableDataSourceHolder" class="org.lastaflute.db.replication.selectable.ThreadLocalSelectableDataSourceHolder"/>
 </components>
