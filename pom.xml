@@ -133,6 +133,9 @@
 					<encoding>UTF-8</encoding>
 					<docencoding>UTF-8</docencoding>
 					<charset>UTF-8</charset>
+					<!-- you can avoid self-closing check e.g. br-tag (checked since java8) -->
+					<!-- fixed but comment-out for emergency deploy -->
+					<additionalparam>-Xdoclint:none</additionalparam>
 				</configuration>
 				<executions>
 					<execution>
