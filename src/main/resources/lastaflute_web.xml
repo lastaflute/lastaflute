@@ -7,14 +7,14 @@
 	<include path="convention.xml"/>
 
 	<!-- servlet -->
-	<component name="requestManager" class="org.dbflute.lastaflute.web.servlet.request.SimpleRequestManager"/>
-	<component name="responseManager" class="org.dbflute.lastaflute.web.servlet.request.SimpleResponseManager"/>
-	<component name="sessionManager" class="org.dbflute.lastaflute.web.servlet.session.SimpleSessionManager"/>
-	<component name="cookieCipher" class="org.dbflute.lastaflute.web.servlet.cookie.SimpleCookieCipher"/>
-	<component name="cookieManager" class="org.dbflute.lastaflute.web.servlet.cookie.SimpleCookieManager"/>
+	<component name="requestManager" class="org.lastaflute.web.servlet.request.SimpleRequestManager"/>
+	<component name="responseManager" class="org.lastaflute.web.servlet.request.SimpleResponseManager"/>
+	<component name="sessionManager" class="org.lastaflute.web.servlet.session.SimpleSessionManager"/>
+	<component name="cookieCipher" class="org.lastaflute.web.servlet.cookie.SimpleCookieCipher"/>
+	<component name="cookieManager" class="org.lastaflute.web.servlet.cookie.SimpleCookieManager"/>
 
 	<!-- action -->
-	<component name="actionPathResolver" class="org.dbflute.lastaflute.web.path.ActionPathResolver"/>
-	<component name="apiManager" class="org.dbflute.lastaflute.web.api.SimpleApiManager"/>
-	<component name="tokenManager" class="org.dbflute.lastaflute.web.token.SimpleTokenManager"/>
+	<component name="actionPathResolver" class="org.lastaflute.web.path.ActionPathResolver"/>
+	<component name="apiManager" class="org.lastaflute.web.api.SimpleApiManager"/>
+	<component name="tokenManager" class="org.lastaflute.web.token.SimpleTokenManager"/>
 </components>

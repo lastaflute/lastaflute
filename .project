@@ -20,18 +20,10 @@
 			<arguments>
 			</arguments>
 		</buildCommand>
-		<buildCommand>
-			<name>org.devzuz.q.maven.jdt.core.mavenIncrementalBuilder</name>
-			<arguments>
-			</arguments>
-		</buildCommand>
 	</buildSpec>
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>org.eclipse.m2e.core.maven2Nature</nature>
 		<nature>org.maven.ide.eclipse.maven2Nature</nature>
-		<nature>org.devzuz.q.maven.jdt.core.mavenNature</nature>
-		<nature>com.sysdeo.eclipse.tomcat.tomcatnature</nature>
-		<nature>net.skirnir.eclipse.maven.mavenAdditionalNature</nature>
 	</natures>
 </projectDescription>

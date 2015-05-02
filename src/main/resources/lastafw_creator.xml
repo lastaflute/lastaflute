@@ -4,5 +4,5 @@
 <components>
 	<include path="convention.xml"/>
 	<include path="customizer.xml"/>
-	<component name="logicCreator" class="org.dbflute.lastaflute.core.smartdeploy.RomanticLogicCreator"/>
+	<component name="logicCreator" class="org.lastaflute.core.smartdeploy.RomanticLogicCreator"/>
 </components>

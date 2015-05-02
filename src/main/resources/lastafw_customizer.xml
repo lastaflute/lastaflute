@@ -5,11 +5,11 @@
 	<!-- _/_/_/_/_/_/_/_/ -->
 	<!-- _/   Action   _/ -->
 	<!-- _/_/_/_/_/_/_/_/ -->
-	<component name="actionCustomizer" class="org.dbflute.lastaflute.web.aspect.ActionCustomizerChain">
+	<component name="actionCustomizer" class="org.lastaflute.web.aspect.ActionCustomizerChain">
 	  	<postConstruct name="addCustomizer">
 			<arg>
 			  	<!-- XxxAction classes under action package can be treated as Action -->
-				<component class="org.dbflute.lastaflute.web.aspect.RomanticActionCustomizer"/>
+				<component class="org.lastaflute.web.aspect.RomanticActionCustomizer"/>
 			</arg>
 	  	</postConstruct>
 	</component>

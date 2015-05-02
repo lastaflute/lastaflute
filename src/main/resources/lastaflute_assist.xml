@@ -10,5 +10,5 @@
 	-->
 
 	<!-- simple name here to be accessible in dicon files that include this -->
-	<component name="provider" class="org.dbflute.lastaflute.core.direction.UnifiedProvider"/>
+	<component name="provider" class="org.lastaflute.core.direction.UnifiedProvider"/>
 </components>

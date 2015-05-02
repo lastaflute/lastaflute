@@ -5,5 +5,5 @@
 	<include path="jta.xml"/>
 
 	<!-- TransactionStage using JTA's TransactionManager -->
-	<component name="transactionStage" class="org.dbflute.lastaflute.db.jta.stage.JTATransactionStage"/>
+	<component name="transactionStage" class="org.lastaflute.db.jta.stage.JTATransactionStage"/>
 </components>
