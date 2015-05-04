@@ -101,7 +101,7 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
     protected TypicalGodHandActionPrologue newTypicalGodHandActionPrologue() {
         final TypicalGodHandResource resource = newTypicalGodHandResource();
         final AccessContextArranger arranger = newAccessContextArranger();
-        return newTypicalGodHandActionPrologue(resource, arranger, () -> myUserBean(), () -> myAppType());
+        return newTypicalGodHandActionPrologue(resource, arranger, () -> getUserBean(), () -> myAppType());
     }
 
     /**
@@ -208,7 +208,7 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
      * Get the bean of login user on session as interface type. (for application)
      * @return The optional thing of found user bean. (NotNull, EmptyAllowed: when not login)
      */
-    protected abstract OptionalThing<? extends UserBean> myUserBean();
+    protected abstract OptionalThing<? extends UserBean> getUserBean();
 
     /**
      * Get the user type of this applicatoin's login.

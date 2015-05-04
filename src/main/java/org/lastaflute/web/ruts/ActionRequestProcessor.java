@@ -133,10 +133,10 @@ public class ActionRequestProcessor {
     //                                                                              Action
     //                                                                              ======
     public VirtualAction createAction(ActionExecute execute, ActionRequestResource resource) {
-        return newGodHandableActionCommand(execute, resource, getTransactionStage());
+        return newGodHandableAction(execute, resource, getTransactionStage());
     }
 
-    protected GodHandableAction newGodHandableActionCommand(ActionExecute execute, ActionRequestResource resource, TransactionStage stage) {
+    protected GodHandableAction newGodHandableAction(ActionExecute execute, ActionRequestResource resource, TransactionStage stage) {
         return new GodHandableAction(execute, resource, getRequestManager(), stage);
     }
 
