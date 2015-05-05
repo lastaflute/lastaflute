@@ -85,7 +85,6 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
                 actionMapping.addExecute(createActionExecute(actionMapping, actionMethod));
             }
         }
-        // TODO jflute lastaflute: [E] check: unneeded old style transaction annotation
         checkExecuteMethodSize(actionMapping, actionType);
     }
 

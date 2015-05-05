@@ -15,6 +15,7 @@
  */
 package org.lastaflute.core.direction;
 
+import org.dbflute.mail.send.SMailDeliveryDepartment;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.core.exception.ExceptionTranslationProvider;
 import org.lastaflute.core.json.JsonResourceProvider;
@@ -63,14 +64,14 @@ public class OptionalCoreDirection {
     protected SecurityResourceProvider securityResourceProvider;
 
     // -----------------------------------------------------
-    //                                                  Time
-    //                                                  ----
+    //                                                 Time
+    //                                                ------
     /** The provider of time resource, e.g. cipher. (NotNull: after direction) */
     protected TimeResourceProvider timeResourceProvider;
 
     // -----------------------------------------------------
-    //                                                  JSON
-    //                                                  ----
+    //                                                 JSON
+    //                                                ------
     /** The provider of JSON resource. (NullAllowed) */
     protected JsonResourceProvider jsonResourceProvider;
 
@@ -85,6 +86,12 @@ public class OptionalCoreDirection {
     //                                          ------------
     /** The provider of concurrent executor. (NullAllowed) */
     protected ConcurrentAsyncExecutorProvider concurrentAsyncExecutorProvider;
+
+    // -----------------------------------------------------
+    //                                                 Mail
+    //                                                ------
+    /** The delivery department of send mail. (NullAllowed) */
+    protected SMailDeliveryDepartment mailDeliveryDepartment;
 
     // ===================================================================================
     //                                                                     Direct Property
@@ -118,15 +125,15 @@ public class OptionalCoreDirection {
     }
 
     // -----------------------------------------------------
-    //                                                  Time
-    //                                                  ----
+    //                                                 Time
+    //                                                ------
     public void directTime(TimeResourceProvider timeResourceProvider) {
         this.timeResourceProvider = timeResourceProvider;
     }
 
     // -----------------------------------------------------
-    //                                                  JSON
-    //                                                  ----
+    //                                                 JSON
+    //                                                ------
     public void directJson(JsonResourceProvider jsonResourceProvider) {
         this.jsonResourceProvider = jsonResourceProvider;
     }
@@ -143,6 +150,13 @@ public class OptionalCoreDirection {
     //                                          ------------
     public void directAsync(ConcurrentAsyncExecutorProvider concurrentAsyncExecutorProvider) {
         this.concurrentAsyncExecutorProvider = concurrentAsyncExecutorProvider;
+    }
+
+    // -----------------------------------------------------
+    //                                                 Mail
+    //                                                ------
+    public void directMail(SMailDeliveryDepartment mailDeliveryDepartment) {
+        this.mailDeliveryDepartment = mailDeliveryDepartment;
     }
 
     // ===================================================================================
@@ -188,8 +202,8 @@ public class OptionalCoreDirection {
     }
 
     // -----------------------------------------------------
-    //                                                  Time
-    //                                                  ----
+    //                                                 Time
+    //                                                ------
     public TimeResourceProvider assistTimeResourceProvider() {
         if (timeResourceProvider == null) {
             String msg = "Not found the provider of time resource.";
@@ -199,23 +213,30 @@ public class OptionalCoreDirection {
     }
 
     // -----------------------------------------------------
-    //                                                  JSON
-    //                                                  ----
+    //                                                 JSON
+    //                                                ------
     public JsonResourceProvider assistJsonResourceProvider() {
-        return jsonResourceProvider; // not required, has default for compatibility
+        return jsonResourceProvider; // not required, has default
     }
 
     // -----------------------------------------------------
     //                                             Exception
     //                                             ---------
     public ExceptionTranslationProvider assistExceptionTranslationProvider() {
-        return exceptionTranslationProvider; // not required, has default for compatibility
+        return exceptionTranslationProvider; // not required, has default
     }
 
     // -----------------------------------------------------
     //                                          Asynchronous
     //                                          ------------
     public ConcurrentAsyncExecutorProvider assistConcurrentAsyncExecutorProvider() {
-        return concurrentAsyncExecutorProvider; // not required, has default for compatibility
+        return concurrentAsyncExecutorProvider; // not required, has default
+    }
+
+    // -----------------------------------------------------
+    //                                                 Mail
+    //                                                ------
+    public SMailDeliveryDepartment assistMailDeliveryDepartment() {
+        return mailDeliveryDepartment; // not required, null means no mail
     }
 }

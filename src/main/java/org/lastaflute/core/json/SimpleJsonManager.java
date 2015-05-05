@@ -39,7 +39,7 @@ public class SimpleJsonManager implements JsonManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleJsonManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleJsonManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -80,9 +80,9 @@ public class SimpleJsonManager implements JsonManager {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[JSON Manager]");
-            LOG.info(" realJsonParser: " + DfTypeUtil.toClassTitle(realJsonParser));
+        if (logger.isInfoEnabled()) {
+            logger.info("[JSON Manager]");
+            logger.info(" realJsonParser: " + DfTypeUtil.toClassTitle(realJsonParser));
         }
     }
 

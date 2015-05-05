@@ -12,4 +12,5 @@
 	<component name="messageResourcesHolder" class="org.lastaflute.core.message.MessageResourcesHolder"/>
 	<component name="exceptionTranslator" class="org.lastaflute.core.exception.ExceptionTranslator"/>
 	<component name="asyncManager" class="org.lastaflute.core.magic.async.SimpleAsyncManager"/>
+	<component name="postbox" class="org.lastaflute.core.mail.Postbox"/>
 </components>
