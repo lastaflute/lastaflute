@@ -98,9 +98,9 @@ public class SimpleTimeManager implements TimeManager {
     protected void showBootLogging() {
         if (LOG.isInfoEnabled()) {
             LOG.info("[Time Manager]");
-            LOG.info(" businessTimeHandler: " + DfTypeUtil.toClassTitle(businessTimeHandler));
+            LOG.info(" businessTimeHandler: " + businessTimeHandler);
             if (developmentProvider != null) { // in development
-                LOG.info(" developmentProvider: " + DfTypeUtil.toClassTitle(developmentProvider));
+                LOG.info(" developmentProvider: " + developmentProvider);
             } else {
                 LOG.info(" currentIgnoreTransaction: " + currentIgnoreTransaction);
                 LOG.info(" adjustTimeMillis: " + adjustTimeMillis);

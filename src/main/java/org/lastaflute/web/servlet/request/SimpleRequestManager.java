@@ -30,7 +30,6 @@ import javax.servlet.http.HttpServletRequest;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfStringUtil;
-import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.message.MessageManager;
@@ -113,8 +112,8 @@ public class SimpleRequestManager implements RequestManager {
     protected void showBootLogging() {
         if (logger.isInfoEnabled()) {
             logger.info("[Request Manager]");
-            logger.info(" localeProvider: " + DfTypeUtil.toClassTitle(localeHandler));
-            logger.info(" timeZoneProvider: " + DfTypeUtil.toClassTitle(timeZoneProvider));
+            logger.info(" localeProvider: " + localeHandler);
+            logger.info(" timeZoneProvider: " + timeZoneProvider);
         }
     }
 

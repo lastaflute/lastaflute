@@ -58,7 +58,7 @@ public class Postbox {
     public void initialize() {
         final OptionalCoreDirection direction = assistOptionalCoreDirection();
         final SMailDeliveryDepartment deliveryDepartment = direction.assistMailDeliveryDepartment();
-        postOffice = deliveryDepartment != null ? new PostOffice(deliveryDepartment) : null;
+        postOffice = deliveryDepartment != null ? newPostOffice(deliveryDepartment) : null;
         showBootLogging();
     }
 
@@ -66,10 +66,22 @@ public class Postbox {
         return assistantDirector.assistOptionalCoreDirection();
     }
 
+    protected PostOffice newPostOffice(SMailDeliveryDepartment deliveryDepartment) {
+        return new PostOffice(deliveryDepartment);
+    }
+
     protected void showBootLogging() {
         if (logger.isInfoEnabled()) {
             logger.info("[Postbox]");
-            logger.info(" postOffice: " + (postOffice != null ? postOffice : "*no used"));
+            if (postOffice != null) {
+                final String exp = postOffice.getClass().getSimpleName() + "@" + Integer.toHexString(postOffice.hashCode());
+                logger.info(" postOffice: " + exp);
+                final SMailDeliveryDepartment department = postOffice.getDeliveryDepartment();
+                logger.info(" postalParkingLot: " + department.getParkingLot());
+                logger.info(" postalPersonnel: " + department.getPersonnel());
+            } else {
+                logger.info(" postOffice: *no used");
+            }
         }
     }
 
