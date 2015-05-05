@@ -246,7 +246,7 @@ public class ActionFormMapper {
         sb.append("\n").append(virtualActionForm);
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        // TODO jflute lastaflute: [E] JSON parse error, option to switch to 500
+        // TODO jflute lastaflute: [C] JSON parse error, 400
         throwRequest404NotFoundException(sb.toString());
     }
 

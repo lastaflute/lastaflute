@@ -16,6 +16,8 @@
 package org.lastaflute.web.aspect;
 
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
@@ -24,7 +26,6 @@ import org.lastaflute.di.core.customizer.ComponentCustomizer;
 import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.web.Execute;
 import org.lastaflute.web.direction.OptionalWebDirection;
-import org.lastaflute.web.exception.ExecuteMethodNotFoundRuntimeException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
@@ -80,20 +81,48 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     //                                                                       =============
     protected void setupMethod(ActionMapping actionMapping) {
         final Class<?> actionType = actionMapping.getActionDef().getComponentClass();
-        for (Method actionMethod : actionType.getDeclaredMethods()) {
-            if (isTargetMethod(actionMapping, actionType, actionMethod)) {
-                actionMapping.addExecute(createActionExecute(actionMapping, actionMethod));
+        for (Method declaredMethod : actionType.getDeclaredMethods()) {
+            if (!isExecuteMethod(declaredMethod)) {
+                continue;
             }
+            final ActionExecute existing = actionMapping.getActionExecute(declaredMethod);
+            if (existing != null) {
+                String msg = "Cannot define overload method of action execute: " + existing;
+                throw new IllegalStateException(msg);
+            }
+            actionMapping.registerExecute(createActionExecute(actionMapping, declaredMethod));
         }
         checkExecuteMethodSize(actionMapping, actionType);
-    }
-
-    protected boolean isTargetMethod(ActionMapping actionMapping, Class<?> actionClass, Method actionMethod) {
-        return isExecuteMethod(actionMethod) && actionMapping.getActionExecute(actionMethod.getName()) == null;
+        checkExecuteMethodBothIndexNamedUrlParameter(actionMapping, actionType);
     }
 
     protected boolean isExecuteMethod(Method actionMethod) {
         return LdiModifierUtil.isPublic(actionMethod) && actionMethod.getAnnotation(Execute.class) != null;
+    }
+
+    // -----------------------------------------------------
+    //                                      Check Definition
+    //                                      ----------------
+    // TODO jflute lastaflute: [E] fitting: exception message
+    protected void checkExecuteMethodSize(ActionMapping actionMapping, Class<?> actionType) {
+        if (actionMapping.getExecuteMap().size() == 0) {
+            String msg = "Not found execute method in the action class (needs at least one method): " + actionType;
+            throw new IllegalStateException(msg);
+        }
+    }
+
+    protected void checkExecuteMethodBothIndexNamedUrlParameter(ActionMapping actionMapping, Class<?> actionType) {
+        final Map<String, ActionExecute> executeMap = actionMapping.getExecuteMap();
+        final ActionExecute index = executeMap.get("index");
+        if (index != null && index.getUrlParamArgs().isPresent()) {
+            for (Entry<String, ActionExecute> entry : executeMap.entrySet()) {
+                final ActionExecute execute = entry.getValue();
+                if (!execute.isIndexMethod() && execute.getUrlParamArgs().isPresent()) {
+                    String msg = "Cannot use URL parameter both index() and named execute: named=" + execute;
+                    throw new IllegalStateException(msg);
+                }
+            }
+        }
     }
 
     // ===================================================================================
@@ -111,11 +140,5 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
 
     protected ActionExecute newActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {
         return new ActionExecute(actionMapping, executeMethod, executeOption);
-    }
-
-    protected void checkExecuteMethodSize(ActionMapping actionMapping, Class<?> actionClass) {
-        if (actionMapping.getExecuteSize() == 0) {
-            throw new ExecuteMethodNotFoundRuntimeException(actionClass);
-        }
     }
 }

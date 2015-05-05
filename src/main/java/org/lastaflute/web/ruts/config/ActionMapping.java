@@ -15,6 +15,9 @@
  */
 package org.lastaflute.web.ruts.config;
 
+import java.lang.reflect.Method;
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.util.DfTypeUtil;
@@ -40,9 +43,6 @@ public class ActionMapping {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    // -----------------------------------------------------
-    //                                                Action
-    //                                                ------
     protected final ComponentDef actionDef;
     protected final BeanDesc actionDesc;
     protected final String actionName;
@@ -59,10 +59,24 @@ public class ActionMapping {
         this.adjustmentProvider = adjustmentProvider;
     }
 
+    // -----------------------------------------------------
+    //                                      Register Execute
+    //                                      ----------------
+    public void registerExecute(ActionExecute execute) {
+        executeMap.put(execute.getExecuteMethod().getName(), execute);
+    }
+
     // ===================================================================================
-    //                                                                       ExecuteConfig
+    //                                                                       Create Action
     //                                                                       =============
-    public ActionExecute findActionExecute(String paramPath) {
+    public Object createAction() {
+        return actionDef.getComponent();
+    }
+
+    // ===================================================================================
+    //                                                                        Find Execute
+    //                                                                        ============
+    public ActionExecute findActionExecute(String paramPath) { // null allowed when not found
         for (ActionExecute execute : executeMap.values()) {
             if (execute.isTargetExecute(paramPath)) {
                 return execute;
@@ -71,7 +85,7 @@ public class ActionMapping {
         return null;
     }
 
-    public ActionExecute findActionExecute(HttpServletRequest request) {
+    public ActionExecute findActionExecute(HttpServletRequest request) { // null allowed when not found
         for (ActionExecute execute : executeMap.values()) {
             if (execute.isTargetExecute(request)) {
                 return execute;
@@ -81,7 +95,7 @@ public class ActionMapping {
     }
 
     protected ActionExecute doFindFixedActionExecute() {
-        final ActionExecute indexFound = getActionExecute("index");
+        final ActionExecute indexFound = executeMap.get("index");
         if (indexFound != null) {
             return indexFound;
         }
@@ -91,15 +105,8 @@ public class ActionMapping {
         return null; // not found
     }
 
-    public ActionExecute getActionExecute(String name) {
-        return executeMap.get(name);
-    }
-
-    // ===================================================================================
-    //                                                                              Action
-    //                                                                              ======
-    public Object createAction() {
-        return actionDef.getComponent();
+    public ActionExecute getActionExecute(Method method) { // null allowed when not found
+        return executeMap.get(method.getName());
     }
 
     // ===================================================================================
@@ -187,14 +194,7 @@ public class ActionMapping {
         return actionName;
     }
 
-    // -----------------------------------------------------
-    //                                             Injection
-    //                                             ---------
-    public int getExecuteSize() {
-        return executeMap.size();
-    }
-
-    public void addExecute(ActionExecute execute) {
-        executeMap.put(execute.getExecuteMethod().getName(), execute);
+    public Map<String, ActionExecute> getExecuteMap() {
+        return executeMap;
     }
 }

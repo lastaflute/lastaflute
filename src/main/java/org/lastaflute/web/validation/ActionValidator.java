@@ -246,7 +246,6 @@ public class ActionValidator {
     //                                           Ordered Map
     //                                           -----------
     // basically for batch display
-    // TODO jflute lastaflute: [E] fitting: validation batch display on HibernateValidator, OK?
     protected TreeMap<String, Object> prepareOrderedMap(Object form, Set<ConstraintViolation<Object>> vioSet) {
         final Map<String, Object> vioPropMap = new HashMap<>(vioSet.size());
         for (ConstraintViolation<Object> vio : vioSet) {

@@ -35,6 +35,5 @@ public interface LastaWebKey {
     String USER_LOCALE_KEY = "lastaflute.action.USER_LOCALE"; // Request or Session
     String USER_TIMEZONE_KEY = "lastaflute.action.USER_TIMEZONE"; // Request or Session
 
-    // TODO jflute lastaflute: [E] function: transaction token
     String TRANSACTION_TOKEN_KEY = "lastaflute.action.TRANSACTION_TOKEN"; // Session
 }

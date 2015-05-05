@@ -382,7 +382,6 @@ public class RequestUrlParamAnalyzer {
     }
 
     protected void throwNoSuchExecute404NotFoundException(String msg) {
-        // TODO jflute lastaflute: [F] improvement: 404 treated as system exception in development
         throw new ForcedRequest404NotFoundException(msg);
     }
 
