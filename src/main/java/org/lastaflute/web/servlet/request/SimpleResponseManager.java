@@ -51,7 +51,7 @@ public class SimpleResponseManager implements ResponseManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleResponseManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleResponseManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -89,9 +89,9 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Response Manager]");
-            LOG.info(" downloadExtensionContentTypeMap: " + downloadExtensionContentTypeMap);
+        if (logger.isInfoEnabled()) {
+            logger.info("[Response Manager]");
+            logger.info(" downloadExtensionContentTypeMap: " + downloadExtensionContentTypeMap);
         }
     }
 
@@ -171,7 +171,7 @@ public class SimpleResponseManager implements ResponseManager {
     public void writeAsJson(String json) {
         assertArgumentNotNull("json", json);
         final String contentType = "application/json";
-        LOG.debug("#flow ...Writing response as {}: \n{]", contentType, json);
+        logger.debug("#flow ...Writing response as {}: \n{}", contentType, json);
         write(json, contentType);
     }
 
@@ -179,7 +179,7 @@ public class SimpleResponseManager implements ResponseManager {
     public void writeAsJavaScript(String script) {
         assertArgumentNotNull("script", script);
         final String contentType = "application/javascript";
-        LOG.debug("#flow ...Writing response as {}: \n{}", contentType, script);
+        logger.debug("#flow ...Writing response as {}: \n{}", contentType, script);
         write(script, contentType);
     }
 
@@ -188,7 +188,7 @@ public class SimpleResponseManager implements ResponseManager {
         assertArgumentNotNull("xmlStr", xmlStr);
         assertArgumentNotNull("encoding", encoding);
         final String contentType = "text/xml";
-        LOG.debug("#flow ...Writing response as {}: \n", contentType, xmlStr);
+        logger.debug("#flow ...Writing response as {}: \n", contentType, xmlStr);
         write(xmlStr, contentType, encoding);
     }
 
