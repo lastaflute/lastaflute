@@ -222,7 +222,10 @@ public class ActionFormMapper {
 
     protected void mappingListJsonBody(ActionExecute execute, VirtualActionForm virtualActionForm, String json) {
         try {
-            final Object realForm = getJsonManager().fromJsonList(json, virtualActionForm.getFormMeta().getFormType());
+            final Class<?> genericType = virtualActionForm.getFormMeta().getListFormGenericType().get(); // already checked
+            System.out.println("***********1: " + genericType);
+            final Object realForm = getJsonManager().fromJsonList(json, genericType);
+            System.out.println("***********2: " + realForm);
             acceptJsonRealForm(virtualActionForm, realForm);
         } catch (RuntimeException e) {
             throwListJsonBodyParseFailureException(execute, virtualActionForm, json, e);

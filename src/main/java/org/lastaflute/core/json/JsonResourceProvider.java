@@ -26,4 +26,8 @@ public interface JsonResourceProvider {
      * @return The instance for real parser of JSON. (NullAllowed: if null, use default)
      */
     RealJsonParser provideJsonParser();
+
+    default boolean isSuppressNulls() {
+        return false;
+    }
 }

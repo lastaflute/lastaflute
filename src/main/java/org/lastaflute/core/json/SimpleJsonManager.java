@@ -52,6 +52,9 @@ public class SimpleJsonManager implements JsonManager {
     /** Is development here? */
     protected boolean developmentHere;
 
+    /** Does it suppress null fields? */
+    protected boolean suppressNulls;
+
     /** The real parser of JSON. (NotNull: after initialization) */
     protected RealJsonParser realJsonParser;
 
@@ -67,6 +70,7 @@ public class SimpleJsonManager implements JsonManager {
         final OptionalCoreDirection direction = assistOptionalCoreDirection();
         developmentHere = direction.isDevelopmentHere();
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
+        suppressNulls = provider != null ? provider.isSuppressNulls() : false;
         final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
         showBootLogging();
@@ -96,6 +100,9 @@ public class SimpleJsonManager implements JsonManager {
         final GsonBuilder builder = new GsonBuilder();
         if (developmentHere) {
             builder.setPrettyPrinting();
+        }
+        if (!suppressNulls) {
+            builder.serializeNulls();
         }
         final Gson gson = builder.create();
         return new RealJsonParser() {

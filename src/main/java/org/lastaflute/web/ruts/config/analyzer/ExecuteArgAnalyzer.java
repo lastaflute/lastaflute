@@ -99,9 +99,10 @@ public class ExecuteArgAnalyzer {
         return findListFormGenericType(parameter) != null;
     }
 
-    protected Type findListFormGenericType(Parameter parameter) {
+    protected Class<?> findListFormGenericType(Parameter parameter) {
+        // TODO jflute cache
         if (List.class.isAssignableFrom(parameter.getType())) {
-            final Type genericType = DfReflectionUtil.getGenericFirstClass(parameter.getParameterizedType());
+            final Class<?> genericType = DfReflectionUtil.getGenericFirstClass(parameter.getParameterizedType());
             return genericType != null && isBeanActionFormType(genericType) ? genericType : null; // e.g. List<SeaForm>
         }
         return null;
@@ -128,7 +129,7 @@ public class ExecuteArgAnalyzer {
     }
 
     protected Class<?> prepareListFormGenericType(Parameter formParam) {
-        return formParam != null ? DfReflectionUtil.getGenericFirstClass(findListFormGenericType(formParam)) : null;
+        return formParam != null ? findListFormGenericType(formParam) : null;
     }
 
     // -----------------------------------------------------

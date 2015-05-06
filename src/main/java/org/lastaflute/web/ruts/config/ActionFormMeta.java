@@ -15,8 +15,10 @@
  */
 package org.lastaflute.web.ruts.config;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
@@ -103,7 +105,12 @@ public class ActionFormMeta {
     protected RealFormSupplier getActionFormSupplier() {
         return () -> {
             try {
-                return formType.newInstance();
+                // TODO jflute xxxxxx
+                if (List.class.isAssignableFrom(formType)) { // e.g. List<SeaForm>, JSON body of list type
+                    return new ArrayList<Object>();
+                } else {
+                    return formType.newInstance();
+                }
             } catch (Exception e) {
                 throwActionFormCreateFailureException(e);
                 return null; // unreachable
