@@ -15,20 +15,21 @@
  */
 package org.lastaflute.core.json;
 
+import java.util.Collection;
 import java.util.List;
-import java.util.function.Supplier;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-
-import net.arnx.jsonic.JSON;
-import net.arnx.jsonic.TypeReference;
 
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.OptionalCoreDirection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
 /**
  * @author jflute
@@ -48,11 +49,11 @@ public class SimpleJsonManager implements JsonManager {
     @Resource
     protected FwAssistantDirector assistantDirector;
 
-    /** The real parser of JSON. (NotNull: after initialization) */
-    protected RealJsonParser realJsonParser;
-
     /** Is development here? */
     protected boolean developmentHere;
+
+    /** The real parser of JSON. (NotNull: after initialization) */
+    protected RealJsonParser realJsonParser;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -64,10 +65,10 @@ public class SimpleJsonManager implements JsonManager {
     @PostConstruct
     public synchronized void initialize() {
         final OptionalCoreDirection direction = assistOptionalCoreDirection();
+        developmentHere = direction.isDevelopmentHere();
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
         final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
-        developmentHere = direction.isDevelopmentHere();
         showBootLogging();
     }
 
@@ -76,7 +77,7 @@ public class SimpleJsonManager implements JsonManager {
     }
 
     protected RealJsonParser createDefaultJsonParser() {
-        return newJSonicRealJsonParser();
+        return newGsonRealJsonParser();
     }
 
     protected void showBootLogging() {
@@ -87,93 +88,115 @@ public class SimpleJsonManager implements JsonManager {
     }
 
     // ===================================================================================
-    //                                                                              JSONIC
+    //                                                                               GSON
     //                                                                              ======
-    protected static final Class<?> JSONIC_DUMMY_TYPE = new Object() {
-    }.getClass();
-
-    protected RealJsonParser newJSonicRealJsonParser() {
+    protected RealJsonParser newGsonRealJsonParser() {
+        // TODO jflute lastaflute: [D] research: Gson thread safe?
+        // TODO jflute lastaflute: [D] research: Gson null property no item OK?
+        final GsonBuilder builder = new GsonBuilder();
+        if (developmentHere) {
+            builder.setPrettyPrinting();
+        }
+        final Gson gson = builder.create();
         return new RealJsonParser() {
+
             @Override
-            public String encode(Object bean) {
-                return JSON.encode(bean, developmentHere);
+            public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
+                return gson.fromJson(json, beanType);
             }
 
             @Override
-            public <BEAN> BEAN decode(String json, Class<BEAN> beanType) {
-                return JSON.decode(json, beanType);
+            public <BEAN> List<BEAN> fromJsonList(String json, Class<BEAN> elementType) {
+                return gson.fromJson(json, new TypeToken<Collection<BEAN>>() {
+                }.getType());
             }
 
             @Override
-            public <BEAN> List<BEAN> decodeList(String json, Class<BEAN> beanType) {
-                return JSON.decode(json, new TypeReference<List<BEAN>>() {
-                    // nothing is overridden
-                });
-            }
-
-            @SuppressWarnings("unchecked")
-            @Override
-            public <BEAN> BEAN mappingJsonTo(String json, Supplier<BEAN> beanSupplier) {
-                BEAN bean = beanSupplier.get();
-                return (BEAN) new JSON() {
-                    @Override
-                    protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
-                        if (context.getDepth() == 0) {
-                            return (T) bean; // first bean instance is provided, basically for action form
-                        }
-                        return super.create(context, beanType);
-                    }
-                }.parse(json, bean.getClass());
-            }
-
-            @Override
-            public <BEAN> List<BEAN> mappingJsonToList(String json, Supplier<BEAN> beanSupplier) {
-                return new JSON() {
-                    private Boolean asList;
-
-                    @SuppressWarnings("unchecked")
-                    @Override
-                    protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
-                        if (asList != null && context.getDepth() == 0 && List.class.isAssignableFrom(beanType)) {
-                            asList = true;
-                        }
-                        if (asList != null && asList && context.getDepth() == 1) {
-                            return (T) beanSupplier.get(); // element bean instance is provided, basically for action form
-                        }
-                        return super.create(context, beanType);
-                    }
-                }.parse(json, new TypeReference<List<BEAN>>() {
-                    // nothing is overridden
-                });
+            public String toJson(Object bean) {
+                return gson.toJson(bean);
             }
         };
     }
 
     // ===================================================================================
+    //                                                                              JSONIC
+    //                                                                              ======
+    // memorable code for JSONIC
+    //protected static final Class<?> JSONIC_DUMMY_TYPE = new Object() {
+    //}.getClass();
+    //
+    //protected RealJsonParser newJSonicRealJsonParser() {
+    //    return new RealJsonParser() {
+    //        @Override
+    //        public String encode(Object bean) {
+    //            return JSON.encode(bean, developmentHere);
+    //        }
+    //
+    //        @Override
+    //        public <BEAN> BEAN decode(String json, Class<BEAN> beanType) {
+    //            return JSON.decode(json, beanType);
+    //        }
+    //
+    //        @Override
+    //        public <BEAN> List<BEAN> decodeList(String json, Class<BEAN> beanType) {
+    //            return JSON.decode(json, new TypeReference<List<BEAN>>() {
+    //                // nothing is overridden
+    //            });
+    //        }
+    //
+    //        @SuppressWarnings("unchecked")
+    //        @Override
+    //        public <BEAN> BEAN mappingJsonTo(String json, Supplier<BEAN> beanSupplier) {
+    //            BEAN bean = beanSupplier.get();
+    //            return (BEAN) new JSON() {
+    //                @Override
+    //                protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
+    //                    if (context.getDepth() == 0) {
+    //                        return (T) bean; // first bean instance is provided, basically for action form
+    //                    }
+    //                    return super.create(context, beanType);
+    //                }
+    //            }.parse(json, bean.getClass());
+    //        }
+    //
+    //        @Override
+    //        public <BEAN> List<BEAN> mappingJsonToList(String json, Supplier<BEAN> beanSupplier) {
+    //            return new JSON() {
+    //                private Boolean asList;
+    //
+    //                @SuppressWarnings("unchecked")
+    //                @Override
+    //                protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
+    //                    if (asList != null && context.getDepth() == 0 && List.class.isAssignableFrom(beanType)) {
+    //                        asList = true;
+    //                    }
+    //                    if (asList != null && asList && context.getDepth() == 1) {
+    //                        return (T) beanSupplier.get(); // element bean instance is provided, basically for action form
+    //                    }
+    //                    return super.create(context, beanType);
+    //                }
+    //            }.parse(json, new TypeReference<List<BEAN>>() {
+    //                // nothing is overridden
+    //            });
+    //        }
+    //    };
+    //}
+
+    // ===================================================================================
     //                                                                       Encode/Decode
     //                                                                       =============
     @Override
-    public String encode(Object bean) {
-        return realJsonParser.encode(bean);
+    public String toJson(Object bean) {
+        return realJsonParser.toJson(bean);
     }
 
     @Override
-    public <BEAN> BEAN decode(String json, Class<BEAN> beanType) {
-        return realJsonParser.decode(json, beanType);
+    public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
+        return realJsonParser.fromJson(json, beanType);
     }
 
     @Override
-    public <BEAN> List<BEAN> decodeList(String json, Class<BEAN> beanType) {
-        return realJsonParser.decodeList(json, beanType);
-    }
-
-    @Override
-    public <BEAN> BEAN mappingJsonTo(String json, Supplier<BEAN> beanSupplier) {
-        return realJsonParser.mappingJsonTo(json, beanSupplier);
-    }
-
-    @Override
-    public <BEAN> List<BEAN> mappingJsonToList(String json, Supplier<BEAN> beanSupplier) {
-        return realJsonParser.mappingJsonToList(json, beanSupplier);
+    public <BEAN> List<BEAN> fromJsonList(String json, Class<BEAN> beanType) {
+        return realJsonParser.fromJsonList(json, beanType);
     }
 }

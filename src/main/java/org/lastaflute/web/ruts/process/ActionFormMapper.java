@@ -213,7 +213,7 @@ public class ActionFormMapper {
 
     protected void mappingJsonBody(ActionExecute execute, VirtualActionForm virtualActionForm, String json) {
         try {
-            final Object realForm = getJsonManager().mappingJsonTo(json, virtualActionForm.getFormSupplier());
+            final Object realForm = getJsonManager().fromJson(json, virtualActionForm.getFormMeta().getFormType());
             acceptJsonRealForm(virtualActionForm, realForm);
         } catch (RuntimeException e) {
             throwJsonBodyParseFailureException(execute, virtualActionForm, json, e);
@@ -222,7 +222,7 @@ public class ActionFormMapper {
 
     protected void mappingListJsonBody(ActionExecute execute, VirtualActionForm virtualActionForm, String json) {
         try {
-            final Object realForm = getJsonManager().mappingJsonToList(json, virtualActionForm.getFormSupplier());
+            final Object realForm = getJsonManager().fromJsonList(json, virtualActionForm.getFormMeta().getFormType());
             acceptJsonRealForm(virtualActionForm, realForm);
         } catch (RuntimeException e) {
             throwListJsonBodyParseFailureException(execute, virtualActionForm, json, e);
@@ -473,7 +473,7 @@ public class ActionFormMapper {
     protected Object parseJsonProperty(Object bean, String name, String json, Class<?> propertyType) {
         final JsonManager jsonManager = getJsonManager();
         try {
-            return jsonManager.decode(json, propertyType);
+            return jsonManager.fromJson(json, propertyType);
         } catch (RuntimeException e) {
             throwJsonPropertyParseFailureException(bean, name, json, propertyType, e);
             return null; // unreachable

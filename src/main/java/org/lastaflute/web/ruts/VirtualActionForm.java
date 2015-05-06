@@ -16,7 +16,6 @@
 package org.lastaflute.web.ruts;
 
 import java.io.Serializable;
-import java.util.function.Supplier;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
@@ -34,24 +33,29 @@ public class VirtualActionForm implements Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Supplier<Object> formSupplier;
+    protected final RealFormSupplier formSupplier;
     protected final ActionFormMeta formMeta;
     protected Object realForm; // lazy loaded
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public VirtualActionForm(Supplier<Object> formSupplier, ActionFormMeta formMeta) {
+    public VirtualActionForm(RealFormSupplier formSupplier, ActionFormMeta formMeta) {
         this.formSupplier = formSupplier;
         this.formMeta = formMeta;
+    }
+
+    @FunctionalInterface
+    public static interface RealFormSupplier {
+        Object supply();
     }
 
     // ===================================================================================
     //                                                                Instantiate RealForm
     //                                                                ====================
-    public void instantiateRealForm() { // mainly here
+    protected void instantiateRealForm() { // mainly here, called from getter
         checkAlreadyExistsRealForm();
-        realForm = formSupplier.get();
+        realForm = formSupplier.supply();
     }
 
     public void acceptRealForm(Object realForm) { // e.g. JSON mapping
@@ -110,7 +114,7 @@ public class VirtualActionForm implements Serializable {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public Supplier<Object> getFormSupplier() {
+    public RealFormSupplier getFormSupplier() {
         return formSupplier;
     }
 
@@ -120,7 +124,7 @@ public class VirtualActionForm implements Serializable {
 
     public Object getRealForm() {
         if (realForm == null) {
-            realForm = formSupplier.get();
+            instantiateRealForm(); // on demand here
         }
         return realForm;
     }

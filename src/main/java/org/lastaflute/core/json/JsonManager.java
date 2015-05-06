@@ -16,7 +16,6 @@
 package org.lastaflute.core.json;
 
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * @author jflute
@@ -24,45 +23,27 @@ import java.util.function.Supplier;
 public interface JsonManager {
 
     /**
-     * Encode the source object to JSON string.
+     * Convert from the JSON string to the specified bean.
+     * @param <BEAN> The type of JSON bean.
+     * @param json The string of JSON to be parsed. (NotNull)
+     * @param beanType The type of bean to convert, should have default constructor. (NotNull)
+     * @return The new-created bean that has the JSON values. (NotNull)
+     */
+    <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
+
+    /**
+     * Convert from the JSON string to the list of specified bean.
+     * @param <BEAN> The type of JSON bean.
+     * @param json The string of JSON to be parsed. (NotNull)
+     * @param beanType The type of bean to convert, should have default constructor. (NotNull)
+     * @return The list of new-created bean that has the JSON values. (NotNull)
+     */
+    <BEAN> List<BEAN> fromJsonList(String json, Class<BEAN> beanType);
+
+    /**
+     * Convert from the source object to JSON string.
      * @param bean The instance of bean to encode. (NotNull)
      * @return The encoded JSON string. (NotNull)
      */
-    String encode(Object bean);
-
-    /**
-     * Decode the JSON string to the specified bean.
-     * @param <BEAN> The type of JSON bean.
-     * @param json The string of JSON to be parsed. (NotNull)
-     * @param beanType The type of bean to convert. (NotNull)
-     * @return The new-created bean that has the JSON values. (NotNull)
-     */
-    <BEAN> BEAN decode(String json, Class<BEAN> beanType);
-
-    /**
-     * Decode the JSON string to the list of specified bean.
-     * @param <BEAN> The type of JSON bean.
-     * @param json The string of JSON to be parsed. (NotNull)
-     * @param beanType The type of bean to convert. (NotNull)
-     * @return The list of new-created bean that has the JSON values. (NotNull)
-     */
-    <BEAN> List<BEAN> decodeList(String json, Class<BEAN> beanType);
-
-    /**
-     * Mapping the JSON string to the specified bean instance. (decode)
-     * @param <BEAN> The type of JSON bean.
-     * @param json The string of JSON to be parsed. (NotNull)
-     * @param beanSupplier The supplier of bean instance to be mapped. (NotNull)
-     * @return The new-created bean that has the JSON values. (NotNull)
-     */
-    <BEAN> BEAN mappingJsonTo(String json, Supplier<BEAN> beanSupplier); // basically for framework
-
-    /**
-     * Mapping the JSON string to the specified bean instance. (decode)
-     * @param <BEAN> The element type of JSON list.
-     * @param json The string of JSON to be parsed. (NotNull)
-     * @param beanSupplier The supplier of bean instance to be mapped. (NotNull)
-     * @return The list of new-created bean that has the JSON values. (NotNull)
-     */
-    <BEAN> List<BEAN> mappingJsonToList(String json, Supplier<BEAN> beanSupplier); // basically for framework
+    String toJson(Object bean);
 }

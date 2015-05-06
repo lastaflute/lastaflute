@@ -18,7 +18,6 @@ package org.lastaflute.web.ruts.config;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
@@ -27,6 +26,7 @@ import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.exception.ActionFormCreateFailureException;
 import org.lastaflute.web.ruts.VirtualActionForm;
+import org.lastaflute.web.ruts.VirtualActionForm.RealFormSupplier;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
 /**
@@ -96,11 +96,11 @@ public class ActionFormMeta {
         return newVirtualActionForm(getActionFormSupplier(), this);
     }
 
-    protected VirtualActionForm newVirtualActionForm(Supplier<Object> formSupplier, ActionFormMeta formMeta) {
+    protected VirtualActionForm newVirtualActionForm(RealFormSupplier formSupplier, ActionFormMeta formMeta) {
         return new VirtualActionForm(formSupplier, formMeta);
     }
 
-    protected Supplier<Object> getActionFormSupplier() {
+    protected RealFormSupplier getActionFormSupplier() {
         return () -> {
             try {
                 return formType.newInstance();

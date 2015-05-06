@@ -466,7 +466,7 @@ public class GodHandableAction implements VirtualAction {
     protected NextJourney handleJsonResponse(JsonResponse<?> jsonResponse) {
         // this needs original action customizer in your customizer.dicon
         final JsonManager jsonManager = getJsonManager();
-        final String json = jsonManager.encode(jsonResponse.getJsonObj());
+        final String json = jsonManager.toJson(jsonResponse.getJsonObj());
         final ResponseManager responseManager = requestManager.getResponseManager();
         setupApiResponseHeader(responseManager, jsonResponse);
         setupApiResponseHttpStatus(responseManager, jsonResponse);
