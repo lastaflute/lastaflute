@@ -21,6 +21,8 @@ import java.util.List;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
+import org.dbflute.util.DfCollectionUtil;
+import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.OptionalCoreDirection;
@@ -97,6 +99,7 @@ public class SimpleJsonManager implements JsonManager {
     protected RealJsonParser newGsonRealJsonParser() {
         // TODO jflute lastaflute: [D] research: Gson thread safe?
         // TODO jflute lastaflute: [D] research: Gson null property no item OK?
+        // TODO jflute lastaflute: [D] fitting: immutable lsit
         final GsonBuilder builder = new GsonBuilder();
         if (developmentHere) {
             builder.setPrettyPrinting();
@@ -107,15 +110,18 @@ public class SimpleJsonManager implements JsonManager {
         final Gson gson = builder.create();
         return new RealJsonParser() {
 
+            @SuppressWarnings("unchecked")
             @Override
             public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
-                return gson.fromJson(json, beanType);
+                final BEAN bean = gson.fromJson(json, beanType);
+                return bean != null ? bean : (BEAN) DfReflectionUtil.newInstance(beanType);
             }
 
             @Override
             public <BEAN> List<BEAN> fromJsonList(String json, Class<BEAN> elementType) {
-                return gson.fromJson(json, new TypeToken<Collection<BEAN>>() {
+                final List<BEAN> list = gson.fromJson(json, new TypeToken<Collection<BEAN>>() {
                 }.getType());
+                return list != null ? list : DfCollectionUtil.emptyList();
             }
 
             @Override

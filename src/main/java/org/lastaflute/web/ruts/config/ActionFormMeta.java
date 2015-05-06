@@ -15,7 +15,6 @@
  */
 package org.lastaflute.web.ruts.config;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -105,17 +104,20 @@ public class ActionFormMeta {
     protected RealFormSupplier getActionFormSupplier() {
         return () -> {
             try {
-                // TODO jflute xxxxxx
-                if (List.class.isAssignableFrom(formType)) { // e.g. List<SeaForm>, JSON body of list type
-                    return new ArrayList<Object>();
-                } else {
-                    return formType.newInstance();
-                }
+                checkFormInstanceType();
+                return formType.newInstance();
             } catch (Exception e) {
                 throwActionFormCreateFailureException(e);
                 return null; // unreachable
             }
         };
+    }
+
+    protected void checkFormInstanceType() {
+        if (List.class.isAssignableFrom(formType)) { // e.g. List<SeaForm>, JSON body of list type
+            String msg = "Cannot instantiate the form because of list type, should not come here:" + toString();
+            throw new IllegalStateException(msg);
+        }
     }
 
     protected void throwActionFormCreateFailureException(Exception cause) {
