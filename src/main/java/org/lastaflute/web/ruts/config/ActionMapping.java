@@ -43,6 +43,7 @@ public class ActionMapping {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // all not null
     protected final ComponentDef actionDef;
     protected final BeanDesc actionDesc;
     protected final String actionName;
@@ -76,6 +77,7 @@ public class ActionMapping {
     // ===================================================================================
     //                                                                        Find Execute
     //                                                                        ============
+    // optional unused for performance
     public ActionExecute findActionExecute(String paramPath) { // null allowed when not found
         for (ActionExecute execute : executeMap.values()) {
             if (execute.isTargetExecute(paramPath)) {
@@ -91,6 +93,7 @@ public class ActionMapping {
                 return execute;
             }
         }
+        // TODO jflute lastaflute: [C] check: wrong name of form when doSubmit, exception?
         return doFindFixedActionExecute();
     }
 
