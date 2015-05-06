@@ -89,12 +89,11 @@ public class ActionMapping {
 
     public ActionExecute findActionExecute(HttpServletRequest request) { // null allowed when not found
         for (ActionExecute execute : executeMap.values()) {
-            if (execute.isTargetExecute(request)) {
+            if (execute.isTargetExecute(request)) { // request parameter contains e.g. doUpdate=update
                 return execute;
             }
         }
-        // TODO jflute lastaflute: [C] check: wrong name of form when doSubmit, exception?
-        return doFindFixedActionExecute();
+        return doFindFixedActionExecute(); // e.g. index() for /sea/land/
     }
 
     protected ActionExecute doFindFixedActionExecute() {
@@ -102,9 +101,10 @@ public class ActionMapping {
         if (indexFound != null) {
             return indexFound;
         }
-        if (executeMap.size() == 1) { // e.g. no index() but only-one method exists
-            return executeMap.get(1);
-        }
+        // remove it on LastaFlute, more strict mapping as possible
+        //if (executeMap.size() == 1) { // e.g. no index() but only-one method exists
+        //    return executeMap.get(0);
+        //}
         return null; // not found
     }
 

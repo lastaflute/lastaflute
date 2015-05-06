@@ -38,8 +38,8 @@ import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
-import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer.ExecuteArgBox;
+import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternBox;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
@@ -445,9 +445,9 @@ public class ActionExecute implements Serializable {
 
     public boolean isTargetExecute(HttpServletRequest request) {
         final String methodName = executeMethod.getName();
-        return !isParameterEmpty(request.getParameter(methodName)) //
-                || !isParameterEmpty(request.getParameter(methodName + ".x")) //
-                || !isParameterEmpty(request.getParameter(methodName + ".y"));
+        return !isParameterEmpty(request.getParameter(methodName)) // e.g. doUpdate=update
+                || !isParameterEmpty(request.getParameter(methodName + ".x")) // e.g. doUpdate.x=update
+                || !isParameterEmpty(request.getParameter(methodName + ".y")); // e.g. doUpdate.y=update
     }
 
     protected boolean isParameterEmpty(String str) {
