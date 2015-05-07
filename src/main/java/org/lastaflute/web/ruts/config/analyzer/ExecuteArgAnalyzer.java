@@ -154,9 +154,9 @@ public class ExecuteArgAnalyzer {
         int index = 0;
         for (Parameter parameter : parameters) {
             if (isOptionalParameterType(parameter.getType())) {
-                final Type parameterizedType = parameter.getParameterizedType();
-                final Class<?> genericType = DfReflectionUtil.getGenericFirstClass(parameterizedType);
-                checkExecuteMethodOptionalParameter(executeMethod, parameterizedType, genericType);
+                final Type paramedType = parameter.getParameterizedType();
+                final Class<?> genericType = DfReflectionUtil.getGenericFirstClass(paramedType);
+                checkExecuteMethodOptionalParameter(executeMethod, paramedType, genericType);
                 optionalGenericTypeMap.put(index, genericType);
             }
             ++index;
@@ -164,12 +164,12 @@ public class ExecuteArgAnalyzer {
         return Collections.unmodifiableMap(optionalGenericTypeMap);
     }
 
-    protected void checkExecuteMethodOptionalParameter(Method executeMethod, final Type parameterizedType, final Class<?> genericType) {
+    protected void checkExecuteMethodOptionalParameter(Method executeMethod, final Type paramedType, final Class<?> genericType) {
         if (genericType == null) { // e.g. non-generic optional
-            throwExecuteMethodOptionalParameterGenericNotFoundException(executeMethod, parameterizedType);
+            throwExecuteMethodOptionalParameterGenericNotFoundException(executeMethod, paramedType);
         }
         if (genericType.equals(Object.class)) { // e.g. wild-card generic or just Object
-            throwExecuteMethodOptionalParameterGenericNotScalarException(executeMethod, parameterizedType, genericType);
+            throwExecuteMethodOptionalParameterGenericNotScalarException(executeMethod, paramedType, genericType);
         }
     }
 
@@ -177,19 +177,18 @@ public class ExecuteArgAnalyzer {
         return LaActionExecuteUtil.isOptionalParameterType(paramType);
     }
 
-    protected void throwExecuteMethodOptionalParameterGenericNotFoundException(Method executeMethod, Type parameterizedType) {
+    protected void throwExecuteMethodOptionalParameterGenericNotFoundException(Method executeMethod, Type paramedType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the generic type for the optional parameter.");
         br.addItem("Execute Method");
         br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
         br.addItem("Parameterized Type");
-        br.addElement(parameterizedType);
+        br.addElement(paramedType);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodOptionalParameterGenericNotFoundException(msg);
     }
 
-    protected void throwExecuteMethodOptionalParameterGenericNotScalarException(Method executeMethod, Type parameterizedType,
-            Class<?> genericType) {
+    protected void throwExecuteMethodOptionalParameterGenericNotScalarException(Method executeMethod, Type paramedType, Class<?> genericType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not scalar generic type for the optional parameter.");
         br.addItem("Advice");
@@ -204,9 +203,9 @@ public class ExecuteArgAnalyzer {
         br.addElement("    public HtmlResponse index(OptionalThing<Integer> opt) { // OK");
         br.addItem("Execute Method");
         br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
-        if (parameterizedType != null) {
+        if (paramedType != null) {
             br.addItem("Parameterized Type");
-            br.addElement(parameterizedType);
+            br.addElement(paramedType);
         }
         br.addItem("Generic Type");
         br.addElement(genericType);
@@ -219,12 +218,12 @@ public class ExecuteArgAnalyzer {
     //                                                                ====================
     protected void checkNonGenericParameter(Method executeMethod, Parameter parameter) {
         if (isNonGenericCheckTargetType(parameter.getType())) { // e.g. List
-            final Type parameterizedType = parameter.getParameterizedType();
-            if (parameterizedType == null) { // no way? no check just in case
+            final Type paramedType = parameter.getParameterizedType();
+            if (paramedType == null) { // no way? no check just in case
                 return;
             }
-            if (parameterizedType instanceof ParameterizedType) {
-                final Type[] typeArgs = ((ParameterizedType) parameterizedType).getActualTypeArguments();
+            if (paramedType instanceof ParameterizedType) {
+                final Type[] typeArgs = ((ParameterizedType) paramedType).getActualTypeArguments();
                 if (typeArgs != null && typeArgs.length > 0 && "?".equals(typeArgs[0].getTypeName())) { // e.g. List<?>
                     throwActionFormWildcardOnlyListParameterException(executeMethod, parameter);
                 }

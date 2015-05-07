@@ -509,12 +509,12 @@ public class ActionFormMapper {
                 return null; // unreachable
             }
             final ParameterizedClassDesc paramedDesc = pd.getParameterizedClassDesc();
-            final Type tp = paramedDesc.getParameterizedType(); // not null
-            if (!(tp instanceof ParameterizedType)) { // generic array type? anyway check it
-                throwJsonPropertyListTypeNonParameterizedException(bean, name, json, pd, tp); // program mistake
+            final Type plainType = paramedDesc.getParameterizedType(); // not null
+            if (!(plainType instanceof ParameterizedType)) { // generic array type? anyway check it
+                throwJsonPropertyListTypeNonParameterizedException(bean, name, json, pd, plainType); // program mistake
                 return null; // unreachable
             }
-            final ParameterizedType paramedType = (ParameterizedType) tp;
+            final ParameterizedType paramedType = (ParameterizedType) plainType;
             if (Object.class.equals(paramedDesc.getGenericFirstType())) { // e.g. public List<?> beanList;
                 throwJsonPropertyListTypeGenericNotScalarException(bean, name, json, pd, paramedType);
                 return null; // unreachable
@@ -539,7 +539,36 @@ public class ActionFormMapper {
         return List.class.equals(propertyType);
     }
 
-    protected void throwJsonPropertyListTypeGenericNotScalarException(Object bean, String name, String json, PropertyDesc pd, Type tp) {
+    protected void throwJsonPropertyListTypeNonGenericException(Object bean, String name, String json, PropertyDesc pd) {
+        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Non-generic list cannot handle the JSON.");
+        br.addItem("Action Form");
+        br.addElement(bean);
+        br.addItem("NonGeneric Property");
+        br.addElement(pd);
+        br.addItem("Unhandled JSON");
+        br.addElement(json);
+        final String msg = br.buildExceptionMessage();
+        throw new ActionFormPopulateFailureException(msg);
+    }
+
+    protected void throwJsonPropertyListTypeNonParameterizedException(Object bean, String name, String json, PropertyDesc pd, Type plainType) {
+        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Non-parameterized list cannot handle the JSON.");
+        br.addItem("Action Form");
+        br.addElement(bean);
+        br.addItem("NonParameterized Property");
+        br.addElement(pd);
+        br.addItem("NonParameterized Type");
+        br.addElement(plainType);
+        br.addItem("Unhandled JSON");
+        br.addElement(json);
+        final String msg = br.buildExceptionMessage();
+        throw new ActionFormPopulateFailureException(msg);
+    }
+
+    protected void throwJsonPropertyListTypeGenericNotScalarException(Object bean, String name, String json, PropertyDesc pd,
+            ParameterizedType paramedType) {
         ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not scalar generic type for the list JSON parameter.");
         br.addItem("Action Form");
@@ -547,7 +576,7 @@ public class ActionFormMapper {
         br.addItem("Generic Property");
         br.addElement(pd);
         br.addItem("Parameterizd Type");
-        br.addElement(tp);
+        br.addElement(paramedType);
         br.addItem("Unhandled JSON");
         br.addElement(json);
         final String msg = br.buildExceptionMessage();
@@ -563,34 +592,6 @@ public class ActionFormMapper {
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
         throwRequest404NotFoundException(sb.toString());
-    }
-
-    protected void throwJsonPropertyListTypeNonParameterizedException(Object bean, String name, String json, PropertyDesc pd, Type tp) {
-        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Non-parameterized list cannot handle the JSON.");
-        br.addItem("Action Form");
-        br.addElement(bean);
-        br.addItem("NonParameterized Property");
-        br.addElement(pd);
-        br.addItem("NonParameterized Type");
-        br.addElement(tp);
-        br.addItem("Unhandled JSON");
-        br.addElement(json);
-        final String msg = br.buildExceptionMessage();
-        throw new ActionFormPopulateFailureException(msg);
-    }
-
-    protected void throwJsonPropertyListTypeNonGenericException(Object bean, String name, String json, PropertyDesc pd) {
-        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Non-generic list cannot handle the JSON.");
-        br.addItem("Action Form");
-        br.addElement(bean);
-        br.addItem("NonGeneric Property");
-        br.addElement(pd);
-        br.addItem("Unhandled JSON");
-        br.addElement(json);
-        final String msg = br.buildExceptionMessage();
-        throw new ActionFormPopulateFailureException(msg);
     }
 
     // ===================================================================================
