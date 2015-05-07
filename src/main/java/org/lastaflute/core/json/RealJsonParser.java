@@ -34,7 +34,11 @@ public interface RealJsonParser {
     <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
 
     /**
-     * Convert from the JSON string to the list of specified bean.
+     * Convert from the JSON string to the list of specified bean. <br>
+     * You need to specify parameterized type for element type.
+     * <pre>
+     * ... = fromJsonList(json, new ParameterizedRef&lt;List&lt;SeaBean&gt;&gt;(){}.getType());
+     * </pre>
      * @param <ELEMENT> The element type of JSON list.
      * @param json The string of JSON to be parsed. (NotNull)
      * @param elementType The type of bean to convert, should have default constructor. (NotNull, EmptyAllowed: returns empty list)

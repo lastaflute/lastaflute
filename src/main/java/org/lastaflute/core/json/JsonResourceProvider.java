@@ -27,7 +27,11 @@ public interface JsonResourceProvider {
      */
     RealJsonParser provideJsonParser();
 
-    default boolean isSuppressNulls() {
-        return false;
+    /**
+     * Is null property suppressed (not displayed) in output JSON string?
+     * @return The determination, true or false.
+     */
+    default boolean isNullsSuppressed() {
+        return false; // display nulls as default
     }
 }

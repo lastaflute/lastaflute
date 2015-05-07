@@ -54,8 +54,8 @@ public class SimpleJsonManager implements JsonManager {
     /** Is development here? */
     protected boolean developmentHere;
 
-    /** Does it suppress null fields? */
-    protected boolean suppressNulls;
+    /** Is null property suppressed (not displayed) in output JSON string? */
+    protected boolean nullsSuppressed;
 
     /** The real parser of JSON. (NotNull: after initialization) */
     protected RealJsonParser realJsonParser;
@@ -72,7 +72,7 @@ public class SimpleJsonManager implements JsonManager {
         final OptionalCoreDirection direction = assistOptionalCoreDirection();
         developmentHere = direction.isDevelopmentHere();
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
-        suppressNulls = provider != null ? provider.isSuppressNulls() : false;
+        nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
         final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
         showBootLogging();
@@ -98,12 +98,11 @@ public class SimpleJsonManager implements JsonManager {
     //                                                                              ======
     protected RealJsonParser newGsonRealJsonParser() {
         // TODO jflute lastaflute: [D] research: Gson thread safe?
-        // TODO jflute lastaflute: [D] research: Gson null property no item OK?
         final GsonBuilder builder = new GsonBuilder();
         if (developmentHere) {
             builder.setPrettyPrinting();
         }
-        if (!suppressNulls) {
+        if (!nullsSuppressed) {
             builder.serializeNulls();
         }
         final Gson gson = builder.create();
@@ -111,19 +110,19 @@ public class SimpleJsonManager implements JsonManager {
 
             @SuppressWarnings("unchecked")
             @Override
-            public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
-                final BEAN bean = gson.fromJson(json, beanType);
+            public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) { // are not null, already checked
+                final BEAN bean = gson.fromJson(json, beanType); // if empty JSON, new-only instance
                 return bean != null ? bean : (BEAN) DfReflectionUtil.newInstance(beanType);
             }
 
             @Override
-            public <BEAN> List<BEAN> fromJsonList(String json, ParameterizedType elementType) {
-                final List<BEAN> list = gson.fromJson(json, elementType);
+            public <BEAN> List<BEAN> fromJsonList(String json, ParameterizedType elementType) { // are not null, already checked
+                final List<BEAN> list = gson.fromJson(json, elementType); // if empty JSON, empty list
                 return list != null ? Collections.unmodifiableList(list) : DfCollectionUtil.emptyList();
             }
 
             @Override
-            public String toJson(Object bean) {
+            public String toJson(Object bean) { // is not null, already checked
                 return gson.toJson(bean);
             }
         };
