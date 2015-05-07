@@ -99,7 +99,6 @@ public class SimpleJsonManager implements JsonManager {
     protected RealJsonParser newGsonRealJsonParser() {
         // TODO jflute lastaflute: [D] research: Gson thread safe?
         // TODO jflute lastaflute: [D] research: Gson null property no item OK?
-        // TODO jflute lastaflute: [D] fitting: immutable list
         final GsonBuilder builder = new GsonBuilder();
         if (developmentHere) {
             builder.setPrettyPrinting();

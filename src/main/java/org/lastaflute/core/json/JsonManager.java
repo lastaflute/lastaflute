@@ -27,8 +27,8 @@ public interface JsonManager {
      * Convert from the JSON string to the specified bean.
      * @param <BEAN> The type of JSON bean.
      * @param json The string of JSON to be parsed. (NotNull)
-     * @param beanType The type of bean to convert, should have default constructor. (NotNull)
-     * @return The new-created bean that has the JSON values. (NotNull)
+     * @param beanType The type of bean to convert, should have default constructor. (NotNull, EmptyAllowed: returns new-only)
+     * @return The new-created bean that has the JSON values. (NotNull: if empty JSON, new-only)
      */
     <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
 
@@ -36,8 +36,8 @@ public interface JsonManager {
      * Convert from the JSON string to the list of specified bean.
      * @param <ELEMENT> The element type of JSON list.
      * @param json The string of JSON to be parsed. (NotNull)
-     * @param elementType The type of bean to convert, should have default constructor. (NotNull)
-     * @return The read-only list of new-created bean that has the JSON values. (NotNull, EmptyAllowed: if empty json)
+     * @param elementType The type of bean to convert, should have default constructor. (NotNull, EmptyAllowed: returns empty list)
+     * @return The read-only list of new-created bean that has the JSON values. (NotNull, EmptyAllowed: if empty JSON)
      */
     <ELEMENT> List<ELEMENT> fromJsonList(String json, ParameterizedType elementType);
 

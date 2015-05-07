@@ -218,24 +218,19 @@ public class ExecuteArgAnalyzer {
     //                                                                NonGeneric Parameter
     //                                                                ====================
     protected void checkNonGenericParameter(Method executeMethod, Parameter parameter) {
-        final Class<?> tp = parameter.getType();
-        if (isNonGenericCheckTargetType(tp)) {
+        if (isNonGenericCheckTargetType(parameter.getType())) { // e.g. List
             final Type parameterizedType = parameter.getParameterizedType();
-            System.out.println("**a: ");
-            if (parameterizedType == null) { // no way?, just in case
+            if (parameterizedType == null) { // no way? no check just in case
                 return;
             }
-            System.out.println("*****: " + parameterizedType.getTypeName() + " :: " + parameterizedType.getClass());
             if (parameterizedType instanceof ParameterizedType) {
                 final Type[] typeArgs = ((ParameterizedType) parameterizedType).getActualTypeArguments();
-                System.out.println("*****@@@@@@: " + typeArgs.length + ", " + typeArgs[0].getTypeName());
-                if (typeArgs != null && typeArgs.length > 0 && "?".equals(typeArgs[0].getTypeName())) {
+                if (typeArgs != null && typeArgs.length > 0 && "?".equals(typeArgs[0].getTypeName())) { // e.g. List<?>
                     throwActionFormWildcardOnlyListParameterException(executeMethod, parameter);
                 }
             } else {
                 throwActionFormNonGenericListParameterException(executeMethod, parameter);
             }
-            // non parameterized type is not checked because of unknown case, but might be no problem...
         }
     }
 
