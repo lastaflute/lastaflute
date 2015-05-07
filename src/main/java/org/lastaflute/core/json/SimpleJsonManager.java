@@ -15,7 +15,8 @@
  */
 package org.lastaflute.core.json;
 
-import java.util.Collection;
+import java.lang.reflect.ParameterizedType;
+import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
@@ -31,7 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 
 /**
  * @author jflute
@@ -99,7 +99,7 @@ public class SimpleJsonManager implements JsonManager {
     protected RealJsonParser newGsonRealJsonParser() {
         // TODO jflute lastaflute: [D] research: Gson thread safe?
         // TODO jflute lastaflute: [D] research: Gson null property no item OK?
-        // TODO jflute lastaflute: [D] fitting: immutable lsit
+        // TODO jflute lastaflute: [D] fitting: immutable list
         final GsonBuilder builder = new GsonBuilder();
         if (developmentHere) {
             builder.setPrettyPrinting();
@@ -118,10 +118,9 @@ public class SimpleJsonManager implements JsonManager {
             }
 
             @Override
-            public <BEAN> List<BEAN> fromJsonList(String json, Class<BEAN> elementType) {
-                final List<BEAN> list = gson.fromJson(json, new TypeToken<Collection<BEAN>>() {
-                }.getType());
-                return list != null ? list : DfCollectionUtil.emptyList();
+            public <BEAN> List<BEAN> fromJsonList(String json, ParameterizedType elementType) {
+                final List<BEAN> list = gson.fromJson(json, elementType);
+                return list != null ? Collections.unmodifiableList(list) : DfCollectionUtil.emptyList();
             }
 
             @Override
@@ -196,20 +195,37 @@ public class SimpleJsonManager implements JsonManager {
     //}
 
     // ===================================================================================
-    //                                                                       Encode/Decode
-    //                                                                       =============
-    @Override
-    public String toJson(Object bean) {
-        return realJsonParser.toJson(bean);
-    }
-
+    //                                                                        from/to JSON
+    //                                                                        ============
     @Override
     public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
+        assertArgumentNotNull("json", json);
+        assertArgumentNotNull("beanType", beanType);
         return realJsonParser.fromJson(json, beanType);
     }
 
     @Override
-    public <BEAN> List<BEAN> fromJsonList(String json, Class<BEAN> beanType) {
-        return realJsonParser.fromJsonList(json, beanType);
+    public <ELEMENT> List<ELEMENT> fromJsonList(String json, ParameterizedType elementType) {
+        assertArgumentNotNull("json", json);
+        assertArgumentNotNull("elementType", elementType);
+        return realJsonParser.fromJsonList(json, elementType);
+    }
+
+    @Override
+    public String toJson(Object bean) {
+        assertArgumentNotNull("bean", bean);
+        return realJsonParser.toJson(bean);
+    }
+
+    // ===================================================================================
+    //                                                                       Assist Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 }

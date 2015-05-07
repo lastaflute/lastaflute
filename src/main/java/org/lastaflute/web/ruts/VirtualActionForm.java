@@ -59,12 +59,16 @@ public class VirtualActionForm implements Serializable {
     }
 
     public void acceptRealForm(Object realForm) { // e.g. JSON mapping
-        if (realForm == null) {
+        checkRealFormExistence(realForm);
+        checkAlreadyExistsRealForm();
+        this.realForm = realForm;
+    }
+
+    protected void checkRealFormExistence(Object realForm) {
+        if (realForm == null) { // basically no way, JsonManager cannot return null, but just in case
             String msg = "Not found the real form to be accepted to virtual form: virtual=" + toString();
             throw new IllegalArgumentException(msg);
         }
-        checkAlreadyExistsRealForm();
-        this.realForm = realForm;
     }
 
     protected void checkAlreadyExistsRealForm() {

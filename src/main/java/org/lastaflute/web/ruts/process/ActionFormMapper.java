@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -54,6 +55,7 @@ import org.lastaflute.web.exception.NoParameterizedListRuntimeException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
+import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.multipart.ActionMultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
@@ -202,7 +204,7 @@ public class ActionFormMapper {
     }
 
     protected boolean isJsonBodyListForm(VirtualActionForm virtualActionForm) {
-        return virtualActionForm.getFormMeta().getListFormGenericType().map(genericType -> {
+        return virtualActionForm.getFormMeta().getListFormParameterGenericType().map(genericType -> {
             return isJsonBodyForm(genericType);
         }).orElse(false);
     }
@@ -222,8 +224,9 @@ public class ActionFormMapper {
 
     protected void mappingListJsonBody(ActionExecute execute, VirtualActionForm virtualActionForm, String json) {
         try {
-            final Class<?> genericType = virtualActionForm.getFormMeta().getListFormGenericType().get(); // already checked
-            final Object realForm = getJsonManager().fromJsonList(json, genericType);
+            final ActionFormMeta formMeta = virtualActionForm.getFormMeta();
+            final ParameterizedType pt = formMeta.getListFormParameterParameterizedType().get(); // already checked
+            final Object realForm = getJsonManager().fromJsonList(json, pt);
             acceptJsonRealForm(virtualActionForm, realForm);
         } catch (RuntimeException e) {
             throwListJsonBodyParseFailureException(execute, virtualActionForm, json, e);
@@ -411,7 +414,7 @@ public class ActionFormMapper {
             final String[] values = (String[]) value;
             final String realValue = values.length > 0 ? values[0] : null;
             if (isJsonParameterProperty(pd)) {
-                final Object jsonObj = parseJsonProperty(bean, name, realValue, propertyType);
+                final Object jsonObj = parseJsonProperty(bean, name, realValue, pd);
                 pd.setValue(bean, jsonObj);
             } else { // normally here
                 pd.setValue(bean, realValue);
@@ -449,6 +452,7 @@ public class ActionFormMapper {
     //                                        JSON Parameter
     //                                        --------------
     protected boolean isJsonParameterProperty(PropertyDesc pd) {
+        // TODO jflute lastaflute: [E] JsonParameter listJson
         final Class<JsonParameter> annoType = JsonParameter.class;
         final Field field = pd.getField();
         if (field != null && field.getAnnotation(annoType) != null) {
@@ -471,8 +475,16 @@ public class ActionFormMapper {
         return false;
     }
 
-    protected Object parseJsonProperty(Object bean, String name, String json, Class<?> propertyType) {
+    protected Object parseJsonProperty(Object bean, String name, String json, PropertyDesc pd) {
         final JsonManager jsonManager = getJsonManager();
+        final Class<?> propertyType = pd.getPropertyType();
+        //        if (List.class.equals(propertyType)) { // just type
+        //            if (pd.isParameterized()) {
+        //                final ParameterizedClassDesc parameterizedClassDesc = pd.getParameterizedClassDesc();
+        //                final ParameterizedClassDesc[] paramArgs = parameterizedClassDesc.getArguments();
+        //                // TODO jflute 
+        //            }
+        //        }
         try {
             return jsonManager.fromJson(json, propertyType);
         } catch (RuntimeException e) {

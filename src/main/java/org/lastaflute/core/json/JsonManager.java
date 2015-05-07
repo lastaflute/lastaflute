@@ -15,6 +15,7 @@
  */
 package org.lastaflute.core.json;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.List;
 
 /**
@@ -33,12 +34,12 @@ public interface JsonManager {
 
     /**
      * Convert from the JSON string to the list of specified bean.
-     * @param <BEAN> The type of JSON bean.
+     * @param <ELEMENT> The element type of JSON list.
      * @param json The string of JSON to be parsed. (NotNull)
-     * @param beanType The type of bean to convert, should have default constructor. (NotNull)
-     * @return The list of new-created bean that has the JSON values. (NotNull)
+     * @param elementType The type of bean to convert, should have default constructor. (NotNull)
+     * @return The read-only list of new-created bean that has the JSON values. (NotNull, EmptyAllowed: if empty json)
      */
-    <BEAN> List<BEAN> fromJsonList(String json, Class<BEAN> beanType);
+    <ELEMENT> List<ELEMENT> fromJsonList(String json, ParameterizedType elementType);
 
     /**
      * Convert from the source object to JSON string.

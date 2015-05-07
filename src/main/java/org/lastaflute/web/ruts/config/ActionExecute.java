@@ -95,7 +95,7 @@ public class ActionExecute implements Serializable {
         executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
         this.urlParamTypeList = executeArgBox.getUrlParamTypeList(); // not null, empty allowed
         this.optionalGenericTypeList = executeArgBox.getOptionalGenericTypeMap();
-        this.formMeta = prepareFormMeta(executeArgBox.getFormType(), executeArgBox.getListFormGenericType());
+        this.formMeta = prepareFormMeta(executeArgBox.getFormType(), executeArgBox.getListFormParameter());
 
         // URL pattern (using urlParamTypeList)
         final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
@@ -143,19 +143,19 @@ public class ActionExecute implements Serializable {
     //                                           -----------
     /**
      * @param formType The type of action form. (NullAllowed: if null, no form for the method)
-     * @param listFormGenericType The generic type of list form. (NullAllowed: normally null, for e.g. JSON list)
+     * @param listFormParameter The parameter of list form. (NullAllowed: normally null, for e.g. JSON list)
      * @return The optional form meta to be prepared. (NotNull)
      */
-    protected OptionalThing<ActionFormMeta> prepareFormMeta(Class<?> formType, Class<?> listFormGenericType) {
-        final ActionFormMeta meta = formType != null ? createFormMeta(formType, listFormGenericType) : null;
+    protected OptionalThing<ActionFormMeta> prepareFormMeta(Class<?> formType, Parameter listFormParameter) {
+        final ActionFormMeta meta = formType != null ? createFormMeta(formType, listFormParameter) : null;
         return OptionalThing.ofNullable(meta, () -> {
             String msg = "Not found the form meta as parameter for the execute method: " + executeMethod;
             throw new ActionFormNotFoundException(msg);
         });
     }
 
-    protected ActionFormMeta createFormMeta(Class<?> formType, Class<?> listFormGenericType) {
-        return newActionFormMeta(buildFormKey(), formType, OptionalThing.ofNullable(listFormGenericType, () -> {
+    protected ActionFormMeta createFormMeta(Class<?> formType, Parameter listFormParameter) {
+        return newActionFormMeta(buildFormKey(), formType, OptionalThing.ofNullable(listFormParameter, () -> {
             String msg = "Not found the listFormGenericType: execute=" + buildSimpleMethodExp() + " form=" + formType;
             throw new IllegalStateException(msg);
         }));
@@ -165,8 +165,8 @@ public class ActionExecute implements Serializable {
         return actionMapping.getActionDef().getComponentName() + "_" + executeMethod.getName() + "_Form";
     }
 
-    protected ActionFormMeta newActionFormMeta(String formKey, Class<?> formType, OptionalThing<Class<?>> listFormGenericType) {
-        return new ActionFormMeta(formKey, formType, listFormGenericType);
+    protected ActionFormMeta newActionFormMeta(String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter) {
+        return new ActionFormMeta(formKey, formType, listFormParameter);
     }
 
     // -----------------------------------------------------

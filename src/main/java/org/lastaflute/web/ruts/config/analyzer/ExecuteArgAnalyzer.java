@@ -17,6 +17,7 @@ package org.lastaflute.web.ruts.config.analyzer;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -54,6 +55,7 @@ public class ExecuteArgAnalyzer {
                 if (formEnd) {
                     throwActionFormNotLastParameterException(executeMethod);
                 }
+                checkNonGenericParameter(executeMethod, parameter);
                 if (isActionFormParameter(parameter)) {
                     formParam = parameter;
                     formEnd = true;
@@ -65,23 +67,22 @@ public class ExecuteArgAnalyzer {
                 }
             }
         }
-        box.setUrlParamTypeList(prepareurlParamTypeList(urlParamTypeList));
+        box.setUrlParamTypeList(prepareUrlParamTypeList(urlParamTypeList));
         box.setOptionalGenericTypeMap(prepareOptionalGenericTypeMap(executeMethod));
         box.setFormType(prepareFormType(formParam));
-        box.setListFormGenericType(prepareListFormGenericType(formParam));
+        box.setListFormParameter(prepareListFormParameter(formParam));
     }
 
-    protected List<Class<?>> prepareurlParamTypeList(List<Class<?>> urlParamTypeList) {
-        return urlParamTypeList != null ? Collections.unmodifiableList(urlParamTypeList) : Collections.emptyList();
-    }
-
-    // -----------------------------------------------------
-    //                                        Form Parameter
-    //                                        --------------
+    // ===================================================================================
+    //                                                                      Form Parameter
+    //                                                                      ==============
     public boolean isActionFormParameter(Parameter parameter) {
         return isBeanActionFormParameter(parameter) || isListActionFormParameter(parameter);
     }
 
+    // -----------------------------------------------------
+    //                                             Bean Form
+    //                                             ---------
     protected boolean isBeanActionFormParameter(Parameter parameter) {
         return isBeanActionFormType(parameter.getType());
     }
@@ -95,19 +96,25 @@ public class ExecuteArgAnalyzer {
         return FORM_SUFFIX;
     }
 
+    // -----------------------------------------------------
+    //                                             List Form
+    //                                             ---------
     protected boolean isListActionFormParameter(Parameter parameter) {
         return findListFormGenericType(parameter) != null;
     }
 
     protected Class<?> findListFormGenericType(Parameter parameter) {
-        // TODO jflute cache
-        if (List.class.isAssignableFrom(parameter.getType())) {
-            final Class<?> genericType = DfReflectionUtil.getGenericFirstClass(parameter.getParameterizedType());
+        if (List.class.equals(parameter.getType())) { // just List
+            final Type pt = parameter.getParameterizedType();
+            final Class<?> genericType = DfReflectionUtil.getGenericFirstClass(pt); // almost not null, already checked
             return genericType != null && isBeanActionFormType(genericType) ? genericType : null; // e.g. List<SeaForm>
         }
         return null;
     }
 
+    // -----------------------------------------------------
+    //                                            Check Form
+    //                                            ----------
     protected void throwActionFormNotLastParameterException(Method executeMethod) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not allowed to define argument after ActionForm.");
@@ -124,17 +131,20 @@ public class ExecuteArgAnalyzer {
         throw new ActionFormNotLastParameterException(msg);
     }
 
+    // -----------------------------------------------------
+    //                                          Prepare Form
+    //                                          ------------
     protected Class<?> prepareFormType(Parameter formParam) {
         return formParam != null ? formParam.getType() : null;
     }
 
-    protected Class<?> prepareListFormGenericType(Parameter formParam) {
-        return formParam != null ? findListFormGenericType(formParam) : null;
+    protected Parameter prepareListFormParameter(Parameter formParam) { // already checked but just in case
+        return (formParam != null && formParam.getParameterizedType() instanceof ParameterizedType) ? formParam : null;
     }
 
-    // -----------------------------------------------------
-    //                                 Optional Generic Type
-    //                                 ---------------------
+    // ===================================================================================
+    //                                                               Optional Generic Type
+    //                                                               =====================
     protected Map<Integer, Class<?>> prepareOptionalGenericTypeMap(Method executeMethod) {
         final Parameter[] parameters = executeMethod.getParameters();
         if (parameters.length == 0) {
@@ -205,6 +215,75 @@ public class ExecuteArgAnalyzer {
     }
 
     // ===================================================================================
+    //                                                                NonGeneric Parameter
+    //                                                                ====================
+    protected void checkNonGenericParameter(Method executeMethod, Parameter parameter) {
+        final Class<?> tp = parameter.getType();
+        if (isNonGenericCheckTargetType(tp)) {
+            final Type parameterizedType = parameter.getParameterizedType();
+            System.out.println("**a: ");
+            if (parameterizedType == null) { // no way?, just in case
+                return;
+            }
+            System.out.println("*****: " + parameterizedType.getTypeName() + " :: " + parameterizedType.getClass());
+            if (parameterizedType instanceof ParameterizedType) {
+                final Type[] typeArgs = ((ParameterizedType) parameterizedType).getActualTypeArguments();
+                System.out.println("*****@@@@@@: " + typeArgs.length + ", " + typeArgs[0].getTypeName());
+                if (typeArgs != null && typeArgs.length > 0 && "?".equals(typeArgs[0].getTypeName())) {
+                    throwActionFormWildcardOnlyListParameterException(executeMethod, parameter);
+                }
+            } else {
+                throwActionFormNonGenericListParameterException(executeMethod, parameter);
+            }
+            // non parameterized type is not checked because of unknown case, but might be no problem...
+        }
+    }
+
+    protected boolean isNonGenericCheckTargetType(Class<?> tp) {
+        return List.class.equals(tp); // just type, interface only because of endless
+    }
+
+    protected void throwActionFormWildcardOnlyListParameterException(Method executeMethod, Parameter parameter) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Cannot use wildcard-only List or Set... e.g. List<?>, Set<?>.");
+        br.addItem("Advice");
+        br.addElement("Add explicit generic type to the collection type");
+        br.addElement("of the @Execute method parameter.");
+        br.addElement("  (x):");
+        br.addElement("    public HtmlResponse index(List<?> formList) { // *NG");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse index(List<SeaForm> formList) { // OK");
+        br.addItem("Execute Method");
+        br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
+        br.addItem("WildcardOnly Parameter");
+        br.addElement(parameter);
+        final String msg = br.buildExceptionMessage();
+        throw new ActionFormNotLastParameterException(msg);
+    }
+
+    protected void throwActionFormNonGenericListParameterException(Method executeMethod, Parameter parameter) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Cannot use non-generic List or Set... e.g. List, Set.");
+        br.addItem("Advice");
+        br.addElement("Add explicit generic type to the collection type");
+        br.addElement("of the @Execute method parameter.");
+        br.addElement("  (x):");
+        br.addElement("    public HtmlResponse index(List formList) { // *NG");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse index(List<SeaForm> formList) { // OK");
+        br.addItem("Execute Method");
+        br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
+        br.addItem("NonGeneric Parameter");
+        br.addElement(parameter);
+        final String msg = br.buildExceptionMessage();
+        throw new ActionFormNotLastParameterException(msg);
+    }
+
+    protected List<Class<?>> prepareUrlParamTypeList(List<Class<?>> urlParamTypeList) {
+        return urlParamTypeList != null ? Collections.unmodifiableList(urlParamTypeList) : Collections.emptyList();
+    }
+
+    // ===================================================================================
     //                                                                Execute Argument Box
     //                                                                ====================
     public static class ExecuteArgBox {
@@ -212,7 +291,7 @@ public class ExecuteArgAnalyzer {
         protected List<Class<?>> urlParamTypeList;
         protected Map<Integer, Class<?>> optionalGenericTypeMap;
         protected Class<?> formType; // null allowed
-        protected Class<?> listFormGenericType; // null allowed for e.g. JSON list
+        protected Parameter listFormParameter; // null allowed for e.g. JSON list
 
         public List<Class<?>> getUrlParamTypeList() {
             return urlParamTypeList;
@@ -238,12 +317,12 @@ public class ExecuteArgAnalyzer {
             this.formType = formType;
         }
 
-        public Class<?> getListFormGenericType() {
-            return listFormGenericType;
+        public Parameter getListFormParameter() {
+            return listFormParameter;
         }
 
-        public void setListFormGenericType(Class<?> listFormGenericType) {
-            this.listFormGenericType = listFormGenericType;
+        public void setListFormParameter(Parameter listFormParameter) {
+            this.listFormParameter = listFormParameter;
         }
     }
 }
