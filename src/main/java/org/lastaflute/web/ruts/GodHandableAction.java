@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -49,14 +48,12 @@ import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.response.StreamResponse;
 import org.lastaflute.web.response.XmlResponse;
 import org.lastaflute.web.response.render.RenderData;
-import org.lastaflute.web.response.render.RenderDataRegistration;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionRequestResource;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
-import org.lastaflute.web.servlet.filter.RequestLoggingFilter.Request500Handler;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -137,7 +134,7 @@ public class GodHandableAction implements VirtualAction {
     //                                             Main Flow
     //                                             ---------
     protected NextJourney doExecute(OptionalThing<VirtualActionForm> form, ActionCallback callback) {
-        prepareRequest500Handling(); // for API
+        prepareRequest500HandlingIfApi();
         processLocale();
         try {
             final ActionResponse before = processCallbackBefore(callback);
@@ -167,19 +164,20 @@ public class GodHandableAction implements VirtualAction {
     // -----------------------------------------------------
     //                                          500 Handling
     //                                          ------------
-    protected void prepareRequest500Handling() {
-        RequestLoggingFilter.setRequest500HandlerOnThread(new Request500Handler() {
-            public void handle(HttpServletRequest request, HttpServletResponse response, Throwable cause) {
+    protected void prepareRequest500HandlingIfApi() {
+        if (meta.isApiAction()) {
+            RequestLoggingFilter.setRequest500HandlerOnThread((request, response, cause) -> {
                 dispatchApiSystemException(request, response, cause);
-            }
-        }); // cleared at logging filter's finally
+            }); // cleared at logging filter's finally
+        }
     }
 
     protected void dispatchApiSystemException(HttpServletRequest request, HttpServletResponse response, Throwable cause) {
-        if (meta.isApiAction() && !response.isCommitted()) {
+        if (meta.isApiAction() && !response.isCommitted()) { // check API action just in case
             getApiManager().handleSystemException(response, meta, cause).ifPresent(apiRes -> {
-                handleActionResponse(apiRes);
+                handleActionResponse(apiRes); /* empty journey so ignore return */
             });
+            meta.clearDisplayData(); /* remove (possible) large data just in case */
         }
     }
 
@@ -412,24 +410,13 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected void setupHtmlResponseHeader(HtmlResponse response) {
-        final Map<String, String> headerMap = response.getHeaderMap();
-        if (!headerMap.isEmpty()) {
-            final ResponseManager responseManager = requestManager.getResponseManager();
-            for (Entry<String, String> entry : headerMap.entrySet()) {
-                responseManager.addHeader(entry.getKey(), entry.getValue());
-            }
-        }
+        response.getHeaderMap().forEach((key, value) -> requestManager.getResponseManager().addHeader(key, value));
     }
 
     protected void setupForwardRenderData(HtmlResponse htmlResponse) {
-        final List<RenderDataRegistration> registrationList = htmlResponse.getRegistrationList();
         final RenderData data = newRenderData();
-        for (RenderDataRegistration registration : registrationList) {
-            registration.register(data);
-        }
-        for (Entry<String, Object> entry : data.getDataMap().entrySet()) {
-            meta.registerData(entry.getKey(), entry.getValue());
-        }
+        htmlResponse.getRegistrationList().forEach(reg -> reg.register(data));
+        data.getDataMap().forEach((key, value) -> meta.registerData(key, value));
     }
 
     protected RenderData newRenderData() {
@@ -489,9 +476,7 @@ public class GodHandableAction implements VirtualAction {
         final Map<String, String> headerMap = apiResponse.getHeaderMap();
         if (!headerMap.isEmpty()) {
             final HttpServletResponse response = responseManager.getResponse();
-            for (Entry<String, String> entry : headerMap.entrySet()) {
-                response.addHeader(entry.getKey(), entry.getValue());
-            }
+            headerMap.forEach((key, value) -> response.addHeader(key, value));
         }
     }
 

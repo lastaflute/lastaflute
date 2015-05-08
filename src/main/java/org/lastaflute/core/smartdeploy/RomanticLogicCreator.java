@@ -28,8 +28,8 @@ public class RomanticLogicCreator extends LogicCreator {
         super(namingConvention);
     }
 
-    @SuppressWarnings("rawtypes")
-    public ComponentDef createComponentDef(Class componentClass) {
+    @Override
+    public ComponentDef createComponentDef(Class<?> componentClass) {
         final ComponentDef dispatched = dispatchByEnv(componentClass);
         if (dispatched != null) {
             return dispatched;
@@ -46,7 +46,7 @@ public class RomanticLogicCreator extends LogicCreator {
     }
 
     protected ComponentEnvDispatcher createEnvDispatcher() {
-        return new ComponentEnvDispatcher(getNamingConvention(), getInstanceDef(), getAutoBindingDef(),
-                isExternalBinding(), getCustomizer());
+        return new ComponentEnvDispatcher(getNamingConvention(), getInstanceDef(), getAutoBindingDef(), isExternalBinding(),
+                getCustomizer());
     }
 }

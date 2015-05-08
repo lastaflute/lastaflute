@@ -744,6 +744,7 @@ public class RequestLoggingFilter implements Filter {
     /**
      * The handler of '500 Error' in the request.
      */
+    @FunctionalInterface
     public interface Request500Handler {
 
         /**

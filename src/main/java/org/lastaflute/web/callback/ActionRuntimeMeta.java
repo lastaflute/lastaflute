@@ -85,11 +85,7 @@ public class ActionRuntimeMeta {
             return false;
         }
         final HtmlResponse htmlResponse = ((HtmlResponse) actionResponse);
-        if (!htmlResponse.isRedirectTo()) {
-            return isHtmlTemplateResponse(htmlResponse);
-        } else {
-            return false;
-        }
+        return !htmlResponse.isRedirectTo() && isHtmlTemplateResponse(htmlResponse);
     }
 
     protected boolean isHtmlTemplateResponse(final HtmlResponse htmlResponse) {
@@ -141,6 +137,11 @@ public class ActionRuntimeMeta {
 
     protected Object filterDisplayDataValue(Object value) {
         return LaParamWrapperUtil.convert(value);
+    }
+
+    public void clearDisplayData() { // called by system exception dispatch for API, just in case leak
+        displayDataMap.clear();
+        displayDataMap = null;
     }
 
     // ===================================================================================
@@ -198,7 +199,11 @@ public class ActionRuntimeMeta {
         this.validationErrors = validationErrors;
     }
 
+    /**
+     * Get the map of display data registered by e.g. HtmlResponse, ActionCallback.
+     * @return The read-only map of display data. (NotNull)
+     */
     public Map<String, Object> getDisplayDataMap() {
-        return displayDataMap != null ? displayDataMap : Collections.emptyMap();
+        return displayDataMap != null ? Collections.unmodifiableMap(displayDataMap) : Collections.emptyMap();
     }
 }

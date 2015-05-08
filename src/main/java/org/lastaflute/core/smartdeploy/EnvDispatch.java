@@ -23,10 +23,10 @@ import java.lang.annotation.Target;
 
 /**
  * The annotation for environment dispatch. <br>
- * You should use creator that can handle this, e.g. {@link RomanticLogicCreator}.
+ * You should use creator that can handle this, e.g. RomanticLogicCreator.
  * <pre>
  * e.g.
- *  &#64;EnvDispatch(dev=FooLogicDev.class, real=FooLogicReal.class)
+ *  &#64;EnvDispatch(development=FooLogicVirtual.class, production=FooLogicReal.class)
  *  public interface FooLogic {
  *  }
  * </pre>
@@ -38,12 +38,12 @@ import java.lang.annotation.Target;
 public @interface EnvDispatch {
 
     /**
-     * @return The type of implementation class for development. (NotNull)
+     * @return The type of implementation class for development environment. (NotNull)
      */
-    Class<?> dev();
+    Class<?> development();
 
     /**
-     * @return The type of implementation class for real environment. (NotNull)
+     * @return The type of implementation class for production environment. (NotNull)
      */
-    Class<?> real();
+    Class<?> production();
 }
