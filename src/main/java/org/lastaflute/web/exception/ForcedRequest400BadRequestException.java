@@ -22,18 +22,18 @@ import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestDelicateErr
 /**
  * @author jflute
  */
-public class ForcedRequest404NotFoundException extends RequestDelicateErrorException {
+public class ForcedRequest400BadRequestException extends RequestDelicateErrorException {
 
     private static final long serialVersionUID = 1L;
 
-    protected static final String TITLE = "404 Not Found";
-    protected static final int STATUS = HttpServletResponse.SC_NOT_FOUND;
+    protected static final String TITLE = "400 Bad Request";
+    protected static final int STATUS = HttpServletResponse.SC_BAD_REQUEST;
 
-    public ForcedRequest404NotFoundException(String msg) {
+    public ForcedRequest400BadRequestException(String msg) {
         super(msg, TITLE, STATUS);
     }
 
-    public ForcedRequest404NotFoundException(String msg, Throwable cause) {
+    public ForcedRequest400BadRequestException(String msg, Throwable cause) {
         super(msg, TITLE, STATUS, cause);
     }
 }

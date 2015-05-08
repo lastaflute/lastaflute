@@ -262,7 +262,7 @@ public class RequestUrlParamAnalyzer {
     protected void handleParameterConversionFailureException(ActionExecute execute, int index, Class<?> paramType, String plainValue,
             String decoded, RuntimeException cause) {
         final String msg = buildParameterConversionFailureMessage(execute, index, paramType, plainValue, decoded, cause);
-        throwNoSuchExecute404NotFoundException(msg); // treat it as no such execute
+        throwExecuteParameterMismatchException(msg); // treat it as no such execute
     }
 
     protected String buildParameterConversionFailureMessage(ActionExecute execute, int index, Class<?> paramType, String plainValue,
@@ -333,7 +333,7 @@ public class RequestUrlParamAnalyzer {
                 continue;
             } else { // required
                 if (value == null) { // already filtered, e.g. empty string to null
-                    throwNoSuchExecute404NotFoundException(buildRequiredPropertyNotFoundMessage(execute, paramPath, index));
+                    throwExecuteParameterMismatchException(buildRequiredPropertyNotFoundMessage(execute, paramPath, index));
                 } else if (value instanceof OptionalThing) { // no way
                     throwIllegalOptionalHandlingException(execute, paramPath, urlParamValueMap, optGenTypeMap, index, value);
                 }
@@ -381,7 +381,9 @@ public class RequestUrlParamAnalyzer {
         return LaActionExecuteUtil.isOptionalParameterType(paramType);
     }
 
-    protected void throwNoSuchExecute404NotFoundException(String msg) {
+    protected void throwExecuteParameterMismatchException(String msg) {
+        // no server error because it can occur by user's trick easily e.g. changing URL
+        // while, might be client bugs (or server) so request delicate error
         throw new ForcedRequest404NotFoundException(msg);
     }
 

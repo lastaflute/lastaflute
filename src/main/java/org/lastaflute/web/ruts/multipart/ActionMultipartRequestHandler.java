@@ -141,7 +141,7 @@ public class ActionMultipartRequestHandler implements MultipartRequestHandler {
         br.addItem("Limit Size");
         br.addElement(limitSize);
         final String msg = br.buildExceptionMessage();
-        throw new ForcedRequest404NotFoundException(msg);
+        throw new ForcedRequest404NotFoundException(msg); // heavy attack!? so give no page to tell wasted action
     }
 
     protected DiskFileItemFactory createDiskFileItemFactory() {

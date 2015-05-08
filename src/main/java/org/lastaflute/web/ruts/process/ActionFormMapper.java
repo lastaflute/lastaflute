@@ -52,6 +52,7 @@ import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.web.api.JsonBody;
 import org.lastaflute.web.api.JsonParameter;
 import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.exception.IndexedPropertyNotListArrayRuntimeException;
 import org.lastaflute.web.exception.NoParameterizedListRuntimeException;
@@ -64,7 +65,6 @@ import org.lastaflute.web.ruts.multipart.ActionMultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
-import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
@@ -185,7 +185,7 @@ public class ActionFormMapper {
     }
 
     protected boolean isRequest404NotFoundException(Throwable cause) {
-        return cause instanceof RequestLoggingFilter.Request404NotFoundException;
+        return cause instanceof ForcedRequest404NotFoundException;
     }
 
     // ===================================================================================
@@ -254,8 +254,7 @@ public class ActionFormMapper {
         sb.append("\n").append(virtualActionForm);
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        // TODO jflute lastaflute: [C] JSON parse error 400 and show as warn
-        throwRequest404NotFoundException(sb.toString());
+        throwRequestJsonParseFailureException(sb.toString());
     }
 
     protected void throwListJsonBodyParseFailureException(ActionExecute execute, VirtualActionForm virtualActionForm, String json,
@@ -267,7 +266,7 @@ public class ActionFormMapper {
         sb.append("\n").append(virtualActionForm);
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        throwRequest404NotFoundException(sb.toString());
+        throwRequestJsonParseFailureException(sb.toString());
     }
 
     // ===================================================================================
@@ -375,7 +374,7 @@ public class ActionFormMapper {
             }
             String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case
             String msg = "The property value cannot be number: " + beanExp + ", name=" + name + ", value=" + dispValue;
-            throwRequest404NotFoundException(msg);
+            throwRequestPropertyMappingFailureException(msg);
         }
     }
 
@@ -591,7 +590,7 @@ public class ActionFormMapper {
         sb.append(" (").append(propertyType.getTypeName()).append(")");
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        throwRequest404NotFoundException(sb.toString());
+        throwRequestJsonParseFailureException(sb.toString());
     }
 
     // ===================================================================================
@@ -635,7 +634,7 @@ public class ActionFormMapper {
 
     protected void throwIndexedPropertyNonNumberIndexException(String name, NumberFormatException e) {
         String msg = "Non number index of the indexed property: name=" + name + "\n" + e.getMessage();
-        throwRequest404NotFoundException(msg);
+        throwRequestPropertyMappingFailureException(msg);
     }
 
     protected void checkIndexedPropertySize(String name, IndexParsedResult parseResult) {
@@ -663,12 +662,12 @@ public class ActionFormMapper {
 
     protected void throwIndexedPropertyMinusIndexException(String name, int index) {
         String msg = "Minus index of the indexed property: name=" + name;
-        throwRequest404NotFoundException(msg);
+        throwRequestPropertyMappingFailureException(msg);
     }
 
     protected void throwIndexedPropertySizeOverException(String name, int index) {
         String msg = "Too large size of the indexed property: name=" + name + ", index=" + index;
-        throwRequest404NotFoundException(msg);
+        throwRequestPropertyMappingFailureException(msg);
     }
 
     // ===================================================================================
@@ -863,7 +862,15 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
-    protected void throwRequest404NotFoundException(String msg) {
+    protected void throwRequestJsonParseFailureException(String msg) {
+        // no server error because it can occur by user's trick
+        // while, is likely to due to client bugs (or server) so request delicate error
+        throw new ForcedRequest400BadRequestException(msg);
+    }
+
+    protected void throwRequestPropertyMappingFailureException(String msg) {
+        // no server error because it can occur by user's trick easily e.g. changing GET parameter
+        // while, might be client bugs (or server) so request delicate error
         throw new ForcedRequest404NotFoundException(msg);
     }
 }

@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.callback;
 
+import java.util.function.Supplier;
+
 import org.dbflute.exception.EntityAlreadyDeletedException;
 import org.dbflute.exception.EntityAlreadyExistsException;
 import org.dbflute.exception.EntityAlreadyUpdatedException;
@@ -182,8 +184,8 @@ public class TypicalGodHandExceptionMonologue {
         if (response.isEmpty()) {
             return;
         }
-        if (logger.isDebugEnabled()) {
-            // not show forwardTo because of forwarding log later
+        showAppEx(cause, () -> {
+            /* not show forwardTo because of forwarding log later */
             final StringBuilder sb = new StringBuilder();
             sb.append("...Handling application exception:");
             sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
@@ -194,7 +196,15 @@ public class TypicalGodHandExceptionMonologue {
             });
             buildApplicationExceptionStackTrace(cause, sb, 0);
             sb.append("\n_/_/_/_/_/_/_/_/_/_/");
-            logger.debug(sb.toString());
+            return sb.toString();
+        });
+    }
+
+    protected void showAppEx(RuntimeException cause, Supplier<String> msgSupplier) {
+        // basically trace in production just in case
+        // if it's noisy and unneeded, override this method
+        if (logger.isInfoEnabled()) {
+            logger.info(msgSupplier.get());
         }
     }
 

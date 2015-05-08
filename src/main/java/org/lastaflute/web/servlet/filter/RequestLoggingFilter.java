@@ -29,6 +29,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import javax.servlet.Filter;
@@ -175,7 +176,7 @@ public class RequestLoggingFilter implements Filter {
         if (logger.isDebugEnabled()) {
             before(request, response);
         }
-        boolean exists404NotFound = false;
+        String specifiedErrorTitle = null;
         boolean existsServerError = false;
         try {
             markBegin();
@@ -183,9 +184,8 @@ public class RequestLoggingFilter implements Filter {
             if (handleErrorAttribute(request, response)) {
                 existsServerError = true;
             }
-        } catch (Request404NotFoundException e) {
-            exists404NotFound = true;
-            handle404NotFound(request, response, e);
+        } catch (RequestDelicateErrorException e) {
+            specifiedErrorTitle = handleDelicateError(request, response, e);
         } catch (RuntimeException e) {
             // no throw the exception to suppress duplicate error message
             // (Jetty's message doesn't have line separator so hard to see it)
@@ -194,9 +194,8 @@ public class RequestLoggingFilter implements Filter {
             existsServerError = true;
         } catch (ServletException e) { // also no throw same reason as RuntimeException catch
             final Throwable rootCause = e.getRootCause();
-            if (rootCause instanceof Request404NotFoundException) {
-                exists404NotFound = true;
-                handle404NotFound(request, response, (Request404NotFoundException) rootCause);
+            if (rootCause instanceof RequestDelicateErrorException) {
+                specifiedErrorTitle = handleDelicateError(request, response, (RequestDelicateErrorException) rootCause);
             } else {
                 final Throwable realCause = rootCause != null ? rootCause : e;
                 sendInternalServerError(request, response, realCause);
@@ -221,7 +220,7 @@ public class RequestLoggingFilter implements Filter {
                     // only when success request
                     // because error logging contains request info
                     Long after = System.currentTimeMillis();
-                    after(request, response, before, after, exists404NotFound);
+                    after(request, response, before, after, specifiedErrorTitle);
                 }
             }
         }
@@ -358,7 +357,7 @@ public class RequestLoggingFilter implements Filter {
     // -----------------------------------------------------
     //                                                 After
     //                                                 -----
-    protected void after(HttpServletRequest request, HttpServletResponse response, Long before, Long after, boolean exists404NotFound) {
+    protected void after(HttpServletRequest request, HttpServletResponse response, Long before, Long after, String specifiedErrorTitle) {
         final StringBuilder sb = new StringBuilder();
         sb.append(LF).append(IND);
         buildResponseInfo(sb, request, response);
@@ -380,8 +379,8 @@ public class RequestLoggingFilter implements Filter {
         sb.append(getTitlePath(request));
         sb.append(" [" + convertToPerformanceView(after.longValue() - before.longValue()) + "]");
         sb.append(LF);
-        if (exists404NotFound) {
-            sb.append(" *404 not found, read the message for the detail");
+        if (specifiedErrorTitle != null) {
+            sb.append(" *").append(specifiedErrorTitle).append(", read the message for the detail");
         }
         sb.append(LF);
 
@@ -559,42 +558,70 @@ public class RequestLoggingFilter implements Filter {
     }
 
     // ===================================================================================
-    //                                                                       404 Not Found
-    //                                                                       =============
-    protected void handle404NotFound(HttpServletRequest request, HttpServletResponse response, Request404NotFoundException notFoundEx)
+    //                                                             Delicate Error e.g. 404
+    //                                                             =======================
+    protected String handleDelicateError(HttpServletRequest request, HttpServletResponse response, RequestDelicateErrorException cause)
             throws IOException {
+        final String title = cause.getTitle();
         if (response.isCommitted()) {
-            if (logger.isDebugEnabled()) {
-                String requestURI = request.getRequestURI();
-                logger.debug("*Cannot send error as '404 Not Found' because of already committed: path=" + requestURI);
-            }
-            return; // cannot help it
+            showDlcEx(cause, () -> {
+                final StringBuilder sb = new StringBuilder();
+                sb.append("*Cannot send error as '").append(title).append("' because of already committed:");
+                sb.append(" path=").append(request.getRequestURI());
+                return sb.toString();
+            });
+            return title; // cannot help it
         }
-        if (logger.isDebugEnabled()) {
+        showDlcEx(cause, () -> {
             final StringBuilder sb = new StringBuilder();
             sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
-            sb.append("\n...Sending error as '404 Not Found' manually");
+            sb.append("\n...Sending error as '").append(title).append("' manually");
             sb.append("\n request : ").append(request.getRequestURI());
-            sb.append("\n message : ").append(notFoundEx.getMessage());
-            build404NotFoundStackTrace(notFoundEx, sb, 0);
+            sb.append("\n message : ").append(cause.getMessage());
+            buildDelicateErrorStackTrace(cause, sb, 0);
             sb.append("\n_/_/_/_/_/_/_/_/_/_/");
-            final String msg = sb.toString();
-            logger.debug(msg);
-        }
+            return sb.toString();
+        });
         try {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            response.sendError(cause.getErrorStatus());
+            return title;
         } catch (IOException sendEx) {
-            final String msg = "Failed to send error as '404 Not Found': " + sendEx.getMessage();
+            final String msg = "Failed to send error as '" + title + "': " + sendEx.getMessage();
             if (errorLogging) {
                 logger.error(msg);
             } else {
-                logger.debug(msg);
+                showDlcEx(cause, () -> msg);
             }
-            return; // cannot help it
+            return title; // cannot help it
         }
     }
 
-    protected void build404NotFoundStackTrace(Throwable cause, StringBuilder sb, int nestLevel) {
+    protected void showDlcEx(RequestDelicateErrorException cause, Supplier<String> msgSupplier) {
+        final DelicateErrorLoggingLevel loggingLevel = cause.getLoggingLevel();
+        if (DelicateErrorLoggingLevel.DEBUG.equals(loggingLevel)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(msgSupplier.get());
+            }
+        } else if (DelicateErrorLoggingLevel.INFO.equals(loggingLevel)) {
+            if (logger.isInfoEnabled()) {
+                logger.info(msgSupplier.get());
+            }
+        } else if (DelicateErrorLoggingLevel.WARN.equals(loggingLevel)) {
+            if (logger.isWarnEnabled()) {
+                logger.warn(msgSupplier.get());
+            }
+        } else if (DelicateErrorLoggingLevel.ERROR.equals(loggingLevel)) {
+            if (logger.isErrorEnabled()) {
+                logger.error(msgSupplier.get());
+            }
+        } else { // as default
+            if (logger.isInfoEnabled()) {
+                logger.info(msgSupplier.get());
+            }
+        }
+    }
+
+    protected void buildDelicateErrorStackTrace(Throwable cause, StringBuilder sb, int nestLevel) {
         if (nestLevel > 0) { // first level message already appended
             sb.append(LF).append("Caused by: ").append(cause.getClass().getName());
             sb.append(": ").append(cause.getMessage());
@@ -624,25 +651,54 @@ public class RequestLoggingFilter implements Filter {
         }
         final Throwable nested = cause.getCause();
         if (nested != null && nested != cause) {
-            build404NotFoundStackTrace(nested, sb, nestLevel + 1);
+            buildDelicateErrorStackTrace(nested, sb, nestLevel + 1);
         }
     }
 
     /**
-     * The exception that means 404 Not Found for the current request. <br>
-     * You can send 404 by throwing this exception in your program.
+     * The exception that means specified delicate error for the current request. <br>
+     * You can send specified status e.g. 400, 404 by throwing this exception in your program.
      */
-    public static class Request404NotFoundException extends RuntimeException {
+    public static class RequestDelicateErrorException extends RuntimeException {
 
         private static final long serialVersionUID = 1L;
 
-        public Request404NotFoundException(String msg) {
+        protected final String title; // not null
+        protected final int errorStatus; // one of HttpServletResponse.SC_...
+        protected DelicateErrorLoggingLevel loggingLevel; // null allowed, INFO as default
+
+        public RequestDelicateErrorException(String msg, String title, int errorStatus) {
             super(msg);
+            this.title = title;
+            this.errorStatus = errorStatus;
         }
 
-        public Request404NotFoundException(String message, Throwable cause) {
-            super(message, cause);
+        public RequestDelicateErrorException(String msg, String title, int errorStatus, Throwable cause) {
+            super(msg, cause);
+            this.title = title;
+            this.errorStatus = errorStatus;
         }
+
+        public RequestDelicateErrorException asLogging(DelicateErrorLoggingLevel loggingLevel) {
+            this.loggingLevel = loggingLevel;
+            return this;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public int getErrorStatus() {
+            return errorStatus;
+        }
+
+        public DelicateErrorLoggingLevel getLoggingLevel() {
+            return loggingLevel;
+        }
+    }
+
+    public static enum DelicateErrorLoggingLevel {
+        DEBUG, INFO, WARN, ERROR
     }
 
     // ===================================================================================

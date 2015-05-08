@@ -257,7 +257,7 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
     }
 
     protected void throwParameterFailure() {
-        lets404();
+        lets404(); // no server error because it can occur by user's trick easily e.g. changing GET parameter
     }
 
     // -----------------------------------------------------
