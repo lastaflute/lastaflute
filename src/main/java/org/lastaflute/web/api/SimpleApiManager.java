@@ -55,8 +55,8 @@ public class SimpleApiManager implements ApiManager {
     @Resource
     protected ResponseManager responseManager;
 
-    /** The provider of API result. (NotNull: after initialization) */
-    protected ApiResultProvider apiResultProvider;
+    /** The hook for API failures. (NotNull: after initialization) */
+    protected ApiFailureHook apiFailureHook;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -68,11 +68,11 @@ public class SimpleApiManager implements ApiManager {
     @PostConstruct
     public synchronized void initialize() {
         final FwWebDirection direction = assistActionDirection();
-        final ApiResultProvider assistedProvider = direction.assistApiResultProvider();
-        if (assistedProvider != null) {
-            apiResultProvider = assistedProvider;
+        final ApiFailureHook assistedHook = direction.assistApiFailureHook();
+        if (assistedHook != null) {
+            apiFailureHook = assistedHook;
         } else {
-            apiResultProvider = new UnsupportedApiResultProvider();
+            apiFailureHook = new UnsupportedApiFailureHook();
         }
         showBootLogging();
     }
@@ -84,7 +84,7 @@ public class SimpleApiManager implements ApiManager {
     protected void showBootLogging() {
         if (LOG.isInfoEnabled()) {
             LOG.info("[API Manager]");
-            LOG.info(" apiResultProvider: " + DfTypeUtil.toClassTitle(apiResultProvider));
+            LOG.info(" apiFailureHook: " + DfTypeUtil.toClassTitle(apiFailureHook));
         }
     }
 
@@ -92,22 +92,22 @@ public class SimpleApiManager implements ApiManager {
     //                                                                       Create Result
     //                                                                       =============
     @Override
-    public ApiResponse prepareLoginRequiredFailure(ApiResultResource resource, ActionRuntimeMeta meta) {
-        return apiResultProvider.prepareLoginRequiredFailure(resource, meta);
+    public ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntimeMeta meta) {
+        return apiFailureHook.handleLoginRequiredFailure(resource, meta);
     }
 
     @Override
-    public ApiResponse prepareValidationError(ApiResultResource resource, ActionRuntimeMeta meta) {
-        return apiResultProvider.prepareValidationError(resource, meta);
+    public ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntimeMeta meta) {
+        return apiFailureHook.handleValidationError(resource, meta);
     }
 
     @Override
-    public ApiResponse prepareApplicationException(ApiResultResource resource, ActionRuntimeMeta meta, RuntimeException cause) {
-        return apiResultProvider.prepareApplicationException(resource, meta, cause);
+    public ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntimeMeta meta, RuntimeException cause) {
+        return apiFailureHook.handleApplicationException(resource, meta, cause);
     }
 
     @Override
-    public OptionalThing<ApiResponse> prepareSystemException(HttpServletResponse response, ActionRuntimeMeta meta, Throwable cause) {
-        return apiResultProvider.prepareSystemException(response, meta, cause);
+    public OptionalThing<ApiResponse> handleSystemException(HttpServletResponse response, ActionRuntimeMeta meta, Throwable cause) {
+        return apiFailureHook.handleSystemException(response, meta, cause);
     }
 }

@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
-import org.lastaflute.web.api.ApiResultProvider;
+import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
@@ -58,7 +58,7 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                              API Call
     //                                              --------
-    protected ApiResultProvider apiResultProvider;
+    protected ApiFailureHook apiFailureHook;
 
     // ===================================================================================
     //                                                                     Direct Property
@@ -100,8 +100,8 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                              API Call
     //                                              --------
-    public void directApiCall(ApiResultProvider apiResultProvider) {
-        this.apiResultProvider = apiResultProvider;
+    public void directApiCall(ApiFailureHook apiFailureHook) {
+        this.apiFailureHook = apiFailureHook;
     }
 
     // ===================================================================================
@@ -152,9 +152,9 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                              API Call
     //                                              --------
-    public ApiResultProvider assistApiResultProvider() {
+    public ApiFailureHook assistApiFailureHook() {
         // TODO jflute lastaflute: [D] fitting: default apiResultProvider
-        return apiResultProvider; // not required, ...
+        return apiFailureHook; // not required, ...
     }
 
     // -----------------------------------------------------

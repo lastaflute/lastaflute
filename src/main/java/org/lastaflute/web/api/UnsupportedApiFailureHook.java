@@ -24,25 +24,25 @@ import org.lastaflute.web.response.ApiResponse;
 /**
  * @author jflute
  */
-public class UnsupportedApiResultProvider implements ApiResultProvider {
+public class UnsupportedApiFailureHook implements ApiFailureHook {
 
     @Override
-    public ApiResponse prepareLoginRequiredFailure(ApiResultResource resource, ActionRuntimeMeta meta) {
+    public ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntimeMeta meta) {
         throw new UnsupportedOperationException("API not supported yet: " + meta);
     }
 
     @Override
-    public ApiResponse prepareValidationError(ApiResultResource resource, ActionRuntimeMeta meta) {
+    public ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntimeMeta meta) {
         throw new UnsupportedOperationException("API not supported yet: " + meta);
     }
 
     @Override
-    public ApiResponse prepareApplicationException(ApiResultResource resource, ActionRuntimeMeta meta, RuntimeException cause) {
+    public ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntimeMeta meta, RuntimeException cause) {
         throw new UnsupportedOperationException("API not supported yet: " + meta);
     }
 
     @Override
-    public OptionalThing<ApiResponse> prepareSystemException(HttpServletResponse response, ActionRuntimeMeta meta, Throwable cause) {
+    public OptionalThing<ApiResponse> handleSystemException(HttpServletResponse response, ActionRuntimeMeta meta, Throwable cause) {
         throw new UnsupportedOperationException("API not supported yet: " + meta);
     }
 }

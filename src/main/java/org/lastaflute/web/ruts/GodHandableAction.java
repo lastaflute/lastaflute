@@ -177,7 +177,7 @@ public class GodHandableAction implements VirtualAction {
 
     protected void dispatchApiSystemException(HttpServletRequest request, HttpServletResponse response, Throwable cause) {
         if (meta.isApiAction() && !response.isCommitted()) {
-            getApiManager().prepareSystemException(response, meta, cause).ifPresent(apiRes -> {
+            getApiManager().handleSystemException(response, meta, cause).ifPresent(apiRes -> {
                 handleActionResponse(apiRes);
             });
         }

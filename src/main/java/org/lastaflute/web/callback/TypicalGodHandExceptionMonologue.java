@@ -24,7 +24,7 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.api.ApiResultResource;
+import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
 import org.lastaflute.web.exception.MessageKeyApplicationException;
 import org.lastaflute.web.login.LoginManager;
@@ -245,12 +245,12 @@ public class TypicalGodHandExceptionMonologue {
     }
 
     protected ActionResponse dispatchApiApplicationException(ActionRuntimeMeta executeMeta, RuntimeException cause) {
-        final ApiResultResource resource = createApiApplicationExceptionResource();
-        return apiManager.prepareApplicationException(resource, executeMeta, cause);
+        final ApiFailureResource resource = createApiApplicationExceptionResource();
+        return apiManager.handleApplicationException(resource, executeMeta, cause);
     }
 
-    protected ApiResultResource createApiApplicationExceptionResource() {
-        return new ApiResultResource(sessionManager.errors().get(), requestManager);
+    protected ApiFailureResource createApiApplicationExceptionResource() {
+        return new ApiFailureResource(sessionManager.errors().get(), requestManager);
     }
 
     // -----------------------------------------------------

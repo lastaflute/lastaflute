@@ -33,7 +33,7 @@ import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.api.ApiResultResource;
+import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.login.LoginHandlingResource;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
@@ -279,12 +279,12 @@ public class TypicalGodHandActionPrologue {
     }
 
     protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntimeMeta executeMeta) {
-        final ApiResultResource resource = createApiLoginRequiredFailureResource();
-        return apiManager.prepareLoginRequiredFailure(resource, executeMeta);
+        final ApiFailureResource resource = createApiLoginRequiredFailureResource();
+        return apiManager.handleLoginRequiredFailure(resource, executeMeta);
     }
 
-    protected ApiResultResource createApiLoginRequiredFailureResource() {
-        return new ApiResultResource(sessionManager.errors().get(), requestManager);
+    protected ApiFailureResource createApiLoginRequiredFailureResource() {
+        return new ApiFailureResource(sessionManager.errors().get(), requestManager);
     }
 
     protected LoginHandlingResource createLogingHandlingResource(ActionRuntimeMeta executeMeta) {

@@ -29,7 +29,7 @@ import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionShow;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.api.ApiResultResource;
+import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.callback.ActionRuntimeMeta;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.path.ActionPathResolver;
@@ -146,12 +146,12 @@ public abstract class LastaAction {
      * @return The response of API for validation error. (NotNull)
      */
     protected ApiResponse dispatchApiValidationError() { // for API
-        final ApiResultResource resource = newApiValidationErrorResource(requestManager.errors().get(), requestManager);
-        return apiManager.prepareValidationError(resource, retrieveActionRuntimeMeta());
+        final ApiFailureResource resource = newApiValidationErrorResource(requestManager.errors().get(), requestManager);
+        return apiManager.handleValidationError(resource, retrieveActionRuntimeMeta());
     }
 
-    protected ApiResultResource newApiValidationErrorResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
-        return new ApiResultResource(errors, requestManager);
+    protected ApiFailureResource newApiValidationErrorResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
+        return new ApiFailureResource(errors, requestManager);
     }
 
     protected ActionRuntimeMeta retrieveActionRuntimeMeta() {
