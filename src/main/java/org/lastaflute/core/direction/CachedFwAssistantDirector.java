@@ -15,8 +15,8 @@
  */
 package org.lastaflute.core.direction;
 
-import org.lastaflute.db.direction.OptionalDbDirection;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.db.direction.FwDbDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 
 /**
  * @author jflute
@@ -26,102 +26,110 @@ public abstract class CachedFwAssistantDirector implements FwAssistantDirector {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected OptionalAssistDirection optionalAssistDirection;
-    protected OptionalCoreDirection optionalCoreDirection;
-    protected OptionalDbDirection optionalDbDirection;
-    protected OptionalWebDirection optionalWebDirection;
+    protected FwAssistDirection assistDirection;
+    protected FwCoreDirection coreDirection;
+    protected FwDbDirection dbDirection;
+    protected FwWebDirection webDirection;
 
     // ===================================================================================
     //                                                                              Assist
     //                                                                              ======
-    public OptionalAssistDirection assistOptionalAssistDirection() {
-        if (optionalAssistDirection != null) {
-            return optionalAssistDirection;
+    public FwAssistDirection assistAssistDirection() {
+        if (assistDirection != null) {
+            return assistDirection;
         }
         synchronized (this) {
-            if (optionalAssistDirection != null) {
-                return optionalAssistDirection;
+            if (assistDirection != null) {
+                return assistDirection;
             }
-            optionalAssistDirection = prepareOptionalAssistDirection();
+            final FwAssistDirection direction = createAssistDirection();
+            prepareAssistDirection(direction);
+            assistDirection = direction;
         }
-        if (optionalAssistDirection == null) {
-            String msg = "Not found the optional core direction.";
-            throw new IllegalStateException(msg);
-        }
-        return optionalAssistDirection;
+        return assistDirection;
+    }
+
+    protected FwAssistDirection createAssistDirection() {
+        return new FwAssistDirection();
     }
 
     /**
      * Prepare the optional direction to assist. <br>
      * You cannot get configurations in this method
      * because the configuration component does not be injected to this yet.
-     * @return The new-created instance of direction. (NotNull)
+     * @param direction The new-created instance of direction, will be prepared in this method. (NotNull)
      */
-    protected abstract OptionalAssistDirection prepareOptionalAssistDirection();
+    protected abstract void prepareAssistDirection(FwAssistDirection direction);
 
     // ===================================================================================
     //                                                                                Core
     //                                                                                ====
-    public OptionalCoreDirection assistOptionalCoreDirection() {
-        if (optionalCoreDirection != null) {
-            return optionalCoreDirection;
+    public FwCoreDirection assistCoreDirection() {
+        if (coreDirection != null) {
+            return coreDirection;
         }
         synchronized (this) {
-            if (optionalCoreDirection != null) {
-                return optionalCoreDirection;
+            if (coreDirection != null) {
+                return coreDirection;
             }
-            optionalCoreDirection = prepareOptionalCoreDirection();
+            final FwCoreDirection direction = createCoreDirection();
+            prepareCoreDirection(direction);
+            coreDirection = direction;
         }
-        if (optionalCoreDirection == null) {
-            String msg = "Not found the optional core direction.";
-            throw new IllegalStateException(msg);
-        }
-        return optionalCoreDirection;
+        return coreDirection;
     }
 
-    protected abstract OptionalCoreDirection prepareOptionalCoreDirection();
+    protected FwCoreDirection createCoreDirection() {
+        return new FwCoreDirection();
+    }
+
+    protected abstract void prepareCoreDirection(FwCoreDirection direction);
 
     // ===================================================================================
     //                                                                                 DB
     //                                                                                ====
-    public OptionalDbDirection assistOptionalDbDirection() {
-        if (optionalDbDirection != null) {
-            return optionalDbDirection;
+    public FwDbDirection assistDbDirection() {
+        if (dbDirection != null) {
+            return dbDirection;
         }
         synchronized (this) {
-            if (optionalDbDirection != null) {
-                return optionalDbDirection;
+            if (dbDirection != null) {
+                return dbDirection;
             }
-            optionalDbDirection = prepareOptionalDbDirection();
+            final FwDbDirection direction = createDbDirection();
+            prepareDbDirection(direction);
+            dbDirection = direction;
         }
-        if (optionalDbDirection == null) {
-            String msg = "Not found the optional DB direction.";
-            throw new IllegalStateException(msg);
-        }
-        return optionalDbDirection;
+        return dbDirection;
     }
 
-    protected abstract OptionalDbDirection prepareOptionalDbDirection();
+    protected FwDbDirection createDbDirection() {
+        return new FwDbDirection();
+    }
+
+    protected abstract void prepareDbDirection(FwDbDirection direction);
 
     // ===================================================================================
     //                                                                                Web
     //                                                                               =====
-    public OptionalWebDirection assistOptionalWebDirection() {
-        if (optionalWebDirection != null) {
-            return optionalWebDirection;
+    public FwWebDirection assistWebDirection() {
+        if (webDirection != null) {
+            return webDirection;
         }
         synchronized (this) {
-            if (optionalWebDirection != null) {
-                return optionalWebDirection;
+            if (webDirection != null) {
+                return webDirection;
             }
-            optionalWebDirection = prepareOptionalWebDirection();
+            final FwWebDirection direction = createWebDirection();
+            prepareWebDirection(direction);
+            webDirection = direction;
         }
-        if (optionalWebDirection == null) {
-            String msg = "Not found the optional web direction.";
-            throw new IllegalStateException(msg);
-        }
-        return optionalWebDirection;
+        return webDirection;
     }
 
-    protected abstract OptionalWebDirection prepareOptionalWebDirection();
+    protected FwWebDirection createWebDirection() {
+        return new FwWebDirection();
+    }
+
+    protected abstract void prepareWebDirection(FwWebDirection direction);
 }

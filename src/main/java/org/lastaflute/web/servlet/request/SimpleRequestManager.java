@@ -35,7 +35,7 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.callback.ActionRuntimeMeta;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.RequestAttributeNotFoundException;
 import org.lastaflute.web.exception.RequestInfoNotFoundException;
 import org.lastaflute.web.ruts.message.ActionMessage;
@@ -99,14 +99,14 @@ public class SimpleRequestManager implements RequestManager {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalWebDirection direction = assistOptionalWebDirection();
+        final FwWebDirection direction = assistWebDirection();
         localeHandler = direction.assistUserLocaleProcessProvider();
         timeZoneProvider = direction.assistUserTimeZoneProcessProvider();
         showBootLogging();
     }
 
-    protected OptionalWebDirection assistOptionalWebDirection() {
-        return assistantDirector.assistOptionalWebDirection();
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
     }
 
     protected void showBootLogging() {

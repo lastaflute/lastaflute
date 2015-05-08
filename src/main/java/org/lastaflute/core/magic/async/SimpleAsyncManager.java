@@ -46,7 +46,7 @@ import org.dbflute.util.DfTraceViewUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.OptionalCoreDirection;
+import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.magic.async.ConcurrentAsyncOption.ConcurrentAsyncInheritType;
@@ -100,7 +100,7 @@ public class SimpleAsyncManager implements AsyncManager {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalCoreDirection direction = getOptionalCoreDirection();
+        final FwCoreDirection direction = assistCoreDirection();
         final ConcurrentAsyncExecutorProvider provider = direction.assistConcurrentAsyncExecutorProvider();
         defaultConcurrentAsyncOption = provider != null ? provider.provideDefaultOption() : null;
         if (defaultConcurrentAsyncOption == null) {
@@ -111,8 +111,8 @@ public class SimpleAsyncManager implements AsyncManager {
         showBootLogging();
     }
 
-    protected OptionalCoreDirection getOptionalCoreDirection() {
-        return assistantDirector.assistOptionalCoreDirection();
+    protected FwCoreDirection assistCoreDirection() {
+        return assistantDirector.assistCoreDirection();
     }
 
     protected ExecutorService createDefaultPrimaryExecutorService(ConcurrentAsyncExecutorProvider provider) {

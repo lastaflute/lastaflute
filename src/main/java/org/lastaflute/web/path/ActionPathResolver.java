@@ -30,7 +30,7 @@ import org.lastaflute.di.core.LaContainer;
 import org.lastaflute.di.naming.NamingConvention;
 import org.lastaflute.di.util.LdiStringUtil;
 import org.lastaflute.web.UrlChain;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -78,13 +78,13 @@ public class ActionPathResolver {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalWebDirection direction = assistOptionalActionDirection();
+        final FwWebDirection direction = assistOptionalActionDirection();
         actionAdjustmentProvider = direction.assistActionAdjustmentProvider();
         showBootLogging();
     }
 
-    protected OptionalWebDirection assistOptionalActionDirection() {
-        return assistantDirector.assistOptionalWebDirection();
+    protected FwWebDirection assistOptionalActionDirection() {
+        return assistantDirector.assistWebDirection();
     }
 
     protected void showBootLogging() {

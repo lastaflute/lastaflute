@@ -23,7 +23,7 @@ import javax.annotation.Resource;
 
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.OptionalCoreDirection;
+import org.lastaflute.core.direction.FwCoreDirection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +66,7 @@ public class SimpleJsonManager implements JsonManager {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalCoreDirection direction = assistOptionalCoreDirection();
+        final FwCoreDirection direction = assistCoreDirection();
         developmentHere = direction.isDevelopmentHere();
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
         nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
@@ -75,8 +75,8 @@ public class SimpleJsonManager implements JsonManager {
         showBootLogging();
     }
 
-    protected OptionalCoreDirection assistOptionalCoreDirection() {
-        return assistantDirector.assistOptionalCoreDirection();
+    protected FwCoreDirection assistCoreDirection() {
+        return assistantDirector.assistCoreDirection();
     }
 
     protected RealJsonParser createDefaultJsonParser() {

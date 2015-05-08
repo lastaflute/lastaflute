@@ -22,7 +22,7 @@ import org.dbflute.mail.PostOffice;
 import org.dbflute.mail.Postcard;
 import org.dbflute.mail.send.SMailDeliveryDepartment;
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.OptionalCoreDirection;
+import org.lastaflute.core.direction.FwCoreDirection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,14 +56,14 @@ public class Postbox {
      */
     @PostConstruct
     public void initialize() {
-        final OptionalCoreDirection direction = assistOptionalCoreDirection();
+        final FwCoreDirection direction = assistCoreDirection();
         final SMailDeliveryDepartment deliveryDepartment = direction.assistMailDeliveryDepartment();
         postOffice = deliveryDepartment != null ? newPostOffice(deliveryDepartment) : null;
         showBootLogging();
     }
 
-    protected OptionalCoreDirection assistOptionalCoreDirection() {
-        return assistantDirector.assistOptionalCoreDirection();
+    protected FwCoreDirection assistCoreDirection() {
+        return assistantDirector.assistCoreDirection();
     }
 
     protected PostOffice newPostOffice(SMailDeliveryDepartment deliveryDepartment) {

@@ -27,7 +27,7 @@ import javax.annotation.Resource;
 import org.dbflute.helper.HandyDate;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.OptionalCoreDirection;
+import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.core.magic.TransactionTimeContext;
 import org.slf4j.Logger;
@@ -74,7 +74,7 @@ public class SimpleTimeManager implements TimeManager {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalCoreDirection direction = assistOptionalCoreDirection();
+        final FwCoreDirection direction = assistCoreDirection();
         final TimeResourceProvider provider = direction.assistTimeResourceProvider();
         businessTimeHandler = provider.provideBusinessTimeHandler(this);
         if (businessTimeHandler == null) {
@@ -91,8 +91,8 @@ public class SimpleTimeManager implements TimeManager {
         showBootLogging();
     }
 
-    protected OptionalCoreDirection assistOptionalCoreDirection() {
-        return assistantDirector.assistOptionalCoreDirection();
+    protected FwCoreDirection assistCoreDirection() {
+        return assistantDirector.assistCoreDirection();
     }
 
     protected void showBootLogging() {

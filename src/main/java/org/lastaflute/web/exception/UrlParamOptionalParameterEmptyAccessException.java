@@ -18,11 +18,11 @@ package org.lastaflute.web.exception;
 /**
  * @author jflute
  */
-public class OptionalParameterEmptyAccessException extends RuntimeException {
+public class UrlParamOptionalParameterEmptyAccessException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    public OptionalParameterEmptyAccessException(String msg) {
+    public UrlParamOptionalParameterEmptyAccessException(String msg) {
         super(msg);
     }
 }

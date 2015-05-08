@@ -30,7 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ActionFoundPathHandler;
 import org.lastaflute.web.path.ActionPathResolver;
@@ -146,7 +146,7 @@ public class RequestRoutingFilter implements Filter {
     }
 
     protected ActionAdjustmentProvider assistActionAdjustmentProvider() {
-        final OptionalWebDirection direction = getAssistantDirector().assistOptionalWebDirection();
+        final FwWebDirection direction = getAssistantDirector().assistWebDirection();
         return direction.assistActionAdjustmentProvider();
     }
 

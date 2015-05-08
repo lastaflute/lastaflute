@@ -13,45 +13,55 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.db.direction;
+package org.lastaflute.core.direction;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Consumer;
 
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
-import org.lastaflute.db.dbflute.classification.ListedClassificationProvider;
 
 /**
  * @author jflute
  */
-public class OptionalDbDirection {
+public class FwAssistDirection {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    // -----------------------------------------------------
-    //                                        Classification
-    //                                        --------------
-    protected ListedClassificationProvider listedClassificationProvider;
+    protected String appConfig;
+    protected final List<String> extendsConfigList = new ArrayList<String>(4);
 
     // ===================================================================================
     //                                                                     Direct Property
     //                                                                     ===============
-    // -----------------------------------------------------
-    //                                        Classification
-    //                                        --------------
-    public void directClassification(ListedClassificationProvider listedClassificationProvider) {
-        this.listedClassificationProvider = listedClassificationProvider;
+    public void directConfig(Consumer<List<String>> appSetupper, String... commonNames) {
+        final List<String> nameList = new ArrayList<String>(4);
+        appSetupper.accept(nameList);
+        nameList.addAll(Arrays.asList(commonNames));
+        appConfig = nameList.remove(0);
+        extendsConfigList.addAll(nameList);
     }
 
     // ===================================================================================
-    //                                                                              Assist
-    //                                                                              ======
+    //                                                                            Accessor
+    //                                                                            ========
+    public String assistAppConfig() {
+        assertAssistObjectNotNull(appConfig, "Not found the file for domain configuration.");
+        return appConfig;
+    }
+
+    public List<String> assistExtendsConfigList() {
+        return extendsConfigList; // empty allowed but almost exists
+    }
+
     // -----------------------------------------------------
-    //                                        Classification
-    //                                        --------------
-    public ListedClassificationProvider assistListedClassificationProvider() {
-        if (listedClassificationProvider == null) {
-            String msg = "Not found the provider for listed classification.";
+    //                                         Assert Helper
+    //                                         -------------
+    protected void assertAssistObjectNotNull(Object obj, String msg) {
+        if (obj == null) {
             throw new FwRequiredAssistNotFoundException(msg);
         }
-        return listedClassificationProvider;
     }
 }

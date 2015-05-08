@@ -24,7 +24,7 @@ import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.web.callback.ActionRuntimeMeta;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.slf4j.Logger;
@@ -67,7 +67,7 @@ public class SimpleApiManager implements ApiManager {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalWebDirection direction = assistOptionalActionDirection();
+        final FwWebDirection direction = assistActionDirection();
         final ApiResultProvider assistedProvider = direction.assistApiResultProvider();
         if (assistedProvider != null) {
             apiResultProvider = assistedProvider;
@@ -77,8 +77,8 @@ public class SimpleApiManager implements ApiManager {
         showBootLogging();
     }
 
-    protected OptionalWebDirection assistOptionalActionDirection() {
-        return assistantDirector.assistOptionalWebDirection();
+    protected FwWebDirection assistActionDirection() {
+        return assistantDirector.assistWebDirection();
     }
 
     protected void showBootLogging() {

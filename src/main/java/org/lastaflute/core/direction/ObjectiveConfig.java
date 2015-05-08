@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -49,8 +50,8 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     @Resource
     protected FwAssistantDirector assistantDirector;
 
-    /** The resource path of properties for domain application. */
-    protected String domainResource;
+    /** The resource path of properties for application. */
+    protected String appResource;
 
     /** The list of resource path for extends-properties. (NotNull, EmptyAllowed) */
     protected final List<String> extendsResourceList = new ArrayList<String>(4);
@@ -71,39 +72,51 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     @PostConstruct
     public synchronized void initialize() {
         direct();
-        final ObjectiveProperties makingProp = newObjectiveProperties();
-        makingProp.checkImplicitOverride();
-        if (!extendsResourceList.isEmpty()) {
-            makingProp.extendsProperties(extendsResourceList.toArray(new String[extendsResourceList.size()]));
-        }
+        final ObjectiveProperties makingProp = prepareObjectiveProperties();
         makingProp.load();
-
-        // prop always be complete object for HotDeploy
-        // get() might be called in initialize()
-        prop = makingProp;
+        prop = makingProp; // prop always be complete object for HotDeploy get() might be called in initialize()
         prepareHotDeploy();
         showBootLogging();
     }
 
     protected void direct() {
-        final OptionalAssistDirection direction = assistOptionalAssistDirection();
-        domainResource = direction.assistDomainConfigFile();
-        extendsResourceList.clear();
-        extendsResourceList.addAll(direction.assistExtendsConfigFileList());
+        final FwAssistDirection direction = assistOptionalAssistDirection();
+        appResource = filterEnvSwitching(direction.assistAppConfig());
+        extendsResourceList.clear(); // for reload
+        extendsResourceList.addAll(filterEnvSwitching(direction.assistExtendsConfigList()));
     }
 
-    protected ObjectiveProperties newObjectiveProperties() {
-        return new ObjectiveProperties(domainResource);
+    protected FwAssistDirection assistOptionalAssistDirection() {
+        return assistantDirector.assistAssistDirection();
     }
 
-    protected OptionalAssistDirection assistOptionalAssistDirection() {
-        return assistantDirector.assistOptionalAssistDirection();
+    protected String filterEnvSwitching(String path) {
+        // TODO jflute lastaflute: [B] function: java system property switching
+        //String systemEnv = System.getProperty("lastaflute.env");
+        return path;
+    }
+
+    protected List<String> filterEnvSwitching(List<String> pathList) {
+        return pathList.stream().map(path -> filterEnvSwitching(path)).collect(Collectors.toList());
+    }
+
+    protected ObjectiveProperties prepareObjectiveProperties() {
+        final ObjectiveProperties makingProp = newObjectiveProperties(appResource);
+        makingProp.checkImplicitOverride();
+        if (!extendsResourceList.isEmpty()) {
+            makingProp.extendsProperties(extendsResourceList.toArray(new String[extendsResourceList.size()]));
+        }
+        return makingProp;
+    }
+
+    protected ObjectiveProperties newObjectiveProperties(String resourcePath) {
+        return new ObjectiveProperties(resourcePath);
     }
 
     protected void showBootLogging() {
         if (LOG.isInfoEnabled()) {
             LOG.info("[Objective Config]");
-            LOG.info(" " + domainResource + " extends " + extendsResourceList);
+            LOG.info(" " + appResource + " extends " + extendsResourceList);
             final boolean checkImplicitOverride = prop.isCheckImplicitOverride();
             final int count = prop.getJavaPropertiesResult().getPropertyList().size();
             LOG.info(" checkImplicitOverride=" + checkImplicitOverride + ", propertyCount=" + count);
@@ -190,7 +203,7 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     //                                                                            Accessor
     //                                                                            ========
     public void setDomainResource(String domainResource) {
-        this.domainResource = domainResource;
+        this.appResource = domainResource;
     }
 
     public void addExtendsResource(String extendsResource) {

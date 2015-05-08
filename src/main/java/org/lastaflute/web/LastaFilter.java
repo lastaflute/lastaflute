@@ -32,7 +32,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.dbflute.bhv.BehaviorSelector;
 import org.lastaflute.core.direction.BootProcessCallback;
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.OptionalCoreDirection;
+import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.message.MessageResourcesHolder;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ExternalContext;
@@ -202,7 +202,7 @@ public class LastaFilter implements Filter {
     //                                      Callback Process
     //                                      ----------------
     protected void callbackProcess(FwAssistantDirector assistantDirector) {
-        final OptionalCoreDirection coreDirection = assistantDirector.assistOptionalCoreDirection();
+        final FwCoreDirection coreDirection = assistantDirector.assistCoreDirection();
         final BootProcessCallback callback = coreDirection.assistBootProcessCallback();
         if (callback != null) {
             callback.callback(assistantDirector);
@@ -236,7 +236,7 @@ public class LastaFilter implements Filter {
     //                                             ---------
     protected void showBoot(FwAssistantDirector assistantDirector) {
         if (logger.isInfoEnabled()) {
-            final OptionalCoreDirection coreDirection = assistantDirector.assistOptionalCoreDirection();
+            final FwCoreDirection coreDirection = assistantDirector.assistCoreDirection();
             final String domainTitle = coreDirection.assistDomainTitle();
             final String environmentTitle = coreDirection.assistEnvironmentTitle();
             logger.info("_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");

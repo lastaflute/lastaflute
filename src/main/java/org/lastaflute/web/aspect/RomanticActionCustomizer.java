@@ -25,7 +25,7 @@ import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.core.customizer.ComponentCustomizer;
 import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.web.Execute;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
@@ -63,7 +63,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
 
     protected ActionAdjustmentProvider comeOnAdjustmentProvider() {
         final FwAssistantDirector director = ContainerUtil.getComponent(FwAssistantDirector.class);
-        final OptionalWebDirection direction = director.assistOptionalWebDirection();
+        final FwWebDirection direction = director.assistWebDirection();
         final ActionAdjustmentProvider adjustmentProvider = direction.assistActionAdjustmentProvider();
         return adjustmentProvider;
     }

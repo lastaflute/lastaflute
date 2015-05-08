@@ -20,7 +20,7 @@ import javax.annotation.Resource;
 
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.security.InvertibleCryptographer;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 
 /**
  * @author jflute
@@ -46,14 +46,14 @@ public class SimpleCookieCipher implements CookieCipher {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalWebDirection direction = getOptionalWebDirection();
+        final FwWebDirection direction = assistWebDirection();
         CookieResourceProvider provider = direction.assistCookieResourceProvider();
         invertibleCipher = provider.provideCipher();
         // no logging here because cookie manager do it
     }
 
-    protected OptionalWebDirection getOptionalWebDirection() {
-        return assistantDirector.assistOptionalWebDirection();
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
     }
 
     // ===================================================================================

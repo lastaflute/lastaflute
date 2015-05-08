@@ -35,8 +35,8 @@ import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.Srl;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
-import org.lastaflute.web.exception.OptionalParameterEmptyAccessException;
 import org.lastaflute.web.exception.UrlParamArgsDifferentCountException;
+import org.lastaflute.web.exception.UrlParamOptionalParameterEmptyAccessException;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -399,11 +399,11 @@ public class RequestUrlParamAnalyzer {
     //                                        --------------
     protected OptionalThing<Object> createEmptyOptional(ActionExecute execute, int fixedIndex, Class<?> paramType) {
         return OptionalThing.ofNullable(null, () -> {
-            throwOptionalParameterEmptyAccessException(execute, fixedIndex, paramType);
+            throwUrlParamOptionalParameterEmptyAccessException(execute, fixedIndex, paramType);
         });
     }
 
-    protected void throwOptionalParameterEmptyAccessException(ActionExecute execute, int index, Class<?> paramType) {
+    protected void throwUrlParamOptionalParameterEmptyAccessException(ActionExecute execute, int index, Class<?> paramType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("The empty optional parameter was accessed.");
         br.addItem("Advice");
@@ -427,6 +427,6 @@ public class RequestUrlParamAnalyzer {
         br.addItem("Parameter Type");
         br.addElement(paramType);
         final String msg = br.buildExceptionMessage();
-        throw new OptionalParameterEmptyAccessException(msg);
+        throw new UrlParamOptionalParameterEmptyAccessException(msg);
     }
 }

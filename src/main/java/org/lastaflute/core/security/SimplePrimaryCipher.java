@@ -19,7 +19,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.OptionalCoreDirection;
+import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +56,7 @@ public class SimplePrimaryCipher implements PrimaryCipher {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalCoreDirection direction = getOptionalCoreDirection();
+        final FwCoreDirection direction = assistCoreDirection();
         final SecurityResourceProvider provider = direction.assistSecurityResourceProvider();
         invertibleCryptographer = provider.providePrimaryInvertibleCryptographer();
         if (invertibleCryptographer == null) {
@@ -71,8 +71,8 @@ public class SimplePrimaryCipher implements PrimaryCipher {
         showBootLogging();
     }
 
-    protected OptionalCoreDirection getOptionalCoreDirection() {
-        return assistantDirector.assistOptionalCoreDirection();
+    protected FwCoreDirection assistCoreDirection() {
+        return assistantDirector.assistCoreDirection();
     }
 
     protected void showBootLogging() {

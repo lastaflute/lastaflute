@@ -15,8 +15,8 @@
  */
 package org.lastaflute.core.direction;
 
-import org.lastaflute.db.direction.OptionalDbDirection;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.db.direction.FwDbDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 
 /**
  * The assistant director (AD) for LastaFlute. <br>
@@ -25,8 +25,8 @@ import org.lastaflute.web.direction.OptionalWebDirection;
  * You should make lastaflute_assist++.xml in your resources to use this as DI component like this:
  * <pre> e.g. if application name is Mythica
  * &lt;components&gt;
- *     &lt;component name="assistantDirector" class="...domainfw.direction.MythicaFwAssistantDirector"/&gt;
- *     &lt;component name="mythicaConfig" class="...domainfw.MythicaConfig$SimpleImpl"/&gt;
+ *     &lt;component name="assistantDirector" class="...mylasta.direction.MythicaFwAssistantDirector"/&gt;
+ *     &lt;component name="mythicaConfig" class="...mylasta.MythicaConfig$SimpleImpl"/&gt;
  * &lt;/components&gt;
  * </pre>
  * And the word 'Direction' means option that changes SAFlute behaviors. <br>
@@ -41,20 +41,20 @@ public interface FwAssistantDirector {
      * (Applications should have configuration by properties files for framework)
      * @return The direction instance for basic assist. (NotNull)
      */
-    OptionalAssistDirection assistOptionalAssistDirection();
+    FwAssistDirection assistAssistDirection();
 
     /**
      * @return The direction instance for core assist. (NotNull)
      */
-    OptionalCoreDirection assistOptionalCoreDirection();
+    FwCoreDirection assistCoreDirection();
 
     /**
      * @return The direction instance for DB assist. (NotNull)
      */
-    OptionalDbDirection assistOptionalDbDirection();
+    FwDbDirection assistDbDirection();
 
     /**
      * @return The direction instance for web assist. (NotNull)
      */
-    OptionalWebDirection assistOptionalWebDirection();
+    FwWebDirection assistWebDirection();
 }

@@ -51,7 +51,7 @@ import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.web.api.JsonBody;
 import org.lastaflute.web.api.JsonParameter;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.exception.IndexedPropertyNotListArrayRuntimeException;
@@ -655,7 +655,7 @@ public class ActionFormMapper {
     }
 
     protected int getIndexedPropertySizeLimit() {
-        final OptionalWebDirection direction = assistantDirector.assistOptionalWebDirection();
+        final FwWebDirection direction = assistantDirector.assistWebDirection();
         final ActionAdjustmentProvider provider = direction.assistActionAdjustmentProvider();
         return provider.provideIndexedPropertySizeLimit();
     }

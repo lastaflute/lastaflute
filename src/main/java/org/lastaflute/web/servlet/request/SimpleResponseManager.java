@@ -35,7 +35,7 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.util.LdiInputStreamUtil;
 import org.lastaflute.di.util.LdiOutputStreamUtil;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.util.LaRequestUtil;
@@ -76,7 +76,7 @@ public class SimpleResponseManager implements ResponseManager {
      */
     @PostConstruct
     public void initialize() {
-        final OptionalWebDirection direction = assistOptionalWebDirection();
+        final FwWebDirection direction = assistWebDirection();
         final ResponseHandlingProvider provider = direction.assistResponseHandlingProvider();
         if (provider != null) {
             downloadExtensionContentTypeMap = provider.provideDownloadExtensionContentTypeMap();
@@ -84,8 +84,8 @@ public class SimpleResponseManager implements ResponseManager {
         showBootLogging();
     }
 
-    protected OptionalWebDirection assistOptionalWebDirection() {
-        return assistantDirector.assistOptionalWebDirection();
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
     }
 
     protected void showBootLogging() {

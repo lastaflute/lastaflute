@@ -23,7 +23,7 @@ import org.dbflute.exception.EntityAlreadyExistsException;
 import org.dbflute.exception.SQLFailureException;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.OptionalCoreDirection;
+import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.db.dbcp.ConnectionPoolViewBuilder;
 import org.lastaflute.db.dbflute.exception.NonTransactionalUpdateException;
 import org.slf4j.Logger;
@@ -54,13 +54,13 @@ public class ExceptionTranslator {
     //                                                                          ==========
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalCoreDirection direction = getOptionalCoreDirection();
+        final FwCoreDirection direction = assistCoreDirection();
         exceptionTranslationProvider = direction.assistExceptionTranslationProvider();
         showBootLogging();
     }
 
-    protected OptionalCoreDirection getOptionalCoreDirection() {
-        return assistantDirector.assistOptionalCoreDirection();
+    protected FwCoreDirection assistCoreDirection() {
+        return assistantDirector.assistCoreDirection();
     }
 
     protected void showBootLogging() {

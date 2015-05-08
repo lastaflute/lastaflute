@@ -18,6 +18,7 @@ package org.lastaflute.web.direction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.web.api.ApiResultProvider;
@@ -30,7 +31,7 @@ import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
 /**
  * @author jflute
  */
-public class OptionalWebDirection {
+public class FwWebDirection {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -51,7 +52,7 @@ public class OptionalWebDirection {
     // -----------------------------------------------------
     //                                               Message
     //                                               -------
-    protected String domainMessageName;
+    protected String appMessageName;
     protected final List<String> extendsMessageNameList = new ArrayList<String>(4);
 
     // -----------------------------------------------------
@@ -88,11 +89,12 @@ public class OptionalWebDirection {
     // -----------------------------------------------------
     //                                               Message
     //                                               -------
-    public void directMessage(String domainMessageName, String... extendsMessageNames) {
-        this.domainMessageName = domainMessageName;
-        if (extendsMessageNames != null && extendsMessageNames.length > 0) {
-            this.extendsMessageNameList.addAll(Arrays.asList(extendsMessageNames));
-        }
+    public void directMessage(Consumer<List<String>> appSetupper, String... commonNames) {
+        final List<String> nameList = new ArrayList<String>(4);
+        appSetupper.accept(nameList);
+        nameList.addAll(Arrays.asList(commonNames));
+        appMessageName = nameList.remove(0);
+        extendsMessageNameList.addAll(nameList);
     }
 
     // -----------------------------------------------------
@@ -109,63 +111,58 @@ public class OptionalWebDirection {
     //                                               Servlet
     //                                               -------
     public UserLocaleProcessProvider assistUserLocaleProcessProvider() {
-        if (userLocaleProcessProvider == null) {
-            String msg = "Not found the provider for user locale process in request.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
+        assertAssistObjectNotNull(userLocaleProcessProvider, "Not found the provider for user locale process in request.");
         return userLocaleProcessProvider;
     }
 
     public UserTimeZoneProcessProvider assistUserTimeZoneProcessProvider() {
-        if (userLocaleProcessProvider == null) {
-            String msg = "Not found the provider for user time-zone process in request.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
+        assertAssistObjectNotNull(userTimeZoneProcessProvider, "Not found the provider for user time-zone process in request.");
         return userTimeZoneProcessProvider;
     }
 
     public CookieResourceProvider assistCookieResourceProvider() {
-        if (cookieResourceProvider == null) {
-            String msg = "Not found the provider for cookie resource.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
+        assertAssistObjectNotNull(cookieResourceProvider, "Not found the provider for cookie resource.");
         return cookieResourceProvider;
     }
 
     public ResponseHandlingProvider assistResponseHandlingProvider() {
-        return responseHandlingProvider; // not required for compatibility
+        return responseHandlingProvider; // not required, it's optional assist
     }
 
     // -----------------------------------------------------
     //                                            Adjustment
     //                                            ----------
     public ActionAdjustmentProvider assistActionAdjustmentProvider() {
-        if (actionAdjustmentProvider == null) {
-            String msg = "Not found the provider of action adjustment.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
+        assertAssistObjectNotNull(actionAdjustmentProvider, "Not found the provider of action adjustment.");
         return actionAdjustmentProvider;
     }
 
     // -----------------------------------------------------
     //                                               Message
     //                                               -------
-    public String assistDomainMessageName() {
-        if (domainMessageName == null) {
-            String msg = "Not found the (file without extension) name for domain message.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
-        return domainMessageName;
+    public String assistAppMessageName() {
+        assertAssistObjectNotNull(appMessageName, "Not found the (file without extension) name for application message.");
+        return appMessageName;
     }
 
     public List<String> assistExtendsMessageNameList() {
-        return extendsMessageNameList;
+        return extendsMessageNameList; // empty allowed but almost exists 
     }
 
     // -----------------------------------------------------
     //                                              API Call
     //                                              --------
     public ApiResultProvider assistApiResultProvider() {
-        return apiResultProvider; // not required for compatibility
+        // TODO jflute lastaflute: [D] fitting: default apiResultProvider
+        return apiResultProvider; // not required, ...
+    }
+
+    // -----------------------------------------------------
+    //                                         Assert Helper
+    //                                         -------------
+    protected void assertAssistObjectNotNull(Object obj, String msg) {
+        if (obj == null) {
+            throw new FwRequiredAssistNotFoundException(msg);
+        }
     }
 }
