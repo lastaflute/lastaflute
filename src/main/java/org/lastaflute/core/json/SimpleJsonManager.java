@@ -16,14 +16,11 @@
 package org.lastaflute.core.json;
 
 import java.lang.reflect.ParameterizedType;
-import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
-import org.dbflute.util.DfCollectionUtil;
-import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.OptionalCoreDirection;
@@ -83,7 +80,7 @@ public class SimpleJsonManager implements JsonManager {
     }
 
     protected RealJsonParser createDefaultJsonParser() {
-        return newGsonRealJsonParser();
+        return createGsonJsonParser();
     }
 
     protected void showBootLogging() {
@@ -96,7 +93,7 @@ public class SimpleJsonManager implements JsonManager {
     // ===================================================================================
     //                                                                               GSON
     //                                                                              ======
-    protected RealJsonParser newGsonRealJsonParser() {
+    protected RealJsonParser createGsonJsonParser() {
         // TODO jflute lastaflute: [D] research: Gson thread safe?
         final GsonBuilder builder = new GsonBuilder();
         if (developmentHere) {
@@ -105,27 +102,11 @@ public class SimpleJsonManager implements JsonManager {
         if (!nullsSuppressed) {
             builder.serializeNulls();
         }
-        final Gson gson = builder.create();
-        return new RealJsonParser() {
+        return newGsonJsonParser(builder.create());
+    }
 
-            @SuppressWarnings("unchecked")
-            @Override
-            public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) { // are not null, already checked
-                final BEAN bean = gson.fromJson(json, beanType); // if empty JSON, new-only instance
-                return bean != null ? bean : (BEAN) DfReflectionUtil.newInstance(beanType);
-            }
-
-            @Override
-            public <BEAN> List<BEAN> fromJsonList(String json, ParameterizedType elementType) { // are not null, already checked
-                final List<BEAN> list = gson.fromJson(json, elementType); // if empty JSON, empty list
-                return list != null ? Collections.unmodifiableList(list) : DfCollectionUtil.emptyList();
-            }
-
-            @Override
-            public String toJson(Object bean) { // is not null, already checked
-                return gson.toJson(bean);
-            }
-        };
+    protected GsonJsonParser newGsonJsonParser(Gson gson) {
+        return new GsonJsonParser(gson);
     }
 
     // ===================================================================================
