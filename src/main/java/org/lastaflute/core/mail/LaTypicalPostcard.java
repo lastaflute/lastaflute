@@ -45,7 +45,7 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     public LaTypicalPostcard() {
         postcard = createNativePostcard();
         variableMap = createVariableMap();
-        postcard.useBodyFile(getBodyFile()).useTemplateText(variableMap);
+        useBodyFile();
     }
 
     protected Postcard createNativePostcard() {
@@ -61,6 +61,13 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
         return variableMap;
     }
 
+    protected void useBodyFile() {
+        postcard.useBodyFile(getBodyFile()).useTemplateText(variableMap);
+    }
+
+    // -----------------------------------------------------
+    //                                             Meta Data
+    //                                             ---------
     protected abstract String getBodyFile();
 
     protected abstract String[] getPropertyNames();

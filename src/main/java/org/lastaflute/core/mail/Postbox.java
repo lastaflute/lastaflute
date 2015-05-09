@@ -91,7 +91,7 @@ public class Postbox {
     // ===================================================================================
     //                                                                             Deliver
     //                                                                             =======
-    public void deliver(LaMailPostcard postcard) {
+    public void post(LaMailPostcard postcard) {
         assertPostOfficeWorks(postcard);
 
         final Postcard nativePostcard = postcard.toNativePostcard();
