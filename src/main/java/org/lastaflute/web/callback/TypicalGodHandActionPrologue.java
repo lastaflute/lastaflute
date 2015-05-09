@@ -32,14 +32,13 @@ import org.lastaflute.db.dbflute.accesscontext.AccessContextResource;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
-import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.api.ApiFailureResource;
+import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginHandlingResource;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.slf4j.Logger;
@@ -124,13 +123,12 @@ public class TypicalGodHandActionPrologue {
         PreparedAccessContext.setAccessContextOnThread(accessContext);
     }
 
-    protected AccessContextResource createAccessContextResource(ActionRuntimeMeta executeMeta) {
-        final Method method = executeMeta.getExecuteMethod();
-        final String classTitle = DfTypeUtil.toClassTitle(method.getDeclaringClass());
-        return newAccessContextResource(method, classTitle);
+    protected AccessContextResource createAccessContextResource(ActionRuntimeMeta runtimeMeta) {
+        final String classTitle = DfTypeUtil.toClassTitle(runtimeMeta.getActionClass());
+        return newAccessContextResource(classTitle, runtimeMeta.getExecuteMethod());
     }
 
-    protected AccessContextResource newAccessContextResource(Method method, String classTitle) {
+    protected AccessContextResource newAccessContextResource(String classTitle, Method method) {
         return new AccessContextResource(classTitle, method);
     }
 
@@ -200,9 +198,9 @@ public class TypicalGodHandActionPrologue {
 
     /**
      * Handle count of SQL execution in the request.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtimeMeta The runtime meta of action execute. (NotNull)
      */
-    protected void handleSqlCount(final ActionRuntimeMeta executeMeta) {
+    protected void handleSqlCount(final ActionRuntimeMeta runtimeMeta) {
         final CallbackContext context = CallbackContext.getCallbackContextOnThread();
         if (context == null) {
             return;
@@ -212,9 +210,9 @@ public class TypicalGodHandActionPrologue {
             return;
         }
         final ExecutedSqlCounter counter = ((ExecutedSqlCounter) filter);
-        final int limitCountOfSql = getLimitCountOfSql(executeMeta);
+        final int limitCountOfSql = getLimitCountOfSql(runtimeMeta);
         if (limitCountOfSql >= 0 && counter.getTotalCountOfSql() > limitCountOfSql) {
-            handleTooManySqlExecution(executeMeta, counter);
+            handleTooManySqlExecution(runtimeMeta, counter);
         }
         final String exp = counter.toLineDisp();
         requestManager.setAttribute(RequestManager.DBFLUTE_SQL_COUNT_KEY, exp); // logged by logging filter
@@ -222,18 +220,16 @@ public class TypicalGodHandActionPrologue {
 
     /**
      * Handle too many SQL executions.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtimeMeta The runtime meta of action execute. (NotNull)
      * @param sqlCounter The counter object for SQL executions. (NotNull)
      */
-    protected void handleTooManySqlExecution(final ActionRuntimeMeta executeMeta, final ExecutedSqlCounter sqlCounter) {
-        final String actionDisp = buildActionDisp(executeMeta);
+    protected void handleTooManySqlExecution(ActionRuntimeMeta runtimeMeta, final ExecutedSqlCounter sqlCounter) {
+        final String actionDisp = buildActionDisp(runtimeMeta);
         logger.warn("*Too many SQL executions: " + sqlCounter.getTotalCountOfSql() + " in " + actionDisp);
     }
 
-    protected String buildActionDisp(ActionRuntimeMeta executeMeta) {
-        final Method method = executeMeta.getExecuteMethod();
-        final Class<?> declaringClass = method.getDeclaringClass();
-        return declaringClass.getSimpleName() + "." + method.getName() + "()";
+    protected String buildActionDisp(ActionRuntimeMeta runtimeMeta) {
+        return runtimeMeta.getActionClass().getSimpleName() + "." + runtimeMeta.getExecuteMethod().getName() + "()";
     }
 
     /**
@@ -287,10 +283,7 @@ public class TypicalGodHandActionPrologue {
         return new ApiFailureResource(sessionManager.errors().get(), requestManager);
     }
 
-    protected LoginHandlingResource createLogingHandlingResource(ActionRuntimeMeta executeMeta) {
-        final Method actionMethod = executeMeta.getExecuteMethod();
-        final RuntimeException failureCause = executeMeta.getFailureCause();
-        final ActionMessages validationErrors = executeMeta.getValidationErrors();
-        return new LoginHandlingResource(actionMethod.getDeclaringClass(), actionMethod, failureCause, validationErrors);
+    protected LoginHandlingResource createLogingHandlingResource(ActionRuntimeMeta runtimeMeta) {
+        return new LoginHandlingResource(runtimeMeta);
     }
 }

@@ -15,8 +15,6 @@
  */
 package org.lastaflute.web.callback;
 
-import java.lang.reflect.Method;
-
 import org.dbflute.bhv.proposal.callback.ExecutedSqlCounter;
 import org.dbflute.hook.CallbackContext;
 import org.dbflute.hook.SqlStringFilter;
@@ -68,9 +66,9 @@ public class TypicalGodHandActionEpilogue {
     //                                                                    ================
     /**
      * Handle count of SQL execution in the request.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtimeMeta The runtime meta of action execute. (NotNull)
      */
-    protected void handleSqlCount(final ActionRuntimeMeta executeMeta) {
+    protected void handleSqlCount(final ActionRuntimeMeta runtimeMeta) {
         final CallbackContext context = CallbackContext.getCallbackContextOnThread();
         if (context == null) {
             return;
@@ -80,9 +78,9 @@ public class TypicalGodHandActionEpilogue {
             return;
         }
         final ExecutedSqlCounter counter = ((ExecutedSqlCounter) filter);
-        final int limitCountOfSql = getLimitCountOfSql(executeMeta);
+        final int limitCountOfSql = getLimitCountOfSql(runtimeMeta);
         if (limitCountOfSql >= 0 && counter.getTotalCountOfSql() > limitCountOfSql) {
-            handleTooManySqlExecution(executeMeta, counter);
+            handleTooManySqlExecution(runtimeMeta, counter);
         }
         final String exp = counter.toLineDisp();
         requestManager.setAttribute(RequestManager.DBFLUTE_SQL_COUNT_KEY, exp); // logged by logging filter
@@ -90,18 +88,16 @@ public class TypicalGodHandActionEpilogue {
 
     /**
      * Handle too many SQL executions.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtimeMeta The runtime meta of action execute. (NotNull)
      * @param sqlCounter The counter object for SQL executions. (NotNull)
      */
-    protected void handleTooManySqlExecution(final ActionRuntimeMeta executeMeta, final ExecutedSqlCounter sqlCounter) {
-        final String actionDisp = buildActionDisp(executeMeta);
+    protected void handleTooManySqlExecution(ActionRuntimeMeta runtimeMeta, final ExecutedSqlCounter sqlCounter) {
+        final String actionDisp = buildActionDisp(runtimeMeta);
         LOG.warn("*Too many SQL executions: " + sqlCounter.getTotalCountOfSql() + " in " + actionDisp);
     }
 
-    protected String buildActionDisp(ActionRuntimeMeta executeMeta) {
-        final Method method = executeMeta.getExecuteMethod();
-        final Class<?> declaringClass = method.getDeclaringClass();
-        return declaringClass.getSimpleName() + "." + method.getName() + "()";
+    protected String buildActionDisp(ActionRuntimeMeta runtimeMeta) {
+        return runtimeMeta.getActionClass().getSimpleName() + "." + runtimeMeta.getExecuteMethod().getName() + "()";
     }
 
     /**

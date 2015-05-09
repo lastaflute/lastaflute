@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.login;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 
 import javax.annotation.Resource;
@@ -628,10 +630,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected OptionalThing<String> processLoginRequired(LoginHandlingResource resource) {
         logger.debug("...Checking login status for login required");
-        if (processAlreadyLogin(resource)) {
-            return processAuthority(resource);
-        }
-        if (processAutoLogin(resource)) {
+        if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
             return processAuthority(resource);
         }
         saveRequestedLoginRedirectInfo();
@@ -734,6 +733,20 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     }
 
     // -----------------------------------------------------
+    //                                       Required Action
+    //                                       ---------------
+    @Override
+    public boolean isLoginRequiredAction(LoginHandlingResource resource) {
+        return !isImplicitEverybodyOpenAction(resource) && !isExplicitEverybodyOpenAction(resource);
+    }
+
+    protected boolean isImplicitEverybodyOpenAction(LoginHandlingResource resource) {
+        return isLoginActionOrRedirectLoginAction(resource);
+    }
+
+    protected abstract boolean isExplicitEverybodyOpenAction(LoginHandlingResource resource);
+
+    // -----------------------------------------------------
     //                                      Session UserBean
     //                                      ----------------
     @Override
@@ -754,16 +767,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @return The forward path, basically for authority redirect. (NotNull, EmptyAllowed: then authority check passed)
      */
     protected OptionalThing<String> processAuthority(LoginHandlingResource resource) {
-        return processAuthority(resource, getSessionUserBean());
-    }
-
-    /**
-     * Process for the authority of the login user. (called in login status)
-     * @param resource The resource of login handling to determine. (NotNull)
-     * @param userBean The optional bean of the login user. (NotNull)
-     * @return The forward path, basically for authority redirect. (NotNull, EmptyAllowed: then authority check passed)
-     */
-    protected OptionalThing<String> processAuthority(LoginHandlingResource resource, OptionalThing<USER_BEAN> userBean) {
         return OptionalObject.empty(); // no check as default, you can override
     }
 
@@ -778,10 +781,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     protected OptionalThing<String> processNotLoginRequired(LoginHandlingResource resource) {
         if (isAutoLoginWhenNotLoginRequired(resource)) {
             logger.debug("...Checking login status for not-login required");
-            if (processAlreadyLogin(resource)) {
-                return processAuthority(resource);
-            }
-            if (processAutoLogin(resource)) {
+            if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
                 return processAuthority(resource);
             }
         }
@@ -802,7 +802,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected boolean isLoginRedirectBeanKeptAction(LoginHandlingResource resource) {
         // normally both are same action, but redirect action might be changed
-        return isLoginAction(resource) || isRedirectLoginAction(resource);
+        return isLoginActionOrRedirectLoginAction(resource);
     }
 
     /**
@@ -859,6 +859,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         return ApiAction.class.isAssignableFrom(actionClass);
     }
 
+    protected boolean isLoginActionOrRedirectLoginAction(LoginHandlingResource resource) {
+        return isLoginAction(resource) || isRedirectLoginAction(resource);
+    }
+
     // ===================================================================================
     //                                                                      Login Redirect
     //                                                                      ==============
@@ -911,6 +915,21 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         } else {
             return response;
         }
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected boolean hasAnnotation(Class<?> targetClass, Method targetMethod, Class<? extends Annotation> annoType) {
+        return hasAnnotationOnClass(targetClass, annoType) || hasAnnotationOnMethod(targetMethod, annoType);
+    }
+
+    protected boolean hasAnnotationOnClass(Class<?> targetClass, Class<? extends Annotation> annoType) {
+        return targetClass.getAnnotation(annoType) != null;
+    }
+
+    protected boolean hasAnnotationOnMethod(Method targetMethod, Class<? extends Annotation> annoType) {
+        return targetMethod.getAnnotation(annoType) != null;
     }
 
     // ===================================================================================

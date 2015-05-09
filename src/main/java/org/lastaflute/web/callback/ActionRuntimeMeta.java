@@ -54,6 +54,14 @@ public class ActionRuntimeMeta {
     //                                                                      Basic Resource
     //                                                                      ==============
     /**
+     * Get the type of requested action.
+     * @return The type object of action, not enhanced. (NotNull)
+     */
+    public Class<?> getActionClass() {
+        return getExecuteMethod().getDeclaringClass();
+    }
+
+    /**
      * Get the method object of action execute.
      * @return The method object from execute configuration. (NotNull)
      */
