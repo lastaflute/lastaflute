@@ -23,5 +23,5 @@ import org.dbflute.mail.Postcard;
  */
 public interface LaMailPostcard {
 
-    Postcard getNativePostcard();
+    Postcard toNativePostcard();
 }

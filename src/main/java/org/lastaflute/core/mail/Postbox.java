@@ -19,6 +19,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.mail.PostOffice;
+import org.dbflute.mail.Postcard;
 import org.dbflute.mail.send.SMailDeliveryDepartment;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
@@ -92,7 +93,9 @@ public class Postbox {
     //                                                                             =======
     public void deliver(LaMailPostcard postcard) {
         assertPostOfficeWorks(postcard);
-        postOffice.deliver(postcard.getNativePostcard());
+
+        final Postcard nativePostcard = postcard.toNativePostcard();
+        postOffice.deliver(nativePostcard);
     }
 
     protected void assertPostOfficeWorks(LaMailPostcard postcard) {

@@ -36,19 +36,24 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     //                                                                           Attribute
     //                                                                           =========
     protected final Postcard postcard;
-    protected Map<String, Object> variableMap; // lazy loaded
+    protected final Map<String, Object> variableMap;
     protected boolean strictAddress = true; // as default
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public LaTypicalPostcard() {
-        postcard = newPostcard();
-        postcard.useBodyFile(getBodyFile());
+        postcard = createNativePostcard();
+        variableMap = createVariableMap();
+        postcard.useBodyFile(getBodyFile()).useTemplateText(variableMap);
     }
 
-    protected Postcard newPostcard() {
+    protected Postcard createNativePostcard() {
         return new Postcard();
+    }
+
+    protected Map<String, Object> createVariableMap() {
+        return new LinkedHashMap<String, Object>();
     }
 
     protected abstract String getBodyFile();
@@ -103,14 +108,7 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     protected void registerVariable(String key, String value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
-        if (variableMap == null) {
-            variableMap = createVariableMap();
-        }
         variableMap.put(key, value);
-    }
-
-    protected Map<String, Object> createVariableMap() {
-        return new LinkedHashMap<String, Object>();
     }
 
     // ===================================================================================
@@ -144,8 +142,13 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public Postcard getNativePostcard() {
+    @Override
+    public Postcard toNativePostcard() {
         return postcard;
+    }
+
+    public Map<String, Object> getVariableMap() {
+        return variableMap;
     }
 
     public boolean isStrictAddress() {
