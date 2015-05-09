@@ -19,7 +19,6 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.mail.PostOffice;
-import org.dbflute.mail.Postcard;
 import org.dbflute.mail.send.SMailDeliveryDepartment;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
@@ -44,7 +43,7 @@ public class Postbox {
     @Resource
     protected FwAssistantDirector assistantDirector;
 
-    /** Everybody knows, it's postOffice post office. (NullAllowed: null means no mail) */
+    /** Everybody knows, it's post office. (NullAllowed: null means no mail) */
     protected PostOffice postOffice;
 
     // ===================================================================================
@@ -74,9 +73,8 @@ public class Postbox {
         if (logger.isInfoEnabled()) {
             logger.info("[Postbox]");
             if (postOffice != null) {
-                final String exp = postOffice.getClass().getSimpleName() + "@" + Integer.toHexString(postOffice.hashCode());
-                logger.info(" postOffice: " + exp);
                 final SMailDeliveryDepartment department = postOffice.getDeliveryDepartment();
+                logger.info(" postOffice: " + buildPostOfficeExp());
                 logger.info(" postalParkingLot: " + department.getParkingLot());
                 logger.info(" postalPersonnel: " + department.getPersonnel());
             } else {
@@ -85,17 +83,21 @@ public class Postbox {
         }
     }
 
+    protected String buildPostOfficeExp() {
+        return postOffice.getClass().getSimpleName() + "@" + Integer.toHexString(postOffice.hashCode());
+    }
+
     // ===================================================================================
     //                                                                             Deliver
     //                                                                             =======
-    public void deliver(Postcard post) {
-        assertPostOfficeWorks(post);
-        postOffice.deliver(post);
+    public void deliver(LaMailPostcard postcard) {
+        assertPostOfficeWorks(postcard);
+        postOffice.deliver(postcard.getNativePostcard());
     }
 
-    protected void assertPostOfficeWorks(Postcard post) {
+    protected void assertPostOfficeWorks(LaMailPostcard postcard) {
         if (postOffice == null) {
-            String msg = "No mail settings so cannot send your mail: " + post;
+            String msg = "No mail settings so cannot send your mail: " + postcard;
             throw new IllegalStateException(msg);
         }
     }
