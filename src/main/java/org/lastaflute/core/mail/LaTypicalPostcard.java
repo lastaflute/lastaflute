@@ -53,10 +53,17 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     }
 
     protected Map<String, Object> createVariableMap() {
-        return new LinkedHashMap<String, Object>();
+        final String[] propertyNames = getPropertyNames();
+        final Map<String, Object> variableMap = new LinkedHashMap<String, Object>(propertyNames.length);
+        for (String propertyName : propertyNames) {
+            variableMap.put(propertyName, null); // default elements for parameter comment
+        }
+        return variableMap;
     }
 
     protected abstract String getBodyFile();
+
+    protected abstract String[] getPropertyNames();
 
     // ===================================================================================
     //                                                                    Postcard Request
