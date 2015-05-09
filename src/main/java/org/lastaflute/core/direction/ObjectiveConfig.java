@@ -28,6 +28,7 @@ import javax.annotation.Resource;
 import org.dbflute.helper.jprop.ObjectiveProperties;
 import org.lastaflute.di.Disposable;
 import org.lastaflute.di.DisposableUtil;
+import org.lastaflute.di.core.LastaDiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,7 +84,7 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         final FwAssistDirection direction = assistOptionalAssistDirection();
         appResource = filterEnvSwitching(direction.assistAppConfig());
         extendsResourceList.clear(); // for reload
-        extendsResourceList.addAll(filterEnvSwitching(direction.assistExtendsConfigList()));
+        extendsResourceList.addAll(filterEnvSwitchingList(direction.assistExtendsConfigList()));
     }
 
     protected FwAssistDirection assistOptionalAssistDirection() {
@@ -91,12 +92,10 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     }
 
     protected String filterEnvSwitching(String path) {
-        // TODO jflute lastaflute: [B] function: java system property switching
-        //String systemEnv = System.getProperty("lastaflute.env");
-        return path;
+        return LastaDiProperties.getInstance().resolveLastaEnvPath(path);
     }
 
-    protected List<String> filterEnvSwitching(List<String> pathList) {
+    protected List<String> filterEnvSwitchingList(List<String> pathList) {
         return pathList.stream().map(path -> filterEnvSwitching(path)).collect(Collectors.toList());
     }
 
