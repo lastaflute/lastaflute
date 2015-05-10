@@ -94,7 +94,11 @@ public class SimpleJsonManager implements JsonManager {
     //                                                                               GSON
     //                                                                              ======
     protected RealJsonParser createGsonJsonParser() {
-        // TODO jflute lastaflute: [D] research: Gson thread safe?
+        final GsonBuilder builder = createGsonBuilder();
+        return newGsonJsonParser(builder.create());
+    }
+
+    protected GsonBuilder createGsonBuilder() {
         final GsonBuilder builder = new GsonBuilder();
         if (developmentHere) {
             builder.setPrettyPrinting();
@@ -102,7 +106,7 @@ public class SimpleJsonManager implements JsonManager {
         if (!nullsSuppressed) {
             builder.serializeNulls();
         }
-        return newGsonJsonParser(builder.create());
+        return builder;
     }
 
     protected GsonJsonParser newGsonJsonParser(Gson gson) {
