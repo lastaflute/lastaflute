@@ -68,12 +68,7 @@ public class SimpleApiManager implements ApiManager {
     @PostConstruct
     public synchronized void initialize() {
         final FwWebDirection direction = assistActionDirection();
-        final ApiFailureHook assistedHook = direction.assistApiFailureHook();
-        if (assistedHook != null) {
-            apiFailureHook = assistedHook;
-        } else {
-            apiFailureHook = new UnsupportedApiFailureHook();
-        }
+        apiFailureHook = direction.assistApiFailureHook();
         showBootLogging();
     }
 

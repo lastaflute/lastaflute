@@ -153,8 +153,8 @@ public class FwWebDirection {
     //                                              API Call
     //                                              --------
     public ApiFailureHook assistApiFailureHook() {
-        // TODO jflute lastaflute: [D] fitting: default apiResultProvider
-        return apiFailureHook; // not required, ...
+        assertAssistObjectNotNull(appMessageName, "Not found the hook for API failure.");
+        return apiFailureHook;
     }
 
     // -----------------------------------------------------

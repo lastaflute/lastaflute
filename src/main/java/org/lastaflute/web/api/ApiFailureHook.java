@@ -30,7 +30,7 @@ public interface ApiFailureHook {
     /**
      * Handle API failure when login required failure.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
-     * @param meta The meta of action execute for the current request. (NotNull)
+     * @param meta The runtime meta of action execute for the current request. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
     ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntimeMeta meta);
@@ -38,7 +38,7 @@ public interface ApiFailureHook {
     /**
      * Handle API failure when validation error.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
-     * @param meta The meta of action execute for the current request. (NotNull)
+     * @param meta The runtime meta of action execute for the current request. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
     ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntimeMeta meta);
@@ -46,7 +46,7 @@ public interface ApiFailureHook {
     /**
      * Handle API failure when application exception.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
-     * @param meta The meta of action execute for the current request. (NotNull)
+     * @param meta The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
@@ -55,7 +55,7 @@ public interface ApiFailureHook {
     /**
      * Handle API failure when system exception. (Not Required)
      * @param response The HTTP response that is not committed yet. (NotNull)
-     * @param meta The meta of action execute for the current request. (NotNull)
+     * @param meta The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The optional API response, which is for e.g. JSON or XML. (NotNull, EmptyAllowed: if empty, default handling about it)
      */

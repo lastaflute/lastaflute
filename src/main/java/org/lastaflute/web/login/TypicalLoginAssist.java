@@ -94,6 +94,70 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     private TransactionStage transactionStage;;
 
     // ===================================================================================
+    //                                                                           Find User
+    //                                                                           =========
+    /**
+     * Check the user is login-able. (basically for validation)
+     * @param email The email address for the login user. (NotNull)
+     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @return true if the user is login-able.
+     */
+    public boolean checkUserLoginable(String email, String password) {
+        return doCheckUserLoginable(email, encryptPassword(password));
+    }
+
+    /**
+     * Check the user is login-able. (basically for validation)
+     * @param email The email address for the login user. (NotNull)
+     * @param cipheredPassword The ciphered password for the login user. (NotNull)
+     * @return true if the user is login-able.
+     */
+    protected abstract boolean doCheckUserLoginable(String email, String cipheredPassword);
+
+    /**
+     * Find the login user in the database.
+     * @param email The email address for the login user. (NotNull)
+     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
+     */
+    public OptionalEntity<USER_ENTITY> findLoginUser(String email, String password) {
+        return doFindLoginUser(email, encryptPassword(password));
+    }
+
+    /**
+     * Finding the login user in the database.
+     * @param email The email address for the login user. (NotNull)
+     * @param cipheredPassword The ciphered password for the login user. (NotNull)
+     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
+     */
+    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(String email, String cipheredPassword);
+
+    /**
+     * Encrypt the password of the login user.
+     * @param plainPassword The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @return The encrypted string of the password. (NotNull)
+     */
+    protected String encryptPassword(String plainPassword) {
+        return primaryCipher.oneway(plainPassword);
+    }
+
+    /**
+     * Find the login user in the database.
+     * @param userId for the login user. (NotNull)
+     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
+     */
+    public OptionalEntity<USER_ENTITY> findLoginUser(Long userId) {
+        return doFindLoginUser(userId);
+    }
+
+    /**
+     * Finding the login user in the database.
+     * @param userId for the login user. (NotNull)
+     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
+     */
+    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(Long userId);
+
+    // ===================================================================================
     //                                                                         Login Logic
     //                                                                         ===========
     // -----------------------------------------------------
@@ -393,70 +457,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     }
 
     // ===================================================================================
-    //                                                                      Find Interface
-    //                                                                      ==============
-    /**
-     * Check the user is login-able. (basically for validation)
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return true if the user is login-able.
-     */
-    public boolean checkUserLoginable(String email, String password) {
-        return doCheckUserLoginable(email, encryptPassword(password));
-    }
-
-    /**
-     * Check the user is login-able. (basically for validation)
-     * @param email The email address for the login user. (NotNull)
-     * @param cipheredPassword The ciphered password for the login user. (NotNull)
-     * @return true if the user is login-able.
-     */
-    protected abstract boolean doCheckUserLoginable(String email, String cipheredPassword);
-
-    /**
-     * Find the login user in the database.
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
-     */
-    public OptionalEntity<USER_ENTITY> findLoginUser(String email, String password) {
-        return doFindLoginUser(email, encryptPassword(password));
-    }
-
-    /**
-     * Finding the login user in the database.
-     * @param email The email address for the login user. (NotNull)
-     * @param cipheredPassword The ciphered password for the login user. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
-     */
-    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(String email, String cipheredPassword);
-
-    /**
-     * Encrypt the password of the login user.
-     * @param plainPassword The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return The encrypted string of the password. (NotNull)
-     */
-    protected String encryptPassword(String plainPassword) {
-        return primaryCipher.oneway(plainPassword);
-    }
-
-    /**
-     * Find the login user in the database.
-     * @param userId for the login user. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
-     */
-    public OptionalEntity<USER_ENTITY> findLoginUser(Long userId) {
-        return doFindLoginUser(userId);
-    }
-
-    /**
-     * Finding the login user in the database.
-     * @param userId for the login user. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
-     */
-    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(Long userId);
-
-    // ===================================================================================
     //                                                                    RememberMe Login
     //                                                                    ================
     @Override
@@ -737,14 +737,20 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                       ---------------
     @Override
     public boolean isLoginRequiredAction(LoginHandlingResource resource) {
-        return !isImplicitEverybodyOpenAction(resource) && !isExplicitEverybodyOpenAction(resource);
+        return !isImplicitEverybodyOpenAction(resource) && !isExplicitAllowAnyoneAccessAction(resource);
     }
 
     protected boolean isImplicitEverybodyOpenAction(LoginHandlingResource resource) {
         return isLoginActionOrRedirectLoginAction(resource);
     }
 
-    protected abstract boolean isExplicitEverybodyOpenAction(LoginHandlingResource resource);
+    protected boolean isExplicitAllowAnyoneAccessAction(LoginHandlingResource resource) {
+        return hasAnnotation(resource.getActionClass(), resource.getExecuteMethod(), getAllowAnyoneAccessAnnotationType());
+    }
+
+    protected Class<? extends Annotation> getAllowAnyoneAccessAnnotationType() {
+        return AllowAnyoneAccess.class;
+    }
 
     // -----------------------------------------------------
     //                                      Session UserBean

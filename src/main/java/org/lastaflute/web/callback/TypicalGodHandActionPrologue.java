@@ -274,9 +274,9 @@ public class TypicalGodHandActionPrologue {
         });
     }
 
-    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntimeMeta executeMeta) {
+    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntimeMeta runtimeMeta) {
         final ApiFailureResource resource = createApiLoginRequiredFailureResource();
-        return apiManager.handleLoginRequiredFailure(resource, executeMeta);
+        return apiManager.handleLoginRequiredFailure(resource, runtimeMeta);
     }
 
     protected ApiFailureResource createApiLoginRequiredFailureResource() {

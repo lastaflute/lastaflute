@@ -74,8 +74,8 @@ public class RequestLoggingFilter implements Filter {
     public static final String ERROR_ATTRIBUTE_KEY = "javax.servlet.error.exception";
     protected static final String LF = "\n";
     protected static final String IND = "  ";
-    protected static final ThreadLocal<String> DUPLICATE_CHECK_LOCAL = new ThreadLocal<String>();
-    protected static final ThreadLocal<Request500Handler> REQUEST_500_HANDLER_LOCAL = new ThreadLocal<Request500Handler>();
+    protected static final ThreadLocal<String> duplicateCheckLocal = new ThreadLocal<String>();
+    protected static final ThreadLocal<Request500Handler> request500HandlerLocal = new ThreadLocal<Request500Handler>();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -252,19 +252,19 @@ public class RequestLoggingFilter implements Filter {
     }
 
     protected boolean isNestedProcess() {
-        return DUPLICATE_CHECK_LOCAL.get() != null;
+        return duplicateCheckLocal.get() != null;
     }
 
     protected void markBegin() {
-        DUPLICATE_CHECK_LOCAL.set("begin");
+        duplicateCheckLocal.set("begin");
     }
 
     protected void clearMark() {
-        DUPLICATE_CHECK_LOCAL.set(null);
+        duplicateCheckLocal.set(null);
     }
 
     protected void clearHandler() {
-        REQUEST_500_HANDLER_LOCAL.set(null);
+        request500HandlerLocal.set(null);
     }
 
     protected void prepareCharacterEncodingIfNeeds(HttpServletRequest request) throws UnsupportedEncodingException {
@@ -725,7 +725,7 @@ public class RequestLoggingFilter implements Filter {
     }
 
     protected void process500HandlingCallback(HttpServletRequest request, HttpServletResponse response, Throwable cause) {
-        final Request500Handler request500Handler = REQUEST_500_HANDLER_LOCAL.get();
+        final Request500Handler request500Handler = request500HandlerLocal.get();
         if (request500Handler == null) {
             return;
         }
@@ -758,7 +758,7 @@ public class RequestLoggingFilter implements Filter {
     }
 
     public static void setRequest500HandlerOnThread(Request500Handler handler) {
-        REQUEST_500_HANDLER_LOCAL.set(handler);
+        request500HandlerLocal.set(handler);
     }
 
     // ===================================================================================
