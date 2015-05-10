@@ -17,8 +17,8 @@ package org.lastaflute.core.direction;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +26,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.helper.jprop.ObjectiveProperties;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.di.Disposable;
 import org.lastaflute.di.DisposableUtil;
 import org.lastaflute.di.core.LastaDiProperties;
@@ -126,49 +127,37 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     // ===================================================================================
     //                                                                        Get Property
     //                                                                        ============
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public String get(String propertyKey) {
         reloadIfNeeds();
         return prop.get(propertyKey);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public Integer getAsInteger(String propertyKey) {
         reloadIfNeeds();
         return prop.getAsInteger(propertyKey);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public Long getAsLong(String propertyKey) {
         reloadIfNeeds();
         return prop.getAsLong(propertyKey);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public BigDecimal getAsDecimal(String propertyKey) {
         reloadIfNeeds();
         return prop.getAsDecimal(propertyKey);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public Date getAsDate(String propertyKey) {
+    @Override
+    public LocalDate getAsDate(String propertyKey) {
         reloadIfNeeds();
-        return prop.getAsDate(propertyKey);
+        return DfTypeUtil.toLocalDate(prop.getAsDate(propertyKey));
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public boolean is(String propertyKey) {
         reloadIfNeeds();
         return prop.is(propertyKey);
