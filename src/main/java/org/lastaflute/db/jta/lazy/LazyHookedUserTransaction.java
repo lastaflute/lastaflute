@@ -196,11 +196,11 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     }
 
     public Integer getCurrentHierarchyLevel() {
-        return (Integer) ThreadCacheContext.getObject(generateHierarchyLevelKey());
+        return ThreadCacheContext.getObject(generateHierarchyLevelKey());
     }
 
     protected boolean isHerarchyLevelFirst() {
-        final Integer currentLevel = (Integer) ThreadCacheContext.getObject(generateHierarchyLevelKey());
+        final Integer currentLevel = ThreadCacheContext.getObject(generateHierarchyLevelKey());
         return currentLevel != null && currentLevel.equals(getFirstHierarchyLevel());
     }
 
@@ -247,7 +247,7 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
 
     protected void resumeForcedlyBegunLazyTransactionIfNeeds() {
         final String resumeKey = generateResumeKey();
-        final ForcedlyBegunResumer resumer = (ForcedlyBegunResumer) ThreadCacheContext.getObject(resumeKey);
+        final ForcedlyBegunResumer resumer = ThreadCacheContext.getObject(resumeKey);
         if (resumer != null) {
             final boolean resumed = resumer.resume();
             if (resumed) {
@@ -339,8 +339,7 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
 
     public static void beginRealTransactionLazily() {
         final String lazyKey = LazyHookedUserTransaction.generateLazyProcessListKey();
-        @SuppressWarnings("unchecked")
-        final List<IndependentProcessor> lazyList = (List<IndependentProcessor>) ThreadCacheContext.getObject(lazyKey);
+        final List<IndependentProcessor> lazyList = ThreadCacheContext.getObject(lazyKey);
         if (lazyList != null) {
             markLazyRealBegun();
             for (IndependentProcessor processor : lazyList) {
@@ -423,8 +422,7 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     //                                          ------------
     protected void arrangeLazyProcessIfAllowed(IndependentProcessor processor) {
         final String lazyKey = generateLazyProcessListKey();
-        @SuppressWarnings("unchecked")
-        List<IndependentProcessor> lazyList = (List<IndependentProcessor>) ThreadCacheContext.getObject(lazyKey);
+        List<IndependentProcessor> lazyList = ThreadCacheContext.getObject(lazyKey);
         if (lazyList == null) {
             lazyList = new ArrayList<IndependentProcessor>();
             ThreadCacheContext.setObject(lazyKey, lazyList);

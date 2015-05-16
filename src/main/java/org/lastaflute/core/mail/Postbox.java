@@ -23,6 +23,8 @@ import org.dbflute.mail.Postcard;
 import org.dbflute.mail.send.SMailDeliveryDepartment;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
+import org.lastaflute.di.Disposable;
+import org.lastaflute.di.DisposableUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * @author jflute
  * @since 0.6.0 (2015/05/04 Monday)
  */
-public class Postbox {
+public class Postbox implements Disposable {
 
     // ===================================================================================
     //                                                                          Definition
@@ -59,6 +61,9 @@ public class Postbox {
         final FwCoreDirection direction = assistCoreDirection();
         final SMailDeliveryDepartment deliveryDepartment = direction.assistMailDeliveryDepartment();
         postOffice = deliveryDepartment != null ? newPostOffice(deliveryDepartment) : null;
+        if (direction.isDevelopmentHere()) {
+            prepareHotDeploy();
+        }
         showBootLogging();
     }
 
@@ -68,6 +73,10 @@ public class Postbox {
 
     protected PostOffice newPostOffice(SMailDeliveryDepartment deliveryDepartment) {
         return new PostOffice(deliveryDepartment);
+    }
+
+    protected void prepareHotDeploy() {
+        DisposableUtil.add(this);
     }
 
     protected void showBootLogging() {
@@ -93,7 +102,6 @@ public class Postbox {
     //                                                                             =======
     public void post(LaMailPostcard postcard) {
         assertPostOfficeWorks(postcard);
-
         final Postcard nativePostcard = postcard.toNativePostcard();
         postOffice.deliver(nativePostcard);
     }
@@ -103,5 +111,13 @@ public class Postbox {
             String msg = "No mail settings so cannot send your mail: " + postcard;
             throw new IllegalStateException(msg);
         }
+    }
+
+    // ===================================================================================
+    //                                                                             Dispose
+    //                                                                             =======
+    @Override
+    public void dispose() {
+        postOffice.workingDispose();
     }
 }
