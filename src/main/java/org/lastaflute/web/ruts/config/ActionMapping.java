@@ -119,28 +119,28 @@ public class ActionMapping {
     // o routing path of forward e.g. /member/list/ -> MemberListAction
     public NextJourney createNextJourney(HtmlResponse response) { // almost copied from super
         String path = response.getRoutingPath();
-        final boolean redirect;
+        final boolean redirectTo;
         if (path.endsWith(REDIRECT)) {
-            redirect = true;
+            redirectTo = true;
             path = path.substring(0, path.length() - REDIRECT.length() - 1);
         } else {
-            redirect = response.isRedirectTo();
+            redirectTo = response.isRedirectTo();
         }
         if (path.indexOf(":") < 0) {
             if (!path.startsWith("/")) {
                 path = buildActionPath(getActionDef().getComponentName()) + path;
             }
-            if (!redirect) { // forward here
+            if (!redirectTo) { // forward here
                 if (isJspForward(path)) { // e.g. JSP
                     path = filterJspPath(path);
                 }
             }
         }
-        return newNextJourney(path, redirect);
+        return newNextJourney(path, redirectTo, response.isAsIs());
     }
 
-    protected NextJourney newNextJourney(String routingPath, boolean redirect) {
-        return new NextJourney(routingPath, redirect);
+    protected NextJourney newNextJourney(String routingPath, boolean redirectTO, boolean asIs) {
+        return new NextJourney(routingPath, redirectTO, asIs);
     }
 
     protected String buildActionPath(String componentName) {

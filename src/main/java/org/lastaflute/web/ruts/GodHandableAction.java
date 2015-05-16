@@ -537,7 +537,7 @@ public class GodHandableAction implements VirtualAction {
     protected void showTransition(NextJourney journey) {
         if (LOG.isDebugEnabled()) {
             if (journey.isPresent()) {
-                final String ing = journey.isRedirect() ? "Redirecting" : "Forwarding";
+                final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
                 final String path = journey.getRoutingPath(); // basically not null but just in case
                 final String tag = path != null && path.endsWith(".jsp") ? "#jsp " : "";
                 LOG.debug("#flow ...{} to {}{}", ing, tag, path);

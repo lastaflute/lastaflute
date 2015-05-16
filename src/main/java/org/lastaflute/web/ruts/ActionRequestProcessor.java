@@ -30,6 +30,7 @@ import org.lastaflute.web.ruts.process.ActionCoinHelper;
 import org.lastaflute.web.ruts.process.ActionFormMapper;
 import org.lastaflute.web.ruts.process.ActionRequestResource;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.servlet.request.ResponseManager;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -164,15 +165,20 @@ public class ActionRequestProcessor {
             return;
         }
         final String routingPath = journey.getRoutingPath();
-        if (journey.isRedirect()) {
-            doRedirect(execute, routingPath);
+        if (journey.isRedirectTo()) {
+            doRedirect(execute, routingPath, journey.isAsIs());
         } else {
             doForward(execute, routingPath);
         }
     }
 
-    protected void doRedirect(ActionExecute execute, String redirectPath) throws IOException {
-        getRequestManager().getResponseManager().redirect(redirectPath);
+    protected void doRedirect(ActionExecute execute, String redirectPath, boolean asIs) throws IOException {
+        final ResponseManager responseManager = getRequestManager().getResponseManager();
+        if (asIs) {
+            responseManager.redirectAsIs(redirectPath);
+        } else { // mainly here
+            responseManager.redirect(redirectPath);
+        }
     }
 
     protected void doForward(ActionExecute execute, String forwardPath) throws IOException, ServletException {

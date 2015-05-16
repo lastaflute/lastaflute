@@ -25,6 +25,7 @@ import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.response.next.ForwardNext;
 import org.lastaflute.web.response.next.RedirectNext;
+import org.lastaflute.web.response.next.RedirectNext.RedirectPathStyle;
 import org.lastaflute.web.response.next.RoutingNext;
 import org.lastaflute.web.response.render.RenderDataRegistration;
 
@@ -42,8 +43,7 @@ public class HtmlResponse implements ActionResponse {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    private final RoutingNext nextRouting;
-    protected final boolean redirectTo;
+    protected final RoutingNext nextRouting;
     protected Map<String, String> headerMap; // lazy loaded (for when no use)
     protected boolean empty;
     protected boolean skipResponse;
@@ -57,13 +57,11 @@ public class HtmlResponse implements ActionResponse {
     public HtmlResponse(ForwardNext forwardNext) {
         assertArgumentNotNull("forwardNext", forwardNext);
         this.nextRouting = forwardNext;
-        this.redirectTo = false;
     }
 
     public HtmlResponse(RedirectNext redirectNext) {
         assertArgumentNotNull("redirectNext", redirectNext);
         this.nextRouting = redirectNext;
-        this.redirectTo = true;
     }
 
     // -----------------------------------------------------
@@ -74,7 +72,11 @@ public class HtmlResponse implements ActionResponse {
     }
 
     public static HtmlResponse fromRedirectPath(String redirectPath) {
-        return new HtmlResponse(new RedirectNext(redirectPath));
+        return new HtmlResponse(new RedirectNext(redirectPath, RedirectPathStyle.INNER));
+    }
+
+    public static HtmlResponse fromRedirectPathAsIs(String redirectPath) {
+        return new HtmlResponse(new RedirectNext(redirectPath, RedirectPathStyle.AS_IS));
     }
 
     // ===================================================================================
@@ -139,8 +141,9 @@ public class HtmlResponse implements ActionResponse {
      * You can use the errors in next action after redirection.
      */
     protected void saveErrorsToSession() {
-        if (!redirectTo) {
-            throw new IllegalStateException("Not allowed operation when forward: saveErrorsToSession()");
+        if (!isRedirectTo()) {
+            String msg = "Not allowed operation when forward: saveErrorsToSession(): " + toString();
+            throw new IllegalStateException(msg);
         }
         errorsToSession = true;
     }
@@ -175,7 +178,11 @@ public class HtmlResponse implements ActionResponse {
     }
 
     public boolean isRedirectTo() {
-        return redirectTo;
+        return nextRouting instanceof RedirectNext;
+    }
+
+    public boolean isAsIs() {
+        return getNextRouting().isAsIs();
     }
 
     @Override

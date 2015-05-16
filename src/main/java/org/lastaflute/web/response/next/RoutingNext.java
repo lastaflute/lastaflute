@@ -21,4 +21,6 @@ package org.lastaflute.web.response.next;
 public interface RoutingNext {
 
     String getRoutingPath();
+
+    boolean isAsIs();
 }

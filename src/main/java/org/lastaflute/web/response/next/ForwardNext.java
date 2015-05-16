@@ -39,6 +39,11 @@ public class ForwardNext implements RoutingNext {
         return forwardPath;
     }
 
+    @Override
+    public boolean isAsIs() {
+        return false;
+    }
+
     public String getForwardPath() {
         return forwardPath;
     }

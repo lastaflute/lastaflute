@@ -107,37 +107,46 @@ public class SimpleResponseManager implements ResponseManager {
     //                                                                   Redirect Response
     //                                                                   =================
     @Override
+    public void forward(String forwardPath) throws ServletException, IOException {
+        assertArgumentNotNull("forwardPath", forwardPath);
+        final HttpServletRequest request = getRequestManager().getRequest();
+        final RequestDispatcher rd = request.getRequestDispatcher(forwardPath); // same context
+        if (rd == null) {
+            String msg = "Not found the request dispatcher for the URI: " + forwardPath;
+            throw new IllegalStateException(msg);
+        }
+        rd.forward(request, getResponse());
+    }
+
+    @Override
     public void redirect(String redirectPath) throws IOException {
         assertArgumentNotNull("redirectPath", redirectPath);
-        doRedirect(redirectPath);
+        doRedirect(redirectPath, false);
     }
 
-    protected void doRedirect(String redirectPath) throws IOException {
+    @Override
+    public void redirectAsIs(String redirectPath) throws IOException {
+        assertArgumentNotNull("redirectPath", redirectPath);
+        doRedirect(redirectPath, true);
+    }
+
+    protected void doRedirect(String redirectPath, boolean asIs) throws IOException {
         final HttpServletResponse response = getResponse();
-        final String redirectUrl = buildRedirectUrl(response, redirectPath);
-        response.sendRedirect(redirectUrl);
+        response.sendRedirect(buildRedirectUrl(response, redirectPath, asIs));
     }
 
-    protected String buildRedirectUrl(HttpServletResponse response, String redirectPath) {
+    protected String buildRedirectUrl(HttpServletResponse response, String redirectPath, boolean asIs) {
         final String redirectUrl;
-        if (redirectPath.startsWith("/")) {
-            redirectUrl = LaRequestUtil.getRequest().getContextPath() + redirectPath;
+        if (needsContextPathForRedirectPath(redirectPath, asIs)) {
+            redirectUrl = getRequestManager().getContextPath() + redirectPath;
         } else {
             redirectUrl = redirectPath;
         }
         return response.encodeRedirectURL(redirectUrl);
     }
 
-    @Override
-    public void forward(String forwardPath) throws ServletException, IOException {
-        assertArgumentNotNull("forwardPath", forwardPath);
-        final HttpServletRequest request = getRequestManager().getRequest();
-        final RequestDispatcher rd = request.getRequestDispatcher(forwardPath);
-        if (rd == null) {
-            String msg = "Not found the request dispatcher for the URI: " + forwardPath;
-            throw new IllegalStateException(msg);
-        }
-        rd.forward(request, getResponse());
+    protected boolean needsContextPathForRedirectPath(String redirectPath, boolean asIs) {
+        return !asIs && redirectPath.startsWith("/");
     }
 
     @Override
@@ -383,7 +392,7 @@ public class SimpleResponseManager implements ResponseManager {
     //                                                                     Friends Gateway
     //                                                                     ===============
     protected RequestManager getRequestManager() {
-        return ContainerUtil.getComponent(RequestManager.class);
+        return ContainerUtil.getComponent(RequestManager.class); // not to be cyclic reference
     }
 
     // ===================================================================================

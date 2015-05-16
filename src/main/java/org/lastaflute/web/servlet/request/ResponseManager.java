@@ -43,19 +43,26 @@ public interface ResponseManager {
     //                                                                    Routing Response
     //                                                                    ================
     /**
-     * Redirect to the path.
-     * @param redirectPath The path of redirect without context path, will be adjusted in this method. (NotNull)
-     * @throws IOException When the IO failed.
-     */
-    void redirect(String redirectPath) throws IOException;
-
-    /**
      * Forward to the path.
      * @param forwardPath The path of forward without context path, will be adjusted in this method. (NotNull)
      * @throws ServletException When the servlet failed.
      * @throws IOException When the IO failed.
      */
     void forward(String forwardPath) throws ServletException, IOException;
+
+    /**
+     * Redirect to the path. (adjusted for context path)
+     * @param redirectPath The path of redirect without context path, will be adjusted in this method. (NotNull)
+     * @throws IOException When the IO failed.
+     */
+    void redirect(String redirectPath) throws IOException;
+
+    /**
+     * Redirect to the path as-is. (no adjustment for context path)
+     * @param redirectPath The path of redirect without context path, plainly used in this method. (NotNull)
+     * @throws IOException When the IO failed.
+     */
+    void redirectAsIs(String redirectPath) throws IOException;
 
     /**
      * Set status as MOVED_PERMANENTLY and add the URL to location.
