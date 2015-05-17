@@ -31,16 +31,14 @@ import org.lastaflute.web.ruts.GodHandableAction;
  * (And you can see the details of this callback process by reading {@link GodHandableAction})
  * <pre>
  * try {
- *     godHandActionPrologue()
- *     godHandBefore()
- *     callbackBefore()
+ *     godHandPrologue()
+ *     hookBefore()
  *     *execute action
  * } catch (...) {
- *     godHandExceptionMonologue()
+ *     godHandMonologue()
  * } finally {
- *     callbackFinally()
- *     godHandFinally()
- *     godHandActionEpilogue()
+ *     hookFinally()
+ *     godHandEpilogue()
  * }
  * </pre>
  * @author jflute

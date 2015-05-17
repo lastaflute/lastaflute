@@ -15,13 +15,16 @@
  */
 package org.lastaflute.web.validation;
 
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.response.ActionResponse;
 
 /**
  * @author jflute
  */
 @FunctionalInterface
-public interface ValidationTrueMessenger {
+public interface ValidationErrorHook {
 
-    ActionMessages callback();
+    /**
+     * @return The action response for validation error. (NotNull)
+     */
+    ActionResponse hook();
 }

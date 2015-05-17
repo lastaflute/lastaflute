@@ -82,13 +82,13 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     }
 
     protected void direct() {
-        final FwAssistDirection direction = assistOptionalAssistDirection();
+        final FwAssistDirection direction = assistAssistDirection();
         appResource = filterEnvSwitching(direction.assistAppConfig());
         extendsResourceList.clear(); // for reload
         extendsResourceList.addAll(filterEnvSwitchingList(direction.assistExtendsConfigList()));
     }
 
-    protected FwAssistDirection assistOptionalAssistDirection() {
+    protected FwAssistDirection assistAssistDirection() {
         return assistantDirector.assistAssistDirection();
     }
 

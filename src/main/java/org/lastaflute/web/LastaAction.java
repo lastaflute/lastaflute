@@ -28,12 +28,8 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionShow;
 import org.lastaflute.db.jta.stage.TransactionStage;
-import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
-import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.path.ActionPathResolver;
-import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.response.StreamResponse;
@@ -44,9 +40,6 @@ import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.validation.ActionValidator;
-import org.lastaflute.web.validation.ValidationErrorHandler;
-import org.lastaflute.web.validation.ValidationMoreHandler;
-import org.lastaflute.web.validation.ValidationTrueMessenger;
 
 /**
  * @author jflute
@@ -107,20 +100,9 @@ public abstract class LastaAction {
     // -----------------------------------------------------
     //                                      Input Validation
     //                                      ----------------
-    protected void validate(Object form, ValidationErrorHandler validationErrorLambda) {
-        newActionValidator().validate(form, validationErrorLambda);
-    }
-
-    protected void validateMore(Object form, ValidationMoreHandler doValidateLambda, ValidationErrorHandler validationErrorLambda) {
-        newActionValidator().validateMore(form, doValidateLambda, validationErrorLambda);
-    }
-
-    protected void validateTrue(boolean trueOrFalse, ValidationTrueMessenger messagesLambda, ValidationErrorHandler validationErrorLambda) {
-        newActionValidator().validateTrue(trueOrFalse, messagesLambda, validationErrorLambda);
-    }
-
-    protected ActionValidator newActionValidator() {
-        return new ActionValidator(requestManager, messageManager);
+    @SuppressWarnings("unchecked")
+    protected <MESSAGES extends ActionMessages> ActionValidator<MESSAGES> createValidator() {
+        return new ActionValidator<MESSAGES>(requestManager, () -> (MESSAGES) createMessages());
     }
 
     /**
@@ -129,33 +111,6 @@ public abstract class LastaAction {
      */
     protected ActionMessages createMessages() { // should be overridden as type-safe properties
         return new ActionMessages();
-    }
-
-    protected HtmlResponse lets404() { // e.g. used by error handling of validation for GET parameter
-        throw new ForcedRequest404NotFoundException("from lets404()");
-    }
-
-    // -----------------------------------------------------
-    //                                          API Dispatch
-    //                                          ------------
-    /**
-     * Dispatch validation error of API to common process by API manager.
-     * <pre>
-     * validate(form, () -> dispatchApiValidationError());
-     * </pre>
-     * @return The response of API for validation error. (NotNull)
-     */
-    protected ApiResponse dispatchApiValidationError() { // for API
-        final ApiFailureResource resource = newApiValidationErrorResource(requestManager.errors().get(), requestManager);
-        return apiManager.handleValidationError(resource, retrieveActionRuntimeMeta());
-    }
-
-    protected ApiFailureResource newApiValidationErrorResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
-        return new ApiFailureResource(errors, requestManager);
-    }
-
-    protected ActionRuntimeMeta retrieveActionRuntimeMeta() {
-        return requestManager.getAttribute(LastaWebKey.ACTION_RUNTIME_META_KEY, ActionRuntimeMeta.class).get(); // always exists
     }
 
     // ===================================================================================

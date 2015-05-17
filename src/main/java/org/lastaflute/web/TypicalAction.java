@@ -35,9 +35,11 @@ import org.lastaflute.web.callback.TypicalGodHandResource;
 import org.lastaflute.web.callback.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
 import org.lastaflute.web.exception.ForcedIllegalTransitionApplicationException;
+import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.response.ActionResponse;
+import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
@@ -130,10 +132,10 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
     //                                            ----------
     @Override
     public ActionResponse godHandExceptionMonologue(ActionRuntimeMeta runtimeMeta) { // fixed process
-        return newTypicalGodHandExceptionMonologue().performMonologue(runtimeMeta);
+        return createTypicalGodHandExceptionMonologue().performMonologue(runtimeMeta);
     }
 
-    protected TypicalGodHandExceptionMonologue newTypicalGodHandExceptionMonologue() {
+    protected TypicalGodHandExceptionMonologue createTypicalGodHandExceptionMonologue() {
         final TypicalGodHandResource resource = newTypicalGodHandResource();
         final TypicalEmbeddedKeySupplier supplier = newTypicalEmbeddedKeySupplier();
         final ActionApplicationExceptionHandler handler = newActionApplicationExceptionHandler();
@@ -231,32 +233,32 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
     protected void checkParameter(boolean expectedBool) { // application may call
         logger.debug("...Checking the parameter is true: {}", expectedBool);
         if (!expectedBool) {
-            throwParameterFailure();
+            handleParameterFailure();
         }
     }
 
     protected void checkParameterExists(Object parameter) { // application may call
         logger.debug("...Checking the parameter exists: {}", parameter);
         if (parameter == null || (parameter instanceof String && ((String) parameter).isEmpty())) {
-            throwParameterFailure();
+            handleParameterFailure();
         }
     }
 
     protected void checkParameterPlusNumber(long num) { // application may call
         logger.debug("...Checking the parameter is plus number: {}", num);
         if (num <= 0) {
-            throwParameterFailure();
+            handleParameterFailure();
         }
     }
 
     protected void checkParameterZeroOrPlusNumber(long num) { // application may call
         logger.debug("...Checking the parameter is zero or plus number: {}", num);
         if (num < 0) {
-            throwParameterFailure();
+            handleParameterFailure();
         }
     }
 
-    protected void throwParameterFailure() {
+    protected void handleParameterFailure() {
         lets404(); // no server error because it can occur by user's trick easily e.g. changing GET parameter
     }
 
@@ -285,6 +287,10 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
         if (!expectedBool) {
             letsIllegalTransition();
         }
+    }
+
+    protected HtmlResponse lets404() { // e.g. used by error handling of validation for GET parameter
+        throw new ForcedRequest404NotFoundException("from lets404()");
     }
 
     protected void letsIllegalTransition() {

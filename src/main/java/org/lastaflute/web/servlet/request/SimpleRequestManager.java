@@ -34,6 +34,7 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionRuntimeMeta;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.RequestAttributeNotFoundException;
@@ -80,6 +81,10 @@ public class SimpleRequestManager implements RequestManager {
     /** The manager of message. (NotNull: after initialization) */
     @Resource
     protected MessageManager messageManager;
+
+    /** The manager of API. (NotNull: after initialization) */
+    @Resource
+    protected ApiManager apiManager;
 
     /** The provider of request user locale. (NotNull: after initialization) */
     protected UserLocaleProcessProvider localeHandler;
@@ -661,6 +666,11 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public MessageManager getMessageManager() {
         return messageManager;
+    }
+
+    @Override
+    public ApiManager getApiManager() {
+        return apiManager;
     }
 
     // ===================================================================================

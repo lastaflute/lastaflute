@@ -40,15 +40,21 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
+import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.api.ApiFailureResource;
+import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.message.MessagesProvider;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 
 /**
+ * @param <MESSAGES> The type of action messages.
  * @author jflute
  */
-public class ActionValidator {
+public class ActionValidator<MESSAGES extends ActionMessages> {
 
     // ===================================================================================
     //                                                                          Definition
@@ -60,77 +66,69 @@ public class ActionValidator {
     //                                                                           Attribute
     //                                                                           =========
     protected final RequestManager requestManager;
-    protected final MessageManager messageManager;
+    protected final MessagesProvider<MESSAGES> messageProvider;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(RequestManager requestManager, MessageManager messageManager) {
+    public ActionValidator(RequestManager requestManager, MessagesProvider<MESSAGES> noArgInLambda) {
         assertArgumentNotNull("requestManager", requestManager);
-        assertArgumentNotNull("messageManager", messageManager);
         this.requestManager = requestManager;
-        this.messageManager = messageManager;
+        this.messageProvider = noArgInLambda;
     }
 
     // ===================================================================================
     //                                                                            Validate
     //                                                                            ========
     // -----------------------------------------------------
-    //                                       Annotation Only
-    //                                       ---------------
-    public void validate(Object form, ValidationErrorHandler validationErrorLambda) {
+    //                                               General
+    //                                               -------
+    public void validate(Object form, ValidateMoreHandler<MESSAGES> doValidateLambda, ValidationErrorHook validationErrorLambda) {
+        doValidate(form, doValidateLambda, validationErrorLambda);
+    }
+
+    protected void doValidate(Object form, ValidateMoreHandler<MESSAGES> doValidateLambda, ValidationErrorHook validationErrorLambda) {
         assertArgumentNotNull("form", form);
+        assertArgumentNotNull("doValidateLambda", doValidateLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
-        handleValidationErrorExceptionIfNeeds(hibernateValidate(form), validationErrorLambda);
-    }
-
-    // -----------------------------------------------------
-    //                                       More by Program
-    //                                       ---------------
-    public void validateMore(Object form, ValidationMoreHandler validationMoreLambda, ValidationErrorHandler validationErrorLambda) {
-        assertArgumentNotNull("form", form);
-        assertArgumentNotNull("validationMoreLambda", validationMoreLambda);
-        assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
-        final ActionMessages messages = hibernateValidate(form);
-        handleMoreValidation(validationMoreLambda, messages);
-        handleValidationErrorExceptionIfNeeds(messages, validationErrorLambda);
-    }
-
-    protected void handleMoreValidation(ValidationMoreHandler doValidateLambda, final ActionMessages messages) {
-        final ActionMessages moreMessages = doValidateLambda.callback();
-        if (moreMessages == null) {
-            String msg = "Cannot return null at more-validation callback of validateMore(): " + doValidateLambda;
-            throw new IllegalStateException(msg);
-        }
-        messages.add(moreMessages);
-    }
-
-    // -----------------------------------------------------
-    //                                         True or Error
-    //                                         -------------
-    public void validateTrue(boolean trueOrFalse, ValidationTrueMessenger messagesLambda, ValidationErrorHandler validationErrorLambda) {
-        if (trueOrFalse) {
-            return;
-        }
-        final ActionMessages messages = messagesLambda.callback();
-        if (messages == null) {
-            String msg = "Cannot return null at the messenger callback of validateTrue(): " + messagesLambda;
-            throw new IllegalStateException(msg);
-        }
-        handleValidationErrorExceptionIfNeeds(messages, validationErrorLambda);
-    }
-
-    // -----------------------------------------------------
-    //                                          Handle Error
-    //                                          ------------
-    protected void handleValidationErrorExceptionIfNeeds(ActionMessages messages, ValidationErrorHandler errorHandler) {
+        @SuppressWarnings("unchecked")
+        final MESSAGES messages = (MESSAGES) hibernateValidate(form);
+        doValidateLambda.more(messages);
         if (!messages.isEmpty()) {
-            throwValidationErrorException(messages, errorHandler);
+            throwValidationErrorException(messages, validationErrorLambda);
         }
     }
 
-    protected void throwValidationErrorException(ActionMessages messages, ValidationErrorHandler errorHandler) {
-        throw new ValidationErrorException(messages, errorHandler);
+    public void letsValidationError(MessagesProvider<MESSAGES> noArgInLambda, ValidationErrorHook validationErrorLambda) {
+        throwValidationErrorException(noArgInLambda.provide(), validationErrorLambda);
+    }
+
+    protected void throwValidationErrorException(MESSAGES messages, ValidationErrorHook validationErrorLambda) {
+        throw new ValidationErrorException(messages, validationErrorLambda);
+    }
+
+    // -----------------------------------------------------
+    //                                               for API
+    //                                               -------
+    public void validateApi(Object form, ValidateMoreHandler<MESSAGES> doValidateLambda) {
+        doValidate(form, doValidateLambda, () -> hookApiValidationError());
+    }
+
+    public void letsValidationErrorApi(MessagesProvider<MESSAGES> noArgInLambda) {
+        throwValidationErrorException(noArgInLambda.provide(), () -> hookApiValidationError());
+    }
+
+    protected ApiResponse hookApiValidationError() { // for API
+        final ApiFailureResource resource = newApiFailureResource(requestManager.errors().get(), requestManager);
+        return requestManager.getApiManager().handleValidationError(resource, retrieveActionRuntimeMeta());
+    }
+
+    protected ApiFailureResource newApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
+        return new ApiFailureResource(errors, requestManager);
+    }
+
+    protected ActionRuntimeMeta retrieveActionRuntimeMeta() {
+        return requestManager.getAttribute(LastaWebKey.ACTION_RUNTIME_META_KEY, ActionRuntimeMeta.class).get(); // always exists
     }
 
     // ===================================================================================
@@ -140,7 +138,7 @@ public class ActionValidator {
         final Validator validator = comeOnHibernateValidator();
         final Set<ConstraintViolation<Object>> vioSet = validator.validate(form);
         final TreeMap<String, Object> orderedMap = prepareOrderedMap(form, vioSet);
-        final ActionMessages messages = newBaseActionMessages();
+        final ActionMessages messages = prepareActionMessages();
         for (Entry<String, Object> entry : orderedMap.entrySet()) {
             final Object holder = entry.getValue();
             if (holder instanceof ConstraintViolation) {
@@ -189,7 +187,7 @@ public class ActionValidator {
     }
 
     protected ResourceBundle newHookedResourceBundle(Locale locale) {
-        return new HookedResourceBundle(messageManager, locale);
+        return new HookedResourceBundle(requestManager.getMessageManager(), locale);
     }
 
     protected static class HookedResourceBundle extends ResourceBundle {
@@ -283,8 +281,8 @@ public class ActionValidator {
     // -----------------------------------------------------
     //                                        Action Message
     //                                        --------------
-    protected ActionMessages newBaseActionMessages() {
-        return new ActionMessages();
+    protected MESSAGES prepareActionMessages() {
+        return messageProvider.provide();
     }
 
     protected void registerActionMessage(ActionMessages messages, ConstraintViolation<Object> vio) {
@@ -313,7 +311,7 @@ public class ActionValidator {
         if (message.contains(itemVariable)) {
             final Locale userLocale = requestManager.getUserLocale();
             final String labelKey = buildLabelKey(propertyPath);
-            final String itemName = messageManager.findMessage(userLocale, labelKey).orElseGet(() -> {
+            final String itemName = requestManager.getMessageManager().findMessage(userLocale, labelKey).orElseGet(() -> {
                 return getDefaultItem(message, propertyPath);
             });
             return Srl.replace(message, itemVariable, itemName);

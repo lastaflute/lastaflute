@@ -57,7 +57,7 @@ import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
-import org.lastaflute.web.validation.ValidationErrorHandler;
+import org.lastaflute.web.validation.ValidationErrorHook;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -365,8 +365,8 @@ public class GodHandableAction implements VirtualAction {
         // e.g. validate(form, () -> dispatchApiValidationError())
         final ActionMessages errors = cause.getMessages();
         requestManager.errors().save(errors); // also API can use it
-        final ValidationErrorHandler errorHandler = cause.getErrorHandler();
-        final ActionResponse response = errorHandler.handle();
+        final ValidationErrorHook errorHandler = cause.getErrorHandler();
+        final ActionResponse response = errorHandler.hook();
         if (response == null) {
             throw new IllegalStateException("The handler for validation error cannot return null: " + errorHandler, cause);
         }
@@ -453,7 +453,7 @@ public class GodHandableAction implements VirtualAction {
     protected NextJourney handleJsonResponse(JsonResponse<?> jsonResponse) {
         // this needs original action customizer in your customizer.dicon
         final JsonManager jsonManager = getJsonManager();
-        final String json = jsonManager.toJson(jsonResponse.getJsonObj());
+        final String json = jsonManager.toJson(jsonResponse.getJsonBean());
         final ResponseManager responseManager = requestManager.getResponseManager();
         setupApiResponseHeader(responseManager, jsonResponse);
         setupApiResponseHttpStatus(responseManager, jsonResponse);

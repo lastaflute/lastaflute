@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionRuntimeMeta;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.scoped.ScopedAttributeHolder;
@@ -279,4 +280,10 @@ public interface RequestManager extends ScopedAttributeHolder {
      * @return The injected manager of message. (NotNull)
      */
     MessageManager getMessageManager();
+
+    /**
+     * Get the manager of API.
+     * @return The injected manager of API. (NotNull)
+     */
+    ApiManager getApiManager();
 }

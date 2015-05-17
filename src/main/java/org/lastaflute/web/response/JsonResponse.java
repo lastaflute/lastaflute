@@ -39,7 +39,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Object jsonObj;
+    protected final BEAN jsonBean;
     protected String callback;
     protected Map<String, String> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
@@ -63,11 +63,11 @@ public class JsonResponse<BEAN> implements ApiResponse {
      * </pre>
      * @param jsonObj The JSON object to send response. (NotNull)
      */
-    public JsonResponse(Object jsonObj) {
+    public JsonResponse(BEAN jsonObj) {
         if (jsonObj == null) {
             throw new IllegalArgumentException("The argument 'jsonObj' should not be null.");
         }
-        this.jsonObj = jsonObj;
+        this.jsonBean = jsonObj;
     }
 
     // ===================================================================================
@@ -150,15 +150,15 @@ public class JsonResponse<BEAN> implements ApiResponse {
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        final String jsonExp = jsonObj != null ? DfTypeUtil.toClassTitle(jsonObj) : null;
+        final String jsonExp = jsonBean != null ? DfTypeUtil.toClassTitle(jsonBean) : null;
         return classTitle + ":{" + jsonExp + ", " + callback + ", " + forcedlyJavaScript + ", " + empty + ", " + skip + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public Object getJsonObj() {
-        return jsonObj;
+    public BEAN getJsonBean() {
+        return jsonBean;
     }
 
     public String getCallback() {

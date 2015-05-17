@@ -16,7 +16,7 @@
 package org.lastaflute.web.validation.exception;
 
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.validation.ValidationErrorHandler;
+import org.lastaflute.web.validation.ValidationErrorHook;
 
 /**
  * @author modified by jflute (originated in Seasar)
@@ -32,12 +32,12 @@ public class ValidationErrorException extends RuntimeException {
     //                                                                           Attribute
     //                                                                           =========
     protected final ActionMessages messages;
-    protected final ValidationErrorHandler errorHandler;
+    protected final ValidationErrorHook errorHandler;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ValidationErrorException(ActionMessages messages, ValidationErrorHandler errorHandler) {
+    public ValidationErrorException(ActionMessages messages, ValidationErrorHook errorHandler) {
         if (messages == null) {
             throw new IllegalArgumentException("The argument 'messages' should not be null.");
         }
@@ -55,7 +55,7 @@ public class ValidationErrorException extends RuntimeException {
         return messages;
     }
 
-    public ValidationErrorHandler getErrorHandler() {
+    public ValidationErrorHook getErrorHandler() {
         return errorHandler;
     }
 }
