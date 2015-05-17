@@ -115,36 +115,36 @@ public class SimpleTimeManager implements TimeManager {
     // don't use business-time handler in current-time process
     // the handler uses these processes...
     @Override
-    public LocalDate getCurrentDate() {
-        return DfTypeUtil.toLocalDate(getCurrentUtilDate(), getBusinessTimeZone());
+    public LocalDate currentDate() {
+        return DfTypeUtil.toLocalDate(currentUtilDate(), getBusinessTimeZone());
     }
 
     @Override
-    public LocalDateTime getCurrentDateTime() {
-        return DfTypeUtil.toLocalDateTime(getCurrentUtilDate(), getBusinessTimeZone());
+    public LocalDateTime currentDateTime() {
+        return DfTypeUtil.toLocalDateTime(currentUtilDate(), getBusinessTimeZone());
     }
 
     @Override
-    public HandyDate getCurrentHandyDate() {
-        return new HandyDate(getCurrentUtilDate());
+    public HandyDate currentHandyDate() {
+        return new HandyDate(currentUtilDate());
     }
 
     @Override
-    public long getCurrentMillis() {
+    public long currentMillis() {
         return currentTimeMillis();
     }
 
     @Override
-    public Date getCurrentUtilDate() {
+    public Date currentUtilDate() {
         if (TransactionTimeContext.exists()) {
             final Date transactionTime = TransactionTimeContext.getTransactionTime();
             return new Date(transactionTime.getTime());
         }
-        return getFlashDate();
+        return flashDate();
     }
 
     @Override
-    public Timestamp getCurrentTimestamp() {
+    public Timestamp currentTimestamp() {
         if (TransactionTimeContext.exists()) {
             final Date transactionTime = TransactionTimeContext.getTransactionTime();
             return new Timestamp(transactionTime.getTime());
@@ -153,7 +153,7 @@ public class SimpleTimeManager implements TimeManager {
     }
 
     @Override
-    public Date getFlashDate() {
+    public Date flashDate() {
         return new Date(currentTimeMillis());
     }
 

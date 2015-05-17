@@ -250,7 +250,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         assertUserEntityRequired(userEntity);
         final USER_BEAN userBean = saveLoginInfoToSession(userEntity);
         if (userBean instanceof SyncCheckable) {
-            ((SyncCheckable) userBean).setLastestSyncCheckDateTime(timeManager.getCurrentDateTime());
+            ((SyncCheckable) userBean).setLastestSyncCheckDateTime(timeManager.currentDateTime());
         }
         if (option.isRememberMe()) {
             saveAutoLoginKeyToCookie(userEntity, userBean);
@@ -374,7 +374,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     protected String buildAutoLoginCookieValue(USER_ENTITY userEntity, USER_BEAN userBean, int expireDays) {
         final String autoLoginKey = createAutoLoginKey(userEntity, userBean);
         final String delimiter = getAutoLoginDelimiter();
-        final HandyDate currentHandyDate = timeManager.getCurrentHandyDate();
+        final HandyDate currentHandyDate = timeManager.currentHandyDate();
         final HandyDate expireDate = currentHandyDate.addDay(expireDays); // access token's expire
         return autoLoginKey + delimiter + formatForAutoLoginExpireDate(expireDate);
     }
@@ -525,7 +525,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @return Is a validation for auto login OK?
      */
     protected boolean isValidAutoLoginCookie(String userKey, String expireDate) {
-        final String currentDate = formatForAutoLoginExpireDate(timeManager.getCurrentHandyDate());
+        final String currentDate = formatForAutoLoginExpireDate(timeManager.currentHandyDate());
         if (currentDate.compareTo(expireDate) < 0) { // String v.s. String
             return true; // valid access token within time limit
         }
@@ -671,7 +671,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         }
         final SyncCheckable checkable = (SyncCheckable) userBean;
         final OptionalThing<LocalDateTime> checkDt = checkable.getLastestSyncCheckDateTime(); // might be null
-        final LocalDateTime currentDt = timeManager.getCurrentDateTime();
+        final LocalDateTime currentDt = timeManager.currentDateTime();
         if (!needsLoginSessionSyncCheck(userBean, checkDt, currentDt)) {
             return true; // means no check
         }

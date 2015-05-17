@@ -226,13 +226,13 @@ public class SimpleAsyncManager implements AsyncManager {
     //                                                                  Asynchronous Entry
     //                                                                  ==================
     @Override
-    public void async(ConcurrentAsyncCall noArgInLambda) {
-        assertThreadCallbackNotNull(noArgInLambda);
+    public void async(ConcurrentAsyncCall noArgLambda) {
+        assertThreadCallbackNotNull(noArgLambda);
         assertExecutorServiceValid();
-        if (noArgInLambda.asPrimary()) {
-            doAsyncPrimary(noArgInLambda);
+        if (noArgLambda.asPrimary()) {
+            doAsyncPrimary(noArgLambda);
         } else {
-            doAsyncSecondary(noArgInLambda);
+            doAsyncSecondary(noArgLambda);
         }
     }
 

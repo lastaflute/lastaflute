@@ -30,8 +30,9 @@ public class FwAssistDirection {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected String appConfig;
+    protected String appConfig; // not null
     protected final List<String> extendsConfigList = new ArrayList<String>(4);
+    protected PropertyFilter configPropertyFilter; // null allowed
 
     // ===================================================================================
     //                                                                     Direct Property
@@ -44,6 +45,10 @@ public class FwAssistDirection {
         extendsConfigList.addAll(nameList);
     }
 
+    public void directPropertyFilter(PropertyFilter configPropertyFilter) {
+        this.configPropertyFilter = configPropertyFilter;
+    }
+
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
@@ -54,6 +59,10 @@ public class FwAssistDirection {
 
     public List<String> assistExtendsConfigList() {
         return extendsConfigList; // empty allowed but almost exists
+    }
+
+    public PropertyFilter assistConfigPropertyFilter() {
+        return configPropertyFilter; // not required: no filter
     }
 
     // -----------------------------------------------------

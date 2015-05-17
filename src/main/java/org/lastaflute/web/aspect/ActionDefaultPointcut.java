@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.lastaflute.core.interceptor.PublicBasisPointcut;
-import org.lastaflute.web.callback.ActionCallback;
+import org.lastaflute.web.callback.ActionHook;
 
 /**
  * @author jflute
@@ -34,7 +34,7 @@ public class ActionDefaultPointcut extends PublicBasisPointcut {
     private static final Set<Method> callbackMethodSet;
     static {
         final Set<Method> tmpSet = new HashSet<Method>();
-        final Method[] methods = ActionCallback.class.getMethods();
+        final Method[] methods = ActionHook.class.getMethods();
         for (Method method : methods) {
             tmpSet.add(method);
         }
@@ -53,7 +53,7 @@ public class ActionDefaultPointcut extends PublicBasisPointcut {
     //                                                                     Callback Method
     //                                                                     ===============
     protected boolean isCallbackMethodImplementation(Method method) {
-        if (!ActionCallback.class.isAssignableFrom(method.getDeclaringClass())) {
+        if (!ActionHook.class.isAssignableFrom(method.getDeclaringClass())) {
             return false; // not required if statement but for performance
         }
         for (Method callbackMethod : callbackMethodSet) {

@@ -31,7 +31,7 @@ public interface AsyncManager {
      * *attention: possibility of multiply threads access
      * </pre>
      * <p>Also you can change it from caller thread's one by interface default methods.</p>
-     * @param noArgInLambda The callback for asynchronous process. (NotNull)
+     * @param noArgLambda The callback for asynchronous process. (NotNull)
      */
-    void async(ConcurrentAsyncCall noArgInLambda);
+    void async(ConcurrentAsyncCall noArgLambda);
 }

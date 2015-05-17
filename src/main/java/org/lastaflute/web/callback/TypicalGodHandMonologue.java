@@ -40,12 +40,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jflute
  */
-public class TypicalGodHandExceptionMonologue {
+public class TypicalGodHandMonologue {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandExceptionMonologue.class);
+    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandMonologue.class);
     protected static final String LF = "\n";
 
     // ===================================================================================
@@ -62,7 +62,7 @@ public class TypicalGodHandExceptionMonologue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandExceptionMonologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier typicalKeySupplier,
+    public TypicalGodHandMonologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier typicalKeySupplier,
             ActionApplicationExceptionHandler applicationExceptionHandler) {
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();

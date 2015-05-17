@@ -34,7 +34,7 @@ import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.callback.ActionCallback;
+import org.lastaflute.web.callback.ActionHook;
 import org.lastaflute.web.callback.ActionRuntimeMeta;
 import org.lastaflute.web.exception.ActionCallbackReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
@@ -57,7 +57,7 @@ import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
-import org.lastaflute.web.validation.ValidationErrorHook;
+import org.lastaflute.web.validation.VaErrorHook;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,44 +115,44 @@ public class GodHandableAction implements VirtualAction {
     }
 
     // ===================================================================================
-    //                                                                    Callback Process
-    //                                                                    ================
+    //                                                                        Hook Process
+    //                                                                        ============
     @Override
     public NextJourney execute(OptionalThing<VirtualActionForm> form) {
-        final ActionCallback callback = prepareActionCallback();
+        final ActionHook callback = prepareActionCallback();
         final NextJourney journey = doExecute(form, callback); // #to_action
         setupDisplayData(journey);
         showTransition(journey);
         return journey;
     }
 
-    protected ActionCallback prepareActionCallback() {
-        return action instanceof ActionCallback ? (ActionCallback) action : null;
+    protected ActionHook prepareActionCallback() {
+        return action instanceof ActionHook ? (ActionHook) action : null;
     }
 
     // -----------------------------------------------------
     //                                             Main Flow
     //                                             ---------
-    protected NextJourney doExecute(OptionalThing<VirtualActionForm> form, ActionCallback callback) {
+    protected NextJourney doExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
         prepareRequest500HandlingIfApi();
         processLocale();
         try {
-            final ActionResponse before = processCallbackBefore(callback);
+            final ActionResponse before = processHookBefore(hook);
             if (before.isPresent()) { // e.g. login required
                 return handleActionResponse(before);
             }
-            return transactionalExecute(form, callback); // #to_action
+            return transactionalExecute(form, hook); // #to_action
         } catch (RuntimeException e) {
-            final ActionResponse monologue = tellExceptionMonologue(callback, e);
+            final ActionResponse monologue = tellExceptionMonologue(hook, e);
             return handleActionResponse(monologue);
         } finally {
-            processCallbackFinally(callback);
+            processHookFinally(hook);
         }
     }
 
-    protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionCallback callback) {
+    protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
         return stage.selectable(() -> {
-            final ActionResponse response = actuallyExecute(form, callback); /* #to_action */
+            final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
             return handleActionResponse(response); /* also response handling in transaction */
         }, getExecuteTransactionGenre()).get(); // because of not null
     }
@@ -191,22 +191,19 @@ public class GodHandableAction implements VirtualAction {
     }
 
     // ===================================================================================
-    //                                                                    Process Callback
-    //                                                                    ================
+    //                                                                        Process Hook
+    //                                                                        ============
     // -----------------------------------------------------
     //                                                Before
     //                                                ------
-    protected ActionResponse processCallbackBefore(ActionCallback callback) {
-        if (callback == null) {
+    protected ActionResponse processHookBefore(ActionHook hook) {
+        if (hook == null) {
             return ActionResponse.empty();
         }
         showBefore(meta);
-        ActionResponse response = callback.godHandActionPrologue(meta);
+        ActionResponse response = hook.godHandPrologue(meta);
         if (isEmpty(response)) {
-            response = callback.godHandBefore(meta);
-            if (isEmpty(response)) {
-                response = callback.callbackBefore(meta);
-            }
+            response = hook.hookBefore(meta);
         }
         if (isPresent(response)) {
             meta.setActionResponse(response);
@@ -223,12 +220,12 @@ public class GodHandableAction implements VirtualAction {
     // -----------------------------------------------------
     //                                            on Failure
     //                                            ----------
-    protected ActionResponse tellExceptionMonologue(ActionCallback callback, RuntimeException e) {
+    protected ActionResponse tellExceptionMonologue(ActionHook hook, RuntimeException e) {
         meta.setFailureCause(e);
-        if (callback == null) {
+        if (hook == null) {
             throw e;
         }
-        final ActionResponse response = callback.godHandExceptionMonologue(meta);
+        final ActionResponse response = hook.godHandMonologue(meta);
         if (isPresent(response)) {
             meta.setActionResponse(response);
             return response;
@@ -240,19 +237,15 @@ public class GodHandableAction implements VirtualAction {
     // -----------------------------------------------------
     //                                               Finally
     //                                               -------
-    protected void processCallbackFinally(ActionCallback callback) {
-        if (callback == null) {
+    protected void processHookFinally(ActionHook hook) {
+        if (hook == null) {
             return;
         }
         showFinally(meta);
         try {
-            callback.callbackFinally(meta);
+            hook.hookFinally(meta);
         } finally {
-            try {
-                callback.godHandFinally(meta);
-            } finally {
-                callback.godHandActionEpilogue(meta);
-            }
+            hook.godHandEpilogue(meta);
         }
     }
 
@@ -279,7 +272,7 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                    Actually Execute
     //                                                                    ================
-    protected ActionResponse actuallyExecute(OptionalThing<VirtualActionForm> optForm, ActionCallback callback) {
+    protected ActionResponse actuallyExecute(OptionalThing<VirtualActionForm> optForm, ActionHook hook) {
         showAction(meta);
         final Object[] requestArgs = toRequestArgs(optForm);
         final Object result = invokeExecuteMethod(execute.getExecuteMethod(), requestArgs); // #to_action
@@ -365,7 +358,7 @@ public class GodHandableAction implements VirtualAction {
         // e.g. validate(form, () -> dispatchApiValidationError())
         final ActionMessages errors = cause.getMessages();
         requestManager.errors().save(errors); // also API can use it
-        final ValidationErrorHook errorHandler = cause.getErrorHandler();
+        final VaErrorHook errorHandler = cause.getErrorHandler();
         final ActionResponse response = errorHandler.hook();
         if (response == null) {
             throw new IllegalStateException("The handler for validation error cannot return null: " + errorHandler, cause);

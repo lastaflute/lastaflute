@@ -61,6 +61,9 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     /** The objective properties in DBFlute library. (NotNull: after initialization) */
     protected ObjectiveProperties prop;
 
+    /** The filter of configuration value. (NotNull: after initialization) */
+    protected PropertyFilter propertyFilter;
+
     /** Is hot deploy requested? (true only when local development) */
     protected boolean hotDeployRequested;
 
@@ -86,6 +89,8 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         appResource = filterEnvSwitching(direction.assistAppConfig());
         extendsResourceList.clear(); // for reload
         extendsResourceList.addAll(filterEnvSwitchingList(direction.assistExtendsConfigList()));
+        final PropertyFilter specified = direction.assistConfigPropertyFilter();
+        propertyFilter = specified != null ? specified : createDefaultPropertyFilter();
     }
 
     protected FwAssistDirection assistAssistDirection() {
@@ -100,8 +105,12 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         return pathList.stream().map(path -> filterEnvSwitching(path)).collect(Collectors.toList());
     }
 
+    protected PropertyFilter createDefaultPropertyFilter() {
+        return (propertyKey, propertyValue) -> propertyValue;
+    }
+
     protected ObjectiveProperties prepareObjectiveProperties() {
-        final ObjectiveProperties makingProp = newObjectiveProperties(appResource);
+        final ObjectiveProperties makingProp = newObjectiveProperties(appResource, propertyFilter);
         makingProp.checkImplicitOverride();
         if (!extendsResourceList.isEmpty()) {
             makingProp.extendsProperties(extendsResourceList.toArray(new String[extendsResourceList.size()]));
@@ -109,8 +118,14 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         return makingProp;
     }
 
-    protected ObjectiveProperties newObjectiveProperties(String resourcePath) {
-        return new ObjectiveProperties(resourcePath);
+    protected ObjectiveProperties newObjectiveProperties(String resourcePath, PropertyFilter propertyFilter) {
+        return new ObjectiveProperties(resourcePath) {
+            @Override
+            public String get(String propertyKey) {
+                final String propertyValue = super.get(propertyKey);
+                return propertyFilter.filter(propertyKey, propertyValue);
+            }
+        };
     }
 
     protected void showBootLogging() {

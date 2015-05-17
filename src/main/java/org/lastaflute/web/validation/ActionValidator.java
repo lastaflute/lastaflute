@@ -46,7 +46,7 @@ import org.lastaflute.web.callback.ActionRuntimeMeta;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.ruts.message.MessagesProvider;
+import org.lastaflute.web.ruts.message.MessagesCreator;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 
@@ -66,15 +66,15 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                                                           Attribute
     //                                                                           =========
     protected final RequestManager requestManager;
-    protected final MessagesProvider<MESSAGES> messageProvider;
+    protected final MessagesCreator<MESSAGES> messageCreator;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(RequestManager requestManager, MessagesProvider<MESSAGES> noArgInLambda) {
+    public ActionValidator(RequestManager requestManager, MessagesCreator<MESSAGES> noArgInLambda) {
         assertArgumentNotNull("requestManager", requestManager);
         this.requestManager = requestManager;
-        this.messageProvider = noArgInLambda;
+        this.messageCreator = noArgInLambda;
     }
 
     // ===================================================================================
@@ -83,11 +83,11 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // -----------------------------------------------------
     //                                               General
     //                                               -------
-    public void validate(Object form, ValidateMoreHandler<MESSAGES> doValidateLambda, ValidationErrorHook validationErrorLambda) {
+    public void validate(Object form, VaMore<MESSAGES> doValidateLambda, VaErrorHook validationErrorLambda) {
         doValidate(form, doValidateLambda, validationErrorLambda);
     }
 
-    protected void doValidate(Object form, ValidateMoreHandler<MESSAGES> doValidateLambda, ValidationErrorHook validationErrorLambda) {
+    protected void doValidate(Object form, VaMore<MESSAGES> doValidateLambda, VaErrorHook validationErrorLambda) {
         assertArgumentNotNull("form", form);
         assertArgumentNotNull("doValidateLambda", doValidateLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
@@ -99,22 +99,22 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         }
     }
 
-    public void letsValidationError(MessagesProvider<MESSAGES> noArgInLambda, ValidationErrorHook validationErrorLambda) {
+    public void letsValidationError(MessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
         throwValidationErrorException(noArgInLambda.provide(), validationErrorLambda);
     }
 
-    protected void throwValidationErrorException(MESSAGES messages, ValidationErrorHook validationErrorLambda) {
+    protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
         throw new ValidationErrorException(messages, validationErrorLambda);
     }
 
     // -----------------------------------------------------
     //                                               for API
     //                                               -------
-    public void validateApi(Object form, ValidateMoreHandler<MESSAGES> doValidateLambda) {
+    public void validateApi(Object form, VaMore<MESSAGES> doValidateLambda) {
         doValidate(form, doValidateLambda, () -> hookApiValidationError());
     }
 
-    public void letsValidationErrorApi(MessagesProvider<MESSAGES> noArgInLambda) {
+    public void letsValidationErrorApi(MessagesCreator<MESSAGES> noArgInLambda) {
         throwValidationErrorException(noArgInLambda.provide(), () -> hookApiValidationError());
     }
 
@@ -282,7 +282,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                        Action Message
     //                                        --------------
     protected MESSAGES prepareActionMessages() {
-        return messageProvider.provide();
+        return messageCreator.provide();
     }
 
     protected void registerActionMessage(ActionMessages messages, ConstraintViolation<Object> vio) {

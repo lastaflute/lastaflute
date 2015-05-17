@@ -15,14 +15,16 @@
  */
 package org.lastaflute.web.validation;
 
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.response.ActionResponse;
 
 /**
- * @param <MESSAGES> The type of action messages.
  * @author jflute
  */
 @FunctionalInterface
-public interface ValidateMoreHandler<MESSAGES extends ActionMessages> {
+public interface VaErrorHook {
 
-    void more(MESSAGES messages);
+    /**
+     * @return The action response for validation error. (NotNull)
+     */
+    ActionResponse hook();
 }

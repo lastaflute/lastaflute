@@ -13,15 +13,16 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.message;
+package org.lastaflute.web.validation;
+
+import org.lastaflute.web.ruts.message.ActionMessages;
 
 /**
- * @param <MESSAGES> The type of messages.
+ * @param <MESSAGES> The type of action messages.
  * @author jflute
- * @since 0.6.0 (2015/05/17 Sunday at higashi-ginza)
  */
 @FunctionalInterface
-public interface MessagesProvider<MESSAGES extends ActionMessages> {
+public interface VaMore<MESSAGES extends ActionMessages> {
 
-    MESSAGES provide();
+    void more(MESSAGES messages);
 }

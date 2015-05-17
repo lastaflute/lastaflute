@@ -22,7 +22,7 @@ import org.lastaflute.web.ruts.message.ActionMessages;
  * @author jflute
  */
 @FunctionalInterface
-public interface ValidationMessenger<MESSAGES extends ActionMessages> {
+public interface VaMessenger<MESSAGES extends ActionMessages> {
 
     void message(MESSAGES messages);
 }

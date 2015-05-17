@@ -20,7 +20,7 @@ import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.ruts.GodHandableAction;
 
 /**
- * The callback for action, which is called from {@link ActionRequestProcessor}. <br>
+ * The hook for action, which is called from {@link ActionRequestProcessor}. <br>
  * Methods that start with 'godHand' and 'callback' exist. <br >
  * You can creatively use like this:
  * <ul>
@@ -43,7 +43,7 @@ import org.lastaflute.web.ruts.GodHandableAction;
  * </pre>
  * @author jflute
  */
-public interface ActionCallback {
+public interface ActionHook {
 
     // ===================================================================================
     //                                                                              Before
@@ -54,22 +54,21 @@ public interface ActionCallback {
      * This method calling order is like this:
      * <pre>
      * try {
-     *     godHandActionPrologue() *here
-     *     godHandBefore()
-     *     callbackBefore()
+     *     godHandPrologue() *here
+     *     hookBefore()
      *     *execute action
      * } catch (...) {
      *     godHandExceptionMonologue()
      * } finally {
      *     callbackFinally()
      *     godHandFinally()
-     *     godHandActionEpilogue()
+     *     godHandEpilogue()
      * }
      * </pre>
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      * @return The path to forward. (NotNull: skip action execute, EmptyAllowed: if empty, proceed to next step)
      */
-    ActionResponse godHandActionPrologue(ActionRuntimeMeta runtimeMeta);
+    ActionResponse godHandPrologue(ActionRuntimeMeta runtimeMeta);
 
     /**
      * Callback process as God hand (means Framework process) before action execution and validation. <br>
@@ -77,45 +76,21 @@ public interface ActionCallback {
      * This method calling order is like this:
      * <pre>
      * try {
-     *     godHandActionPrologue()
-     *     godHandBefore() *here
-     *     callbackBefore()
+     *     godHandPrologue()
+     *     hookBefore() *here
      *     *execute action
      * } catch (...) {
      *     godHandExceptionMonologue()
      * } finally {
      *     callbackFinally()
      *     godHandFinally()
-     *     godHandActionEpilogue()
+     *     godHandEpilogue()
      * }
      * </pre>
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      * @return The path to forward. (NotNull: skip action execute, EmptyAllowed: if empty, proceed to next step)
      */
-    ActionResponse godHandBefore(ActionRuntimeMeta runtimeMeta);
-
-    /**
-     * Callback process as sub-class before action execution and validation. <br>
-     * You can implement or override this at concrete class (Super class should not use this).
-     * This method calling order is like this:
-     * <pre>
-     * try {
-     *     godHandActionPrologue()
-     *     godHandBefore()
-     *     callbackBefore() *here
-     *     *execute action
-     * } catch (...) {
-     *     godHandExceptionMonologue()
-     * } finally {
-     *     callbackFinally()
-     *     godHandFinally()
-     *     godHandActionEpilogue()
-     * }
-     * </pre>
-     * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
-     * @return The path to forward. (NotNull: skip action execute, EmptyAllowed: if empty, proceed to next step)
-     */
-    ActionResponse callbackBefore(ActionRuntimeMeta runtimeMeta);
+    ActionResponse hookBefore(ActionRuntimeMeta runtimeMeta);
 
     // ===================================================================================
     //                                                                          on Failure
@@ -127,69 +102,44 @@ public interface ActionCallback {
      * This method calling order is like this:
      * <pre>
      * try {
-     *     godHandActionPrologue()
-     *     godHandBefore()
-     *     callbackBefore()
+     *     godHandPrologue()
+     *     hookBefore()
      *     *execute action
      * } catch (...) {
      *     godHandExceptionMonologue() *here
      * } finally {
      *     callbackFinally()
      *     godHandFinally()
-     *     godHandActionEpilogue()
+     *     godHandEpilogue()
      * }
      * </pre>
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      * @return The path to forward. (NotNull, EmptyAllowed: if empty, proceed to next step)
      */
-    ActionResponse godHandExceptionMonologue(ActionRuntimeMeta runtimeMeta);
+    ActionResponse godHandMonologue(ActionRuntimeMeta runtimeMeta);
 
     // ===================================================================================
     //                                                                             Finally
     //                                                                             =======
-    /**
-     * Callback process as sub-class after action execution (success or not: finally).
-     * You can implement or override this at concrete class (Super class should not use this). <br>
-     * This method calling order is like this:
-     * <pre>
-     * try {
-     *     godHandActionPrologue()
-     *     godHandBefore()
-     *     callbackBefore()
-     *     *execute action
-     * } catch (...) {
-     *     godHandExceptionMonologue()
-     * } finally {
-     *     callbackFinally() *here
-     *     godHandFinally()
-     *     godHandActionEpilogue()
-     * }
-     * </pre>
-     * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
-     */
-    void callbackFinally(ActionRuntimeMeta runtimeMeta);
-
     /**
      * Callback process as God hand (means Framework process) after action execution (success or not: finally). <br>
      * You should not implement or override this at concrete class because this is for super class. <br>
      * This method calling order is like this:
      * <pre>
      * try {
-     *     godHandActionPrologue()
-     *     godHandBefore()
-     *     callbackBefore()
+     *     godHandPrologue()
+     *     hookBefore()
      *     *execute action
      * } catch (...) {
      *     godHandExceptionMonologue()
      * } finally {
-     *     callbackFinally()
-     *     godHandFinally() *here
-     *     godHandActionEpilogue()
+     *     hookFinally() *here
+     *     godHandEpilogue()
      * }
      * </pre>
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      */
-    void godHandFinally(ActionRuntimeMeta runtimeMeta);
+    void hookFinally(ActionRuntimeMeta runtimeMeta);
 
     /**
      * Callback process as God hand (means Framework process) for action epilogue (closing action). <br>
@@ -197,19 +147,17 @@ public interface ActionCallback {
      * This method calling order is like this:
      * <pre>
      * try {
-     *     godHandActionPrologue()
-     *     godHandBefore()
-     *     callbackBefore()
+     *     godHandPrologue()
+     *     hookBefore()
      *     *execute action
      * } catch (...) {
      *     godHandExceptionMonologue()
      * } finally {
-     *     callbackFinally()
-     *     godHandFinally()
-     *     godHandActionEpilogue() *here
+     *     hookFinally()
+     *     godHandEpilogue() *here
      * }
      * </pre>
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      */
-    void godHandActionEpilogue(ActionRuntimeMeta runtimeMeta);
+    void godHandEpilogue(ActionRuntimeMeta runtimeMeta);
 }

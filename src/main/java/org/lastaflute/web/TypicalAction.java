@@ -25,12 +25,12 @@ import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.callback.ActionCallback;
+import org.lastaflute.web.callback.ActionHook;
 import org.lastaflute.web.callback.ActionRuntimeMeta;
 import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
 import org.lastaflute.web.callback.TypicalGodHandActionEpilogue;
 import org.lastaflute.web.callback.TypicalGodHandActionPrologue;
-import org.lastaflute.web.callback.TypicalGodHandExceptionMonologue;
+import org.lastaflute.web.callback.TypicalGodHandMonologue;
 import org.lastaflute.web.callback.TypicalGodHandResource;
 import org.lastaflute.web.callback.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * And you can add methods for all applications.
  * @author jflute
  */
-public abstract class TypicalAction extends LastaAction implements ActionCallback {
+public abstract class TypicalAction extends LastaAction implements ActionHook {
 
     // ===================================================================================
     //                                                                          Definition
@@ -87,8 +87,8 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
     private ApiManager apiManager;
 
     // ===================================================================================
-    //                                                                            Callback
-    //                                                                            ========
+    //                                                                               Hook
+    //                                                                              ======
     // [typical callback process]
     // read the source code for the details
     // (because of no comment here)
@@ -96,11 +96,11 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
     //                                                Before
     //                                                ------
     @Override
-    public ActionResponse godHandActionPrologue(ActionRuntimeMeta runtimeMeta) { // fixed process
-        return newTypicalGodHandActionPrologue().performPrologue(runtimeMeta);
+    public ActionResponse godHandPrologue(ActionRuntimeMeta runtimeMeta) { // fixed process
+        return createTypicalGodHandActionPrologue().performPrologue(runtimeMeta);
     }
 
-    protected TypicalGodHandActionPrologue newTypicalGodHandActionPrologue() {
+    protected TypicalGodHandActionPrologue createTypicalGodHandActionPrologue() {
         final TypicalGodHandResource resource = newTypicalGodHandResource();
         final AccessContextArranger arranger = newAccessContextArranger();
         return newTypicalGodHandActionPrologue(resource, arranger, () -> getUserBean(), () -> myAppType());
@@ -118,12 +118,7 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
     }
 
     @Override
-    public ActionResponse godHandBefore(ActionRuntimeMeta runtimeMeta) { // application's super class may override
-        return ActionResponse.empty();
-    }
-
-    @Override
-    public ActionResponse callbackBefore(ActionRuntimeMeta runtimeMeta) { // application may override
+    public ActionResponse hookBefore(ActionRuntimeMeta runtimeMeta) { // application may override
         return ActionResponse.empty();
     }
 
@@ -131,15 +126,15 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
     //                                            on Failure
     //                                            ----------
     @Override
-    public ActionResponse godHandExceptionMonologue(ActionRuntimeMeta runtimeMeta) { // fixed process
+    public ActionResponse godHandMonologue(ActionRuntimeMeta runtimeMeta) { // fixed process
         return createTypicalGodHandExceptionMonologue().performMonologue(runtimeMeta);
     }
 
-    protected TypicalGodHandExceptionMonologue createTypicalGodHandExceptionMonologue() {
+    protected TypicalGodHandMonologue createTypicalGodHandExceptionMonologue() {
         final TypicalGodHandResource resource = newTypicalGodHandResource();
         final TypicalEmbeddedKeySupplier supplier = newTypicalEmbeddedKeySupplier();
         final ActionApplicationExceptionHandler handler = newActionApplicationExceptionHandler();
-        return newTypicalGodHandExceptionMonologue(resource, supplier, handler);
+        return newTypicalGodHandMonologue(resource, supplier, handler);
     }
 
     protected TypicalEmbeddedKeySupplier newTypicalEmbeddedKeySupplier() {
@@ -163,33 +158,28 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
         return ActionResponse.empty();
     }
 
-    protected TypicalGodHandExceptionMonologue newTypicalGodHandExceptionMonologue(TypicalGodHandResource resource,
-            TypicalEmbeddedKeySupplier supplier, ActionApplicationExceptionHandler handler) {
-        return new TypicalGodHandExceptionMonologue(resource, supplier, handler);
+    protected TypicalGodHandMonologue newTypicalGodHandMonologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier supplier,
+            ActionApplicationExceptionHandler handler) {
+        return new TypicalGodHandMonologue(resource, supplier, handler);
     }
 
     // -----------------------------------------------------
     //                                               Finally
     //                                               -------
     @Override
-    public void callbackFinally(ActionRuntimeMeta runtimeMeta) { // application may override
+    public void hookFinally(ActionRuntimeMeta runtimeMeta) { // application may override
     }
 
     @Override
-    public void godHandFinally(ActionRuntimeMeta runtimeMeta) { // application's super class may override
+    public void godHandEpilogue(ActionRuntimeMeta runtimeMeta) { // fixed process
+        createTypicalGodHandEpilogue().performEpilogue(runtimeMeta);
     }
 
-    @Override
-    public void godHandActionEpilogue(ActionRuntimeMeta runtimeMeta) { // fixed process
-        newTypicalGodHandActionEpilogue().performEpilogue(runtimeMeta);
+    protected TypicalGodHandActionEpilogue createTypicalGodHandEpilogue() {
+        return newTypicalGodHandEpilogue(newTypicalGodHandResource());
     }
 
-    protected TypicalGodHandActionEpilogue newTypicalGodHandActionEpilogue() {
-        final TypicalGodHandResource resource = newTypicalGodHandResource();
-        return newTypicalGodHandActionEpilogue(resource);
-    }
-
-    protected TypicalGodHandActionEpilogue newTypicalGodHandActionEpilogue(TypicalGodHandResource resource) {
+    protected TypicalGodHandActionEpilogue newTypicalGodHandEpilogue(TypicalGodHandResource resource) {
         return new TypicalGodHandActionEpilogue(resource);
     }
 
@@ -294,8 +284,8 @@ public abstract class TypicalAction extends LastaAction implements ActionCallbac
     }
 
     protected void letsIllegalTransition() {
-        final TypicalEmbeddedKeySupplier supplier = newTypicalEmbeddedKeySupplier();
-        throw new ForcedIllegalTransitionApplicationException(supplier.getErrorsAppIllegalTransitionKey());
+        final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
+        throw new ForcedIllegalTransitionApplicationException(transitionKey);
     }
 
     // ===================================================================================

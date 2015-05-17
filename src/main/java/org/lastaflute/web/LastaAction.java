@@ -97,11 +97,8 @@ public abstract class LastaAction {
     // ===================================================================================
     //                                                                          Validation
     //                                                                          ==========
-    // -----------------------------------------------------
-    //                                      Input Validation
-    //                                      ----------------
     @SuppressWarnings("unchecked")
-    protected <MESSAGES extends ActionMessages> ActionValidator<MESSAGES> createValidator() {
+    protected <MESSAGES extends ActionMessages> ActionValidator<MESSAGES> createValidator() { // overridden as type-safe
         return new ActionValidator<MESSAGES>(requestManager, () -> (MESSAGES) createMessages());
     }
 
@@ -109,7 +106,7 @@ public abstract class LastaAction {
      * Create the action messages basically for session errors or messages. (for application)
      * @return The new-created action messages provided from Struts. (NotNull)
      */
-    protected ActionMessages createMessages() { // should be overridden as type-safe properties
+    protected ActionMessages createMessages() { // overridden as type-safe
         return new ActionMessages();
     }
 
@@ -122,8 +119,8 @@ public abstract class LastaAction {
      * You can get the same date (but different instances) in the same transaction.
      * @return The local date that has current date. (NotNull)
      */
-    protected LocalDate getCurrentDate() {
-        return timeManager.getCurrentDate();
+    protected LocalDate currentDate() {
+        return timeManager.currentDate();
     }
 
     /**
@@ -132,8 +129,8 @@ public abstract class LastaAction {
      * You can get the same date (but different instances) in the same transaction.
      * @return The local date-time that has current time. (NotNull)
      */
-    protected LocalDateTime getCurrentDateTime() {
-        return timeManager.getCurrentDateTime();
+    protected LocalDateTime currentDateTime() {
+        return timeManager.currentDateTime();
     }
 
     // ===================================================================================
@@ -150,10 +147,10 @@ public abstract class LastaAction {
      * *attention: possibility of multiply threads access
      * </pre>
      * <p>Also you can change it from caller thread's one by interface default methods.</p>
-     * @param noArgInLambda The callback for asynchronous process. (NotNull)
+     * @param noArgLambda The callback for asynchronous process. (NotNull)
      */
-    protected void async(ConcurrentAsyncCall noArgInLambda) {
-        asycnManager.async(noArgInLambda);
+    protected void async(ConcurrentAsyncCall noArgLambda) {
+        asycnManager.async(noArgLambda);
     }
 
     /**
