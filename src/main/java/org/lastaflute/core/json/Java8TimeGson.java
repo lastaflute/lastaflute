@@ -78,7 +78,7 @@ public interface Java8TimeGson {
 
     class LocalTimelizer implements JsonSerializer<LocalTime>, JsonDeserializer<LocalTime> {
 
-        protected static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        protected static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_TIME;
 
         @Override
         public JsonElement serialize(LocalTime src, Type typeOfSrc, JsonSerializationContext context) {
