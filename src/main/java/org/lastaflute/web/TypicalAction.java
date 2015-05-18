@@ -20,6 +20,7 @@ import java.util.function.Supplier;
 import javax.annotation.Resource;
 
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.Srl;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.time.TimeManager;
@@ -234,20 +235,6 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
         }
     }
 
-    protected void checkParameterPlusNumber(long num) { // application may call
-        logger.debug("...Checking the parameter is plus number: {}", num);
-        if (num <= 0) {
-            handleParameterFailure();
-        }
-    }
-
-    protected void checkParameterZeroOrPlusNumber(long num) { // application may call
-        logger.debug("...Checking the parameter is zero or plus number: {}", num);
-        if (num < 0) {
-            handleParameterFailure();
-        }
-    }
-
     protected void handleParameterFailure() {
         lets404(); // no server error because it can occur by user's trick easily e.g. changing GET parameter
     }
@@ -286,6 +273,17 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     protected void letsIllegalTransition() {
         final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
         throw new ForcedIllegalTransitionApplicationException(transitionKey);
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected boolean isEmpty(String str) {
+        return Srl.is_Null_or_Empty(str);
+    }
+
+    protected boolean isNotEmpty(String str) {
+        return Srl.is_NotNull_and_NotEmpty(str);
     }
 
     // ===================================================================================

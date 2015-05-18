@@ -27,9 +27,6 @@ import org.lastaflute.core.direction.FwCoreDirection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 /**
  * @author jflute
  * @author awaawa
@@ -94,23 +91,18 @@ public class SimpleJsonManager implements JsonManager {
     //                                                                               GSON
     //                                                                              ======
     protected RealJsonParser createGsonJsonParser() {
-        final GsonBuilder builder = createGsonBuilder();
-        return newGsonJsonParser(builder.create());
+        return newGsonJsonParser(developmentHere, nullsSuppressed);
     }
 
-    protected GsonBuilder createGsonBuilder() {
-        final GsonBuilder builder = new GsonBuilder();
-        if (developmentHere) {
-            builder.setPrettyPrinting();
-        }
-        if (!nullsSuppressed) {
-            builder.serializeNulls();
-        }
-        return builder;
-    }
-
-    protected GsonJsonParser newGsonJsonParser(Gson gson) {
-        return new GsonJsonParser(gson);
+    protected GsonJsonParser newGsonJsonParser(boolean developmentHere, boolean nullsSuppressed) {
+        return new GsonJsonParser(builder -> {
+            if (developmentHere) {
+                builder.setPrettyPrinting();
+            }
+            if (!nullsSuppressed) {
+                builder.serializeNulls();
+            }
+        });
     }
 
     // ===================================================================================

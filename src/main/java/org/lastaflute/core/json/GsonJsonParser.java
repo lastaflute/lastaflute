@@ -18,23 +18,67 @@ package org.lastaflute.core.json;
 import java.lang.reflect.ParameterizedType;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
  * @author jflute
  */
-public class GsonJsonParser implements RealJsonParser {
+public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
     protected final Gson gson;
 
-    public GsonJsonParser(Gson gson) {
-        this.gson = gson;
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public GsonJsonParser(Consumer<GsonBuilder> settings) {
+        final GsonBuilder builder = newGsonBuilder();
+        acceptGsonSettings(settings, builder);
+        setupGsonBuilder(builder);
+        registerJava8TimeAdapter(builder);
+        gson = builder.create();
     }
 
+    protected GsonBuilder newGsonBuilder() {
+        return new GsonBuilder();
+    }
+
+    protected void acceptGsonSettings(Consumer<GsonBuilder> settings, GsonBuilder builder) {
+        settings.accept(builder);
+    }
+
+    protected void setupGsonBuilder(GsonBuilder builder) { // you can override
+    }
+
+    protected void registerJava8TimeAdapter(GsonBuilder builder) { // until supported by Gson
+        builder.registerTypeAdapter(localDateType, newLocalDatelizer());
+        builder.registerTypeAdapter(localDateTimeType, newLocalDateTimelizer());
+        builder.registerTypeAdapter(localTimeType, newLocalTimelizer());
+    }
+
+    protected LocalDatelizer newLocalDatelizer() {
+        return new LocalDatelizer();
+    }
+
+    protected LocalDateTimelizer newLocalDateTimelizer() {
+        return new LocalDateTimelizer();
+    }
+
+    protected LocalTimelizer newLocalTimelizer() {
+        return new LocalTimelizer();
+    }
+
+    // ===================================================================================
+    //                                                                      JSON Interface
+    //                                                                      ==============
     @SuppressWarnings("unchecked")
     @Override
     public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) { // are not null, already checked
