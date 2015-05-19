@@ -41,9 +41,9 @@ public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
     //                                                                         ===========
     public GsonJsonParser(Consumer<GsonBuilder> settings) {
         final GsonBuilder builder = newGsonBuilder();
+        setupDefaultSettings(builder);
+        setupYourSettings(builder);
         acceptGsonSettings(settings, builder);
-        setupGsonBuilder(builder);
-        registerJava8TimeAdapter(builder);
         gson = builder.create();
     }
 
@@ -51,17 +51,26 @@ public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
         return new GsonBuilder();
     }
 
-    protected void acceptGsonSettings(Consumer<GsonBuilder> settings, GsonBuilder builder) {
-        settings.accept(builder);
+    protected void setupDefaultSettings(final GsonBuilder builder) {
+        registerUtilDateFormat(builder);
+        registerJava8TimeAdapter(builder);
     }
 
-    protected void setupGsonBuilder(GsonBuilder builder) { // you can override
+    protected void registerUtilDateFormat(GsonBuilder builder) {
+        builder.setDateFormat("yyyy-MM-dd'T'HH:mm:ss"); // same as local date-time
     }
 
     protected void registerJava8TimeAdapter(GsonBuilder builder) { // until supported by Gson
         builder.registerTypeAdapter(localDateType, newLocalDatelizer());
         builder.registerTypeAdapter(localDateTimeType, newLocalDateTimelizer());
         builder.registerTypeAdapter(localTimeType, newLocalTimelizer());
+    }
+
+    protected void setupYourSettings(GsonBuilder builder) { // you can override
+    }
+
+    protected void acceptGsonSettings(Consumer<GsonBuilder> settings, GsonBuilder builder) {
+        settings.accept(builder);
     }
 
     protected LocalDatelizer newLocalDatelizer() {
