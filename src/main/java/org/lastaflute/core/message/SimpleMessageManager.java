@@ -151,11 +151,9 @@ public class SimpleMessageManager implements MessageManager {
         if (errors.isEmpty()) {
             return messageList;
         }
-        final Iterator<ActionMessage> ite = errors.get();
+        final Iterator<ActionMessage> ite = errors.accessByFlatIterator();
         while (ite.hasNext()) {
-            final ActionMessage actionMessage = (ActionMessage) ite.next();
-            final String messageText = resolveMessageText(locale, actionMessage);
-            messageList.add(messageText);
+            messageList.add(resolveMessageText(locale, ite.next()));
         }
         return messageList;
     }
@@ -168,34 +166,23 @@ public class SimpleMessageManager implements MessageManager {
         if (errors.isEmpty()) {
             return propertyMessageMap;
         }
-        final Iterator<String> properyIte = errors.properties();
-        while (properyIte.hasNext()) {
-            final String property = properyIte.next();
+        final List<String> propList = errors.toPropertyList();
+        for (String property : propList) {
             List<String> messageList = propertyMessageMap.get(property);
             if (messageList == null) {
                 messageList = new ArrayList<String>();
+                propertyMessageMap.put(property, messageList);
             }
-            final Iterator<ActionMessage> actionMessageIte = errors.get(property);
-            while (actionMessageIte.hasNext()) {
-                final ActionMessage actionMessage = actionMessageIte.next();
-                final String messageText = resolveMessageText(locale, actionMessage);
-                messageList.add(messageText);
+            for (Iterator<ActionMessage> ite = errors.accessByIteratorOf(property); ite.hasNext();) {
+                messageList.add(resolveMessageText(locale, ite.next()));
             }
-            propertyMessageMap.put(property, messageList);
         }
         return propertyMessageMap;
     }
 
-    protected String resolveMessageText(Locale locale, ActionMessage actionMessage) {
-        final String key = actionMessage.getKey();
-        final Object[] values = actionMessage.getValues();
-        final String messageText;
-        if (actionMessage.isResource()) {
-            messageText = getMessage(locale, key, values);
-        } else {
-            messageText = key;
-        }
-        return messageText;
+    protected String resolveMessageText(Locale locale, ActionMessage message) {
+        final String key = message.getKey();
+        return message.isResource() ? getMessage(locale, key, message.getValues()) : key;
     }
 
     // ===================================================================================

@@ -636,7 +636,7 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public void saveErrorsToSession() {
         errors().get().ifPresent(messages -> {
-            final Iterator<ActionMessage> ite = messages.get();
+            final Iterator<ActionMessage> ite = messages.accessByFlatIterator();
             sessionManager.errors().clear(); /* means overriding */
             while (ite.hasNext()) {
                 final ActionMessage message = ite.next();

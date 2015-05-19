@@ -19,10 +19,11 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -45,33 +46,31 @@ public class ActionMessages implements Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final Map<String, ActionMessageItem> messageMap = new LinkedHashMap<String, ActionMessageItem>();
     protected boolean accessed;
-    protected final Map<String, ActionMessageItem> messages = new HashMap<String, ActionMessageItem>();
     protected int itemCount;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public ActionMessages() {
-        super();
     }
 
     public ActionMessages(ActionMessages messages) {
-        super();
-        this.add(messages);
+        add(messages);
     }
 
     // ===================================================================================
     //                                                                         Add Message
     //                                                                         ===========
     public void add(String property, ActionMessage message) {
-        ActionMessageItem item = messages.get(property);
+        ActionMessageItem item = messageMap.get(property);
         final List<ActionMessage> list;
         if (item == null) {
             ++itemCount;
             list = new ArrayList<ActionMessage>();
             item = new ActionMessageItem(list, itemCount, property);
-            messages.put(property, item);
+            messageMap.put(property, item);
         } else {
             list = item.getList();
         }
@@ -82,12 +81,9 @@ public class ActionMessages implements Serializable {
         if (messages == null) {
             return;
         }
-        final Iterator<String> props = messages.properties();
-        while (props.hasNext()) {
-            final String property = (String) props.next();
-            final Iterator<ActionMessage> msgs = messages.get(property);
-            while (msgs.hasNext()) {
-                add(property, (ActionMessage) msgs.next());
+        for (String property : messages.toPropertyList()) {
+            for (Iterator<ActionMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
+                add(property, ite.next());
             }
         }
     }
@@ -95,77 +91,79 @@ public class ActionMessages implements Serializable {
     // ===================================================================================
     //                                                                         Get Message
     //                                                                         ===========
-    public Iterator<ActionMessage> get() {
+    public Iterator<ActionMessage> accessByFlatIterator() {
         accessed = true;
-        if (messages.isEmpty()) {
+        if (messageMap.isEmpty()) {
             return Collections.emptyIterator();
         }
-        final List<ActionMessage> results = new ArrayList<ActionMessage>();
-        final List<ActionMessageItem> actionItems = new ArrayList<ActionMessageItem>();
-        for (Iterator<ActionMessageItem> ite = messages.values().iterator(); ite.hasNext();) {
-            actionItems.add(ite.next());
+        final List<ActionMessage> msgList = new ArrayList<ActionMessage>();
+        final List<ActionMessageItem> itemList = new ArrayList<ActionMessageItem>(messageMap.size());
+        for (Iterator<ActionMessageItem> ite = messageMap.values().iterator(); ite.hasNext();) {
+            itemList.add(ite.next());
         }
-        Collections.sort(actionItems, actionItemComparator);
-        for (Iterator<ActionMessageItem> ite = actionItems.iterator(); ite.hasNext();) {
-            final ActionMessageItem ami = ite.next();
-            for (Iterator<ActionMessage> messages = ami.getList().iterator(); messages.hasNext();) {
-                results.add(messages.next());
+        Collections.sort(itemList, actionItemComparator);
+        for (Iterator<ActionMessageItem> ite = itemList.iterator(); ite.hasNext();) {
+            for (Iterator<ActionMessage> messages = ite.next().getList().iterator(); messages.hasNext();) {
+                msgList.add(messages.next());
             }
         }
-        return results.iterator();
+        return msgList.iterator();
     }
 
-    public Iterator<ActionMessage> get(String property) {
+    public Iterator<ActionMessage> accessByIteratorOf(String property) {
         accessed = true;
-        final ActionMessageItem item = messages.get(property);
-        if (item == null) {
-            return Collections.emptyIterator();
-        } else {
-            return item.getList().iterator();
+        final ActionMessageItem item = messageMap.get(property);
+        return item != null ? item.getList().iterator() : Collections.emptyIterator();
+    }
+
+    // ===================================================================================
+    //                                                                   Property Handling
+    //                                                                   =================
+    public boolean hasMessageOf(String property) {
+        final ActionMessageItem item = messageMap.get(property);
+        return item != null && !item.getList().isEmpty();
+    }
+
+    public boolean hasMessageOf(String property, String key) {
+        final ActionMessageItem item = messageMap.get(property);
+        return item != null && item.getList().stream().anyMatch(message -> message.getKey().equals(key));
+    }
+
+    public List<String> toPropertyList() {
+        if (messageMap.isEmpty()) {
+            return Collections.emptyList();
         }
+        final List<ActionMessageItem> itemList = new ArrayList<ActionMessageItem>(messageMap.values());
+        Collections.sort(itemList, actionItemComparator);
+        final List<String> propList = itemList.stream().map(item -> item.getProperty()).collect(Collectors.toList());
+        return Collections.unmodifiableList(propList);
     }
 
     // ===================================================================================
     //                                                                   Various Operation
     //                                                                   =================
     public void clear() {
-        messages.clear();
+        messageMap.clear();
     }
 
     public boolean isEmpty() {
-        return messages.isEmpty();
+        return messageMap.isEmpty();
     }
 
     public boolean isAccessed() {
         return accessed;
     }
 
-    public Iterator<String> properties() {
-        if (messages.isEmpty()) {
-            return Collections.emptyIterator();
-        }
-        final List<String> results = new ArrayList<String>();
-        final List<ActionMessageItem> actionItems = new ArrayList<ActionMessageItem>();
-        for (Iterator<ActionMessageItem> ite = messages.values().iterator(); ite.hasNext();) {
-            actionItems.add(ite.next());
-        }
-        Collections.sort(actionItems, actionItemComparator);
-        for (Iterator<ActionMessageItem> ite = actionItems.iterator(); ite.hasNext();) {
-            results.add(ite.next().getProperty());
-        }
-        return results.iterator();
-    }
-
     public int size() {
         int total = 0;
-        for (Iterator<ActionMessageItem> ite = messages.values().iterator(); ite.hasNext();) {
+        for (Iterator<ActionMessageItem> ite = messageMap.values().iterator(); ite.hasNext();) {
             total += ite.next().getList().size();
         }
         return total;
     }
 
     public int size(String property) {
-        final ActionMessageItem item = messages.get(property);
+        final ActionMessageItem item = messageMap.get(property);
         return (item == null) ? 0 : item.getList().size();
     }
 
@@ -174,13 +172,13 @@ public class ActionMessages implements Serializable {
     //                                                                      ==============
     @Override
     public String toString() {
-        return this.messages.toString();
+        return this.messageMap.toString();
     }
 
     // ===================================================================================
     //                                                                        Message Item
     //                                                                        ============
-    protected class ActionMessageItem implements Serializable {
+    protected static class ActionMessageItem implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
@@ -194,6 +192,7 @@ public class ActionMessages implements Serializable {
             this.property = property;
         }
 
+        @Override
         public String toString() {
             return this.messageList.toString();
         }
