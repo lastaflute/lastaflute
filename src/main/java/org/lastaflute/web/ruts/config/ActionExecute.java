@@ -26,7 +26,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.web.exception.ActionFormNotFoundException;
@@ -156,7 +155,7 @@ public class ActionExecute implements Serializable {
 
     protected ActionFormMeta createFormMeta(Class<?> formType, Parameter listFormParameter) {
         return newActionFormMeta(buildFormKey(), formType, OptionalThing.ofNullable(listFormParameter, () -> {
-            String msg = "Not found the listFormGenericType: execute=" + buildSimpleMethodExp() + " form=" + formType;
+            String msg = "Not found the listFormGenericType: execute=" + toSimpleMethodExp() + " form=" + formType;
             throw new IllegalStateException(msg);
         }));
     }
@@ -201,7 +200,7 @@ public class ActionExecute implements Serializable {
         br.addElement("    @Execute // OK: abbreviate it");
         br.addElement("    public void index(int pageNumber, String keyword) {");
         br.addItem("Execute Method");
-        br.addElement(buildSimpleMethodExp());
+        br.addElement(toSimpleMethodExp());
         br.addItem("Specified urlPattern");
         br.addElement(specifiedUrlPattern);
         final String msg = br.buildExceptionMessage();
@@ -225,7 +224,7 @@ public class ActionExecute implements Serializable {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the URL parameter arguments for the execute method.");
         br.addItem("Execute Method");
-        br.addElement(buildSimpleMethodExp());
+        br.addElement(toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
         throw new UrlParamArgsNotFoundException(msg);
     }
@@ -284,7 +283,7 @@ public class ActionExecute implements Serializable {
         br.addElement("    @Execute(\"{}/sea/{}\")");
         br.addElement("    public HtmlResponse index(int land, String ikspiary) { // OK");
         br.addItem("Execute Method");
-        br.addElement(buildSimpleMethodExp());
+        br.addElement(toSimpleMethodExp());
         br.addItem("urlPattern Variable List");
         br.addElement(urlPatternVarList);
         br.addItem("Defined Argument List");
@@ -467,15 +466,15 @@ public class ActionExecute implements Serializable {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append(DfTypeUtil.toClassTitle(this)).append(":{");
-        sb.append(buildSimpleMethodExp());
+        sb.append("execute:{");
+        sb.append(toSimpleMethodExp());
         sb.append(", urlPattern=").append(urlPattern);
         sb.append(", regexp=").append(urlPatternRegexp);
         sb.append("}@").append(Integer.toHexString(hashCode()));
         return sb.toString();
     }
 
-    protected String buildSimpleMethodExp() {
+    public String toSimpleMethodExp() {
         return LaActionExecuteUtil.buildSimpleMethodExp(executeMethod);
     }
 

@@ -75,7 +75,8 @@ public class RequestLoggingFilter implements Filter {
     protected static final String LF = "\n";
     protected static final String IND = "  ";
     protected static final ThreadLocal<String> duplicateCheckLocal = new ThreadLocal<String>();
-    protected static final ThreadLocal<Request500Handler> request500HandlerLocal = new ThreadLocal<Request500Handler>();
+    protected static final ThreadLocal<RequestServerErrorHandler> serverErrorHandlerLocal = new ThreadLocal<RequestServerErrorHandler>();
+    protected static final ThreadLocal<RequestClientErrorHandler> clientErrorHandlerLocal = new ThreadLocal<RequestClientErrorHandler>();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -184,7 +185,7 @@ public class RequestLoggingFilter implements Filter {
             if (handleErrorAttribute(request, response)) {
                 existsServerError = true;
             }
-        } catch (RequestDelicateErrorException e) {
+        } catch (RequestClientErrorException e) {
             specifiedErrorTitle = handleDelicateError(request, response, e);
         } catch (RuntimeException e) {
             // no throw the exception to suppress duplicate error message
@@ -194,8 +195,8 @@ public class RequestLoggingFilter implements Filter {
             existsServerError = true;
         } catch (ServletException e) { // also no throw same reason as RuntimeException catch
             final Throwable rootCause = e.getRootCause();
-            if (rootCause instanceof RequestDelicateErrorException) {
-                specifiedErrorTitle = handleDelicateError(request, response, (RequestDelicateErrorException) rootCause);
+            if (rootCause instanceof RequestClientErrorException) {
+                specifiedErrorTitle = handleDelicateError(request, response, (RequestClientErrorException) rootCause);
             } else {
                 final Throwable realCause = rootCause != null ? rootCause : e;
                 sendInternalServerError(request, response, realCause);
@@ -264,7 +265,8 @@ public class RequestLoggingFilter implements Filter {
     }
 
     protected void clearHandler() {
-        request500HandlerLocal.set(null);
+        serverErrorHandlerLocal.set(null);
+        clientErrorHandlerLocal.set(null);
     }
 
     protected void prepareCharacterEncodingIfNeeds(HttpServletRequest request) throws UnsupportedEncodingException {
@@ -558,27 +560,31 @@ public class RequestLoggingFilter implements Filter {
     }
 
     // ===================================================================================
-    //                                                             Delicate Error e.g. 404
-    //                                                             =======================
-    protected String handleDelicateError(HttpServletRequest request, HttpServletResponse response, RequestDelicateErrorException cause)
+    //                                                               Client Error e.g. 404
+    //                                                               =====================
+    protected String handleDelicateError(HttpServletRequest request, HttpServletResponse response, RequestClientErrorException cause)
             throws IOException {
+        final boolean beforeHandlingCommitted = response.isCommitted();
+        processClientErrorCallback(request, response, cause);
         final String title = cause.getTitle();
         if (response.isCommitted()) {
-            showDlcEx(cause, () -> {
-                final StringBuilder sb = new StringBuilder();
-                sb.append("*Cannot send error as '").append(title).append("' because of already committed:");
-                sb.append(" path=").append(request.getRequestURI());
-                return sb.toString();
-            });
+            if (beforeHandlingCommitted) {
+                showCliEx(cause, () -> {
+                    final StringBuilder sb = new StringBuilder();
+                    sb.append("*Cannot send error as '").append(title).append("' because of already committed:");
+                    sb.append(" path=").append(request.getRequestURI());
+                    return sb.toString();
+                });
+            }
             return title; // cannot help it
         }
-        showDlcEx(cause, () -> {
+        showCliEx(cause, () -> {
             final StringBuilder sb = new StringBuilder();
             sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
             sb.append("\n...Sending error as '").append(title).append("' manually");
             sb.append("\n request : ").append(request.getRequestURI());
             sb.append("\n message : ").append(cause.getMessage());
-            buildDelicateErrorStackTrace(cause, sb, 0);
+            buildClientErrorStackTrace(cause, sb, 0);
             sb.append("\n_/_/_/_/_/_/_/_/_/_/");
             return sb.toString();
         });
@@ -590,13 +596,56 @@ public class RequestLoggingFilter implements Filter {
             if (errorLogging) {
                 logger.error(msg);
             } else {
-                showDlcEx(cause, () -> msg);
+                showCliEx(cause, () -> msg);
             }
             return title; // cannot help it
         }
     }
 
-    protected void showDlcEx(RequestDelicateErrorException cause, Supplier<String> msgSupplier) {
+    // -----------------------------------------------------
+    //                                 Client Error Callback
+    //                                 ---------------------
+    protected void processClientErrorCallback(HttpServletRequest request, HttpServletResponse response, RequestClientErrorException cause) {
+        final RequestClientErrorHandler clientErrorHandler = clientErrorHandlerLocal.get();
+        if (clientErrorHandler == null) {
+            return;
+        }
+        try {
+            clientErrorHandler.handle(request, response, cause);
+        } catch (Throwable handlingEx) {
+            final String msg = "Failed to handle 'Client Error' by the handler: " + clientErrorHandler;
+            if (errorLogging) {
+                logger.error(msg, handlingEx);
+            } else {
+                logger.debug(msg, handlingEx);
+            }
+        }
+    }
+
+    /**
+     * The handler of 'Client Error' in the request.
+     */
+    @FunctionalInterface
+    public interface RequestClientErrorHandler {
+
+        /**
+         * Handle the 'Client Error' exception. <br>
+         * The info logging is executed after your handling so basically you don't need logging.
+         * @param request The request provided by caller. (NotNull)
+         * @param response The response provided by caller, might be already committed. (NotNull)
+         * @param cause The cause of this 'Client Error'. (NotNull)
+         */
+        void handle(HttpServletRequest request, HttpServletResponse response, RequestClientErrorException cause);
+    }
+
+    public static void setRequestClientHandlerOnThread(RequestClientErrorHandler handler) {
+        clientErrorHandlerLocal.set(handler);
+    }
+
+    // -----------------------------------------------------
+    //                                     Show Client Error
+    //                                     -----------------
+    protected void showCliEx(RequestClientErrorException cause, Supplier<String> msgSupplier) {
         final DelicateErrorLoggingLevel loggingLevel = cause.getLoggingLevel();
         if (DelicateErrorLoggingLevel.DEBUG.equals(loggingLevel)) {
             if (logger.isDebugEnabled()) {
@@ -621,7 +670,7 @@ public class RequestLoggingFilter implements Filter {
         }
     }
 
-    protected void buildDelicateErrorStackTrace(Throwable cause, StringBuilder sb, int nestLevel) {
+    protected void buildClientErrorStackTrace(Throwable cause, StringBuilder sb, int nestLevel) {
         if (nestLevel > 0) { // first level message already appended
             sb.append(LF).append("Caused by: ").append(cause.getClass().getName());
             sb.append(": ").append(cause.getMessage());
@@ -651,15 +700,18 @@ public class RequestLoggingFilter implements Filter {
         }
         final Throwable nested = cause.getCause();
         if (nested != null && nested != cause) {
-            buildDelicateErrorStackTrace(nested, sb, nestLevel + 1);
+            buildClientErrorStackTrace(nested, sb, nestLevel + 1);
         }
     }
 
+    // -----------------------------------------------------
+    //                                Client Error Exception
+    //                                ----------------------
     /**
-     * The exception that means specified delicate error for the current request. <br>
+     * The exception that means specified client error for the current request. <br>
      * You can send specified status e.g. 400, 404 by throwing this exception in your program.
      */
-    public static class RequestDelicateErrorException extends RuntimeException {
+    public static class RequestClientErrorException extends RuntimeException {
 
         private static final long serialVersionUID = 1L;
 
@@ -667,19 +719,19 @@ public class RequestLoggingFilter implements Filter {
         protected final int errorStatus; // one of HttpServletResponse.SC_...
         protected DelicateErrorLoggingLevel loggingLevel; // null allowed, INFO as default
 
-        public RequestDelicateErrorException(String msg, String title, int errorStatus) {
+        public RequestClientErrorException(String msg, String title, int errorStatus) {
             super(msg);
             this.title = title;
             this.errorStatus = errorStatus;
         }
 
-        public RequestDelicateErrorException(String msg, String title, int errorStatus, Throwable cause) {
+        public RequestClientErrorException(String msg, String title, int errorStatus, Throwable cause) {
             super(msg, cause);
             this.title = title;
             this.errorStatus = errorStatus;
         }
 
-        public RequestDelicateErrorException asLogging(DelicateErrorLoggingLevel loggingLevel) {
+        public RequestClientErrorException asLogging(DelicateErrorLoggingLevel loggingLevel) {
             this.loggingLevel = loggingLevel;
             return this;
         }
@@ -702,11 +754,11 @@ public class RequestLoggingFilter implements Filter {
     }
 
     // ===================================================================================
-    //                                                                    500 Server Error
-    //                                                                    ================
+    //                                                               Server Error e.g. 500
+    //                                                               =====================
     protected void sendInternalServerError(HttpServletRequest request, HttpServletResponse response, Throwable cause) throws IOException {
         if (cause != null) {
-            process500HandlingCallback(request, response, cause);
+            processServerErrorCallback(request, response, cause);
             request.setAttribute(ERROR_ATTRIBUTE_KEY, cause); // for something outer process
         }
         try {
@@ -724,15 +776,18 @@ public class RequestLoggingFilter implements Filter {
         }
     }
 
-    protected void process500HandlingCallback(HttpServletRequest request, HttpServletResponse response, Throwable cause) {
-        final Request500Handler request500Handler = request500HandlerLocal.get();
-        if (request500Handler == null) {
+    // -----------------------------------------------------
+    //                                 Server Error Callback
+    //                                 ---------------------
+    protected void processServerErrorCallback(HttpServletRequest request, HttpServletResponse response, Throwable cause) {
+        final RequestServerErrorHandler serverErrorHandler = serverErrorHandlerLocal.get();
+        if (serverErrorHandler == null) {
             return;
         }
         try {
-            request500Handler.handle(request, response, cause);
+            serverErrorHandler.handle(request, response, cause);
         } catch (Throwable handlingEx) {
-            final String msg = "Failed to handle '500 Error' by the handler: " + request500Handler;
+            final String msg = "Failed to handle '500 Error' by the handler: " + serverErrorHandler;
             if (errorLogging) {
                 logger.error(msg, handlingEx);
             } else {
@@ -742,23 +797,23 @@ public class RequestLoggingFilter implements Filter {
     }
 
     /**
-     * The handler of '500 Error' in the request.
+     * The handler of 'Server Error' in the request.
      */
     @FunctionalInterface
-    public interface Request500Handler {
+    public interface RequestServerErrorHandler {
 
         /**
-         * Handle the '500 Error' exception. <br>
+         * Handle the 'Server Error' exception. <br>
          * The error logging is executed after your handling so basically you don't need logging.
          * @param request The request provided by caller. (NotNull)
          * @param response The response provided by caller, might be already committed. (NotNull)
-         * @param cause The cause of this '500 Error'. (NotNull)
+         * @param cause The cause of this 'Server Error'. (NotNull)
          */
         void handle(HttpServletRequest request, HttpServletResponse response, Throwable cause);
     }
 
-    public static void setRequest500HandlerOnThread(Request500Handler handler) {
-        request500HandlerLocal.set(handler);
+    public static void setRequestServerErrorHandlerOnThread(RequestServerErrorHandler handler) {
+        serverErrorHandlerLocal.set(handler);
     }
 
     // ===================================================================================

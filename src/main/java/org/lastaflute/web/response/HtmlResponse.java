@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.response.next.ForwardNext;
@@ -48,7 +49,7 @@ public class HtmlResponse implements ActionResponse {
     protected boolean empty;
     protected boolean skipResponse;
     protected List<RenderDataRegistration> registrationList; // lazy loaded
-    protected Class<?> pushedFormType; // optional
+    protected Class<?> pushedFormType; // null allowed
     protected boolean errorsToSession;
 
     // ===================================================================================
@@ -199,8 +200,10 @@ public class HtmlResponse implements ActionResponse {
         return registrationList != null ? registrationList : Collections.emptyList();
     }
 
-    public Class<?> getPushedFormType() {
-        return pushedFormType;
+    public OptionalThing<Class<?>> getPushedFormType() {
+        return OptionalThing.ofNullable(pushedFormType, () -> {
+            throw new IllegalStateException("Not found the pushed form type in the HTML response: " + nextRouting);
+        });
     }
 
     public boolean isErrorsToSession() {

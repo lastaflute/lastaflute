@@ -13,22 +13,20 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process;
-
-import java.util.Map;
+package org.lastaflute.web.exception;
 
 /**
  * @author jflute
  */
-public class ActionRequestResource {
+public class RequestJsonParseFailureException extends ForcedRequest400BadRequestException {
 
-    protected final Map<Integer, Object> urlParamValueMap;
+    private static final long serialVersionUID = 1L;
 
-    public ActionRequestResource(Map<Integer, Object> urlParamValueMap) {
-        this.urlParamValueMap = urlParamValueMap;
+    public RequestJsonParseFailureException(String msg) {
+        super(msg);
     }
 
-    public Map<Integer, Object> getUrlParamValueMap() {
-        return urlParamValueMap;
+    public RequestJsonParseFailureException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

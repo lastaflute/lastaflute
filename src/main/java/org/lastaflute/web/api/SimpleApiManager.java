@@ -17,13 +17,12 @@ package org.lastaflute.web.api;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.servlet.request.ResponseManager;
@@ -87,22 +86,27 @@ public class SimpleApiManager implements ApiManager {
     //                                                                       Create Result
     //                                                                       =============
     @Override
-    public ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntimeMeta meta) {
-        return apiFailureHook.handleLoginRequiredFailure(resource, meta);
+    public ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime) {
+        return apiFailureHook.handleLoginRequiredFailure(resource, runtime);
     }
 
     @Override
-    public ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntimeMeta meta) {
-        return apiFailureHook.handleValidationError(resource, meta);
+    public ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntime runtime) {
+        return apiFailureHook.handleValidationError(resource, runtime);
     }
 
     @Override
-    public ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntimeMeta meta, RuntimeException cause) {
-        return apiFailureHook.handleApplicationException(resource, meta, cause);
+    public ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause) {
+        return apiFailureHook.handleApplicationException(resource, runtime, cause);
     }
 
     @Override
-    public OptionalThing<ApiResponse> handleSystemException(HttpServletResponse response, ActionRuntimeMeta meta, Throwable cause) {
-        return apiFailureHook.handleSystemException(response, meta, cause);
+    public OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause) {
+        return apiFailureHook.handleClientException(resource, runtime, cause);
+    }
+
+    @Override
+    public OptionalThing<ApiResponse> handleServerException(ApiFailureResource resource, ActionRuntime runtime, Throwable cause) {
+        return apiFailureHook.handleServerException(resource, runtime, cause);
     }
 }

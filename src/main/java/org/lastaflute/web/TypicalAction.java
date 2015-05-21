@@ -27,7 +27,7 @@ import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionHook;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
 import org.lastaflute.web.callback.TypicalGodHandActionEpilogue;
 import org.lastaflute.web.callback.TypicalGodHandActionPrologue;
@@ -97,7 +97,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                                Before
     //                                                ------
     @Override
-    public ActionResponse godHandPrologue(ActionRuntimeMeta runtimeMeta) { // fixed process
+    public ActionResponse godHandPrologue(ActionRuntime runtimeMeta) { // fixed process
         return createTypicalGodHandActionPrologue().performPrologue(runtimeMeta);
     }
 
@@ -119,7 +119,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     }
 
     @Override
-    public ActionResponse hookBefore(ActionRuntimeMeta runtimeMeta) { // application may override
+    public ActionResponse hookBefore(ActionRuntime runtimeMeta) { // application may override
         return ActionResponse.empty();
     }
 
@@ -127,7 +127,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                            on Failure
     //                                            ----------
     @Override
-    public ActionResponse godHandMonologue(ActionRuntimeMeta runtimeMeta) { // fixed process
+    public ActionResponse godHandMonologue(ActionRuntime runtimeMeta) { // fixed process
         return createTypicalGodHandExceptionMonologue().performMonologue(runtimeMeta);
     }
 
@@ -168,11 +168,11 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                               Finally
     //                                               -------
     @Override
-    public void hookFinally(ActionRuntimeMeta runtimeMeta) { // application may override
+    public void hookFinally(ActionRuntime runtimeMeta) { // application may override
     }
 
     @Override
-    public void godHandEpilogue(ActionRuntimeMeta runtimeMeta) { // fixed process
+    public void godHandEpilogue(ActionRuntime runtimeMeta) { // fixed process
         createTypicalGodHandEpilogue().performEpilogue(runtimeMeta);
     }
 

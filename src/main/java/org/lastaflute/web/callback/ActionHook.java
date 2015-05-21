@@ -68,7 +68,7 @@ public interface ActionHook {
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      * @return The path to forward. (NotNull: skip action execute, EmptyAllowed: if empty, proceed to next step)
      */
-    ActionResponse godHandPrologue(ActionRuntimeMeta runtimeMeta);
+    ActionResponse godHandPrologue(ActionRuntime runtimeMeta);
 
     /**
      * Callback process as God hand (means Framework process) before action execution and validation. <br>
@@ -90,7 +90,7 @@ public interface ActionHook {
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      * @return The path to forward. (NotNull: skip action execute, EmptyAllowed: if empty, proceed to next step)
      */
-    ActionResponse hookBefore(ActionRuntimeMeta runtimeMeta);
+    ActionResponse hookBefore(ActionRuntime runtimeMeta);
 
     // ===================================================================================
     //                                                                          on Failure
@@ -116,7 +116,7 @@ public interface ActionHook {
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      * @return The path to forward. (NotNull, EmptyAllowed: if empty, proceed to next step)
      */
-    ActionResponse godHandMonologue(ActionRuntimeMeta runtimeMeta);
+    ActionResponse godHandMonologue(ActionRuntime runtimeMeta);
 
     // ===================================================================================
     //                                                                             Finally
@@ -139,7 +139,7 @@ public interface ActionHook {
      * </pre>
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      */
-    void hookFinally(ActionRuntimeMeta runtimeMeta);
+    void hookFinally(ActionRuntime runtimeMeta);
 
     /**
      * Callback process as God hand (means Framework process) for action epilogue (closing action). <br>
@@ -159,5 +159,5 @@ public interface ActionHook {
      * </pre>
      * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
      */
-    void godHandEpilogue(ActionRuntimeMeta runtimeMeta);
+    void godHandEpilogue(ActionRuntime runtimeMeta);
 }

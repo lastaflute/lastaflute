@@ -76,7 +76,7 @@ public class TypicalGodHandMonologue {
     // ===================================================================================
     //                                                                           Monologue
     //                                                                           =========
-    public ActionResponse performMonologue(ActionRuntimeMeta runtimeMeta) {
+    public ActionResponse performMonologue(ActionRuntime runtimeMeta) {
         final RuntimeException cause = runtimeMeta.getFailureCause();
         RuntimeException translated = null;
         try {
@@ -111,7 +111,7 @@ public class TypicalGodHandMonologue {
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The forward path. (NullAllowed: if not null, it goes to the path)
      */
-    protected ActionResponse handleApplicationException(ActionRuntimeMeta executeMeta, RuntimeException cause) { // called by callback
+    protected ActionResponse handleApplicationException(ActionRuntime executeMeta, RuntimeException cause) { // called by callback
         final ActionResponse forwardTo = doHandleApplicationException(executeMeta, cause);
         showApplicationExceptionHandlingIfNeeds(cause, forwardTo);
         if (needsApplicationExceptionApiDispatch(executeMeta, forwardTo)) {
@@ -123,7 +123,7 @@ public class TypicalGodHandMonologue {
     // -----------------------------------------------------
     //                                     Actually Handling
     //                                     -----------------
-    protected ActionResponse doHandleApplicationException(ActionRuntimeMeta executeMeta, RuntimeException cause) {
+    protected ActionResponse doHandleApplicationException(ActionRuntime executeMeta, RuntimeException cause) {
         ActionResponse forwardTo = ActionResponse.empty();
         if (cause instanceof LaApplicationException) {
             final LaApplicationException appEx = (LaApplicationException) cause;
@@ -240,11 +240,11 @@ public class TypicalGodHandMonologue {
         }
     }
 
-    protected boolean needsApplicationExceptionApiDispatch(ActionRuntimeMeta executeMeta, ActionResponse forwardTo) {
+    protected boolean needsApplicationExceptionApiDispatch(ActionRuntime executeMeta, ActionResponse forwardTo) {
         return forwardTo.isPresent() && executeMeta.isApiAction();
     }
 
-    protected ActionResponse dispatchApiApplicationException(ActionRuntimeMeta executeMeta, RuntimeException cause) {
+    protected ActionResponse dispatchApiApplicationException(ActionRuntime executeMeta, RuntimeException cause) {
         final ApiFailureResource resource = createApiApplicationExceptionResource();
         return apiManager.handleApplicationException(resource, executeMeta, cause);
     }

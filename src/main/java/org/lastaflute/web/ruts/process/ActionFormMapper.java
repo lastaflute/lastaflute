@@ -51,14 +51,15 @@ import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.web.api.JsonBody;
 import org.lastaflute.web.api.JsonParameter;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
-import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.exception.IndexedPropertyNotListArrayRuntimeException;
 import org.lastaflute.web.exception.NoParameterizedListRuntimeException;
+import org.lastaflute.web.exception.RequestJsonParseFailureException;
+import org.lastaflute.web.exception.RequestPropertyMappingFailureException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.VirtualActionForm;
-import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.multipart.ActionMultipartRequestHandler;
@@ -105,12 +106,12 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                            Populate
     //                                                                            ========
-    public void populateParameter(ActionExecute execute, OptionalThing<VirtualActionForm> optForm) throws IOException, ServletException {
+    public void populateParameter(ActionRuntime runtime, OptionalThing<VirtualActionForm> optForm) throws IOException, ServletException {
         if (!optForm.isPresent()) {
             return;
         }
         final VirtualActionForm virtualActionForm = optForm.get();
-        if (handleJsonBody(execute, virtualActionForm)) {
+        if (handleJsonBody(runtime, virtualActionForm)) {
             return;
         }
         MultipartRequestHandler multipartHandler = null;
@@ -124,14 +125,14 @@ public class ActionFormMapper {
             }
         }
         final Object realForm = virtualActionForm.getRealForm();
-        final Map<String, Object> params = getAllParameters(requestManager.getRequest(), multipartHandler, execute);
+        final Map<String, Object> params = getAllParameters(multipartHandler);
         for (Entry<String, Object> entry : params.entrySet()) {
             final String name = entry.getKey();
             final Object value = entry.getValue();
             try {
                 setProperty(realForm, name, value, null, null);
             } catch (Throwable cause) {
-                handleIllegalPropertyPopulateException(realForm, name, value, cause); // adjustment here
+                handleIllegalPropertyPopulateException(realForm, name, value, runtime, cause); // adjustment here
             }
         }
     }
@@ -150,8 +151,8 @@ public class ActionFormMapper {
         return new ActionMultipartRequestHandler();
     }
 
-    protected Map<String, Object> getAllParameters(HttpServletRequest request, MultipartRequestHandler multipartHandler,
-            ActionExecute execute) {
+    protected Map<String, Object> getAllParameters(MultipartRequestHandler multipartHandler) {
+        final HttpServletRequest request = requestManager.getRequest();
         final Map<String, Object> paramMap = new LinkedHashMap<String, Object>();
         final Enumeration<String> em = request.getParameterNames();
         while (em.hasMoreElements()) {
@@ -164,16 +165,19 @@ public class ActionFormMapper {
         return paramMap;
     }
 
-    protected void handleIllegalPropertyPopulateException(Object form, String name, Object value, Throwable cause) throws ServletException {
+    protected void handleIllegalPropertyPopulateException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause)
+            throws ServletException {
         if (isRequest404NotFoundException(cause)) { // for indexed property check
             throw new ServletException(cause);
         }
-        throwActionFormPopulateFailureException(form, name, value, cause);
+        throwActionFormPopulateFailureException(form, name, value, runtime, cause);
     }
 
-    protected void throwActionFormPopulateFailureException(Object form, String name, Object value, Throwable cause) {
+    protected void throwActionFormPopulateFailureException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Failed to populate the parameter to the form.");
+        br.addItem("Action Runtime");
+        br.addElement(runtime);
         br.addItem("Action Form");
         br.addElement(form);
         br.addItem("Property Name");
@@ -191,13 +195,13 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                           JSON Body
     //                                                                           =========
-    protected boolean handleJsonBody(ActionExecute execute, VirtualActionForm virtualActionForm) throws IOException {
+    protected boolean handleJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm) throws IOException {
         if (isJsonBodyForm(virtualActionForm.getFormMeta().getFormType())) {
-            mappingJsonBody(execute, virtualActionForm, getRequestBody());
+            mappingJsonBody(runtime, virtualActionForm, getRequestBody());
             return true;
         }
         if (isJsonBodyListForm(virtualActionForm)) {
-            mappingListJsonBody(execute, virtualActionForm, getRequestBody());
+            mappingListJsonBody(runtime, virtualActionForm, getRequestBody());
             return true;
         }
         return false;
@@ -217,23 +221,23 @@ public class ActionFormMapper {
         return requestManager.getRequestBody();
     }
 
-    protected void mappingJsonBody(ActionExecute execute, VirtualActionForm virtualActionForm, String json) {
+    protected void mappingJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json) {
         try {
             final Object realForm = getJsonManager().fromJson(json, virtualActionForm.getFormMeta().getFormType());
             acceptJsonRealForm(virtualActionForm, realForm);
         } catch (RuntimeException e) {
-            throwJsonBodyParseFailureException(execute, virtualActionForm, json, e);
+            throwJsonBodyParseFailureException(runtime, virtualActionForm, json, e);
         }
     }
 
-    protected void mappingListJsonBody(ActionExecute execute, VirtualActionForm virtualActionForm, String json) {
+    protected void mappingListJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json) {
         try {
             final ActionFormMeta formMeta = virtualActionForm.getFormMeta();
             final ParameterizedType pt = formMeta.getListFormParameterParameterizedType().get(); // already checked
             final Object realForm = getJsonManager().fromJsonList(json, pt);
             acceptJsonRealForm(virtualActionForm, realForm);
         } catch (RuntimeException e) {
-            throwListJsonBodyParseFailureException(execute, virtualActionForm, json, e);
+            throwListJsonBodyParseFailureException(runtime, virtualActionForm, json, e);
         }
     }
 
@@ -245,24 +249,24 @@ public class ActionFormMapper {
         virtualActionForm.acceptRealForm(realForm);
     }
 
-    protected void throwJsonBodyParseFailureException(ActionExecute execute, VirtualActionForm virtualActionForm, String json,
+    protected void throwJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
             RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
         sb.append("Cannot parse json of the request body:");
         sb.append("\n[JsonBody Parse Failure]");
-        sb.append("\n").append(execute);
+        sb.append("\n").append(runtime);
         sb.append("\n").append(virtualActionForm);
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
         throwRequestJsonParseFailureException(sb.toString());
     }
 
-    protected void throwListJsonBodyParseFailureException(ActionExecute execute, VirtualActionForm virtualActionForm, String json,
+    protected void throwListJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
             RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
         sb.append("Cannot parse list json of the request body:");
         sb.append("\n[List JsonBody Parse Failure]");
-        sb.append("\n").append(execute);
+        sb.append("\n").append(runtime);
         sb.append("\n").append(virtualActionForm);
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
@@ -864,13 +868,13 @@ public class ActionFormMapper {
     //                                                                        ============
     protected void throwRequestJsonParseFailureException(String msg) {
         // no server error because it can occur by user's trick
-        // while, is likely to due to client bugs (or server) so request delicate error
-        throw new ForcedRequest400BadRequestException(msg);
+        // while, is likely to due to client bugs (or server) so request client error
+        throw new RequestJsonParseFailureException(msg);
     }
 
     protected void throwRequestPropertyMappingFailureException(String msg) {
         // no server error because it can occur by user's trick easily e.g. changing GET parameter
-        // while, might be client bugs (or server) so request delicate error
-        throw new ForcedRequest404NotFoundException(msg);
+        // while, might be client bugs (or server) so request client error
+        throw new RequestPropertyMappingFailureException(msg);
     }
 }

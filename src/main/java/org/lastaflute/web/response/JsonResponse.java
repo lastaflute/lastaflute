@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.aspect.RomanticActionCustomizer;
@@ -161,8 +162,11 @@ public class JsonResponse<BEAN> implements ApiResponse {
         return jsonBean;
     }
 
-    public String getCallback() {
-        return callback;
+    public OptionalThing<String> getCallback() {
+        final Class<? extends Object> beanType = jsonBean.getClass();
+        return OptionalThing.ofNullable(callback, () -> {
+            throw new IllegalStateException("Not found the callback in the JSON response: " + beanType);
+        });
     }
 
     public boolean isForcedlyJavaScript() {

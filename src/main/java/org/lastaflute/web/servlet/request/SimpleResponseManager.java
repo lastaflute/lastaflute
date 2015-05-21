@@ -103,6 +103,11 @@ public class SimpleResponseManager implements ResponseManager {
         return LaResponseUtil.getResponse();
     }
 
+    @Override
+    public boolean isCommitted() {
+        return getResponse().isCommitted();
+    }
+
     // ===================================================================================
     //                                                                   Redirect Response
     //                                                                   =================

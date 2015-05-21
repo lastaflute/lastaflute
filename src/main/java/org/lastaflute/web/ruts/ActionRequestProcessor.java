@@ -24,11 +24,13 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.TransactionStage;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.process.ActionCoinHelper;
 import org.lastaflute.web.ruts.process.ActionFormMapper;
-import org.lastaflute.web.ruts.process.ActionRequestResource;
+import org.lastaflute.web.ruts.process.ActionResponseReflector;
+import org.lastaflute.web.ruts.process.RequestUrlParam;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 
@@ -82,7 +84,7 @@ public class ActionRequestProcessor {
     // ===================================================================================
     //                                                                             Process
     //                                                                             =======
-    public void process(ActionExecute execute, ActionRequestResource resource) throws IOException, ServletException {
+    public void process(ActionExecute execute, RequestUrlParam resource) throws IOException, ServletException {
         // initializing and clearing thread cache here so you can use thread cache in your action execute
         final boolean exists = ThreadCacheContext.exists();
         try {
@@ -100,23 +102,44 @@ public class ActionRequestProcessor {
     // ===================================================================================
     //                                                                           Main Flow
     //                                                                           =========
-    protected void doProcess(ActionExecute execute, ActionRequestResource resource) throws IOException, ServletException {
-        ready();
-        final OptionalThing<VirtualActionForm> form = prepareActionForm(execute);
-        populateParameter(execute, form);
-        final VirtualAction action = createAction(execute, resource);
-        final NextJourney journey = performAction(action, form, execute); // #to_action
-        toNext(execute, journey);
+    protected void doProcess(ActionExecute execute, RequestUrlParam urlParam) throws IOException, ServletException {
+        final ActionRuntime runtime = createActionRuntime(execute, urlParam);
+        final ActionResponseReflector reflector = createResponseReflector(runtime);
+        ready(runtime, reflector);
+
+        final OptionalThing<VirtualActionForm> form = prepareActionForm(runtime);
+        populateParameter(runtime, form);
+
+        final VirtualAction action = createAction(runtime, reflector);
+        final NextJourney journey = performAction(action, form, runtime); // #to_action
+
+        toNext(runtime, journey);
     }
 
-    protected void ready() {
+    // ===================================================================================
+    //                                                                               Ready
+    //                                                                               =====
+    protected ActionRuntime createActionRuntime(ActionExecute execute, RequestUrlParam urlParam) {
+        return new ActionRuntime(execute, urlParam);
+    }
+
+    protected ActionResponseReflector createResponseReflector(ActionRuntime runtime) {
+        return new ActionResponseReflector(runtime, getRequestManager());
+    }
+
+    protected void ready(ActionRuntime runtime, ActionResponseReflector reflector) {
+        actionCoinHelper.prepareRequestClientErrorHandlingIfApi(runtime, reflector);
+        actionCoinHelper.prepareRequestServerErrorHandlingIfApi(runtime, reflector);
         actionCoinHelper.removeCachedMessages();
+        actionCoinHelper.resolveLocale(runtime);
+        actionCoinHelper.saveRuntimeToRequest(runtime);
     }
 
     // ===================================================================================
     //                                                                         Action Form
     //                                                                         ===========
-    public OptionalThing<VirtualActionForm> prepareActionForm(ActionExecute execute) {
+    public OptionalThing<VirtualActionForm> prepareActionForm(ActionRuntime runtime) {
+        final ActionExecute execute = runtime.getActionExecute();
         final OptionalThing<VirtualActionForm> parameterForm = execute.createActionForm();
         parameterForm.ifPresent(form -> saveFormToRequest(execute, form)); // to use form tag
         return parameterForm;
@@ -126,53 +149,54 @@ public class ActionRequestProcessor {
         getRequestManager().setAttribute(execute.getFormMeta().get().getFormKey(), value);
     }
 
-    protected void populateParameter(ActionExecute execute, OptionalThing<VirtualActionForm> form) throws IOException, ServletException {
-        actionFormMapper.populateParameter(execute, form);
+    protected void populateParameter(ActionRuntime runtime, OptionalThing<VirtualActionForm> form) throws IOException, ServletException {
+        actionFormMapper.populateParameter(runtime, form);
     }
 
     // ===================================================================================
     //                                                                              Action
     //                                                                              ======
-    public VirtualAction createAction(ActionExecute execute, ActionRequestResource resource) {
-        return newGodHandableAction(execute, resource, getTransactionStage());
+    public VirtualAction createAction(ActionRuntime runtime, ActionResponseReflector reflector) {
+        return newGodHandableAction(runtime, reflector, getTransactionStage(), getRequestManager());
     }
 
-    protected GodHandableAction newGodHandableAction(ActionExecute execute, ActionRequestResource resource, TransactionStage stage) {
-        return new GodHandableAction(execute, resource, getRequestManager(), stage);
+    protected GodHandableAction newGodHandableAction(ActionRuntime runtime, ActionResponseReflector reflector, TransactionStage stage,
+            RequestManager requestManager) {
+        return new GodHandableAction(runtime, reflector, stage, requestManager);
     }
 
-    protected NextJourney performAction(VirtualAction action, OptionalThing<VirtualActionForm> form, ActionExecute execute)
+    protected NextJourney performAction(VirtualAction action, OptionalThing<VirtualActionForm> form, ActionRuntime runtime)
             throws IOException, ServletException {
         try {
             return action.execute(form); // #to_action
         } catch (RuntimeException e) {
-            return handleActionFailureException(action, form, execute, e);
+            return handleActionFailureException(action, form, runtime, e);
         } finally {
             actionCoinHelper.clearContextJustInCase();
         }
     }
 
     protected NextJourney handleActionFailureException(VirtualAction action, OptionalThing<VirtualActionForm> optForm,
-            ActionExecute execute, RuntimeException cause) throws IOException, ServletException {
+            ActionRuntime runtime, RuntimeException cause) throws IOException, ServletException {
         throw new ServletException(cause);
     }
 
     // ===================================================================================
     //                                                                             to Next
     //                                                                             =======
-    protected void toNext(ActionExecute execute, NextJourney journey) throws IOException, ServletException {
+    protected void toNext(ActionRuntime runtime, NextJourney journey) throws IOException, ServletException {
         if (journey.isEmpty()) { // e.g. JSON handling
             return;
         }
         final String routingPath = journey.getRoutingPath();
         if (journey.isRedirectTo()) {
-            doRedirect(execute, routingPath, journey.isAsIs());
+            doRedirect(runtime, routingPath, journey.isAsIs());
         } else {
-            doForward(execute, routingPath);
+            doForward(runtime, routingPath);
         }
     }
 
-    protected void doRedirect(ActionExecute execute, String redirectPath, boolean asIs) throws IOException {
+    protected void doRedirect(ActionRuntime runtime, String redirectPath, boolean asIs) throws IOException {
         final ResponseManager responseManager = getRequestManager().getResponseManager();
         if (asIs) {
             responseManager.redirectAsIs(redirectPath);
@@ -181,7 +205,7 @@ public class ActionRequestProcessor {
         }
     }
 
-    protected void doForward(ActionExecute execute, String forwardPath) throws IOException, ServletException {
+    protected void doForward(ActionRuntime runtime, String forwardPath) throws IOException, ServletException {
         getRequestManager().getResponseManager().forward(forwardPath);
     }
 

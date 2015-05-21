@@ -18,12 +18,17 @@ package org.lastaflute.web.ruts.process;
 
 import org.dbflute.hook.AccessContext;
 import org.dbflute.hook.CallbackContext;
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.magic.TransactionTimeContext;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.api.ApiFailureResource;
+import org.lastaflute.web.api.ApiManager;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 
@@ -64,6 +69,64 @@ public class ActionCoinHelper {
     }
 
     // ===================================================================================
+    //                                                                Prepare API Handling
+    //                                                                ====================
+    // -----------------------------------------------------
+    //                                          Client Error
+    //                                          ------------
+    public void prepareRequestClientErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
+        if (runtime.isApiAction()) {
+            RequestLoggingFilter.setRequestClientHandlerOnThread((request, response, cause) -> {
+                dispatchApiClientException(runtime, reflector, cause);
+            }); // cleared at logging filter's finally
+        }
+    }
+
+    protected void dispatchApiClientException(ActionRuntime runtime, ActionResponseReflector reflector, RuntimeException cause) {
+        if (canHandleApiException(runtime)) { // check API action just in case
+            getApiManager().handleClientException(createApiFailureResource(), runtime, cause).ifPresent(apiRes -> {
+                reflector.reflect(apiRes); /* empty journey so ignore return */
+            });
+            runtime.clearDisplayData(); /* remove (possible) large data just in case */
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                          Server Error
+    //                                          ------------
+    public void prepareRequestServerErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
+        if (runtime.isApiAction()) {
+            RequestLoggingFilter.setRequestServerErrorHandlerOnThread((request, response, cause) -> {
+                dispatchApiServerException(runtime, reflector, cause);
+            }); // cleared at logging filter's finally
+        }
+    }
+
+    protected void dispatchApiServerException(ActionRuntime runtime, ActionResponseReflector reflector, Throwable cause) {
+        if (canHandleApiException(runtime)) { // check API action just in case
+            getApiManager().handleServerException(createApiFailureResource(), runtime, cause).ifPresent(apiRes -> {
+                reflector.reflect(apiRes); /* empty journey so ignore return */
+            });
+            runtime.clearDisplayData(); /* remove (possible) large data just in case */
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                          Assist Logic
+    //                                          ------------
+    protected boolean canHandleApiException(ActionRuntime runtime) {
+        return runtime.isApiAction() && !requestManager.getResponseManager().isCommitted();
+    }
+
+    protected ApiFailureResource createApiFailureResource() {
+        return new ApiFailureResource(OptionalThing.empty(), requestManager);
+    }
+
+    protected ApiManager getApiManager() {
+        return requestManager.getApiManager();
+    }
+
+    // ===================================================================================
     //                                                               Remove Cached Message
     //                                                               =====================
     /**
@@ -87,6 +150,22 @@ public class ActionCoinHelper {
         sessionManager.getAttribute(key, ActionMessages.class).filter(messages -> messages.isAccessed()).ifPresent(messages -> {
             sessionManager.removeAttribute(key);
         });
+    }
+
+    // ===================================================================================
+    //                                                                      Resolve Locale
+    //                                                                      ==============
+    public void resolveLocale(ActionRuntime runtime) {
+        // you can customize the process e.g. accept cookie locale
+        requestManager.resolveUserLocale(runtime);
+        requestManager.resolveUserTimeZone(runtime);
+    }
+
+    // ===================================================================================
+    //                                                                        Save Runtime
+    //                                                                        ============
+    public void saveRuntimeToRequest(ActionRuntime runtime) { // to get it from other area
+        requestManager.setAttribute(LastaWebKey.ACTION_RUNTIME_KEY, runtime);
     }
 
     // ===================================================================================

@@ -32,10 +32,11 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfStringUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
+import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.RequestAttributeNotFoundException;
 import org.lastaflute.web.exception.RequestInfoNotFoundException;
@@ -85,6 +86,10 @@ public class SimpleRequestManager implements RequestManager {
     /** The manager of API. (NotNull: after initialization) */
     @Resource
     protected ApiManager apiManager;
+
+    /** The manager of JSON. (NotNull: after initialization) */
+    @Resource
+    protected JsonManager jsonManager;
 
     /** The provider of request user locale. (NotNull: after initialization) */
     protected UserLocaleProcessProvider localeHandler;
@@ -387,10 +392,10 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public Locale resolveUserLocale(ActionRuntimeMeta executeMeta) {
+    public Locale resolveUserLocale(ActionRuntime runtimeMeta) {
         Locale locale = findCachedLocale();
         if (locale == null) {
-            locale = findBusinessLocale(executeMeta);
+            locale = findBusinessLocale(runtimeMeta);
         }
         if (locale == null) {
             locale = findCookieLocale(); // before session
@@ -410,8 +415,8 @@ public class SimpleRequestManager implements RequestManager {
         return getAttribute(getReqeustUserLocaleKey(), Locale.class).orElse(null);
     }
 
-    protected Locale findBusinessLocale(ActionRuntimeMeta executeMeta) { // null allowed because of internal handling
-        return localeHandler.findBusinessLocale(executeMeta, this).orElse(null);
+    protected Locale findBusinessLocale(ActionRuntime runtimeMeta) { // null allowed because of internal handling
+        return localeHandler.findBusinessLocale(runtimeMeta, this).orElse(null);
     }
 
     protected Locale findCookieLocale() { // null allowed because of internal handling
@@ -500,13 +505,13 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public TimeZone resolveUserTimeZone(ActionRuntimeMeta executeMeta) {
+    public TimeZone resolveUserTimeZone(ActionRuntime runtimeMeta) {
         if (!timeZoneProvider.isUseTimeZoneHandling()) {
             return null;
         }
         TimeZone timeZone = findCachedTimeZone();
         if (timeZone == null) {
-            timeZone = findBusinessTimeZone(executeMeta);
+            timeZone = findBusinessTimeZone(runtimeMeta);
         }
         if (timeZone == null) {
             timeZone = findCookieTimeZone(); // before session
@@ -526,8 +531,8 @@ public class SimpleRequestManager implements RequestManager {
         return getAttribute(getReqeustUserTimeZoneKey(), TimeZone.class).orElse(null);
     }
 
-    protected TimeZone findBusinessTimeZone(ActionRuntimeMeta executeMeta) { // null allowed because of internal handling
-        return timeZoneProvider.findBusinessTimeZone(executeMeta, this).orElse(null);
+    protected TimeZone findBusinessTimeZone(ActionRuntime runtimeMeta) { // null allowed because of internal handling
+        return timeZoneProvider.findBusinessTimeZone(runtimeMeta, this).orElse(null);
     }
 
     protected TimeZone findCookieTimeZone() { // null allowed because of internal handling
@@ -666,6 +671,11 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public MessageManager getMessageManager() {
         return messageManager;
+    }
+
+    @Override
+    public JsonManager getJsonManager() {
+        return jsonManager;
     }
 
     @Override

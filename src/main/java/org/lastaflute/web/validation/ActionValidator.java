@@ -42,7 +42,7 @@ import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiFailureResource;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
@@ -127,8 +127,8 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return new ApiFailureResource(errors, requestManager);
     }
 
-    protected ActionRuntimeMeta retrieveActionRuntimeMeta() {
-        return requestManager.getAttribute(LastaWebKey.ACTION_RUNTIME_META_KEY, ActionRuntimeMeta.class).get(); // always exists
+    protected ActionRuntime retrieveActionRuntimeMeta() {
+        return requestManager.getAttribute(LastaWebKey.ACTION_RUNTIME_KEY, ActionRuntime.class).get(); // always exists
     }
 
     // ===================================================================================

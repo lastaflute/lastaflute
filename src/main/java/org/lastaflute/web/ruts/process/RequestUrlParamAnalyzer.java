@@ -64,10 +64,10 @@ public class RequestUrlParamAnalyzer {
     /**
      * @param execute The definition of action execute. (NotNull)
      * @param paramPath The parameter path from URL. (NullAllowed)
-     * @return The map of URL parameter value. map:{index = value} (NotNull)
+     * @return The object for URL parameter value that has e.g. map:{index = value} (NotNull)
      */
-    public Map<Integer, Object> analyzeUrlParamValue(ActionExecute execute, String paramPath) {
-        return doAnalyzeUrlParamValue(execute, extractRealParamPath(execute, paramPath));
+    public RequestUrlParam analyzeUrlParam(ActionExecute execute, String paramPath) {
+        return doAnalyzeUrlParam(execute, extractRealParamPath(execute, paramPath));
     }
 
     protected String extractRealParamPath(ActionExecute execute, String paramPath) {
@@ -88,7 +88,7 @@ public class RequestUrlParamAnalyzer {
         return real;
     }
 
-    protected Map<Integer, Object> doAnalyzeUrlParamValue(ActionExecute execute, String paramPath) {
+    protected RequestUrlParam doAnalyzeUrlParam(ActionExecute execute, String paramPath) {
         final List<Class<?>> urlParamTypeList = execute.getUrlParamArgs().map(args -> {
             return args.getUrlParamTypeList();
         }).orElse(Collections.emptyList());
@@ -103,7 +103,11 @@ public class RequestUrlParamAnalyzer {
         }
         assertUrlParamArgsCountMatches(execute, paramPath, urlParamTypeList, urlParamValueMap);
         checkRequiredParameter(execute, paramPath, urlParamValueMap, optGenTypeMap);
-        return urlParamValueMap;
+        return newRequestUrlParam(urlParamTypeList, urlParamValueMap);
+    }
+
+    protected RequestUrlParam newRequestUrlParam(List<Class<?>> urlParamTypeList, Map<Integer, Object> urlParamValueMap) {
+        return new RequestUrlParam(urlParamTypeList, urlParamValueMap);
     }
 
     // -----------------------------------------------------

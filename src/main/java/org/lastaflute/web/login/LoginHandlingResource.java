@@ -17,7 +17,7 @@ package org.lastaflute.web.login;
 
 import java.lang.reflect.Method;
 
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.message.ActionMessages;
 
 /**
@@ -28,12 +28,12 @@ public class LoginHandlingResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionRuntimeMeta runtimeMeta;
+    protected final ActionRuntime runtimeMeta;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LoginHandlingResource(ActionRuntimeMeta runtimeMeta) {
+    public LoginHandlingResource(ActionRuntime runtimeMeta) {
         this.runtimeMeta = runtimeMeta;
     }
 
@@ -63,7 +63,7 @@ public class LoginHandlingResource {
      * Get the runtime meta of action execute.
      * @return The runtime meta of action execute. (NotNull)
      */
-    public ActionRuntimeMeta getRuntimeMeta() {
+    public ActionRuntime getRuntimeMeta() {
         return runtimeMeta;
     }
 

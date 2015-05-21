@@ -20,42 +20,24 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
-import org.dbflute.optional.OptionalObject;
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.core.json.JsonManager;
-import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
-import org.lastaflute.web.LastaWebKey;
-import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionHook;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.exception.ActionCallbackReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
 import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
 import org.lastaflute.web.exception.ExecuteMethodReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
 import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.response.ApiResponse;
-import org.lastaflute.web.response.HtmlResponse;
-import org.lastaflute.web.response.JsonResponse;
-import org.lastaflute.web.response.StreamResponse;
-import org.lastaflute.web.response.XmlResponse;
-import org.lastaflute.web.response.render.RenderData;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.ruts.process.ActionRequestResource;
+import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
-import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.request.RequestManager;
-import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.validation.VaErrorHook;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
@@ -78,40 +60,31 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionExecute execute;
-    protected final ActionRequestResource resource;
-    protected final RequestManager requestManager;
-    protected final TransactionStage stage;
-    protected final Object action;
-    protected final ActionRuntimeMeta meta;
+    protected final ActionExecute execute; // fixed info
+    protected final ActionRuntime runtime; // has state
+    protected final ActionResponseReflector reflector; // has state
+    protected final RequestManager requestManager; // singleton
+    protected final TransactionStage stage; // singleton
+    protected final Object action; // created here
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public GodHandableAction(ActionExecute execute, ActionRequestResource resource, RequestManager requestManager, TransactionStage stage) {
-        this.execute = execute;
-        this.resource = resource;
+    public GodHandableAction(ActionRuntime runtime, ActionResponseReflector reflector, TransactionStage stage, RequestManager requestManager) {
+        this.execute = runtime.getActionExecute();
+        this.runtime = runtime;
+        this.reflector = reflector;
         this.requestManager = requestManager;
         this.stage = stage;
-        try {
-            this.action = createAction(execute);
-        } catch (RuntimeException e) {
-            throw new ActionCreateFailureException("Failed to create the action: " + execute, e);
-        }
-        this.meta = newActionRuntimeMeta(execute);
-        saveRuntimeMetaToRequest(requestManager);
+        this.action = createAction(execute);
     }
 
     protected Object createAction(ActionExecute execute) {
-        return execute.getActionMapping().createAction();
-    }
-
-    protected ActionRuntimeMeta newActionRuntimeMeta(ActionExecute execute) {
-        return new ActionRuntimeMeta(execute);
-    }
-
-    protected void saveRuntimeMetaToRequest(RequestManager requestManager) { // to get it from other area
-        requestManager.setAttribute(LastaWebKey.ACTION_RUNTIME_META_KEY, meta);
+        try {
+            return execute.getActionMapping().createAction();
+        } catch (RuntimeException e) {
+            throw new ActionCreateFailureException("Failed to create the action: " + execute, e);
+        }
     }
 
     // ===================================================================================
@@ -119,32 +92,30 @@ public class GodHandableAction implements VirtualAction {
     //                                                                        ============
     @Override
     public NextJourney execute(OptionalThing<VirtualActionForm> form) {
-        final ActionHook callback = prepareActionCallback();
-        final NextJourney journey = doExecute(form, callback); // #to_action
+        final ActionHook hook = prepareActionHook();
+        final NextJourney journey = godHandlyExecute(form, hook);
         setupDisplayData(journey);
         showTransition(journey);
         return journey;
     }
 
-    protected ActionHook prepareActionCallback() {
+    protected ActionHook prepareActionHook() {
         return action instanceof ActionHook ? (ActionHook) action : null;
     }
 
     // -----------------------------------------------------
     //                                             Main Flow
     //                                             ---------
-    protected NextJourney doExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
-        prepareRequest500HandlingIfApi();
-        processLocale();
+    protected NextJourney godHandlyExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
         try {
             final ActionResponse before = processHookBefore(hook);
             if (before.isPresent()) { // e.g. login required
-                return handleActionResponse(before);
+                return reflect(before);
+            } else { // mainly here
+                return transactionalExecute(form, hook); // #to_action
             }
-            return transactionalExecute(form, hook); // #to_action
         } catch (RuntimeException e) {
-            final ActionResponse monologue = tellExceptionMonologue(hook, e);
-            return handleActionResponse(monologue);
+            return reflect(tellExceptionMonologue(hook, e));
         } finally {
             processHookFinally(hook);
         }
@@ -153,7 +124,7 @@ public class GodHandableAction implements VirtualAction {
     protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
         return stage.selectable(() -> {
             final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
-            return handleActionResponse(response); /* also response handling in transaction */
+            return reflect(response); /* also response handling in transaction */
         }, getExecuteTransactionGenre()).get(); // because of not null
     }
 
@@ -161,33 +132,8 @@ public class GodHandableAction implements VirtualAction {
         return execute.getTransactionGenre();
     }
 
-    // -----------------------------------------------------
-    //                                          500 Handling
-    //                                          ------------
-    protected void prepareRequest500HandlingIfApi() {
-        if (meta.isApiAction()) {
-            RequestLoggingFilter.setRequest500HandlerOnThread((request, response, cause) -> {
-                dispatchApiSystemException(request, response, cause);
-            }); // cleared at logging filter's finally
-        }
-    }
-
-    protected void dispatchApiSystemException(HttpServletRequest request, HttpServletResponse response, Throwable cause) {
-        if (meta.isApiAction() && !response.isCommitted()) { // check API action just in case
-            getApiManager().handleSystemException(response, meta, cause).ifPresent(apiRes -> {
-                handleActionResponse(apiRes); /* empty journey so ignore return */
-            });
-            meta.clearDisplayData(); /* remove (possible) large data just in case */
-        }
-    }
-
-    // -----------------------------------------------------
-    //                                                Locale
-    //                                                ------
-    protected void processLocale() { // moved from request processor
-        // you can customize the process e.g. accept cookie locale
-        requestManager.resolveUserLocale(meta);
-        requestManager.resolveUserTimeZone(meta);
+    protected NextJourney reflect(ActionResponse response) {
+        return reflector.reflect(response);
     }
 
     // ===================================================================================
@@ -200,20 +146,20 @@ public class GodHandableAction implements VirtualAction {
         if (hook == null) {
             return ActionResponse.empty();
         }
-        showBefore(meta);
-        ActionResponse response = hook.godHandPrologue(meta);
+        showBefore(runtime);
+        ActionResponse response = hook.godHandPrologue(runtime);
         if (isEmpty(response)) {
-            response = hook.hookBefore(meta);
+            response = hook.hookBefore(runtime);
         }
         if (isPresent(response)) {
-            meta.setActionResponse(response);
+            runtime.setActionResponse(response);
         }
         return response;
     }
 
-    protected void showBefore(ActionRuntimeMeta meta) {
+    protected void showBefore(ActionRuntime runtime) {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("#flow ...Calling back #before for {}", buildActionName(meta));
+            LOG.debug("#flow ...Calling back #before for {}", buildActionName(runtime));
         }
     }
 
@@ -221,13 +167,13 @@ public class GodHandableAction implements VirtualAction {
     //                                            on Failure
     //                                            ----------
     protected ActionResponse tellExceptionMonologue(ActionHook hook, RuntimeException e) {
-        meta.setFailureCause(e);
+        runtime.setFailureCause(e);
         if (hook == null) {
             throw e;
         }
-        final ActionResponse response = hook.godHandMonologue(meta);
+        final ActionResponse response = hook.godHandMonologue(runtime);
         if (isPresent(response)) {
-            meta.setActionResponse(response);
+            runtime.setActionResponse(response);
             return response;
         } else {
             throw e;
@@ -241,18 +187,18 @@ public class GodHandableAction implements VirtualAction {
         if (hook == null) {
             return;
         }
-        showFinally(meta);
+        showFinally(runtime);
         try {
-            hook.hookFinally(meta);
+            hook.hookFinally(runtime);
         } finally {
-            hook.godHandEpilogue(meta);
+            hook.godHandEpilogue(runtime);
         }
     }
 
-    protected void showFinally(ActionRuntimeMeta meta) {
+    protected void showFinally(ActionRuntime runtime) {
         if (LOG.isDebugEnabled()) {
-            final String failureMark = meta.hasFailureCause() ? " with failure" : "";
-            LOG.debug("#flow ...Calling back #finally{} for {}", failureMark, buildActionName(meta));
+            final String failureMark = runtime.hasFailureCause() ? " with failure" : "";
+            LOG.debug("#flow ...Calling back #finally{} for {}", failureMark, buildActionName(runtime));
         }
     }
 
@@ -273,26 +219,28 @@ public class GodHandableAction implements VirtualAction {
     //                                                                    Actually Execute
     //                                                                    ================
     protected ActionResponse actuallyExecute(OptionalThing<VirtualActionForm> optForm, ActionHook hook) {
-        showAction(meta);
+        showAction(runtime);
         final Object[] requestArgs = toRequestArgs(optForm);
         final Object result = invokeExecuteMethod(execute.getExecuteMethod(), requestArgs); // #to_action
         assertExecuteReturnNotNull(requestArgs, result);
         assertExecuteMethodReturnTypeActionResponse(requestArgs, result);
         final ActionResponse response = (ActionResponse) result;
-        meta.setActionResponse(response); // always set here because of main
+        runtime.setActionResponse(response); // always set here because of main
         return response;
     }
 
     protected Object[] toRequestArgs(OptionalThing<VirtualActionForm> optForm) {
         final List<Object> paramList = new ArrayList<Object>(4);
-        execute.getUrlParamArgs().ifPresent(args -> paramList.addAll(resource.getUrlParamValueMap().values()));
+        execute.getUrlParamArgs().ifPresent(args -> {
+            paramList.addAll(runtime.getRequestUrlParam().getUrlParamValueMap().values());
+        });
         optForm.ifPresent(form -> paramList.add(form.getRealForm()));
         return !paramList.isEmpty() ? paramList.toArray(new Object[paramList.size()]) : EMPTY_ARRAY;
     }
 
-    protected void showAction(ActionRuntimeMeta meta) {
+    protected void showAction(ActionRuntime runtime) {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("#flow ...Beginning #action {}", buildActionDisp(meta));
+            LOG.debug("#flow ...Beginning #action {}", buildActionDisp(runtime));
         }
     }
 
@@ -367,160 +315,11 @@ public class GodHandableAction implements VirtualAction {
     }
 
     // ===================================================================================
-    //                                                                     Handle Response
-    //                                                                     ===============
-    protected NextJourney handleActionResponse(ActionResponse response) {
-        if (response.isEmpty() || response.isSkip()) {
-            return emptyJourney();
-        }
-        return doHandleActionResponse(response);
-    }
-
-    protected NextJourney doHandleActionResponse(ActionResponse response) {
-        if (response instanceof HtmlResponse) {
-            return handleHtmlResponse((HtmlResponse) response);
-        } else if (response instanceof JsonResponse) {
-            return handleJsonResponse((JsonResponse<?>) response);
-        } else if (response instanceof XmlResponse) {
-            return handleXmlResponse((XmlResponse) response);
-        } else if (response instanceof StreamResponse) {
-            return handleStreamResponse((StreamResponse) response);
-        } else {
-            String msg = "Unknown action response type: " + response.getClass() + ", " + response;
-            throw new IllegalStateException(msg);
-        }
-    }
-
-    // -----------------------------------------------------
-    //                                         HTML Response
-    //                                         -------------
-    protected NextJourney handleHtmlResponse(HtmlResponse response) {
-        setupHtmlResponseHeader(response);
-        setupForwardRenderData(response);
-        setupPushedActionForm(response);
-        setupSavingErrorsToSession(response);
-        return createActionNext(response);
-    }
-
-    protected void setupHtmlResponseHeader(HtmlResponse response) {
-        response.getHeaderMap().forEach((key, value) -> requestManager.getResponseManager().addHeader(key, value));
-    }
-
-    protected void setupForwardRenderData(HtmlResponse htmlResponse) {
-        final RenderData data = newRenderData();
-        htmlResponse.getRegistrationList().forEach(reg -> reg.register(data));
-        data.getDataMap().forEach((key, value) -> meta.registerData(key, value));
-    }
-
-    protected RenderData newRenderData() {
-        return new RenderData();
-    }
-
-    protected void setupPushedActionForm(HtmlResponse response) {
-        final Class<?> formType = response.getPushedFormType();
-        if (formType != null) {
-            final String formKey = LastaWebKey.PUSHED_ACTION_FORM_KEY;
-            final ActionFormMeta formMeta = createPushedActionFormMeta(formType, formKey);
-            requestManager.setAttribute(formKey, formMeta.createActionForm());
-        }
-    }
-
-    protected ActionFormMeta createPushedActionFormMeta(Class<?> formType, String formKey) {
-        // TODO jflute lastaflute: [E] fitting: cache of action form meta for pushed and also argument
-        return new ActionFormMeta(formKey, formType, OptionalObject.empty());
-    }
-
-    protected NextJourney createActionNext(HtmlResponse response) {
-        return execute.getActionMapping().createNextJourney(response);
-    }
-
-    protected void setupSavingErrorsToSession(HtmlResponse response) {
-        if (response.isErrorsToSession()) {
-            requestManager.saveErrorsToSession();
-        }
-    }
-
-    // -----------------------------------------------------
-    //                                         JSON Response
-    //                                         -------------
-    protected NextJourney handleJsonResponse(JsonResponse<?> jsonResponse) {
-        // this needs original action customizer in your customizer.dicon
-        final JsonManager jsonManager = getJsonManager();
-        final String json = jsonManager.toJson(jsonResponse.getJsonBean());
-        final ResponseManager responseManager = requestManager.getResponseManager();
-        setupApiResponseHeader(responseManager, jsonResponse);
-        setupApiResponseHttpStatus(responseManager, jsonResponse);
-        final String callback = jsonResponse.getCallback();
-        if (callback != null) { // JSONP (needs JavaScript)
-            final String script = callback + "(" + json + ")";
-            responseManager.writeAsJavaScript(script);
-        } else {
-            // responseManager might have debug logging so no logging here
-            if (jsonResponse.isForcedlyJavaScript()) {
-                responseManager.writeAsJavaScript(json);
-            } else { // as JSON (default)
-                responseManager.writeAsJson(json);
-            }
-        }
-        return emptyJourney();
-    }
-
-    protected void setupApiResponseHeader(ResponseManager responseManager, ApiResponse apiResponse) {
-        final Map<String, String> headerMap = apiResponse.getHeaderMap();
-        if (!headerMap.isEmpty()) {
-            final HttpServletResponse response = responseManager.getResponse();
-            headerMap.forEach((key, value) -> response.addHeader(key, value));
-        }
-    }
-
-    protected void setupApiResponseHttpStatus(ResponseManager responseManager, ApiResponse apiResponse) {
-        final Integer httpStatus = apiResponse.getHttpStatus();
-        if (httpStatus != null) {
-            responseManager.setResponseStatus(httpStatus);
-        }
-    }
-
-    // -----------------------------------------------------
-    //                                          XML Response
-    //                                          ------------
-    protected NextJourney handleXmlResponse(XmlResponse xmlResponse) {
-        final ResponseManager responseManager = requestManager.getResponseManager();
-        setupApiResponseHeader(responseManager, xmlResponse);
-        setupApiResponseHttpStatus(responseManager, xmlResponse);
-        responseManager.writeAsXml(xmlResponse.getXmlStr(), xmlResponse.getEncoding());
-        return emptyJourney();
-    }
-
-    // -----------------------------------------------------
-    //                                       Stream Response
-    //                                       ---------------
-    protected NextJourney handleStreamResponse(StreamResponse streamResponse) {
-        final ResponseManager responseManager = requestManager.getResponseManager();
-        setupStreamResponseHttpStatus(responseManager, streamResponse);
-        responseManager.download(streamResponse.toDownloadResource());
-        return emptyJourney();
-    }
-
-    protected void setupStreamResponseHttpStatus(ResponseManager responseManager, StreamResponse streamResponse) {
-        final Integer httpStatus = streamResponse.getHttpStatus();
-        if (httpStatus != null) {
-            responseManager.setResponseStatus(httpStatus);
-        }
-    }
-
-    // -----------------------------------------------------
-    //                                         Empty Journey
-    //                                         -------------
-    protected NextJourney emptyJourney() {
-        return NextJourney.empty();
-    }
-
-    // ===================================================================================
     //                                                                        Display Data
     //                                                                        ============
     protected void setupDisplayData(NextJourney journey) {
-        if (meta.isForwardToHtml() && journey.isPresent()) {
-            meta.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
+        if (runtime.isForwardToHtml() && journey.isPresent()) {
+            runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
         }
     }
 
@@ -528,41 +327,24 @@ public class GodHandableAction implements VirtualAction {
     //                                                                             Logging
     //                                                                             =======
     protected void showTransition(NextJourney journey) {
-        if (LOG.isDebugEnabled()) {
-            if (journey.isPresent()) {
-                final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
-                final String path = journey.getRoutingPath(); // basically not null but just in case
-                final String tag = path != null && path.endsWith(".jsp") ? "#jsp " : "";
-                LOG.debug("#flow ...{} to {}{}", ing, tag, path);
-            }
+        if (LOG.isDebugEnabled() && journey.isPresent()) {
+            final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
+            final String path = journey.getRoutingPath(); // not null
+            final String tag = path.endsWith(".html") ? "#html " : (path.endsWith(".jsp") ? "#jsp " : "");
+            LOG.debug("#flow ...{} to {}{}", ing, tag, path);
         }
     }
 
-    protected String buildActionDisp(ActionRuntimeMeta meta) {
-        final Method method = meta.getExecuteMethod();
+    protected String buildActionDisp(ActionRuntime runtime) {
+        final Method method = runtime.getExecuteMethod();
         final Class<?> declaringClass = method.getDeclaringClass();
         return declaringClass.getSimpleName() + "." + method.getName() + "()";
     }
 
-    protected String buildActionName(ActionRuntimeMeta meta) {
-        final Method method = meta.getExecuteMethod();
+    protected String buildActionName(ActionRuntime runtime) {
+        final Method method = runtime.getExecuteMethod();
         final Class<?> declaringClass = method.getDeclaringClass();
         return declaringClass.getSimpleName();
-    }
-
-    // ===================================================================================
-    //                                                                           Component
-    //                                                                           =========
-    protected ApiManager getApiManager() {
-        return getComponent(ApiManager.class);
-    }
-
-    protected JsonManager getJsonManager() {
-        return getComponent(JsonManager.class);
-    }
-
-    protected <COMPONENT> COMPONENT getComponent(Class<COMPONENT> type) {
-        return ContainerUtil.getComponent(type);
     }
 
     // ===================================================================================

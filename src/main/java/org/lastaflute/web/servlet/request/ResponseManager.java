@@ -39,6 +39,12 @@ public interface ResponseManager {
      */
     HttpServletResponse getResponse();
 
+    /**
+     * Is the current response committed?
+     * @return The determination, true or false.
+     */
+    boolean isCommitted();
+
     // ===================================================================================
     //                                                                    Routing Response
     //                                                                    ================

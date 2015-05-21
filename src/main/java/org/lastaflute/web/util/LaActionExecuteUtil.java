@@ -33,7 +33,7 @@ public class LaActionExecuteUtil {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    protected static final String KEY = LastaWebKey.EXECUTE_CONFIG_KEY;
+    protected static final String KEY = LastaWebKey.ACTION_EXECUTE_KEY;
 
     // ===================================================================================
     //                                                             Access to ExecuteConfig
@@ -55,8 +55,8 @@ public class LaActionExecuteUtil {
         return (ActionExecute) LaRequestUtil.getRequest().getAttribute(KEY);
     }
 
-    public static void setActionExecute(HttpServletRequest request, ActionExecute method) {
-        request.setAttribute(KEY, method);
+    public static void setActionExecute(HttpServletRequest request, ActionExecute execute) {
+        request.setAttribute(KEY, execute);
     }
 
     // ===================================================================================

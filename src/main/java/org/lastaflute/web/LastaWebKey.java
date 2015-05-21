@@ -22,14 +22,14 @@ public interface LastaWebKey {
 
     String MODULE_CONFIG_KEY = "lastaflute.config.MODULE"; // ServletContext, Request
     String ACTION_MAPPING_KEY = "lastaflute.config.ACTION_MAPPING"; // Request
-    String EXECUTE_CONFIG_KEY = "lastaflute.config.ACTION_EXECUTE"; // Request
+    String ACTION_EXECUTE_KEY = "lastaflute.config.ACTION_EXECUTE"; // Request
 
     String MESSAGE_RESOURCES_KEY = "lastaflute.message.RESOURCES"; // ServletContext
     String ACTION_ERRORS_KEY = "lastaflute.message.ACTION_ERRORS"; // Request or Session
     String ACTION_INFO_KEY = "lastaflute.message.ACTION_INFO"; // Request or Session
 
     String ACTION_PATH_KEY = "lastaflute.action.ACTION_PATH"; // Request
-    String ACTION_RUNTIME_META_KEY = "lastaflute.action.ACTION_RUMTIME_META"; // Request
+    String ACTION_RUNTIME_KEY = "lastaflute.action.ACTION_RUMTIME"; // Request
     String PUSHED_ACTION_FORM_KEY = "lastaflute.action.PUSHED_ACTION_FORM"; // Request
 
     String USER_LOCALE_KEY = "lastaflute.action.USER_LOCALE"; // Request or Session

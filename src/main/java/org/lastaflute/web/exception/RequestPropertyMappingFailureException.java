@@ -9,20 +9,24 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.response;
+package org.lastaflute.web.exception;
 
 /**
  * @author jflute
  */
-public interface ActionResponseHandler {
+public class RequestPropertyMappingFailureException extends ForcedRequest404NotFoundException {
 
-    /**
-     * @param actionResponse The response of action. (NotNull)
-     * @return The converted response as string or API-resolved dummy forward. (NullAllowed: if null, no handling)
-     */
-    String handle(ActionResponse actionResponse);
+    private static final long serialVersionUID = 1L;
+
+    public RequestPropertyMappingFailureException(String msg) {
+        super(msg);
+    }
+
+    public RequestPropertyMappingFailureException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

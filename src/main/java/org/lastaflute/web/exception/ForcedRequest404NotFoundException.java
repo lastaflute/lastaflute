@@ -17,12 +17,12 @@ package org.lastaflute.web.exception;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestDelicateErrorException;
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 
 /**
  * @author jflute
  */
-public class ForcedRequest404NotFoundException extends RequestDelicateErrorException {
+public class ForcedRequest404NotFoundException extends RequestClientErrorException {
 
     private static final long serialVersionUID = 1L;
 

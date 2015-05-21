@@ -15,10 +15,8 @@
  */
 package org.lastaflute.web.api;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.response.ApiResponse;
 
 /**
@@ -30,34 +28,43 @@ public interface ApiFailureHook {
     /**
      * Handle API failure when login required failure.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
-     * @param meta The runtime meta of action execute for the current request. (NotNull)
+     * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
-    ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntimeMeta meta);
+    ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime);
 
     /**
      * Handle API failure when validation error.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
-     * @param meta The runtime meta of action execute for the current request. (NotNull)
+     * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
-    ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntimeMeta meta);
+    ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntime runtime);
 
     /**
      * Handle API failure when application exception.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
-     * @param meta The runtime meta of action execute for the current request. (NotNull)
+     * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
-    ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntimeMeta meta, RuntimeException cause);
+    ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause);
 
     /**
-     * Handle API failure when system exception. (Not Required)
-     * @param response The HTTP response that is not committed yet. (NotNull)
-     * @param meta The runtime meta of action execute for the current request. (NotNull)
+     * Handle API failure when client exception, e.g. 404 not found, 400 bad request. (Not Required)
+     * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
+     * @param runtime The runtime meta of action execute for the current request. (NotNull)
+     * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
+     * @return The API response, which is for e.g. JSON or XML. (NotNull)
+     */
+    OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause);
+
+    /**
+     * Handle API failure when server exception, e.g. 500 server error. (Not Required)
+     * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)
+     * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The optional API response, which is for e.g. JSON or XML. (NotNull, EmptyAllowed: if empty, default handling about it)
      */
-    OptionalThing<ApiResponse> handleSystemException(HttpServletResponse response, ActionRuntimeMeta meta, Throwable cause);
+    OptionalThing<ApiResponse> handleServerException(ApiFailureResource resource, ActionRuntime runtime, Throwable cause);
 }

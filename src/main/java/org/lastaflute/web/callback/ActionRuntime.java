@@ -27,17 +27,26 @@ import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.process.RequestUrlParam;
 import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**
  * @author jflute
  */
-public class ActionRuntimeMeta {
+public class ActionRuntime {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionExecute execute;
+    // -----------------------------------------------------
+    //                                      Request Resource
+    //                                      ----------------
+    protected final ActionExecute execute; // fixed meta data
+    protected final RequestUrlParam urlParam; // of current request
+
+    // -----------------------------------------------------
+    //                                         Runtime State
+    //                                         -------------
     protected ActionResponse actionResponse;
     protected RuntimeException failureCause;
     protected ActionMessages validationErrors;
@@ -46,8 +55,9 @@ public class ActionRuntimeMeta {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionRuntimeMeta(ActionExecute execute) {
+    public ActionRuntime(ActionExecute execute, RequestUrlParam urlParam) {
         this.execute = execute;
+        this.urlParam = urlParam;
     }
 
     // ===================================================================================
@@ -57,7 +67,7 @@ public class ActionRuntimeMeta {
      * Get the type of requested action.
      * @return The type object of action, not enhanced. (NotNull)
      */
-    public Class<?> getActionClass() {
+    public Class<?> getActionType() {
         return getExecuteMethod().getDeclaringClass();
     }
 
@@ -157,20 +167,50 @@ public class ActionRuntimeMeta {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "{" + buildToStringContents() + "}";
-    }
-
-    protected String buildToStringContents() {
-        final Method method = getExecuteMethod();
-        final String invoke = method.getDeclaringClass().getSimpleName() + "." + method.getName();
-        final String path = actionResponse != null ? actionResponse.toString() : null;
-        final String failure = failureCause != null ? DfTypeUtil.toClassTitle(failureCause) : null;
-        return invoke + ":" + path + ":" + failure;
+        final StringBuilder sb = new StringBuilder();
+        sb.append("runtime:{").append(execute.toSimpleMethodExp());
+        sb.append(", urlParam=").append(urlParam);
+        if (actionResponse != null) {
+            sb.append(", response=").append(actionResponse);
+        }
+        if (failureCause != null) {
+            sb.append(", failure=").append(DfTypeUtil.toClassTitle(failureCause));
+        }
+        if (validationErrors != null) {
+            sb.append(", errors=").append(validationErrors.toPropertyList());
+        }
+        if (displayDataMap != null) {
+            sb.append(", display=").append(displayDataMap.keySet());
+        }
+        sb.append("}");
+        return sb.toString();
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                      Request Resource
+    //                                      ----------------
+    /**
+     * Get the definition of the requested action execute.
+     * @return The object that has definition info of action execute. (NotNull)
+     */
+    public ActionExecute getActionExecute() {
+        return execute;
+    }
+
+    /**
+     * Get the URL parameters of the request for the action.
+     * @return The object that has e.g. URL parameter values. (NotNull)
+     */
+    public RequestUrlParam getRequestUrlParam() {
+        return urlParam;
+    }
+
+    // -----------------------------------------------------
+    //                                         Runtime State
+    //                                         -------------
     /**
      * Get the action response returned by action execute.
      * @return The action response returned by action execute. (NullAllowed: not null only when success)

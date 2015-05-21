@@ -18,7 +18,7 @@ package org.lastaflute.web.servlet.request;
 import java.util.TimeZone;
 
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.callback.ActionRuntime;
 
 /**
  * The provider of user time-zone process for current request.
@@ -41,11 +41,11 @@ public interface UserTimeZoneProcessProvider {
 
     /**
      * Find the business time-zone. (prevails over cookie)
-     * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
+     * @param runtimeMeta The runtime meta of action execution which you can get the calling method. (NotNull)
      * @param requestManager The manager of request to find your time-zone. (NotNull)
      * @return The found time-zone by your business rule. (NotNull, EmptyAllowed: when not found)
      */
-    OptionalThing<TimeZone> findBusinessTimeZone(ActionRuntimeMeta runtimeMeta, RequestManager requestManager);
+    OptionalThing<TimeZone> findBusinessTimeZone(ActionRuntime runtimeMeta, RequestManager requestManager);
 
     /**
      * Get the requested time-zone. (for when not found in session or cookie) <br>
