@@ -76,10 +76,10 @@ public class GodHandableAction implements VirtualAction {
         this.reflector = reflector;
         this.requestManager = requestManager;
         this.stage = stage;
-        this.action = createAction(execute);
+        this.action = createAction();
     }
 
-    protected Object createAction(ActionExecute execute) {
+    protected Object createAction() {
         try {
             return execute.getActionMapping().createAction();
         } catch (RuntimeException e) {

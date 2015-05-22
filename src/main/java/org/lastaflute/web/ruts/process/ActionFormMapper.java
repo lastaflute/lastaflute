@@ -258,7 +258,7 @@ public class ActionFormMapper {
         sb.append("\n").append(virtualActionForm);
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        throwRequestJsonParseFailureException(sb.toString());
+        throwRequestJsonParseFailureException(sb.toString(), e);
     }
 
     protected void throwListJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
@@ -270,7 +270,7 @@ public class ActionFormMapper {
         sb.append("\n").append(virtualActionForm);
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        throwRequestJsonParseFailureException(sb.toString());
+        throwRequestJsonParseFailureException(sb.toString(), e);
     }
 
     // ===================================================================================
@@ -378,7 +378,7 @@ public class ActionFormMapper {
             }
             String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case
             String msg = "The property value cannot be number: " + beanExp + ", name=" + name + ", value=" + dispValue;
-            throwRequestPropertyMappingFailureException(msg);
+            throwRequestPropertyMappingFailureException(msg, e);
         }
     }
 
@@ -594,7 +594,7 @@ public class ActionFormMapper {
         sb.append(" (").append(propertyType.getTypeName()).append(")");
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        throwRequestJsonParseFailureException(sb.toString());
+        throwRequestJsonParseFailureException(sb.toString(), e);
     }
 
     // ===================================================================================
@@ -638,7 +638,7 @@ public class ActionFormMapper {
 
     protected void throwIndexedPropertyNonNumberIndexException(String name, NumberFormatException e) {
         String msg = "Non number index of the indexed property: name=" + name + "\n" + e.getMessage();
-        throwRequestPropertyMappingFailureException(msg);
+        throwRequestPropertyMappingFailureException(msg, e);
     }
 
     protected void checkIndexedPropertySize(String name, IndexParsedResult parseResult) {
@@ -693,9 +693,10 @@ public class ActionFormMapper {
         if (value.getClass().isArray() && Array.getLength(value) > 0) {
             value = Array.get(value, 0);
         }
-        if (pd.getPropertyType().isArray()) {
+        final Class<?> propertyType = pd.getPropertyType();
+        if (propertyType.isArray()) {
             Object array = pd.getValue(bean);
-            final Class<?> elementType = getArrayElementType(pd.getPropertyType(), indexes.length);
+            final Class<?> elementType = getArrayElementType(propertyType, indexes.length);
             if (array == null) {
                 int[] newIndexes = new int[indexes.length];
                 newIndexes[0] = indexes[0] + 1;
@@ -704,7 +705,7 @@ public class ActionFormMapper {
             array = expand(array, indexes, elementType);
             pd.setValue(bean, array);
             setArrayValue(array, indexes, value);
-        } else if (List.class.isAssignableFrom(pd.getPropertyType())) {
+        } else if (List.class.isAssignableFrom(propertyType)) {
             List<Object> list = (List<Object>) pd.getValue(bean);
             if (list == null) {
                 list = new ArrayList<Object>(Math.max(50, indexes[0]));
@@ -750,17 +751,17 @@ public class ActionFormMapper {
     //                              ------------------------
     @SuppressWarnings("unchecked")
     protected Object prepareIndexedProperty(Object bean, String name, int[] indexes) {
-        BeanDesc beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
+        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
         if (!beanDesc.hasPropertyDesc(name)) {
             return null;
         }
-        PropertyDesc pd = beanDesc.getPropertyDesc(name);
+        final PropertyDesc pd = beanDesc.getPropertyDesc(name);
         if (!pd.isReadable()) {
             return null;
         }
         if (pd.getPropertyType().isArray()) {
             Object array = pd.getValue(bean);
-            Class<?> elementType = getArrayElementType(pd.getPropertyType(), indexes.length);
+            final Class<?> elementType = getArrayElementType(pd.getPropertyType(), indexes.length);
             if (array == null) {
                 int[] newIndexes = new int[indexes.length];
                 newIndexes[0] = indexes[0] + 1;
@@ -807,12 +808,12 @@ public class ActionFormMapper {
         Object value = array;
         elementType = convertClass(elementType);
         for (int i = 0; i < indexes.length; i++) {
-            Object value2 = Array.get(value, indexes[i]);
-            if (i == indexes.length - 1 && value2 == null) {
-                value2 = LdiClassUtil.newInstance(elementType);
-                Array.set(value, indexes[i], value2);
+            Object element = Array.get(value, indexes[i]);
+            if (i == indexes.length - 1 && element == null) {
+                element = LdiClassUtil.newInstance(elementType);
+                Array.set(value, indexes[i], element);
             }
-            value = value2;
+            value = element;
         }
         return value;
     }
@@ -847,34 +848,30 @@ public class ActionFormMapper {
     }
 
     protected Class<?> convertClass(Class<?> clazz) {
-        if (LdiModifierUtil.isAbstract(clazz) && Map.class.isAssignableFrom(clazz)) {
-            return HashMap.class;
-        }
-        return clazz;
+        return LdiModifierUtil.isAbstract(clazz) && Map.class.isAssignableFrom(clazz) ? HashMap.class : clazz;
     }
 
     // -----------------------------------------------------
     //                                            Real Class
     //                                            ----------
     protected Class<?> getRealClass(Class<?> clazz) {
-        if (clazz.getName().indexOf(AspectWeaver.SUFFIX_ENHANCED_CLASS) > 0) {
-            return clazz.getSuperclass();
-        }
-        return clazz;
+        return clazz.getName().indexOf(AspectWeaver.SUFFIX_ENHANCED_CLASS) > 0 ? clazz.getSuperclass() : clazz;
     }
 
     // ===================================================================================
-    //                                                                        Small Helper
+    //                                                                        Client Error
     //                                                                        ============
-    protected void throwRequestJsonParseFailureException(String msg) {
-        // no server error because it can occur by user's trick
-        // while, is likely to due to client bugs (or server) so request client error
-        throw new RequestJsonParseFailureException(msg);
+    // no server error because it can occur by user's trick
+    // while, is likely to due to client bugs (or server) so request client error
+    protected void throwRequestJsonParseFailureException(String msg, RuntimeException e) {
+        throw new RequestJsonParseFailureException(msg, e);
     }
 
     protected void throwRequestPropertyMappingFailureException(String msg) {
-        // no server error because it can occur by user's trick easily e.g. changing GET parameter
-        // while, might be client bugs (or server) so request client error
         throw new RequestPropertyMappingFailureException(msg);
+    }
+
+    protected void throwRequestPropertyMappingFailureException(String msg, RuntimeException e) {
+        throw new RequestPropertyMappingFailureException(msg, e);
     }
 }
