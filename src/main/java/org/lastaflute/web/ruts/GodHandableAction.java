@@ -54,7 +54,7 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(GodHandableAction.class);
+    private static final Logger logger = LoggerFactory.getLogger(GodHandableAction.class);
     private static final Object[] EMPTY_ARRAY = new Object[] {};
 
     // ===================================================================================
@@ -63,8 +63,8 @@ public class GodHandableAction implements VirtualAction {
     protected final ActionExecute execute; // fixed info
     protected final ActionRuntime runtime; // has state
     protected final ActionResponseReflector reflector; // has state
-    protected final RequestManager requestManager; // singleton
     protected final TransactionStage stage; // singleton
+    protected final RequestManager requestManager; // singleton
     protected final Object action; // created here
 
     // ===================================================================================
@@ -74,8 +74,8 @@ public class GodHandableAction implements VirtualAction {
         this.execute = runtime.getActionExecute();
         this.runtime = runtime;
         this.reflector = reflector;
-        this.requestManager = requestManager;
         this.stage = stage;
+        this.requestManager = requestManager;
         this.action = createAction();
     }
 
@@ -88,25 +88,21 @@ public class GodHandableAction implements VirtualAction {
     }
 
     // ===================================================================================
-    //                                                                        Hook Process
-    //                                                                        ============
+    //                                                                             Execute
+    //                                                                             =======
     @Override
     public NextJourney execute(OptionalThing<VirtualActionForm> form) {
-        final ActionHook hook = prepareActionHook();
-        final NextJourney journey = godHandlyExecute(form, hook);
+        final NextJourney journey = godHandyExecute(form);
         setupDisplayData(journey);
         showTransition(journey);
         return journey;
     }
 
-    protected ActionHook prepareActionHook() {
-        return action instanceof ActionHook ? (ActionHook) action : null;
-    }
-
     // -----------------------------------------------------
-    //                                             Main Flow
+    //                                             God Handy
     //                                             ---------
-    protected NextJourney godHandlyExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
+    protected NextJourney godHandyExecute(OptionalThing<VirtualActionForm> form) {
+        final ActionHook hook = prepareActionHook();
         try {
             final ActionResponse before = processHookBefore(hook);
             if (before.isPresent()) { // e.g. login required
@@ -119,6 +115,10 @@ public class GodHandableAction implements VirtualAction {
         } finally {
             processHookFinally(hook);
         }
+    }
+
+    protected ActionHook prepareActionHook() {
+        return action instanceof ActionHook ? (ActionHook) action : null;
     }
 
     protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
@@ -158,8 +158,8 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected void showBefore(ActionRuntime runtime) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("#flow ...Calling back #before for {}", buildActionName(runtime));
+        if (logger.isDebugEnabled()) {
+            logger.debug("#flow ...Calling back #before for {}", buildActionName(runtime));
         }
     }
 
@@ -196,9 +196,9 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected void showFinally(ActionRuntime runtime) {
-        if (LOG.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             final String failureMark = runtime.hasFailureCause() ? " with failure" : "";
-            LOG.debug("#flow ...Calling back #finally{} for {}", failureMark, buildActionName(runtime));
+            logger.debug("#flow ...Calling back #finally{} for {}", failureMark, buildActionName(runtime));
         }
     }
 
@@ -239,8 +239,8 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected void showAction(ActionRuntime runtime) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("#flow ...Beginning #action {}", buildActionDisp(runtime));
+        if (logger.isDebugEnabled()) {
+            logger.debug("#flow ...Beginning #action {}", buildActionDisp(runtime));
         }
     }
 
@@ -327,11 +327,11 @@ public class GodHandableAction implements VirtualAction {
     //                                                                             Logging
     //                                                                             =======
     protected void showTransition(NextJourney journey) {
-        if (LOG.isDebugEnabled() && journey.isPresent()) {
+        if (logger.isDebugEnabled() && journey.isPresent()) {
             final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
             final String path = journey.getRoutingPath(); // not null
             final String tag = path.endsWith(".html") ? "#html " : (path.endsWith(".jsp") ? "#jsp " : "");
-            LOG.debug("#flow ...{} to {}{}", ing, tag, path);
+            logger.debug("#flow ...{} to {}{}", ing, tag, path);
         }
     }
 

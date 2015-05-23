@@ -84,14 +84,15 @@ public class ActionRequestProcessor {
     // ===================================================================================
     //                                                                             Process
     //                                                                             =======
-    public void process(ActionExecute execute, RequestUrlParam resource) throws IOException, ServletException {
+    public void process(ActionExecute execute, RequestUrlParam urlParam) throws IOException, ServletException {
         // initializing and clearing thread cache here so you can use thread cache in your action execute
         final boolean exists = ThreadCacheContext.exists();
         try {
             if (!exists) { // inherits existing cache when nested call e.g. forward
                 ThreadCacheContext.initialize();
             }
-            doProcess(execute, resource); // #to_action
+            final ActionRuntime runtime = createActionRuntime(execute, urlParam);
+            fire(runtime); // #to_action
         } finally {
             if (!exists) {
                 ThreadCacheContext.clear();
@@ -99,11 +100,20 @@ public class ActionRequestProcessor {
         }
     }
 
+    protected ActionRuntime createActionRuntime(ActionExecute execute, RequestUrlParam urlParam) {
+        return new ActionRuntime(execute, urlParam);
+    }
+
     // ===================================================================================
-    //                                                                           Main Flow
-    //                                                                           =========
-    protected void doProcess(ActionExecute execute, RequestUrlParam urlParam) throws IOException, ServletException {
-        final ActionRuntime runtime = createActionRuntime(execute, urlParam);
+    //                                                                               Fire
+    //                                                                              ======
+    /**
+     * Fire the action, creating, populating, performing and to next.
+     * @param runtime The runtime meta of action execute, which has action execute, URL parameter and states. (NotNull)
+     * @throws IOException When the action fails about the IO.
+     * @throws ServletException When the action fails about the Servlet.
+     */
+    protected void fire(ActionRuntime runtime) throws IOException, ServletException {
         final ActionResponseReflector reflector = createResponseReflector(runtime);
         ready(runtime, reflector);
 
@@ -119,10 +129,6 @@ public class ActionRequestProcessor {
     // ===================================================================================
     //                                                                               Ready
     //                                                                               =====
-    protected ActionRuntime createActionRuntime(ActionExecute execute, RequestUrlParam urlParam) {
-        return new ActionRuntime(execute, urlParam);
-    }
-
     protected ActionResponseReflector createResponseReflector(ActionRuntime runtime) {
         return new ActionResponseReflector(runtime, getRequestManager());
     }
@@ -140,9 +146,10 @@ public class ActionRequestProcessor {
     //                                                                         ===========
     public OptionalThing<VirtualActionForm> prepareActionForm(ActionRuntime runtime) {
         final ActionExecute execute = runtime.getActionExecute();
-        final OptionalThing<VirtualActionForm> parameterForm = execute.createActionForm();
-        parameterForm.ifPresent(form -> saveFormToRequest(execute, form)); // to use form tag
-        return parameterForm;
+        final OptionalThing<VirtualActionForm> optForm = execute.createActionForm();
+        optForm.ifPresent(form -> saveFormToRequest(execute, form)); // to use form tag
+        runtime.setActionForm(optForm); // to use in action hook
+        return optForm;
     }
 
     protected void saveFormToRequest(ActionExecute execute, VirtualActionForm value) {

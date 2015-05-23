@@ -20,11 +20,13 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
+import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.RequestUrlParam;
@@ -47,6 +49,7 @@ public class ActionRuntime {
     // -----------------------------------------------------
     //                                         Runtime State
     //                                         -------------
+    protected OptionalThing<VirtualActionForm> form;
     protected ActionResponse actionResponse;
     protected RuntimeException failureCause;
     protected ActionMessages validationErrors;
@@ -211,6 +214,18 @@ public class ActionRuntime {
     // -----------------------------------------------------
     //                                         Runtime State
     //                                         -------------
+    /**
+     * Get the action form mapped from request parameter.
+     * @return The optional action form. (NotNull, EmptyAllowed: when no form or before form creation)
+     */
+    public OptionalThing<VirtualActionForm> getActionForm() {
+        return form != null ? form : OptionalThing.empty();
+    }
+
+    public void setActionForm(OptionalThing<VirtualActionForm> form) {
+        this.form = form;
+    }
+
     /**
      * Get the action response returned by action execute.
      * @return The action response returned by action execute. (NullAllowed: not null only when success)
