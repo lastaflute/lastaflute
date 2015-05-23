@@ -153,8 +153,8 @@ public class RelativeDateScript {
         throw new IllegalStateException(msg);
     }
 
-    protected void throwRelativeDateMethodNotFoundException(String relativeDate, Class<HandyDate> handyDateType,
-            String methodName, Class<?>[] argTypes) {
+    protected void throwRelativeDateMethodNotFoundException(String relativeDate, Class<HandyDate> handyDateType, String methodName,
+            Class<?>[] argTypes) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the method to invoke for RelativeDate.");
         br.addItem("Relative Date");
@@ -169,8 +169,8 @@ public class RelativeDateScript {
         throw new IllegalStateException(msg);
     }
 
-    protected void throwRelativeDateInvokeFailureException(String relativeDate, Class<HandyDate> targetType,
-            String methodName, ReflectionFailureException e) {
+    protected void throwRelativeDateInvokeFailureException(String relativeDate, Class<HandyDate> targetType, String methodName,
+            ReflectionFailureException e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Failed to invoke the method for RelativeDate.");
         br.addItem("Relative Date");

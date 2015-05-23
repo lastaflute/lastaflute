@@ -68,8 +68,7 @@ public class ActionDefaultPointcut extends PublicBasisPointcut {
     //                                                                   Reflection Helper
     //                                                                   =================
     protected boolean isImplementsMethod(Method targetMethod, Method interfaceMethod) {
-        return isAssignableFromDeclaringClass(targetMethod, interfaceMethod)
-                && equalsIgnoreDeclaringClass(targetMethod, interfaceMethod);
+        return isAssignableFromDeclaringClass(targetMethod, interfaceMethod) && equalsIgnoreDeclaringClass(targetMethod, interfaceMethod);
     }
 
     protected boolean isAssignableFromDeclaringClass(Method targetMethod, Method interfaceMethod) {

@@ -10,6 +10,7 @@
 	<component name="jsonManager" class="org.lastaflute.core.json.SimpleJsonManager"/>
 	<component name="messageManager" class="org.lastaflute.core.message.SimpleMessageManager"/>
 	<component name="messageResourcesHolder" class="org.lastaflute.core.message.MessageResourcesHolder"/>
+	<component name="templateManager" class="org.lastaflute.core.template.SimpleTemplateManager"/>
 	<component name="exceptionTranslator" class="org.lastaflute.core.exception.ExceptionTranslator"/>
 	<component name="asyncManager" class="org.lastaflute.core.magic.async.SimpleAsyncManager"/>
 	<component name="postbox" class="org.lastaflute.core.mail.Postbox"/>

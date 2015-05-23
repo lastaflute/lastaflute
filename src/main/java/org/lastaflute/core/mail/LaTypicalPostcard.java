@@ -119,7 +119,7 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // ===================================================================================
     //                                                                        Variable Map
     //                                                                        ============
-    protected void registerVariable(String key, String value) {
+    protected void registerVariable(String key, Object value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
         variableMap.put(key, value);

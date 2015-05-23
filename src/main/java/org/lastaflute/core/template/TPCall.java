@@ -13,13 +13,15 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.login.option;
+package org.lastaflute.core.template;
 
 /**
+ * @param <PMB> The type of parameter bean.
  * @author jflute
+ * @since 0.6.0 (2015/05/23 Saturday)
  */
 @FunctionalInterface
-public interface LoginOpCall {
+public interface TPCall<PMB extends TemplatePmb> {
 
-    void callback(LoginOption op);
+    void setup(PMB pmb);
 }
