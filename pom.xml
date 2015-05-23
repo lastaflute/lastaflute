@@ -14,7 +14,7 @@
 
 	<properties>
 		<dbflute.version>1.1.0-sp3-RC6</dbflute.version>
-		<lasat.di.version>0.6.0-RC7</lasat.di.version>
+		<lasat.di.version>0.6.0</lasat.di.version>
 		<hibernate.version>5.1.3.Final</hibernate.version>
 		<servlet.version>3.1.0</servlet.version>
 		<jsp.version>2.3.1</jsp.version>
