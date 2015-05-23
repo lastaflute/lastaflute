@@ -16,6 +16,7 @@
 package org.lastaflute.core.template;
 
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -27,6 +28,7 @@ import org.dbflute.twowaysql.context.CommandContextCreator;
 import org.dbflute.twowaysql.node.Node;
 import org.dbflute.twowaysql.pmbean.SimpleMapPmb;
 import org.dbflute.util.DfResourceUtil;
+import org.dbflute.util.Srl;
 
 /**
  * @author jflute
@@ -36,14 +38,22 @@ public class SimpleTemplateManager implements TemplateManager {
 
     // ===================================================================================
     //                                                                          Definition
-    //                                                                          ==========s
-    protected static final CommandContextCreator contextCreator;
-    static {
-        final String[] argNames = new String[] { "pmb" };
-        final Class<?>[] argTypes = new Class<?>[] { SimpleMapPmb.class };
-        contextCreator = new CommandContextCreator(argNames, argTypes);
+    //                                                                          ==========
+    protected static final String IF_PREFIX = "/*IF ";
+    protected static final String FOR_PREFIX = "/*FOR ";
+    protected static final String END_COMMENT = "/*END*/";
+    protected static final String CLOSE_MARK = "*/";
+    protected static final String LF = "\n";
+    protected static final String CRLF = "\r\n";
+
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final FileTextIO textIO = createFileTextIO();
+
+    protected FileTextIO createFileTextIO() {
+        return new FileTextIO().encodeAsUTF8().removeUTF8Bom().replaceCrLfToLf();
     }
-    protected static final FileTextIO textIO = new FileTextIO().encodeAsUTF8().removeUTF8Bom();
 
     // ===================================================================================
     //                                                                          Initialize
@@ -86,15 +96,80 @@ public class SimpleTemplateManager implements TemplateManager {
     // ===================================================================================
     //                                                                            Evaluate
     //                                                                            ========
-    // TODO jflute lastaflute: [B] adjustment of line separator
     // very similar to pm-comment proofreader of MailFlute but no recycle to be independent
+    // -----------------------------------------------------
+    //                                              Evaluate
+    //                                              --------
     protected String evaluate(String templateText, Object pmb) {
-        final Node node = analyze(templateText);
+        final Node node = analyze(filterTemplateText(templateText, pmb));
         final CommandContext ctx = prepareContext(pmb);
         node.accept(ctx);
         return ctx.getSql();
     }
 
+    // -----------------------------------------------------
+    //                                       Line Adjustment
+    //                                       ---------------
+    protected String filterTemplateText(String templateText, Object pmb) {
+        final String replaced = Srl.replace(templateText, CRLF, LF);
+        final List<String> lineList = Srl.splitList(replaced, LF);
+        final StringBuilder sb = new StringBuilder(templateText.length());
+        boolean nextNoLine = false;
+        int lineNumber = 0;
+        for (String line : lineList) {
+            ++lineNumber;
+            if (nextNoLine) {
+                sb.append(line);
+                nextNoLine = false;
+                continue;
+            }
+            if (isIfEndCommentLine(line) || isForEndCommentLine(line)) {
+                appendLfLine(sb, lineNumber, Srl.substringLastFront(line, END_COMMENT));
+                sb.append(LF).append(END_COMMENT);
+                nextNoLine = true;
+                continue;
+            }
+            final String realLine;
+            if (isOnlyIfCommentLine(line) || isOnlyForCommentLine(line) || isOnlyEndCommentLine(line)) {
+                nextNoLine = true;
+                realLine = Srl.ltrim(line);
+            } else {
+                realLine = line;
+            }
+            appendLfLine(sb, lineNumber, realLine);
+        }
+        return sb.toString();
+    }
+
+    protected boolean isOnlyIfCommentLine(String line) {
+        final String trimmed = line.trim();
+        return trimmed.startsWith(IF_PREFIX) && trimmed.endsWith(CLOSE_MARK) && Srl.count(line, CLOSE_MARK) == 1;
+    }
+
+    protected boolean isOnlyForCommentLine(String line) {
+        final String trimmed = line.trim();
+        return trimmed.startsWith(FOR_PREFIX) && trimmed.endsWith(CLOSE_MARK) && Srl.count(line, CLOSE_MARK) == 1;
+    }
+
+    protected boolean isOnlyEndCommentLine(String line) {
+        return line.trim().equals(END_COMMENT);
+    }
+
+    protected boolean isIfEndCommentLine(String line) {
+        return line.startsWith(IF_PREFIX) && line.endsWith(END_COMMENT) && Srl.count(line, CLOSE_MARK) > 1;
+    }
+
+    protected boolean isForEndCommentLine(String line) {
+        return line.startsWith(FOR_PREFIX) && line.endsWith(END_COMMENT) && Srl.count(line, CLOSE_MARK) > 1;
+    }
+
+    protected void appendLfLine(final StringBuilder sb, int lineNumber, String line) {
+        sb.append(lineNumber > 1 ? LF : "").append(line);
+    }
+
+    // -----------------------------------------------------
+    //                                      Analyze Template
+    //                                      ----------------
     protected Node analyze(String templateText) {
         return createSqlAnalyzer(templateText, true).analyze();
     }
