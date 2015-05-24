@@ -181,9 +181,7 @@ public class RequestLoggingFilter implements Filter {
         boolean existsServerError = false;
         try {
             markBegin();
-            System.out.println("*******1: " + request.getRequestURI());
             chain.doFilter(request, response);
-            System.out.println("*******2: " + request.getRequestURI());
             if (handleErrorAttribute(request, response)) {
                 existsServerError = true;
             }
