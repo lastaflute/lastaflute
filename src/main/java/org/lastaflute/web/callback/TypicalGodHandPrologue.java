@@ -47,12 +47,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jflute
  */
-public class TypicalGodHandActionPrologue {
+public class TypicalGodHandPrologue {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandActionPrologue.class);
+    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandPrologue.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -68,7 +68,7 @@ public class TypicalGodHandActionPrologue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandActionPrologue(TypicalGodHandResource resource, AccessContextArranger accessContextArranger,
+    public TypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger accessContextArranger,
             Supplier<OptionalThing<? extends UserBean>> userBeanSupplier, Supplier<String> appTypeSupplier) {
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();

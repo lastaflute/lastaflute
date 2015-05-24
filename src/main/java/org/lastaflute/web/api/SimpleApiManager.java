@@ -83,8 +83,8 @@ public class SimpleApiManager implements ApiManager {
     }
 
     // ===================================================================================
-    //                                                                       Create Result
-    //                                                                       =============
+    //                                                                    Business Failure
+    //                                                                    ================
     @Override
     public ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime) {
         return apiFailureHook.handleLoginRequiredFailure(resource, runtime);
@@ -100,6 +100,9 @@ public class SimpleApiManager implements ApiManager {
         return apiFailureHook.handleApplicationException(resource, runtime, cause);
     }
 
+    // ===================================================================================
+    //                                                                      System Failure
+    //                                                                      ==============
     @Override
     public OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause) {
         return apiFailureHook.handleClientException(resource, runtime, cause);

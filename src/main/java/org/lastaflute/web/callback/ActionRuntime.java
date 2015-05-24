@@ -26,6 +26,7 @@ import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
+import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.message.ActionMessages;
@@ -95,8 +96,11 @@ public class ActionRuntime {
     }
 
     // ===================================================================================
-    //                                                                      Execute Status
-    //                                                                      ==============
+    //                                                                       Action Status
+    //                                                                       =============
+    // -----------------------------------------------------
+    //                                              Response
+    //                                              --------
     /**
      * Is the result of the action execute, forward to HTML template?
      * @return The determination, true or false.
@@ -130,6 +134,25 @@ public class ActionRuntime {
         return actionResponse != null && actionResponse instanceof HtmlResponse;
     }
 
+    /**
+     * Is the result of the action execute, JSON?
+     * @return The determination, true or false.
+     */
+    public boolean isReturnJson() {
+        return isJsonResponse();
+    }
+
+    /**
+     * Is the existing response JSON?
+     * @return The determination, true or false.
+     */
+    protected boolean isJsonResponse() {
+        return actionResponse != null && actionResponse instanceof JsonResponse;
+    }
+
+    // -----------------------------------------------------
+    //                                         Failure/Error
+    //                                         -------------
     /**
      * Does it have exception as failure cause?
      * @return The determination, true or false.

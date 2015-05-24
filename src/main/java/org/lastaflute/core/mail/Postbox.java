@@ -118,6 +118,8 @@ public class Postbox implements Disposable {
     //                                                                             =======
     @Override
     public void dispose() {
-        postOffice.workingDispose();
+        if (postOffice != null) {
+            postOffice.workingDispose();
+        }
     }
 }

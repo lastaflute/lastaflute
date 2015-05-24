@@ -25,6 +25,9 @@ import org.lastaflute.web.response.ApiResponse;
  */
 public interface ApiManager {
 
+    // ===================================================================================
+    //                                                                    Business Failure
+    //                                                                    ================
     /**
      * Handle API failure when login required failure.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
@@ -51,6 +54,9 @@ public interface ApiManager {
      */
     ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause);
 
+    // ===================================================================================
+    //                                                                      System Failure
+    //                                                                      ==============
     /**
      * Handle API failure when client exception, e.g. 404 not found, 400 bad request. (Not Required)
      * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)

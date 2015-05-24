@@ -30,7 +30,7 @@ import org.lastaflute.web.callback.ActionHook;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
 import org.lastaflute.web.callback.TypicalGodHandActionEpilogue;
-import org.lastaflute.web.callback.TypicalGodHandActionPrologue;
+import org.lastaflute.web.callback.TypicalGodHandPrologue;
 import org.lastaflute.web.callback.TypicalGodHandMonologue;
 import org.lastaflute.web.callback.TypicalGodHandResource;
 import org.lastaflute.web.callback.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
@@ -98,13 +98,13 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                                ------
     @Override
     public ActionResponse godHandPrologue(ActionRuntime runtimeMeta) { // fixed process
-        return createTypicalGodHandActionPrologue().performPrologue(runtimeMeta);
+        return createTypicalGodHandPrologue().performPrologue(runtimeMeta);
     }
 
-    protected TypicalGodHandActionPrologue createTypicalGodHandActionPrologue() {
+    protected TypicalGodHandPrologue createTypicalGodHandPrologue() {
         final TypicalGodHandResource resource = newTypicalGodHandResource();
         final AccessContextArranger arranger = newAccessContextArranger();
-        return newTypicalGodHandActionPrologue(resource, arranger, () -> getUserBean(), () -> myAppType());
+        return newTypicalGodHandPrologue(resource, arranger, () -> getUserBean(), () -> myAppType());
     }
 
     /**
@@ -113,9 +113,9 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      */
     protected abstract AccessContextArranger newAccessContextArranger();
 
-    protected TypicalGodHandActionPrologue newTypicalGodHandActionPrologue(TypicalGodHandResource resource, AccessContextArranger arranger,
+    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger arranger,
             Supplier<OptionalThing<? extends UserBean>> userBeanSupplier, Supplier<String> appTypeSupplier) {
-        return new TypicalGodHandActionPrologue(resource, arranger, userBeanSupplier, appTypeSupplier);
+        return new TypicalGodHandPrologue(resource, arranger, userBeanSupplier, appTypeSupplier);
     }
 
     @Override
