@@ -28,6 +28,7 @@ import javax.annotation.Resource;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.Srl;
 import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
@@ -65,11 +66,14 @@ public class SimpleMessageManager implements MessageManager {
         return doFindMessage(locale, key).get();
     }
 
-    protected void throwMessageKeyNotFoundException(Locale locale, String key) {
+    protected void throwMessageKeyNotFoundException(Locale locale, String key, String filtered) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the message by the key.");
         br.addItem("Key");
         br.addElement(key);
+        if (!key.equals(filtered)) {
+            br.addElement("(filtered: " + filtered + ")");
+        }
         br.addItem("Locale");
         br.addElement(locale);
         br.addItem("MessageResources");
@@ -118,10 +122,15 @@ public class SimpleMessageManager implements MessageManager {
 
     protected OptionalThing<String> doFindMessage(Locale locale, String key) {
         final MessageResourcesGateway gateway = getMessageResourceGateway();
-        final String message = gateway.getMessage(locale, key);
+        final String filtered = filterMessageKey(key);
+        final String message = gateway.getMessage(locale, filtered);
         return OptionalThing.ofNullable(message, () -> {
-            throwMessageKeyNotFoundException(locale, key);
+            throwMessageKeyNotFoundException(locale, key, filtered);
         });
+    }
+
+    protected String filterMessageKey(String key) {
+        return Srl.isQuotedAnything(key, "{", "}") ? Srl.unquoteAnything(key, "{", "}") : key;
     }
 
     @Override
