@@ -15,6 +15,7 @@
  */
 package org.lastaflute.core.mail;
 
+import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -114,6 +115,15 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
             String msg = "Failed to create internet address: " + address;
             throw new IllegalStateException(msg, e);
         }
+    }
+
+    // -----------------------------------------------------
+    //                                            Attachment
+    //                                            ----------
+    public void attach(String filename, InputStream stream) {
+        assertArgumentNotNull("filename", filename);
+        assertArgumentNotNull("stream", stream);
+        postcard.attach(filename, stream);
     }
 
     // ===================================================================================

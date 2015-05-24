@@ -30,8 +30,8 @@ import org.lastaflute.web.callback.ActionHook;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
 import org.lastaflute.web.callback.TypicalGodHandActionEpilogue;
-import org.lastaflute.web.callback.TypicalGodHandPrologue;
 import org.lastaflute.web.callback.TypicalGodHandMonologue;
+import org.lastaflute.web.callback.TypicalGodHandPrologue;
 import org.lastaflute.web.callback.TypicalGodHandResource;
 import org.lastaflute.web.callback.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
@@ -221,16 +221,16 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     // -----------------------------------------------------
     //                                       Check Parameter
     //                                       ---------------
-    protected void checkParameter(boolean expectedBool) { // application may call
-        logger.debug("...Checking the parameter is true: {}", expectedBool);
-        if (!expectedBool) {
+    protected void verifyParameterExists(Object parameter) { // application may call
+        logger.debug("...Verifying the parameter exists: {}", parameter);
+        if (parameter == null || (parameter instanceof String && ((String) parameter).isEmpty())) {
             handleParameterFailure();
         }
     }
 
-    protected void checkParameterExists(Object parameter) { // application may call
-        logger.debug("...Checking the parameter exists: {}", parameter);
-        if (parameter == null || (parameter instanceof String && ((String) parameter).isEmpty())) {
+    protected void verifyParameterTrue(boolean expectedBool) { // application may call
+        logger.debug("...Verifying the parameter is true: {}", expectedBool);
+        if (!expectedBool) {
             handleParameterFailure();
         }
     }
@@ -247,8 +247,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      * You can use this in your action process against invalid URL parameters.
      * @param expectedBool The expected determination for your business, true or false. (false: 404 not found)
      */
-    protected void checkOr404NotFound(boolean expectedBool) { // application may call
-        logger.debug("...Checking the condition is true or 404 not found: {}", expectedBool);
+    protected void verifyTrueOr404NotFound(boolean expectedBool) { // application may call
+        logger.debug("...Verifying the condition is true or 404 not found: {}", expectedBool);
         if (!expectedBool) {
             lets404();
         }
@@ -259,8 +259,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      * You can use this in your action process against strange request parameters.
      * @param expectedBool The expected determination for your business, true or false. (false: illegal transition)
      */
-    protected void checkOrIllegalTransition(boolean expectedBool) { // application may call
-        logger.debug("...Checking the condition is true or illegal transition: {}", expectedBool);
+    protected void verifyTrueOrIllegalTransition(boolean expectedBool) { // application may call
+        logger.debug("...Verifying the condition is true or illegal transition: {}", expectedBool);
         if (!expectedBool) {
             letsIllegalTransition();
         }
