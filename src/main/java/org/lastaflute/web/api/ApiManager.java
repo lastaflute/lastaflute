@@ -29,7 +29,8 @@ public interface ApiManager {
     //                                                                    Business Failure
     //                                                                    ================
     /**
-     * Handle API failure when login required failure.
+     * Handle API failure when login required failure. <br>
+     * The hookFinally() of action hook will be called after this.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
      * @param errors The optional action message for errors, but basically no errors. (NullAllowed)
      * @param runtime The runtime meta of action execute for the current request. (NotNull)
@@ -38,7 +39,8 @@ public interface ApiManager {
     ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime);
 
     /**
-     * Handle API failure when validation error.
+     * Handle API failure when validation error. <br>
+     * The hookFinally() of action hook will be called after this.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
      * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
@@ -46,7 +48,8 @@ public interface ApiManager {
     ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntime runtime);
 
     /**
-     * Handle API failure when application exception.
+     * Handle API failure when application exception. <br>
+     * The hookFinally() of action hook will be called after this.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
      * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
@@ -58,7 +61,8 @@ public interface ApiManager {
     //                                                                      System Failure
     //                                                                      ==============
     /**
-     * Handle API failure when client exception, e.g. 404 not found, 400 bad request. (Not Required)
+     * Handle API failure when client exception, e.g. 404 not found, 400 bad request. (Not Required) <br>
+     * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
      * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)
      * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
@@ -67,7 +71,8 @@ public interface ApiManager {
     OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause);
 
     /**
-     * Handle API failure when server exception, e.g. 500 server error. (Not Required)
+     * Handle API failure when server exception, e.g. 500 server error. (Not Required) <br>
+     * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
      * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)
      * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)

@@ -15,11 +15,16 @@
  */
 package org.lastaflute.web;
 
+import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
 import javax.annotation.Resource;
 
+import org.dbflute.helper.beans.DfBeanDesc;
+import org.dbflute.helper.beans.factory.DfBeanDescFactory;
+import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
@@ -102,7 +107,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     }
 
     protected TypicalGodHandPrologue createTypicalGodHandPrologue() {
-        final TypicalGodHandResource resource = newTypicalGodHandResource();
+        final TypicalGodHandResource resource = createTypicalGodHandResource();
         final AccessContextArranger arranger = newAccessContextArranger();
         return newTypicalGodHandPrologue(resource, arranger, () -> getUserBean(), () -> myAppType());
     }
@@ -128,11 +133,11 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                            ----------
     @Override
     public ActionResponse godHandMonologue(ActionRuntime runtimeMeta) { // fixed process
-        return createTypicalGodHandExceptionMonologue().performMonologue(runtimeMeta);
+        return createTypicalGodHandMonologue().performMonologue(runtimeMeta);
     }
 
-    protected TypicalGodHandMonologue createTypicalGodHandExceptionMonologue() {
-        final TypicalGodHandResource resource = newTypicalGodHandResource();
+    protected TypicalGodHandMonologue createTypicalGodHandMonologue() {
+        final TypicalGodHandResource resource = createTypicalGodHandResource();
         final TypicalEmbeddedKeySupplier supplier = newTypicalEmbeddedKeySupplier();
         final ActionApplicationExceptionHandler handler = newActionApplicationExceptionHandler();
         return newTypicalGodHandMonologue(resource, supplier, handler);
@@ -177,7 +182,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     }
 
     protected TypicalGodHandActionEpilogue createTypicalGodHandEpilogue() {
-        return newTypicalGodHandEpilogue(newTypicalGodHandResource());
+        return newTypicalGodHandEpilogue(createTypicalGodHandResource());
     }
 
     protected TypicalGodHandActionEpilogue newTypicalGodHandEpilogue(TypicalGodHandResource resource) {
@@ -187,21 +192,25 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     // -----------------------------------------------------
     //                                      Resource Factory
     //                                      ----------------
-    protected TypicalGodHandResource newTypicalGodHandResource() {
+    protected TypicalGodHandResource createTypicalGodHandResource() {
         final OptionalThing<LoginManager> loginManager = myLoginManager();
         return new TypicalGodHandResource(requestManager, responseManager, sessionManager, loginManager, apiManager, exceptionTranslator);
     }
 
     // ===================================================================================
-    //                                                                         My Resource
-    //                                                                         ===========
-    protected abstract String myAppType();
-
+    //                                                                           User Info
+    //                                                                           =========
     /**
      * Get the bean of login user on session as interface type. (for application)
      * @return The optional thing of found user bean. (NotNull, EmptyAllowed: when not login)
      */
     protected abstract OptionalThing<? extends UserBean> getUserBean();
+
+    /**
+     * Get the application type, e.g. for common column.
+     * @return The application type basically fixed string. (NotNull) 
+     */
+    protected abstract String myAppType();
 
     /**
      * Get the user type of this applicatoin's login.
@@ -216,63 +225,66 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     protected abstract OptionalThing<LoginManager> myLoginManager();
 
     // ===================================================================================
-    //                                                                   Application Check
-    //                                                                   =================
+    //                                                                              Verify
+    //                                                                              ======
     // -----------------------------------------------------
-    //                                       Check Parameter
-    //                                       ---------------
+    //                                      Verify Parameter
+    //                                      ----------------
     protected void verifyParameterExists(Object parameter) { // application may call
         logger.debug("...Verifying the parameter exists: {}", parameter);
         if (parameter == null || (parameter instanceof String && ((String) parameter).isEmpty())) {
-            handleParameterFailure();
+            handleParameterFailure("Not found the parameter: parameter=" + parameter);
         }
     }
 
-    protected void verifyParameterTrue(boolean expectedBool) { // application may call
+    protected void verifyParameterTrue(String msg, boolean expectedBool) { // application may call
         logger.debug("...Verifying the parameter is true: {}", expectedBool);
         if (!expectedBool) {
-            handleParameterFailure();
+            handleParameterFailure(msg);
         }
     }
 
-    protected void handleParameterFailure() {
-        lets404(); // no server error because it can occur by user's trick easily e.g. changing GET parameter
+    protected void handleParameterFailure(String msg) {
+        // no server error because it can occur by user's trick easily e.g. changing GET parameter
+        lets404(msg);
     }
 
     // -----------------------------------------------------
-    //                                          Check or ...
-    //                                          ------------
+    //                                         Verify or ...
+    //                                         -------------
     /**
      * Check the condition is true or it throws 404 not found forcedly. <br>
      * You can use this in your action process against invalid URL parameters.
+     * @param msg The message for exception message. (NotNull)
      * @param expectedBool The expected determination for your business, true or false. (false: 404 not found)
      */
-    protected void verifyTrueOr404NotFound(boolean expectedBool) { // application may call
+    protected void verifyTrueOr404NotFound(String msg, boolean expectedBool) { // application may call
         logger.debug("...Verifying the condition is true or 404 not found: {}", expectedBool);
         if (!expectedBool) {
-            lets404();
+            lets404(msg);
         }
     }
 
     /**
      * Check the condition is true or it throws illegal transition forcedly. <br>
      * You can use this in your action process against strange request parameters.
+     * @param msg The message for exception message. (NotNull)
      * @param expectedBool The expected determination for your business, true or false. (false: illegal transition)
      */
-    protected void verifyTrueOrIllegalTransition(boolean expectedBool) { // application may call
+    protected void verifyTrueOrIllegalTransition(String msg, boolean expectedBool) { // application may call
         logger.debug("...Verifying the condition is true or illegal transition: {}", expectedBool);
         if (!expectedBool) {
-            letsIllegalTransition();
+            letsIllegalTransition(msg);
         }
     }
 
-    protected HtmlResponse lets404() { // e.g. used by error handling of validation for GET parameter
-        throw new ForcedRequest404NotFoundException("from lets404()");
+    protected HtmlResponse lets404(String msg) { // e.g. used by error handling of validation for GET parameter
+        throw new ForcedRequest404NotFoundException(msg);
     }
 
-    protected void letsIllegalTransition() {
+    protected void letsIllegalTransition(String msg) {
         final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
-        throw new ForcedIllegalTransitionApplicationException(transitionKey);
+        throw new ForcedIllegalTransitionApplicationException(msg, transitionKey);
     }
 
     // ===================================================================================
@@ -284,6 +296,23 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
 
     protected boolean isNotEmpty(String str) {
         return Srl.is_NotNull_and_NotEmpty(str);
+    }
+
+    protected <CLS extends Classification> CLS toCDef(Class<CLS> cdefType, Object code) {
+        assertArgumentNotNull("cdefType", cdefType);
+        assertArgumentNotNull("code", code);
+        if (code instanceof String && ((String) code).isEmpty()) {
+            throw new IllegalArgumentException("The argument 'code' should not be empty: cdefType=" + cdefType);
+        }
+        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(cdefType);
+        final Method method = beanDesc.getMethod("codeOf", new Class<?>[] { Object.class });
+        @SuppressWarnings("unchecked")
+        final CLS cdef = (CLS) DfReflectionUtil.invoke(method, null, new Object[] { code });
+        if (cdef == null) {
+            String msg = "Unknow classification code for " + cdefType.getName() + ": " + code;
+            throw new ForcedRequest404NotFoundException(msg);
+        }
+        return cdef;
     }
 
     // ===================================================================================

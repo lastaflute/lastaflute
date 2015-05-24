@@ -175,7 +175,7 @@ public abstract class LastaAction {
      * return redirect(MemberEditAction.class);
      *
      * <span style="color: #3F7E5E">// e.g. /member/</span>
-     * return redirect(MemberIndexAction.class);
+     * return redirect(MemberAction.class);
      * </pre>
      * @param actionType The class type of action that it redirects to. (NotNull)
      * @return The HTML response for redirect. (NotNull)
@@ -195,7 +195,7 @@ public abstract class LastaAction {
      * return redirectById(MemberEditAction.class, 3, 197);
      *
      * <span style="color: #3F7E5E">// e.g. /member/3/</span>
-     * return redirectById(MemberIndexAction.class, 3);
+     * return redirectById(MemberAction.class, 3);
      * </pre>
      * @param actionType The class type of action that it redirects to. (NotNull)
      * @param ids The varying array for IDs. (NotNull)
@@ -218,7 +218,7 @@ public abstract class LastaAction {
      * return redirectByParam(MemberEditAction.class, "foo", 3, "bar", "qux");
      *
      * <span style="color: #3F7E5E">// e.g. /member/?foo=3</span>
-     * return redirectByParam(MemberIndexAction.class, "foo", 3);
+     * return redirectByParam(MemberAction.class, "foo", 3);
      * </pre>
      * @param actionType The class type of action that it redirects to. (NotNull)
      * @param params The varying array for the parameters on GET. (NotNull)
@@ -240,7 +240,7 @@ public abstract class LastaAction {
      * return redirectWith(MemberEditAction.class, <span style="color: #FD4747">params</span>("memberId", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/</span>
-     * return redirectWith(MemberIndexAction.class, <span style="color: #FD4747">moreUrl</span>("edit", memberId));
+     * return redirectWith(MemberAction.class, <span style="color: #FD4747">moreUrl</span>("edit", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/#profile</span>
      * return redirectWith(MemberEditAction.class, <span style="color: #FD4747">moreUrl</span>(memberId).<span style="color: #FD4747">hash</span>("profile"));
@@ -268,7 +268,7 @@ public abstract class LastaAction {
     protected HtmlResponse doRedirect(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsRediect(toActionUrl(actionType, true, chain));
+        return newHtmlResponseAsRediect(actionPathResolver.toActionUrl(actionType, true, chain));
     }
 
     protected HtmlResponse newHtmlResponseAsRediect(String redirectPath) {
@@ -285,7 +285,7 @@ public abstract class LastaAction {
      * return forward(MemberEditAction.class);
      *
      * <span style="color: #3F7E5E">// e.g. /member/</span>
-     * return forward(MemberIndexAction.class);
+     * return forward(MemberAction.class);
      * </pre>
      * @param actionType The class type of action that it forwards to. (NotNull)
      * @return The HTML response for forward. (NotNull)
@@ -305,7 +305,7 @@ public abstract class LastaAction {
      * return forwardById(MemberEditAction.class, 3, 197);
      *
      * <span style="color: #3F7E5E">// e.g. /member/3/</span>
-     * return forwardById(MemberIndexAction.class, 3);
+     * return forwardById(MemberAction.class, 3);
      * </pre>
      * @param actionType The class type of action that it forwards to. (NotNull)
      * @param ids The varying array for IDs. (NotNull)
@@ -328,7 +328,7 @@ public abstract class LastaAction {
      * return forwardByParam(MemberEditAction.class, "foo", 3, "bar", "qux");
      *
      * <span style="color: #3F7E5E">// e.g. /member/?foo=3</span>
-     * return forwardByParam(MemberIndexAction.class, "foo", 3);
+     * return forwardByParam(MemberAction.class, "foo", 3);
      * </pre>
      * @param actionType The class type of action that it forwards to. (NotNull)
      * @param params The varying array for the parameters on GET. (NotNull)
@@ -350,7 +350,7 @@ public abstract class LastaAction {
      * return forwardWith(MemberEditAction.class, <span style="color: #FD4747">params</span>("memberId", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/</span>
-     * return forwardWith(MemberIndexAction.class, <span style="color: #FD4747">moreUrl</span>("edit", memberId));
+     * return forwardWith(MemberAction.class, <span style="color: #FD4747">moreUrl</span>("edit", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/#profile</span>
      * return forwardWith(MemberEditAction.class, <span style="color: #FD4747">moreUrl</span>(memberId).<span style="color: #FD4747">hash</span>("profile"));
@@ -378,7 +378,7 @@ public abstract class LastaAction {
     protected HtmlResponse doForward(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsForward(toActionUrl(actionType, false, chain));
+        return newHtmlResponseAsForward(actionPathResolver.toActionUrl(actionType, false, chain));
     }
 
     protected HtmlResponse newHtmlResponseAsForward(String redirectPath) {
@@ -440,31 +440,6 @@ public abstract class LastaAction {
      */
     protected HtmlResponse movedPermanently(HtmlResponse response) {
         return responseManager.movedPermanently(response);
-    }
-
-    // -----------------------------------------------------
-    //                                          URL Handling
-    //                                          ------------
-    /**
-     * Convert to URL string to move the action. <br>
-     * This method is to build URL string by manually so normally you don't use directly from your action.
-     * @param actionType The class type of action that it redirects to. (NotNull)
-     * @param redirect Do you redirect to the action?
-     * @param chain The chain of URL to build additional info on URL. (NotNull)
-     * @return The URL string to move to the action. (NotNull)
-     */
-    protected String toActionUrl(Class<?> actionType, boolean redirect, UrlChain chain) {
-        return actionPathResolver.toActionUrl(actionType, redirect, chain);
-    }
-
-    /**
-     * Resolve the action URL from the class type of the action. <br>
-     * This method is to build URL string by manually so normally you don't use directly from your action.
-     * @param actionType The class type of action that it redirects to. (NotNull)
-     * @return The basic URL string to move to the action. (NotNull)
-     */
-    protected String resolveActionPath(Class<?> actionType) {
-        return actionPathResolver.resolveActionPath(actionType);
     }
 
     // ===================================================================================
