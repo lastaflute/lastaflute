@@ -122,7 +122,7 @@ public class RequestLoggingFilter implements Filter {
     }
 
     protected List<String> getDefaultExceptExtSet() {
-        return Arrays.asList(".js", ".css", ".png", ".gif", ".jpg", ".ico", ".svg", ".svgz", ".ttf");
+        return Arrays.asList(".js", ".css", ".png", ".gif", ".jpg", ".ico", ".svg", ".svgz", ".ttf", ".woff");
     }
 
     protected void setupExceptUrlPattern(FilterConfig filterConfig) {
@@ -181,7 +181,9 @@ public class RequestLoggingFilter implements Filter {
         boolean existsServerError = false;
         try {
             markBegin();
+            System.out.println("*******1: " + request.getRequestURI());
             chain.doFilter(request, response);
+            System.out.println("*******2: " + request.getRequestURI());
             if (handleErrorAttribute(request, response)) {
                 existsServerError = true;
             }
