@@ -8,7 +8,7 @@
 	<component name="assistantDirector" class="org.docksidestage.mylasta.direction.MythicaFwAssistantDirector"/>
 	<component name="mythicaConfig" class="org.docksidestage.mylasta.direction.MythicaConfig$SimpleImpl"/>
 	-->
-	<include condition="#exists('#path')" path="lastaflute_director.xml"/>
+	<include path="lastaflute_director.xml"/>
 
 	<!-- simple name here to be accessible in Di xml files that include this -->
 	<component name="provider" class="org.lastaflute.core.direction.UnifiedProvider"/>
