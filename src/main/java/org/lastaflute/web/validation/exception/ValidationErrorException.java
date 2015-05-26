@@ -49,6 +49,14 @@ public class ValidationErrorException extends RuntimeException {
     }
 
     // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        return "validationError:{messages=" + messages + ", handler=" + errorHandler + "}";
+    }
+
+    // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
     public ActionMessages getMessages() {
