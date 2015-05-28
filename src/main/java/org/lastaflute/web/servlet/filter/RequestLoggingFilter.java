@@ -43,7 +43,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import org.dbflute.util.DfTraceViewUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,14 +135,14 @@ public class RequestLoggingFilter implements Filter {
     }
 
     protected void setupRequestUriTitleUrlPattern(FilterConfig filterConfig) {
-        String pattern = filterConfig.getInitParameter("requestUriTitleUrlPattern");
+        final String pattern = filterConfig.getInitParameter("requestUriTitleUrlPattern");
         if (pattern != null && pattern.trim().length() > 0) {
             this.requestUriTitleUrlPattern = Pattern.compile(pattern);
         }
     }
 
     protected void setupSubRequestUrlPatternUrlPattern(FilterConfig filterConfig) {
-        String pattern = filterConfig.getInitParameter("subRequestUrlPattern");
+        final String pattern = filterConfig.getInitParameter("subRequestUrlPattern");
         if (pattern != null && pattern.trim().length() > 0) {
             this.subRequestUrlPattern = Pattern.compile(pattern);
         }
@@ -156,23 +155,22 @@ public class RequestLoggingFilter implements Filter {
     // ===================================================================================
     //                                                                              Filter
     //                                                                              ======
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain) throws IOException,
-            ServletException {
-        if (!isHttpServlet(servletRequest, servletResponse)) {
-            chain.doFilter(servletRequest, servletResponse);
+    public void doFilter(ServletRequest servRequest, ServletResponse servResponse, FilterChain chain) throws IOException, ServletException {
+        if (!isHttpServlet(servRequest, servResponse)) {
+            chain.doFilter(servRequest, servResponse);
             return;
         }
-        final HttpServletRequest request = (HttpServletRequest) servletRequest;
-        final HttpServletResponse response = (HttpServletResponse) servletResponse;
-
-        if (isNestedProcess() || isOutOfTargetPath(request)) {
-            // nested processes are e.g. forwarding to JSP
-            // out-of-target paths are e.g. .html
+        final HttpServletRequest request = (HttpServletRequest) servRequest;
+        final HttpServletResponse response = (HttpServletResponse) servResponse;
+        if (isNestedProcess() || isOutOfTargetPath(request)) { // e.g. forwarding to JSP or .html
             chain.doFilter(request, response);
-            return;
+        } else { // target top level process
+            actuallyFilter(chain, request, response);
         }
-        prepareCharacterEncodingIfNeeds(request);
+    }
 
+    protected void actuallyFilter(FilterChain chain, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        prepareCharacterEncodingIfNeeds(request);
         final Long before = System.currentTimeMillis(); // used in not only debug but also error
         if (logger.isDebugEnabled()) {
             before(request, response);
@@ -832,7 +830,7 @@ public class RequestLoggingFilter implements Filter {
             sb.append(LF);
         }
         final long after = System.currentTimeMillis();
-        final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
+        final String performanceView = convertToPerformanceView(after - before);
         sb.append("= = = = = = = = = =/ [").append(performanceView).append("] #").append(Integer.toHexString(cause.hashCode()));
         buildExceptionStackTrace(cause, sb); // extract stack trace manually
         final String msg = sb.toString().trim();
