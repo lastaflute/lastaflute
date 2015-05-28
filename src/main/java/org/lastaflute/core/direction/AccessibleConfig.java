@@ -16,7 +16,7 @@
 package org.lastaflute.core.direction;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.DfTypeUtil.ParseDateNumberFormatException;
@@ -64,14 +64,14 @@ public interface AccessibleConfig {
     BigDecimal getAsDecimal(String propertyKey);
 
     /**
-     * Get the value of property as {@link Date}.
+     * Get the value of property as {@link LocalDate}.
      * @param propertyKey The key of the property. (NotNull)
      * @return The value of found property. (NullAllowed: if null, not found)
      * @throws ParseDateException When it failed to parse the string to date.
      * @throws ParseDateNumberFormatException When it failed to format the elements as number.
      * @throws ParseDateOutOfCalendarException When the date was out of calendar. (if BC, not thrown)
      */
-    Date getAsDate(String propertyKey);
+    LocalDate getAsDate(String propertyKey);
 
     /**
      * Is the property true?

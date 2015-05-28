@@ -13,18 +13,20 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation;
-
-import org.lastaflute.web.response.ActionResponse;
+package org.lastaflute.web.exception;
 
 /**
  * @author jflute
  */
-@FunctionalInterface
-public interface ValidationErrorHandler {
+public class RequestJsonParseFailureException extends ForcedRequest400BadRequestException {
 
-    /**
-     * @return The action response for validation error. (NotNull)
-     */
-    ActionResponse handle();
+    private static final long serialVersionUID = 1L;
+
+    public RequestJsonParseFailureException(String msg) {
+        super(msg);
+    }
+
+    public RequestJsonParseFailureException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

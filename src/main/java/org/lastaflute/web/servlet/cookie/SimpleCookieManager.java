@@ -24,7 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.CookieNotFoundException;
 import org.lastaflute.web.servlet.cookie.exception.CookieCipherDecryptFailureException;
 import org.lastaflute.web.util.LaRequestUtil;
@@ -68,7 +68,7 @@ public class SimpleCookieManager implements CookieManager {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalWebDirection direction = assistOptionalWebDirection();
+        final FwWebDirection direction = assistWebDirection();
         defaultPath = direction.assistCookieResourceProvider().provideDefaultPath();
         if (defaultPath == null) {
             final String msg = "No assist for the default path of cookie.";
@@ -82,8 +82,8 @@ public class SimpleCookieManager implements CookieManager {
         showBootLogging();
     }
 
-    protected OptionalWebDirection assistOptionalWebDirection() {
-        return assistantDirector.assistOptionalWebDirection();
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
     }
 
     protected void showBootLogging() {

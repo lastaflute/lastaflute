@@ -15,8 +15,6 @@
  */
 package org.lastaflute.web.callback;
 
-import java.lang.reflect.Method;
-
 import org.dbflute.bhv.proposal.callback.ExecutedSqlCounter;
 import org.dbflute.hook.CallbackContext;
 import org.dbflute.hook.SqlStringFilter;
@@ -50,16 +48,16 @@ public class TypicalGodHandActionEpilogue {
     // ===================================================================================
     //                                                                            Prologue
     //                                                                            ========
-    public void performEpilogue(ActionRuntimeMeta executeMeta) { // fixed process
-        if (executeMeta.isForwardToHtml()) {
-            arrangeNoCacheResponseWhenJsp(executeMeta);
+    public void performEpilogue(ActionRuntime runtime) { // fixed process
+        if (runtime.isForwardToHtml()) {
+            arrangeNoCacheResponseWhenJsp(runtime);
         }
-        handleSqlCount(executeMeta);
+        handleSqlCount(runtime);
         clearCallbackContext();
         clearPreparedAccessContext();
     }
 
-    protected void arrangeNoCacheResponseWhenJsp(ActionRuntimeMeta executeMeta) {
+    protected void arrangeNoCacheResponseWhenJsp(ActionRuntime runtime) {
         responseManager.addNoCache();
     }
 
@@ -68,9 +66,9 @@ public class TypicalGodHandActionEpilogue {
     //                                                                    ================
     /**
      * Handle count of SQL execution in the request.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      */
-    protected void handleSqlCount(final ActionRuntimeMeta executeMeta) {
+    protected void handleSqlCount(final ActionRuntime runtime) {
         final CallbackContext context = CallbackContext.getCallbackContextOnThread();
         if (context == null) {
             return;
@@ -80,9 +78,9 @@ public class TypicalGodHandActionEpilogue {
             return;
         }
         final ExecutedSqlCounter counter = ((ExecutedSqlCounter) filter);
-        final int limitCountOfSql = getLimitCountOfSql(executeMeta);
+        final int limitCountOfSql = getLimitCountOfSql(runtime);
         if (limitCountOfSql >= 0 && counter.getTotalCountOfSql() > limitCountOfSql) {
-            handleTooManySqlExecution(executeMeta, counter);
+            handleTooManySqlExecution(runtime, counter);
         }
         final String exp = counter.toLineDisp();
         requestManager.setAttribute(RequestManager.DBFLUTE_SQL_COUNT_KEY, exp); // logged by logging filter
@@ -90,27 +88,25 @@ public class TypicalGodHandActionEpilogue {
 
     /**
      * Handle too many SQL executions.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      * @param sqlCounter The counter object for SQL executions. (NotNull)
      */
-    protected void handleTooManySqlExecution(final ActionRuntimeMeta executeMeta, final ExecutedSqlCounter sqlCounter) {
-        final String actionDisp = buildActionDisp(executeMeta);
+    protected void handleTooManySqlExecution(ActionRuntime runtime, final ExecutedSqlCounter sqlCounter) {
+        final String actionDisp = buildActionDisp(runtime);
         LOG.warn("*Too many SQL executions: " + sqlCounter.getTotalCountOfSql() + " in " + actionDisp);
     }
 
-    protected String buildActionDisp(ActionRuntimeMeta executeMeta) {
-        final Method method = executeMeta.getExecuteMethod();
-        final Class<?> declaringClass = method.getDeclaringClass();
-        return declaringClass.getSimpleName() + "." + method.getName() + "()";
+    protected String buildActionDisp(ActionRuntime runtime) {
+        return runtime.getActionType().getSimpleName() + "." + runtime.getExecuteMethod().getName() + "()";
     }
 
     /**
      * Get the limit count of SQL execution. <br>
      * You can override if you need.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      * @return The max count allowed for SQL executions. (MinusAllowed: if minus, no check)
      */
-    protected int getLimitCountOfSql(ActionRuntimeMeta executeMeta) {
+    protected int getLimitCountOfSql(ActionRuntime runtime) {
         return 30; // as default
     }
 

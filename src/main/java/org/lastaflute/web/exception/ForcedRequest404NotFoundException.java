@@ -15,20 +15,25 @@
  */
 package org.lastaflute.web.exception;
 
-import org.lastaflute.web.servlet.filter.RequestLoggingFilter.Request404NotFoundException;
+import javax.servlet.http.HttpServletResponse;
+
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 
 /**
  * @author jflute
  */
-public class ForcedRequest404NotFoundException extends Request404NotFoundException {
+public class ForcedRequest404NotFoundException extends RequestClientErrorException {
 
     private static final long serialVersionUID = 1L;
 
+    protected static final String TITLE = "404 Not Found";
+    protected static final int STATUS = HttpServletResponse.SC_NOT_FOUND;
+
     public ForcedRequest404NotFoundException(String msg) {
-        super(msg);
+        super(msg, TITLE, STATUS);
     }
 
     public ForcedRequest404NotFoundException(String msg, Throwable cause) {
-        super(msg, cause);
+        super(msg, TITLE, STATUS, cause);
     }
 }

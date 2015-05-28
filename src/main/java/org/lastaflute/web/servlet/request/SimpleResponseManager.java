@@ -35,7 +35,7 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.util.LdiInputStreamUtil;
 import org.lastaflute.di.util.LdiOutputStreamUtil;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.util.LaRequestUtil;
@@ -51,7 +51,7 @@ public class SimpleResponseManager implements ResponseManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleResponseManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleResponseManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -76,7 +76,7 @@ public class SimpleResponseManager implements ResponseManager {
      */
     @PostConstruct
     public void initialize() {
-        final OptionalWebDirection direction = assistOptionalWebDirection();
+        final FwWebDirection direction = assistWebDirection();
         final ResponseHandlingProvider provider = direction.assistResponseHandlingProvider();
         if (provider != null) {
             downloadExtensionContentTypeMap = provider.provideDownloadExtensionContentTypeMap();
@@ -84,14 +84,14 @@ public class SimpleResponseManager implements ResponseManager {
         showBootLogging();
     }
 
-    protected OptionalWebDirection assistOptionalWebDirection() {
-        return assistantDirector.assistOptionalWebDirection();
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Response Manager]");
-            LOG.info(" downloadExtensionContentTypeMap: " + downloadExtensionContentTypeMap);
+        if (logger.isInfoEnabled()) {
+            logger.info("[Response Manager]");
+            logger.info(" downloadExtensionContentTypeMap: " + downloadExtensionContentTypeMap);
         }
     }
 
@@ -103,41 +103,55 @@ public class SimpleResponseManager implements ResponseManager {
         return LaResponseUtil.getResponse();
     }
 
+    @Override
+    public boolean isCommitted() {
+        return getResponse().isCommitted();
+    }
+
     // ===================================================================================
     //                                                                   Redirect Response
     //                                                                   =================
     @Override
+    public void forward(String forwardPath) throws ServletException, IOException {
+        assertArgumentNotNull("forwardPath", forwardPath);
+        final HttpServletRequest request = getRequestManager().getRequest();
+        final RequestDispatcher rd = request.getRequestDispatcher(forwardPath); // same context
+        if (rd == null) {
+            String msg = "Not found the request dispatcher for the URI: " + forwardPath;
+            throw new IllegalStateException(msg);
+        }
+        rd.forward(request, getResponse());
+    }
+
+    @Override
     public void redirect(String redirectPath) throws IOException {
         assertArgumentNotNull("redirectPath", redirectPath);
-        doRedirect(redirectPath);
+        doRedirect(redirectPath, false);
     }
 
-    protected void doRedirect(String redirectPath) throws IOException {
+    @Override
+    public void redirectAsIs(String redirectPath) throws IOException {
+        assertArgumentNotNull("redirectPath", redirectPath);
+        doRedirect(redirectPath, true);
+    }
+
+    protected void doRedirect(String redirectPath, boolean asIs) throws IOException {
         final HttpServletResponse response = getResponse();
-        final String redirectUrl = buildRedirectUrl(response, redirectPath);
-        response.sendRedirect(redirectUrl);
+        response.sendRedirect(buildRedirectUrl(response, redirectPath, asIs));
     }
 
-    protected String buildRedirectUrl(HttpServletResponse response, String redirectPath) {
+    protected String buildRedirectUrl(HttpServletResponse response, String redirectPath, boolean asIs) {
         final String redirectUrl;
-        if (redirectPath.startsWith("/")) {
-            redirectUrl = LaRequestUtil.getRequest().getContextPath() + redirectPath;
+        if (needsContextPathForRedirectPath(redirectPath, asIs)) {
+            redirectUrl = getRequestManager().getContextPath() + redirectPath;
         } else {
             redirectUrl = redirectPath;
         }
         return response.encodeRedirectURL(redirectUrl);
     }
 
-    @Override
-    public void forward(String forwardPath) throws ServletException, IOException {
-        assertArgumentNotNull("forwardPath", forwardPath);
-        final HttpServletRequest request = getRequestManager().getRequest();
-        final RequestDispatcher rd = request.getRequestDispatcher(forwardPath);
-        if (rd == null) {
-            String msg = "Not found the request dispatcher for the URI: " + forwardPath;
-            throw new IllegalStateException(msg);
-        }
-        rd.forward(request, getResponse());
+    protected boolean needsContextPathForRedirectPath(String redirectPath, boolean asIs) {
+        return !asIs && redirectPath.startsWith("/");
     }
 
     @Override
@@ -171,7 +185,7 @@ public class SimpleResponseManager implements ResponseManager {
     public void writeAsJson(String json) {
         assertArgumentNotNull("json", json);
         final String contentType = "application/json";
-        LOG.debug("#flow ...Writing response as {}: \n{]", contentType, json);
+        logger.debug("#flow ...Writing response as {}: \n{}", contentType, json);
         write(json, contentType);
     }
 
@@ -179,7 +193,7 @@ public class SimpleResponseManager implements ResponseManager {
     public void writeAsJavaScript(String script) {
         assertArgumentNotNull("script", script);
         final String contentType = "application/javascript";
-        LOG.debug("#flow ...Writing response as {}: \n{}", contentType, script);
+        logger.debug("#flow ...Writing response as {}: \n{}", contentType, script);
         write(script, contentType);
     }
 
@@ -188,7 +202,7 @@ public class SimpleResponseManager implements ResponseManager {
         assertArgumentNotNull("xmlStr", xmlStr);
         assertArgumentNotNull("encoding", encoding);
         final String contentType = "text/xml";
-        LOG.debug("#flow ...Writing response as {}: \n", contentType, xmlStr);
+        logger.debug("#flow ...Writing response as {}: \n", contentType, xmlStr);
         write(xmlStr, contentType, encoding);
     }
 
@@ -383,7 +397,7 @@ public class SimpleResponseManager implements ResponseManager {
     //                                                                     Friends Gateway
     //                                                                     ===============
     protected RequestManager getRequestManager() {
-        return ContainerUtil.getComponent(RequestManager.class);
+        return ContainerUtil.getComponent(RequestManager.class); // not to be cyclic reference
     }
 
     // ===================================================================================

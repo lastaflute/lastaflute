@@ -35,8 +35,8 @@ import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.Srl;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
-import org.lastaflute.web.exception.OptionalParameterEmptyAccessException;
 import org.lastaflute.web.exception.UrlParamArgsDifferentCountException;
+import org.lastaflute.web.exception.UrlParamOptionalParameterEmptyAccessException;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -64,10 +64,10 @@ public class RequestUrlParamAnalyzer {
     /**
      * @param execute The definition of action execute. (NotNull)
      * @param paramPath The parameter path from URL. (NullAllowed)
-     * @return The map of URL parameter value. map:{index = value} (NotNull)
+     * @return The object for URL parameter value that has e.g. map:{index = value} (NotNull)
      */
-    public Map<Integer, Object> analyzeUrlParamValue(ActionExecute execute, String paramPath) {
-        return doAnalyzeUrlParamValue(execute, extractRealParamPath(execute, paramPath));
+    public RequestUrlParam analyzeUrlParam(ActionExecute execute, String paramPath) {
+        return doAnalyzeUrlParam(execute, extractRealParamPath(execute, paramPath));
     }
 
     protected String extractRealParamPath(ActionExecute execute, String paramPath) {
@@ -88,7 +88,7 @@ public class RequestUrlParamAnalyzer {
         return real;
     }
 
-    protected Map<Integer, Object> doAnalyzeUrlParamValue(ActionExecute execute, String paramPath) {
+    protected RequestUrlParam doAnalyzeUrlParam(ActionExecute execute, String paramPath) {
         final List<Class<?>> urlParamTypeList = execute.getUrlParamArgs().map(args -> {
             return args.getUrlParamTypeList();
         }).orElse(Collections.emptyList());
@@ -103,7 +103,11 @@ public class RequestUrlParamAnalyzer {
         }
         assertUrlParamArgsCountMatches(execute, paramPath, urlParamTypeList, urlParamValueMap);
         checkRequiredParameter(execute, paramPath, urlParamValueMap, optGenTypeMap);
-        return urlParamValueMap;
+        return newRequestUrlParam(urlParamTypeList, urlParamValueMap);
+    }
+
+    protected RequestUrlParam newRequestUrlParam(List<Class<?>> urlParamTypeList, Map<Integer, Object> urlParamValueMap) {
+        return new RequestUrlParam(urlParamTypeList, urlParamValueMap);
     }
 
     // -----------------------------------------------------
@@ -262,7 +266,7 @@ public class RequestUrlParamAnalyzer {
     protected void handleParameterConversionFailureException(ActionExecute execute, int index, Class<?> paramType, String plainValue,
             String decoded, RuntimeException cause) {
         final String msg = buildParameterConversionFailureMessage(execute, index, paramType, plainValue, decoded, cause);
-        throwNoSuchExecute404NotFoundException(msg); // treat it as no such execute
+        throwExecuteParameterMismatchException(msg); // treat it as no such execute
     }
 
     protected String buildParameterConversionFailureMessage(ActionExecute execute, int index, Class<?> paramType, String plainValue,
@@ -333,7 +337,7 @@ public class RequestUrlParamAnalyzer {
                 continue;
             } else { // required
                 if (value == null) { // already filtered, e.g. empty string to null
-                    throwNoSuchExecute404NotFoundException(buildRequiredPropertyNotFoundMessage(execute, paramPath, index));
+                    throwExecuteParameterMismatchException(buildRequiredPropertyNotFoundMessage(execute, paramPath, index));
                 } else if (value instanceof OptionalThing) { // no way
                     throwIllegalOptionalHandlingException(execute, paramPath, urlParamValueMap, optGenTypeMap, index, value);
                 }
@@ -381,8 +385,9 @@ public class RequestUrlParamAnalyzer {
         return LaActionExecuteUtil.isOptionalParameterType(paramType);
     }
 
-    protected void throwNoSuchExecute404NotFoundException(String msg) {
-        // TODO jflute lastaflute: [F] improvement: 404 treated as system exception in development
+    protected void throwExecuteParameterMismatchException(String msg) {
+        // no server error because it can occur by user's trick easily e.g. changing URL
+        // while, might be client bugs (or server) so request delicate error
         throw new ForcedRequest404NotFoundException(msg);
     }
 
@@ -398,11 +403,11 @@ public class RequestUrlParamAnalyzer {
     //                                        --------------
     protected OptionalThing<Object> createEmptyOptional(ActionExecute execute, int fixedIndex, Class<?> paramType) {
         return OptionalThing.ofNullable(null, () -> {
-            throwOptionalParameterEmptyAccessException(execute, fixedIndex, paramType);
+            throwUrlParamOptionalParameterEmptyAccessException(execute, fixedIndex, paramType);
         });
     }
 
-    protected void throwOptionalParameterEmptyAccessException(ActionExecute execute, int index, Class<?> paramType) {
+    protected void throwUrlParamOptionalParameterEmptyAccessException(ActionExecute execute, int index, Class<?> paramType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("The empty optional parameter was accessed.");
         br.addItem("Advice");
@@ -426,6 +431,6 @@ public class RequestUrlParamAnalyzer {
         br.addItem("Parameter Type");
         br.addElement(paramType);
         final String msg = br.buildExceptionMessage();
-        throw new OptionalParameterEmptyAccessException(msg);
+        throw new UrlParamOptionalParameterEmptyAccessException(msg);
     }
 }

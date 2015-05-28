@@ -41,7 +41,7 @@ public interface TimeManager {
      * You can get the same date (but different instances) in the same transaction.
      * @return The local date that has current date. (NotNull)
      */
-    LocalDate getCurrentDate();
+    LocalDate currentDate();
 
     /**
      * Get the date-time that specifies current time for business. <br>
@@ -49,7 +49,7 @@ public interface TimeManager {
      * You can get the same date (but different instances) in the same transaction.
      * @return The local date-time that has current time. (NotNull)
      */
-    LocalDateTime getCurrentDateTime();
+    LocalDateTime currentDateTime();
 
     /**
      * Get the handy date that specifies current time for business. <br>
@@ -57,7 +57,7 @@ public interface TimeManager {
      * You can get the same date (but different instances) in the same transaction.
      * @return The handy date that has current time. (NotNull)
      */
-    HandyDate getCurrentHandyDate();
+    HandyDate currentHandyDate();
 
     /**
      * Get the time millisecond that specifies current time for business. <br>
@@ -65,7 +65,7 @@ public interface TimeManager {
      * You can get the same date (but different instances) in the same transaction.
      * @return The long value for current time. (NotNull)
      */
-    long getCurrentMillis();
+    long currentMillis();
 
     /**
      * Get the local date that specifies current time for business. <br>
@@ -73,7 +73,7 @@ public interface TimeManager {
      * You can get the same date (but different instances) in the same transaction.
      * @return The local date that has current time. (NotNull)
      */
-    Date getCurrentUtilDate();
+    Date currentUtilDate();
 
     /**
      * Get the time-stamp that specifies current time for business. <br>
@@ -81,14 +81,14 @@ public interface TimeManager {
      * You can get the same date (but different instances) in the same transaction.
      * @return The time-stamp that has current time. (NotNull)
      */
-    Timestamp getCurrentTimestamp();
+    Timestamp currentTimestamp();
 
     /**
      * Get the date that specifies method-called time (flash time). <br>
      * This method ignores whether it is in transaction or not.
      * @return The date that has method-called time (flash time). (NotNull) 
      */
-    Date getFlashDate();
+    Date flashDate();
 
     // ===================================================================================
     //                                                                   Business Handling

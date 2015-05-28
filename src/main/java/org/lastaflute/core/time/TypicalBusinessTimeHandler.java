@@ -18,6 +18,8 @@ package org.lastaflute.core.time;
 import java.util.Date;
 import java.util.TimeZone;
 
+import org.dbflute.util.DfTypeUtil;
+
 /**
  * @author jflute
  */
@@ -39,8 +41,7 @@ public class TypicalBusinessTimeHandler implements BusinessTimeHandler {
      * @param currentTimeProvider The provider of current time. (NotNull)
      * @param finalTimeZoneProvider The provider of final time-zone. (NotNull)
      */
-    public TypicalBusinessTimeHandler(CurrentTimeProvider currentTimeProvider,
-            FinalTimeZoneProvider finalTimeZoneProvider) {
+    public TypicalBusinessTimeHandler(CurrentTimeProvider currentTimeProvider, FinalTimeZoneProvider finalTimeZoneProvider) {
         this.currentTimeProvider = currentTimeProvider;
         this.finalTimeZoneProvider = finalTimeZoneProvider;
     }
@@ -48,9 +49,7 @@ public class TypicalBusinessTimeHandler implements BusinessTimeHandler {
     // ===================================================================================
     //                                                                          Birth Date
     //                                                                          ==========
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public Integer calculateAge(Date birthDate) {
         throw new UnsupportedOperationException("not implemented yet");
     }
@@ -58,16 +57,12 @@ public class TypicalBusinessTimeHandler implements BusinessTimeHandler {
     // ===================================================================================
     //                                                                       Business Date
     //                                                                       =============
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public boolean isBusinessDate(Date targetDate) {
         throw new UnsupportedOperationException("not implemented yet");
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public Date getNextBusinessDate(Date baseDate, int addedDay) {
         throw new UnsupportedOperationException("not implemented yet");
     }
@@ -75,9 +70,7 @@ public class TypicalBusinessTimeHandler implements BusinessTimeHandler {
     // ===================================================================================
     //                                                                   Business TimeZone
     //                                                                   =================
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public TimeZone getBusinessTimeZone() {
         return finalTimeZoneProvider.finalTimeZone();
     }
@@ -87,5 +80,16 @@ public class TypicalBusinessTimeHandler implements BusinessTimeHandler {
     //                                                                       =============
     protected long currentTimeMillis() {
         return currentTimeProvider.currentTimeMillis();
+    }
+
+    // ===================================================================================
+    //                                                                        Xxx Override
+    //                                                                        ============
+    @Override
+    public String toString() {
+        final String classTitle = DfTypeUtil.toClassTitle(this);
+        final String currentTimeExp = DfTypeUtil.toClassTitle(currentTimeProvider);
+        final String finalZoneExp = DfTypeUtil.toClassTitle(finalTimeZoneProvider);
+        return classTitle + ":{" + currentTimeExp + ", " + finalZoneExp + "}";
     }
 }

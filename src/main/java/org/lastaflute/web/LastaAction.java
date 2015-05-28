@@ -29,11 +29,7 @@ import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionShow;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.api.ApiResultResource;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
-import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.path.ActionPathResolver;
-import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.response.StreamResponse;
@@ -44,9 +40,6 @@ import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.validation.ActionValidator;
-import org.lastaflute.web.validation.ValidationErrorHandler;
-import org.lastaflute.web.validation.ValidationMoreHandler;
-import org.lastaflute.web.validation.ValidationTrueMessenger;
 
 /**
  * @author jflute
@@ -104,58 +97,17 @@ public abstract class LastaAction {
     // ===================================================================================
     //                                                                          Validation
     //                                                                          ==========
-    // -----------------------------------------------------
-    //                                      Input Validation
-    //                                      ----------------
-    protected void validate(Object form, ValidationErrorHandler validationErrorLambda) {
-        newActionValidator().validate(form, validationErrorLambda);
-    }
-
-    protected void validateMore(Object form, ValidationMoreHandler doValidateLambda, ValidationErrorHandler validationErrorLambda) {
-        newActionValidator().validateMore(form, doValidateLambda, validationErrorLambda);
-    }
-
-    protected void validateTrue(boolean trueOrFalse, ValidationTrueMessenger messagesLambda, ValidationErrorHandler validationErrorLambda) {
-        newActionValidator().validateTrue(trueOrFalse, messagesLambda, validationErrorLambda);
-    }
-
-    protected ActionValidator newActionValidator() {
-        return new ActionValidator(requestManager, messageManager);
+    @SuppressWarnings("unchecked")
+    protected <MESSAGES extends ActionMessages> ActionValidator<MESSAGES> createValidator() { // overridden as type-safe
+        return new ActionValidator<MESSAGES>(requestManager, () -> (MESSAGES) createMessages());
     }
 
     /**
      * Create the action messages basically for session errors or messages. (for application)
      * @return The new-created action messages provided from Struts. (NotNull)
      */
-    protected ActionMessages createMessages() { // should be overridden as type-safe properties
+    protected ActionMessages createMessages() { // overridden as type-safe
         return new ActionMessages();
-    }
-
-    protected HtmlResponse lets404() { // e.g. used by error handling of validation for GET parameter
-        throw new ForcedRequest404NotFoundException("from lets404()");
-    }
-
-    // -----------------------------------------------------
-    //                                          API Dispatch
-    //                                          ------------
-    /**
-     * Dispatch validation error of API to common process by API manager.
-     * <pre>
-     * validate(form, () -> dispatchApiValidationError());
-     * </pre>
-     * @return The response of API for validation error. (NotNull)
-     */
-    protected ApiResponse dispatchApiValidationError() { // for API
-        final ApiResultResource resource = newApiValidationErrorResource(requestManager.errors().get(), requestManager);
-        return apiManager.prepareValidationError(resource, retrieveActionRuntimeMeta());
-    }
-
-    protected ApiResultResource newApiValidationErrorResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
-        return new ApiResultResource(errors, requestManager);
-    }
-
-    protected ActionRuntimeMeta retrieveActionRuntimeMeta() {
-        return requestManager.getAttribute(LastaWebKey.ACTION_RUNTIME_META_KEY, ActionRuntimeMeta.class).get(); // always exists
     }
 
     // ===================================================================================
@@ -167,8 +119,8 @@ public abstract class LastaAction {
      * You can get the same date (but different instances) in the same transaction.
      * @return The local date that has current date. (NotNull)
      */
-    protected LocalDate getCurrentDate() {
-        return timeManager.getCurrentDate();
+    protected LocalDate currentDate() {
+        return timeManager.currentDate();
     }
 
     /**
@@ -177,8 +129,8 @@ public abstract class LastaAction {
      * You can get the same date (but different instances) in the same transaction.
      * @return The local date-time that has current time. (NotNull)
      */
-    protected LocalDateTime getCurrentDateTime() {
-        return timeManager.getCurrentDateTime();
+    protected LocalDateTime currentDateTime() {
+        return timeManager.currentDateTime();
     }
 
     // ===================================================================================
@@ -195,10 +147,10 @@ public abstract class LastaAction {
      * *attention: possibility of multiply threads access
      * </pre>
      * <p>Also you can change it from caller thread's one by interface default methods.</p>
-     * @param noArgInLambda The callback for asynchronous process. (NotNull)
+     * @param noArgLambda The callback for asynchronous process. (NotNull)
      */
-    protected void async(ConcurrentAsyncCall noArgInLambda) {
-        asycnManager.async(noArgInLambda);
+    protected void async(ConcurrentAsyncCall noArgLambda) {
+        asycnManager.async(noArgLambda);
     }
 
     /**
@@ -223,7 +175,7 @@ public abstract class LastaAction {
      * return redirect(MemberEditAction.class);
      *
      * <span style="color: #3F7E5E">// e.g. /member/</span>
-     * return redirect(MemberIndexAction.class);
+     * return redirect(MemberAction.class);
      * </pre>
      * @param actionType The class type of action that it redirects to. (NotNull)
      * @return The HTML response for redirect. (NotNull)
@@ -243,7 +195,7 @@ public abstract class LastaAction {
      * return redirectById(MemberEditAction.class, 3, 197);
      *
      * <span style="color: #3F7E5E">// e.g. /member/3/</span>
-     * return redirectById(MemberIndexAction.class, 3);
+     * return redirectById(MemberAction.class, 3);
      * </pre>
      * @param actionType The class type of action that it redirects to. (NotNull)
      * @param ids The varying array for IDs. (NotNull)
@@ -266,7 +218,7 @@ public abstract class LastaAction {
      * return redirectByParam(MemberEditAction.class, "foo", 3, "bar", "qux");
      *
      * <span style="color: #3F7E5E">// e.g. /member/?foo=3</span>
-     * return redirectByParam(MemberIndexAction.class, "foo", 3);
+     * return redirectByParam(MemberAction.class, "foo", 3);
      * </pre>
      * @param actionType The class type of action that it redirects to. (NotNull)
      * @param params The varying array for the parameters on GET. (NotNull)
@@ -288,7 +240,7 @@ public abstract class LastaAction {
      * return redirectWith(MemberEditAction.class, <span style="color: #FD4747">params</span>("memberId", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/</span>
-     * return redirectWith(MemberIndexAction.class, <span style="color: #FD4747">moreUrl</span>("edit", memberId));
+     * return redirectWith(MemberAction.class, <span style="color: #FD4747">moreUrl</span>("edit", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/#profile</span>
      * return redirectWith(MemberEditAction.class, <span style="color: #FD4747">moreUrl</span>(memberId).<span style="color: #FD4747">hash</span>("profile"));
@@ -316,7 +268,7 @@ public abstract class LastaAction {
     protected HtmlResponse doRedirect(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsRediect(toActionUrl(actionType, true, chain));
+        return newHtmlResponseAsRediect(actionPathResolver.toActionUrl(actionType, true, chain));
     }
 
     protected HtmlResponse newHtmlResponseAsRediect(String redirectPath) {
@@ -333,7 +285,7 @@ public abstract class LastaAction {
      * return forward(MemberEditAction.class);
      *
      * <span style="color: #3F7E5E">// e.g. /member/</span>
-     * return forward(MemberIndexAction.class);
+     * return forward(MemberAction.class);
      * </pre>
      * @param actionType The class type of action that it forwards to. (NotNull)
      * @return The HTML response for forward. (NotNull)
@@ -353,7 +305,7 @@ public abstract class LastaAction {
      * return forwardById(MemberEditAction.class, 3, 197);
      *
      * <span style="color: #3F7E5E">// e.g. /member/3/</span>
-     * return forwardById(MemberIndexAction.class, 3);
+     * return forwardById(MemberAction.class, 3);
      * </pre>
      * @param actionType The class type of action that it forwards to. (NotNull)
      * @param ids The varying array for IDs. (NotNull)
@@ -376,7 +328,7 @@ public abstract class LastaAction {
      * return forwardByParam(MemberEditAction.class, "foo", 3, "bar", "qux");
      *
      * <span style="color: #3F7E5E">// e.g. /member/?foo=3</span>
-     * return forwardByParam(MemberIndexAction.class, "foo", 3);
+     * return forwardByParam(MemberAction.class, "foo", 3);
      * </pre>
      * @param actionType The class type of action that it forwards to. (NotNull)
      * @param params The varying array for the parameters on GET. (NotNull)
@@ -398,7 +350,7 @@ public abstract class LastaAction {
      * return forwardWith(MemberEditAction.class, <span style="color: #FD4747">params</span>("memberId", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/</span>
-     * return forwardWith(MemberIndexAction.class, <span style="color: #FD4747">moreUrl</span>("edit", memberId));
+     * return forwardWith(MemberAction.class, <span style="color: #FD4747">moreUrl</span>("edit", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/#profile</span>
      * return forwardWith(MemberEditAction.class, <span style="color: #FD4747">moreUrl</span>(memberId).<span style="color: #FD4747">hash</span>("profile"));
@@ -426,7 +378,7 @@ public abstract class LastaAction {
     protected HtmlResponse doForward(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsForward(toActionUrl(actionType, false, chain));
+        return newHtmlResponseAsForward(actionPathResolver.toActionUrl(actionType, false, chain));
     }
 
     protected HtmlResponse newHtmlResponseAsForward(String redirectPath) {
@@ -488,31 +440,6 @@ public abstract class LastaAction {
      */
     protected HtmlResponse movedPermanently(HtmlResponse response) {
         return responseManager.movedPermanently(response);
-    }
-
-    // -----------------------------------------------------
-    //                                          URL Handling
-    //                                          ------------
-    /**
-     * Convert to URL string to move the action. <br>
-     * This method is to build URL string by manually so normally you don't use directly from your action.
-     * @param actionType The class type of action that it redirects to. (NotNull)
-     * @param redirect Do you redirect to the action?
-     * @param chain The chain of URL to build additional info on URL. (NotNull)
-     * @return The URL string to move to the action. (NotNull)
-     */
-    protected String toActionUrl(Class<?> actionType, boolean redirect, UrlChain chain) {
-        return actionPathResolver.toActionUrl(actionType, redirect, chain);
-    }
-
-    /**
-     * Resolve the action URL from the class type of the action. <br>
-     * This method is to build URL string by manually so normally you don't use directly from your action.
-     * @param actionType The class type of action that it redirects to. (NotNull)
-     * @return The basic URL string to move to the action. (NotNull)
-     */
-    protected String resolveActionPath(Class<?> actionType) {
-        return actionPathResolver.resolveActionPath(actionType);
     }
 
     // ===================================================================================

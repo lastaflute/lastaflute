@@ -17,16 +17,19 @@ package org.lastaflute.core.direction;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.helper.jprop.ObjectiveProperties;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.di.Disposable;
 import org.lastaflute.di.DisposableUtil;
+import org.lastaflute.di.core.LastaDiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,14 +52,17 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     @Resource
     protected FwAssistantDirector assistantDirector;
 
-    /** The resource path of properties for domain application. */
-    protected String domainResource;
+    /** The resource path of properties for application. */
+    protected String appResource;
 
     /** The list of resource path for extends-properties. (NotNull, EmptyAllowed) */
     protected final List<String> extendsResourceList = new ArrayList<String>(4);
 
     /** The objective properties in DBFlute library. (NotNull: after initialization) */
     protected ObjectiveProperties prop;
+
+    /** The filter of configuration value. (NotNull: after initialization) */
+    protected PropertyFilter propertyFilter;
 
     /** Is hot deploy requested? (true only when local development) */
     protected boolean hotDeployRequested;
@@ -71,39 +77,61 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     @PostConstruct
     public synchronized void initialize() {
         direct();
-        final ObjectiveProperties makingProp = newObjectiveProperties();
-        makingProp.checkImplicitOverride();
-        if (!extendsResourceList.isEmpty()) {
-            makingProp.extendsProperties(extendsResourceList.toArray(new String[extendsResourceList.size()]));
-        }
+        final ObjectiveProperties makingProp = prepareObjectiveProperties();
         makingProp.load();
-
-        // prop always be complete object for HotDeploy
-        // get() might be called in initialize()
-        prop = makingProp;
+        prop = makingProp; // prop always be complete object for HotDeploy get() might be called in initialize()
         prepareHotDeploy();
         showBootLogging();
     }
 
     protected void direct() {
-        final OptionalAssistDirection direction = assistOptionalAssistDirection();
-        domainResource = direction.assistDomainConfigFile();
-        extendsResourceList.clear();
-        extendsResourceList.addAll(direction.assistExtendsConfigFileList());
+        final FwAssistDirection direction = assistAssistDirection();
+        appResource = filterEnvSwitching(direction.assistAppConfig());
+        extendsResourceList.clear(); // for reload
+        extendsResourceList.addAll(filterEnvSwitchingList(direction.assistExtendsConfigList()));
+        final PropertyFilter specified = direction.assistConfigPropertyFilter();
+        propertyFilter = specified != null ? specified : createDefaultPropertyFilter();
     }
 
-    protected ObjectiveProperties newObjectiveProperties() {
-        return new ObjectiveProperties(domainResource);
+    protected FwAssistDirection assistAssistDirection() {
+        return assistantDirector.assistAssistDirection();
     }
 
-    protected OptionalAssistDirection assistOptionalAssistDirection() {
-        return assistantDirector.assistOptionalAssistDirection();
+    protected String filterEnvSwitching(String path) {
+        return LastaDiProperties.getInstance().resolveLastaEnvPath(path);
+    }
+
+    protected List<String> filterEnvSwitchingList(List<String> pathList) {
+        return pathList.stream().map(path -> filterEnvSwitching(path)).collect(Collectors.toList());
+    }
+
+    protected PropertyFilter createDefaultPropertyFilter() {
+        return (propertyKey, propertyValue) -> propertyValue;
+    }
+
+    protected ObjectiveProperties prepareObjectiveProperties() {
+        final ObjectiveProperties makingProp = newObjectiveProperties(appResource, propertyFilter);
+        makingProp.checkImplicitOverride();
+        if (!extendsResourceList.isEmpty()) {
+            makingProp.extendsProperties(extendsResourceList.toArray(new String[extendsResourceList.size()]));
+        }
+        return makingProp;
+    }
+
+    protected ObjectiveProperties newObjectiveProperties(String resourcePath, PropertyFilter propertyFilter) {
+        return new ObjectiveProperties(resourcePath) {
+            @Override
+            public String get(String propertyKey) {
+                final String propertyValue = super.get(propertyKey);
+                return propertyFilter.filter(propertyKey, propertyValue);
+            }
+        };
     }
 
     protected void showBootLogging() {
         if (LOG.isInfoEnabled()) {
             LOG.info("[Objective Config]");
-            LOG.info(" " + domainResource + " extends " + extendsResourceList);
+            LOG.info(" " + appResource + " extends " + extendsResourceList);
             final boolean checkImplicitOverride = prop.isCheckImplicitOverride();
             final int count = prop.getJavaPropertiesResult().getPropertyList().size();
             LOG.info(" checkImplicitOverride=" + checkImplicitOverride + ", propertyCount=" + count);
@@ -114,49 +142,37 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     // ===================================================================================
     //                                                                        Get Property
     //                                                                        ============
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public String get(String propertyKey) {
         reloadIfNeeds();
         return prop.get(propertyKey);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public Integer getAsInteger(String propertyKey) {
         reloadIfNeeds();
         return prop.getAsInteger(propertyKey);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public Long getAsLong(String propertyKey) {
         reloadIfNeeds();
         return prop.getAsLong(propertyKey);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public BigDecimal getAsDecimal(String propertyKey) {
         reloadIfNeeds();
         return prop.getAsDecimal(propertyKey);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public Date getAsDate(String propertyKey) {
+    @Override
+    public LocalDate getAsDate(String propertyKey) {
         reloadIfNeeds();
-        return prop.getAsDate(propertyKey);
+        return DfTypeUtil.toLocalDate(prop.getAsDate(propertyKey));
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
     public boolean is(String propertyKey) {
         reloadIfNeeds();
         return prop.is(propertyKey);
@@ -190,7 +206,7 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     //                                                                            Accessor
     //                                                                            ========
     public void setDomainResource(String domainResource) {
-        this.domainResource = domainResource;
+        this.appResource = domainResource;
     }
 
     public void addExtendsResource(String extendsResource) {

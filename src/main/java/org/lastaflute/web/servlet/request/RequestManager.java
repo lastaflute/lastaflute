@@ -21,9 +21,11 @@ import java.util.TimeZone;
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.web.LastaWebKey;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.api.ApiManager;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.scoped.ScopedAttributeHolder;
 import org.lastaflute.web.servlet.request.scoped.ScopedMessageHandler;
@@ -181,10 +183,10 @@ public interface RequestManager extends ScopedAttributeHolder {
      * Resolve the locale for user of current request. <br>
      * Basically this is called before action execution in request processor. <br>
      * So use {@link #getUserLocale()} if you find locale.
-     * @param executeMeta The meta of action execution which you can get the calling method. (NotNull)
+     * @param runtimeMeta The runtime meta of action execution which you can get the calling method. (NotNull)
      * @return The selected locale for the current request. (NotNull)
      */
-    Locale resolveUserLocale(ActionRuntimeMeta executeMeta);
+    Locale resolveUserLocale(ActionRuntime runtimeMeta);
 
     /**
      * Save the locale for user of current request to cookie. <br>
@@ -215,10 +217,10 @@ public interface RequestManager extends ScopedAttributeHolder {
      * Resolve the time-zone for user of current request. <br>
      * Basically this is called before action execution in request processor. <br>
      * So use {@link #getUserTimeZone()} if you find time-zone.
-     * @param executeMeta The meta of action execution which you can get the calling method. (NotNull)
+     * @param runtimeMeta The runtime meta of action execution which you can get the calling method. (NotNull)
      * @return The object that specifies request time-zone. (NotNull)
      */
-    TimeZone resolveUserTimeZone(ActionRuntimeMeta executeMeta);
+    TimeZone resolveUserTimeZone(ActionRuntime runtimeMeta);
 
     /**
      * Save the time-zone for user of current request to cookie. <br>
@@ -279,4 +281,16 @@ public interface RequestManager extends ScopedAttributeHolder {
      * @return The injected manager of message. (NotNull)
      */
     MessageManager getMessageManager();
+
+    /**
+     * Get the manager of JSON.
+     * @return The injected manager of JSON. (NotNull)
+     */
+    JsonManager getJsonManager();
+
+    /**
+     * Get the manager of API.
+     * @return The injected manager of API. (NotNull)
+     */
+    ApiManager getApiManager();
 }

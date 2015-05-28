@@ -15,18 +15,15 @@
  */
 package org.lastaflute.core.json;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.List;
-import java.util.function.Supplier;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
-import net.arnx.jsonic.JSON;
-import net.arnx.jsonic.TypeReference;
-
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.OptionalCoreDirection;
+import org.lastaflute.core.direction.FwCoreDirection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +36,7 @@ public class SimpleJsonManager implements JsonManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleJsonManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleJsonManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -48,11 +45,14 @@ public class SimpleJsonManager implements JsonManager {
     @Resource
     protected FwAssistantDirector assistantDirector;
 
-    /** The real parser of JSON. (NotNull: after initialization) */
-    protected RealJsonParser realJsonParser;
-
     /** Is development here? */
     protected boolean developmentHere;
+
+    /** Is null property suppressed (not displayed) in output JSON string? */
+    protected boolean nullsSuppressed;
+
+    /** The real parser of JSON. (NotNull: after initialization) */
+    protected RealJsonParser realJsonParser;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -63,117 +63,144 @@ public class SimpleJsonManager implements JsonManager {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalCoreDirection direction = assistOptionalCoreDirection();
+        final FwCoreDirection direction = assistCoreDirection();
+        developmentHere = direction.isDevelopmentHere();
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
+        nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
         final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
-        developmentHere = direction.isDevelopmentHere();
         showBootLogging();
     }
 
-    protected OptionalCoreDirection assistOptionalCoreDirection() {
-        return assistantDirector.assistOptionalCoreDirection();
+    protected FwCoreDirection assistCoreDirection() {
+        return assistantDirector.assistCoreDirection();
     }
 
     protected RealJsonParser createDefaultJsonParser() {
-        return newJSonicRealJsonParser();
+        return createGsonJsonParser();
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[JSON Manager]");
-            LOG.info(" realJsonParser: " + DfTypeUtil.toClassTitle(realJsonParser));
+        if (logger.isInfoEnabled()) {
+            logger.info("[JSON Manager]");
+            logger.info(" realJsonParser: " + DfTypeUtil.toClassTitle(realJsonParser));
         }
+    }
+
+    // ===================================================================================
+    //                                                                               GSON
+    //                                                                              ======
+    protected RealJsonParser createGsonJsonParser() {
+        return newGsonJsonParser(developmentHere, nullsSuppressed);
+    }
+
+    protected GsonJsonParser newGsonJsonParser(boolean developmentHere, boolean nullsSuppressed) {
+        return new GsonJsonParser(builder -> {
+            if (developmentHere) {
+                builder.setPrettyPrinting();
+            }
+            if (!nullsSuppressed) {
+                builder.serializeNulls();
+            }
+        });
     }
 
     // ===================================================================================
     //                                                                              JSONIC
     //                                                                              ======
-    protected static final Class<?> JSONIC_DUMMY_TYPE = new Object() {
-    }.getClass();
+    // memorable code for JSONIC
+    //protected static final Class<?> JSONIC_DUMMY_TYPE = new Object() {
+    //}.getClass();
+    //
+    //protected RealJsonParser newJSonicRealJsonParser() {
+    //    return new RealJsonParser() {
+    //        @Override
+    //        public String encode(Object bean) {
+    //            return JSON.encode(bean, developmentHere);
+    //        }
+    //
+    //        @Override
+    //        public <BEAN> BEAN decode(String json, Class<BEAN> beanType) {
+    //            return JSON.decode(json, beanType);
+    //        }
+    //
+    //        @Override
+    //        public <BEAN> List<BEAN> decodeList(String json, Class<BEAN> beanType) {
+    //            return JSON.decode(json, new TypeReference<List<BEAN>>() {
+    //                // nothing is overridden
+    //            });
+    //        }
+    //
+    //        @SuppressWarnings("unchecked")
+    //        @Override
+    //        public <BEAN> BEAN mappingJsonTo(String json, Supplier<BEAN> beanSupplier) {
+    //            BEAN bean = beanSupplier.get();
+    //            return (BEAN) new JSON() {
+    //                @Override
+    //                protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
+    //                    if (context.getDepth() == 0) {
+    //                        return (T) bean; // first bean instance is provided, basically for action form
+    //                    }
+    //                    return super.create(context, beanType);
+    //                }
+    //            }.parse(json, bean.getClass());
+    //        }
+    //
+    //        @Override
+    //        public <BEAN> List<BEAN> mappingJsonToList(String json, Supplier<BEAN> beanSupplier) {
+    //            return new JSON() {
+    //                private Boolean asList;
+    //
+    //                @SuppressWarnings("unchecked")
+    //                @Override
+    //                protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
+    //                    if (asList != null && context.getDepth() == 0 && List.class.isAssignableFrom(beanType)) {
+    //                        asList = true;
+    //                    }
+    //                    if (asList != null && asList && context.getDepth() == 1) {
+    //                        return (T) beanSupplier.get(); // element bean instance is provided, basically for action form
+    //                    }
+    //                    return super.create(context, beanType);
+    //                }
+    //            }.parse(json, new TypeReference<List<BEAN>>() {
+    //                // nothing is overridden
+    //            });
+    //        }
+    //    };
+    //}
 
-    protected RealJsonParser newJSonicRealJsonParser() {
-        return new RealJsonParser() {
-            @Override
-            public String encode(Object bean) {
-                return JSON.encode(bean, developmentHere);
-            }
+    // ===================================================================================
+    //                                                                        from/to JSON
+    //                                                                        ============
+    @Override
+    public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
+        assertArgumentNotNull("json", json);
+        assertArgumentNotNull("beanType", beanType);
+        return realJsonParser.fromJson(json, beanType);
+    }
 
-            @Override
-            public <BEAN> BEAN decode(String json, Class<BEAN> beanType) {
-                return JSON.decode(json, beanType);
-            }
+    @Override
+    public <ELEMENT> List<ELEMENT> fromJsonList(String json, ParameterizedType elementType) {
+        assertArgumentNotNull("json", json);
+        assertArgumentNotNull("elementType", elementType);
+        return realJsonParser.fromJsonList(json, elementType);
+    }
 
-            @Override
-            public <BEAN> List<BEAN> decodeList(String json, Class<BEAN> beanType) {
-                return JSON.decode(json, new TypeReference<List<BEAN>>() {
-                    // nothing is overridden
-                });
-            }
-
-            @SuppressWarnings("unchecked")
-            @Override
-            public <BEAN> BEAN mappingJsonTo(String json, Supplier<BEAN> beanSupplier) {
-                BEAN bean = beanSupplier.get();
-                return (BEAN) new JSON() {
-                    @Override
-                    protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
-                        if (context.getDepth() == 0) {
-                            return (T) bean; // first bean instance is provided, basically for action form
-                        }
-                        return super.create(context, beanType);
-                    }
-                }.parse(json, bean.getClass());
-            }
-
-            @Override
-            public <BEAN> List<BEAN> mappingJsonToList(String json, Supplier<BEAN> beanSupplier) {
-                return new JSON() {
-                    private Boolean asList;
-
-                    @SuppressWarnings("unchecked")
-                    @Override
-                    protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
-                        if (asList != null && context.getDepth() == 0 && List.class.isAssignableFrom(beanType)) {
-                            asList = true;
-                        }
-                        if (asList != null && asList && context.getDepth() == 1) {
-                            return (T) beanSupplier.get(); // element bean instance is provided, basically for action form
-                        }
-                        return super.create(context, beanType);
-                    }
-                }.parse(json, new TypeReference<List<BEAN>>() {
-                    // nothing is overridden
-                });
-            }
-        };
+    @Override
+    public String toJson(Object bean) {
+        assertArgumentNotNull("bean", bean);
+        return realJsonParser.toJson(bean);
     }
 
     // ===================================================================================
-    //                                                                       Encode/Decode
+    //                                                                       Assist Helper
     //                                                                       =============
-    @Override
-    public String encode(Object bean) {
-        return realJsonParser.encode(bean);
-    }
-
-    @Override
-    public <BEAN> BEAN decode(String json, Class<BEAN> beanType) {
-        return realJsonParser.decode(json, beanType);
-    }
-
-    @Override
-    public <BEAN> List<BEAN> decodeList(String json, Class<BEAN> beanType) {
-        return realJsonParser.decodeList(json, beanType);
-    }
-
-    @Override
-    public <BEAN> BEAN mappingJsonTo(String json, Supplier<BEAN> beanSupplier) {
-        return realJsonParser.mappingJsonTo(json, beanSupplier);
-    }
-
-    @Override
-    public <BEAN> List<BEAN> mappingJsonToList(String json, Supplier<BEAN> beanSupplier) {
-        return realJsonParser.mappingJsonToList(json, beanSupplier);
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 }

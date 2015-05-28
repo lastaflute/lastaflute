@@ -78,14 +78,16 @@ public class ThreadCacheContext {
     //                                                                      ==============
     /**
      * Get the value of the object by the key.
+     * @param <OBJ> The type of cached object.
      * @param key The key of the object. (NotNull)
      * @return The value of the object. (NullAllowed)
      */
-    public static Object getObject(String key) {
+    @SuppressWarnings("unchecked")
+    public static <OBJ> OBJ getObject(String key) {
         if (!exists()) {
             throwThreadCacheNotInitializedException(key);
         }
-        return threadLocal.get().get(key);
+        return (OBJ) threadLocal.get().get(key);
     }
 
     /**

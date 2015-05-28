@@ -17,6 +17,7 @@ package org.lastaflute.web.login;
 
 import java.lang.reflect.Method;
 
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.message.ActionMessages;
 
 /**
@@ -27,20 +28,13 @@ public class LoginHandlingResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Class<?> actionClass;
-    protected final Method actionMethod;
-    protected final RuntimeException failureCause;
-    protected final ActionMessages validationErrors;
+    protected final ActionRuntime runtimeMeta;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LoginHandlingResource(Class<?> actionClass, Method actionMethod, RuntimeException failureCause,
-            ActionMessages validationErrors) {
-        this.actionClass = actionClass;
-        this.actionMethod = actionMethod;
-        this.failureCause = failureCause;
-        this.validationErrors = validationErrors;
+    public LoginHandlingResource(ActionRuntime runtimeMeta) {
+        this.runtimeMeta = runtimeMeta;
     }
 
     // ===================================================================================
@@ -51,7 +45,7 @@ public class LoginHandlingResource {
      * @return The determination, true or false.
      */
     public boolean hasFailureCause() {
-        return failureCause != null;
+        return runtimeMeta.hasFailureCause();
     }
 
     /**
@@ -59,26 +53,34 @@ public class LoginHandlingResource {
      * @return The determination, true or false.
      */
     public boolean hasValidationError() {
-        return validationErrors != null && !validationErrors.isEmpty();
+        return runtimeMeta.hasValidationError();
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
     /**
-     * Get the type of requested action.
-     * @return The type object of action. (NotNull)
+     * Get the runtime meta of action execute.
+     * @return The runtime meta of action execute. (NotNull)
      */
-    public Class<?> getActionClass() {
-        return actionClass;
+    public ActionRuntime getRuntimeMeta() {
+        return runtimeMeta;
     }
 
     /**
-     * Get the method of requested action.
+     * Get the type of requested action.
+     * @return The type object of action, not enhanced. (NotNull)
+     */
+    public Class<?> getActionClass() {
+        return runtimeMeta.getExecuteMethod().getDeclaringClass();
+    }
+
+    /**
+     * Get the method of action execute.
      * @return The method object of action. (NotNull)
      */
-    public Method getActionMethod() {
-        return actionMethod;
+    public Method getExecuteMethod() {
+        return runtimeMeta.getExecuteMethod();
     }
 
     /**
@@ -86,7 +88,7 @@ public class LoginHandlingResource {
      * @return The exception as failure cause. (NullAllowed: when before execute or on success)
      */
     public RuntimeException getFailureCause() {
-        return failureCause;
+        return runtimeMeta.getFailureCause();
     }
 
     /**
@@ -94,6 +96,6 @@ public class LoginHandlingResource {
      * @return The messages as validation error. (NullAllowed: when no validation error)
      */
     public ActionMessages getValidationErrors() {
-        return validationErrors;
+        return runtimeMeta.getValidationErrors();
     }
 }

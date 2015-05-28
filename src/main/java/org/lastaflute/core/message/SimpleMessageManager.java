@@ -28,6 +28,7 @@ import javax.annotation.Resource;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.Srl;
 import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
@@ -65,11 +66,14 @@ public class SimpleMessageManager implements MessageManager {
         return doFindMessage(locale, key).get();
     }
 
-    protected void throwMessageKeyNotFoundException(Locale locale, String key) {
+    protected void throwMessageKeyNotFoundException(Locale locale, String key, String filtered) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the message by the key.");
         br.addItem("Key");
         br.addElement(key);
+        if (!key.equals(filtered)) {
+            br.addElement("(filtered: " + filtered + ")");
+        }
         br.addItem("Locale");
         br.addElement(locale);
         br.addItem("MessageResources");
@@ -118,10 +122,15 @@ public class SimpleMessageManager implements MessageManager {
 
     protected OptionalThing<String> doFindMessage(Locale locale, String key) {
         final MessageResourcesGateway gateway = getMessageResourceGateway();
-        final String message = gateway.getMessage(locale, key);
+        final String filtered = filterMessageKey(key);
+        final String message = gateway.getMessage(locale, filtered);
         return OptionalThing.ofNullable(message, () -> {
-            throwMessageKeyNotFoundException(locale, key);
+            throwMessageKeyNotFoundException(locale, key, filtered);
         });
+    }
+
+    protected String filterMessageKey(String key) {
+        return Srl.isQuotedAnything(key, "{", "}") ? Srl.unquoteAnything(key, "{", "}") : key;
     }
 
     @Override
@@ -151,11 +160,9 @@ public class SimpleMessageManager implements MessageManager {
         if (errors.isEmpty()) {
             return messageList;
         }
-        final Iterator<ActionMessage> ite = errors.get();
+        final Iterator<ActionMessage> ite = errors.accessByFlatIterator();
         while (ite.hasNext()) {
-            final ActionMessage actionMessage = (ActionMessage) ite.next();
-            final String messageText = resolveMessageText(locale, actionMessage);
-            messageList.add(messageText);
+            messageList.add(resolveMessageText(locale, ite.next()));
         }
         return messageList;
     }
@@ -168,34 +175,23 @@ public class SimpleMessageManager implements MessageManager {
         if (errors.isEmpty()) {
             return propertyMessageMap;
         }
-        final Iterator<String> properyIte = errors.properties();
-        while (properyIte.hasNext()) {
-            final String property = properyIte.next();
+        final List<String> propList = errors.toPropertyList();
+        for (String property : propList) {
             List<String> messageList = propertyMessageMap.get(property);
             if (messageList == null) {
                 messageList = new ArrayList<String>();
+                propertyMessageMap.put(property, messageList);
             }
-            final Iterator<ActionMessage> actionMessageIte = errors.get(property);
-            while (actionMessageIte.hasNext()) {
-                final ActionMessage actionMessage = actionMessageIte.next();
-                final String messageText = resolveMessageText(locale, actionMessage);
-                messageList.add(messageText);
+            for (Iterator<ActionMessage> ite = errors.accessByIteratorOf(property); ite.hasNext();) {
+                messageList.add(resolveMessageText(locale, ite.next()));
             }
-            propertyMessageMap.put(property, messageList);
         }
         return propertyMessageMap;
     }
 
-    protected String resolveMessageText(Locale locale, ActionMessage actionMessage) {
-        final String key = actionMessage.getKey();
-        final Object[] values = actionMessage.getValues();
-        final String messageText;
-        if (actionMessage.isResource()) {
-            messageText = getMessage(locale, key, values);
-        } else {
-            messageText = key;
-        }
-        return messageText;
+    protected String resolveMessageText(Locale locale, ActionMessage message) {
+        final String key = message.getKey();
+        return message.isResource() ? getMessage(locale, key, message.getValues()) : key;
     }
 
     // ===================================================================================

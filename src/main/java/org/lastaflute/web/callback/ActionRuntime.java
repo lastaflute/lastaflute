@@ -20,24 +20,37 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
+import org.lastaflute.web.response.JsonResponse;
+import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.process.RequestUrlParam;
 import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**
  * @author jflute
  */
-public class ActionRuntimeMeta {
+public class ActionRuntime {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionExecute execute;
+    // -----------------------------------------------------
+    //                                      Request Resource
+    //                                      ----------------
+    protected final ActionExecute execute; // fixed meta data
+    protected final RequestUrlParam urlParam; // of current request
+
+    // -----------------------------------------------------
+    //                                         Runtime State
+    //                                         -------------
+    protected OptionalThing<VirtualActionForm> form;
     protected ActionResponse actionResponse;
     protected RuntimeException failureCause;
     protected ActionMessages validationErrors;
@@ -46,13 +59,22 @@ public class ActionRuntimeMeta {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionRuntimeMeta(ActionExecute execute) {
+    public ActionRuntime(ActionExecute execute, RequestUrlParam urlParam) {
         this.execute = execute;
+        this.urlParam = urlParam;
     }
 
     // ===================================================================================
     //                                                                      Basic Resource
     //                                                                      ==============
+    /**
+     * Get the type of requested action.
+     * @return The type object of action, not enhanced. (NotNull)
+     */
+    public Class<?> getActionType() {
+        return getExecuteMethod().getDeclaringClass();
+    }
+
     /**
      * Get the method object of action execute.
      * @return The method object from execute configuration. (NotNull)
@@ -74,8 +96,11 @@ public class ActionRuntimeMeta {
     }
 
     // ===================================================================================
-    //                                                                      Execute Status
-    //                                                                      ==============
+    //                                                                       Action Status
+    //                                                                       =============
+    // -----------------------------------------------------
+    //                                              Response
+    //                                              --------
     /**
      * Is the result of the action execute, forward to HTML template?
      * @return The determination, true or false.
@@ -85,11 +110,7 @@ public class ActionRuntimeMeta {
             return false;
         }
         final HtmlResponse htmlResponse = ((HtmlResponse) actionResponse);
-        if (!htmlResponse.isRedirectTo()) {
-            return isHtmlTemplateResponse(htmlResponse);
-        } else {
-            return false;
-        }
+        return !htmlResponse.isRedirectTo() && isHtmlTemplateResponse(htmlResponse);
     }
 
     protected boolean isHtmlTemplateResponse(final HtmlResponse htmlResponse) {
@@ -113,6 +134,25 @@ public class ActionRuntimeMeta {
         return actionResponse != null && actionResponse instanceof HtmlResponse;
     }
 
+    /**
+     * Is the result of the action execute, JSON?
+     * @return The determination, true or false.
+     */
+    public boolean isReturnJson() {
+        return isJsonResponse();
+    }
+
+    /**
+     * Is the existing response JSON?
+     * @return The determination, true or false.
+     */
+    protected boolean isJsonResponse() {
+        return actionResponse != null && actionResponse instanceof JsonResponse;
+    }
+
+    // -----------------------------------------------------
+    //                                         Failure/Error
+    //                                         -------------
     /**
      * Does it have exception as failure cause?
      * @return The determination, true or false.
@@ -143,25 +183,72 @@ public class ActionRuntimeMeta {
         return LaParamWrapperUtil.convert(value);
     }
 
+    public void clearDisplayData() { // called by system exception dispatch for API, just in case leak
+        displayDataMap.clear();
+        displayDataMap = null;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
     @Override
     public String toString() {
-        return "{" + buildToStringContents() + "}";
-    }
-
-    protected String buildToStringContents() {
-        final Method method = getExecuteMethod();
-        final String invoke = method.getDeclaringClass().getSimpleName() + "." + method.getName();
-        final String path = actionResponse != null ? actionResponse.toString() : null;
-        final String failure = failureCause != null ? DfTypeUtil.toClassTitle(failureCause) : null;
-        return invoke + ":" + path + ":" + failure;
+        final StringBuilder sb = new StringBuilder();
+        sb.append("runtime:{").append(execute.toSimpleMethodExp());
+        sb.append(", urlParam=").append(urlParam);
+        if (actionResponse != null) {
+            sb.append(", response=").append(actionResponse);
+        }
+        if (failureCause != null) {
+            sb.append(", failure=").append(DfTypeUtil.toClassTitle(failureCause));
+        }
+        if (validationErrors != null) {
+            sb.append(", errors=").append(validationErrors.toPropertyList());
+        }
+        if (displayDataMap != null) {
+            sb.append(", display=").append(displayDataMap.keySet());
+        }
+        sb.append("}");
+        return sb.toString();
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                      Request Resource
+    //                                      ----------------
+    /**
+     * Get the definition of the requested action execute.
+     * @return The object that has definition info of action execute. (NotNull)
+     */
+    public ActionExecute getActionExecute() {
+        return execute;
+    }
+
+    /**
+     * Get the URL parameters of the request for the action.
+     * @return The object that has e.g. URL parameter values. (NotNull)
+     */
+    public RequestUrlParam getRequestUrlParam() {
+        return urlParam;
+    }
+
+    // -----------------------------------------------------
+    //                                         Runtime State
+    //                                         -------------
+    /**
+     * Get the action form mapped from request parameter.
+     * @return The optional action form. (NotNull, EmptyAllowed: when no form or before form creation)
+     */
+    public OptionalThing<VirtualActionForm> getActionForm() {
+        return form != null ? form : OptionalThing.empty();
+    }
+
+    public void setActionForm(OptionalThing<VirtualActionForm> form) {
+        this.form = form;
+    }
+
     /**
      * Get the action response returned by action execute.
      * @return The action response returned by action execute. (NullAllowed: not null only when success)
@@ -198,7 +285,11 @@ public class ActionRuntimeMeta {
         this.validationErrors = validationErrors;
     }
 
+    /**
+     * Get the map of display data registered by e.g. HtmlResponse, ActionCallback.
+     * @return The read-only map of display data. (NotNull)
+     */
     public Map<String, Object> getDisplayDataMap() {
-        return displayDataMap != null ? displayDataMap : Collections.emptyMap();
+        return displayDataMap != null ? Collections.unmodifiableMap(displayDataMap) : Collections.emptyMap();
     }
 }

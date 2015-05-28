@@ -22,11 +22,11 @@ public class ForcedIllegalTransitionApplicationException extends MessageKeyAppli
 
     private static final long serialVersionUID = 1L;
 
-    public ForcedIllegalTransitionApplicationException(String transitionKey) {
-        super(transitionKey);
+    public ForcedIllegalTransitionApplicationException(String msg, String transitionKey) {
+        super(msg, transitionKey);
     }
 
-    public ForcedIllegalTransitionApplicationException(String transitionKey, Throwable cause) {
-        super(transitionKey, cause);
+    public ForcedIllegalTransitionApplicationException(String msg, String transitionKey, Throwable cause) {
+        super(msg, transitionKey, cause);
     }
 }

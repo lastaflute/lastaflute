@@ -27,7 +27,7 @@ import javax.annotation.Resource;
 import org.dbflute.helper.HandyDate;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.OptionalCoreDirection;
+import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.core.magic.TransactionTimeContext;
 import org.slf4j.Logger;
@@ -74,7 +74,7 @@ public class SimpleTimeManager implements TimeManager {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalCoreDirection direction = assistOptionalCoreDirection();
+        final FwCoreDirection direction = assistCoreDirection();
         final TimeResourceProvider provider = direction.assistTimeResourceProvider();
         businessTimeHandler = provider.provideBusinessTimeHandler(this);
         if (businessTimeHandler == null) {
@@ -91,16 +91,16 @@ public class SimpleTimeManager implements TimeManager {
         showBootLogging();
     }
 
-    protected OptionalCoreDirection assistOptionalCoreDirection() {
-        return assistantDirector.assistOptionalCoreDirection();
+    protected FwCoreDirection assistCoreDirection() {
+        return assistantDirector.assistCoreDirection();
     }
 
     protected void showBootLogging() {
         if (LOG.isInfoEnabled()) {
             LOG.info("[Time Manager]");
-            LOG.info(" businessTimeHandler: " + DfTypeUtil.toClassTitle(businessTimeHandler));
+            LOG.info(" businessTimeHandler: " + businessTimeHandler);
             if (developmentProvider != null) { // in development
-                LOG.info(" developmentProvider: " + DfTypeUtil.toClassTitle(developmentProvider));
+                LOG.info(" developmentProvider: " + developmentProvider);
             } else {
                 LOG.info(" currentIgnoreTransaction: " + currentIgnoreTransaction);
                 LOG.info(" adjustTimeMillis: " + adjustTimeMillis);
@@ -115,36 +115,36 @@ public class SimpleTimeManager implements TimeManager {
     // don't use business-time handler in current-time process
     // the handler uses these processes...
     @Override
-    public LocalDate getCurrentDate() {
-        return DfTypeUtil.toLocalDate(getCurrentUtilDate(), getBusinessTimeZone());
+    public LocalDate currentDate() {
+        return DfTypeUtil.toLocalDate(currentUtilDate(), getBusinessTimeZone());
     }
 
     @Override
-    public LocalDateTime getCurrentDateTime() {
-        return DfTypeUtil.toLocalDateTime(getCurrentUtilDate(), getBusinessTimeZone());
+    public LocalDateTime currentDateTime() {
+        return DfTypeUtil.toLocalDateTime(currentUtilDate(), getBusinessTimeZone());
     }
 
     @Override
-    public HandyDate getCurrentHandyDate() {
-        return new HandyDate(getCurrentUtilDate());
+    public HandyDate currentHandyDate() {
+        return new HandyDate(currentUtilDate());
     }
 
     @Override
-    public long getCurrentMillis() {
+    public long currentMillis() {
         return currentTimeMillis();
     }
 
     @Override
-    public Date getCurrentUtilDate() {
+    public Date currentUtilDate() {
         if (TransactionTimeContext.exists()) {
             final Date transactionTime = TransactionTimeContext.getTransactionTime();
             return new Date(transactionTime.getTime());
         }
-        return getFlashDate();
+        return flashDate();
     }
 
     @Override
-    public Timestamp getCurrentTimestamp() {
+    public Timestamp currentTimestamp() {
         if (TransactionTimeContext.exists()) {
             final Date transactionTime = TransactionTimeContext.getTransactionTime();
             return new Timestamp(transactionTime.getTime());
@@ -153,7 +153,7 @@ public class SimpleTimeManager implements TimeManager {
     }
 
     @Override
-    public Date getFlashDate() {
+    public Date flashDate() {
         return new Date(currentTimeMillis());
     }
 

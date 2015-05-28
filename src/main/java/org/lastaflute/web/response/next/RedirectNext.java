@@ -21,12 +21,21 @@ package org.lastaflute.web.response.next;
 public class RedirectNext implements RoutingNext {
 
     protected final String redirectPath;
+    protected final RedirectPathStyle redirectPathDest;
 
-    public RedirectNext(String redirectPath) {
+    public RedirectNext(String redirectPath, RedirectPathStyle redirectPathStyle) {
         if (redirectPath == null) {
             throw new IllegalArgumentException("The argument 'redirectPath' should not be null.");
         }
+        if (redirectPathStyle == null) {
+            throw new IllegalArgumentException("The argument 'redirectPathStyle' should not be null: " + redirectPath);
+        }
         this.redirectPath = redirectPath;
+        this.redirectPathDest = redirectPathStyle;
+    }
+
+    public enum RedirectPathStyle { // to avoid boolean argument
+        INNER, AS_IS
     }
 
     @Override
@@ -37,6 +46,11 @@ public class RedirectNext implements RoutingNext {
     @Override
     public String getRoutingPath() {
         return redirectPath;
+    }
+
+    @Override
+    public boolean isAsIs() {
+        return RedirectPathStyle.AS_IS.equals(redirectPathDest);
     }
 
     public String getRedirectPath() {

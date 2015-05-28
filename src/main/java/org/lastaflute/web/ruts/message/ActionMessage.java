@@ -30,6 +30,7 @@ public class ActionMessage implements Serializable {
     private static final long serialVersionUID = 1L;
     protected static final String BEGIN_MARK = "{";
     protected static final String END_MARK = "}";
+    protected static final Object[] EMPTY_VALUES = new Object[0];
 
     // ===================================================================================
     //                                                                           Attribute
@@ -41,33 +42,16 @@ public class ActionMessage implements Serializable {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionMessage(String key) {
-        this(key, (Object[]) null);
-    }
-
-    public ActionMessage(String key, Object value0) {
-        this(key, new Object[] { value0 });
-    }
-
-    public ActionMessage(String key, Object value0, Object value1) {
-        this(key, new Object[] { value0, value1 });
-    }
-
-    public ActionMessage(String key, Object value0, Object value1, Object value2) {
-        this(key, new Object[] { value0, value1, value2 });
-    }
-
-    public ActionMessage(String key, Object value0, Object value1, Object value2, Object value3) {
-        this(key, new Object[] { value0, value1, value2, value3 });
-    }
-
-    public ActionMessage(String key, Object[] values) { // central kitchen
+    public ActionMessage(String key, Object... values) {
+        assertArgumentNotNull("key", key);
+        assertArgumentNotNull("values", values);
         this.key = filterKey(key);
         this.values = values;
         this.resource = true;
     }
 
     public ActionMessage(String key, boolean resource) { // basically for direct message
+        assertArgumentNotNull("key", key);
         this.key = resource ? filterKey(key) : key;
         this.values = null;
         this.resource = resource;
@@ -80,6 +64,18 @@ public class ActionMessage implements Serializable {
             return Srl.unquoteAnything(key, beginMark, endMark); // remove Hibernate Validator's braces
         } else {
             return key;
+        }
+    }
+
+    // ===================================================================================
+    //                                                                       Assist Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
         }
     }
 

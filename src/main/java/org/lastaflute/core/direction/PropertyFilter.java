@@ -13,15 +13,18 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation;
-
-import org.lastaflute.web.ruts.message.ActionMessages;
+package org.lastaflute.core.direction;
 
 /**
  * @author jflute
+ * @since 0.6.0 (2015/05/17 Sunday)
  */
-@FunctionalInterface
-public interface ValidationTrueMessenger {
+public interface PropertyFilter {
 
-    ActionMessages callback();
+    /**
+     * @param propertyKey The key of property. (NotNull)
+     * @param propertyValue The value of property. (NullAllowed: if null, returns null)
+     * @return The filtered value or plain. (NullAllowed: when the original value is null)
+     */
+    String filter(String propertyKey, String propertyValue);
 }

@@ -15,14 +15,16 @@
  */
 package org.lastaflute.web.callback;
 
+import java.util.function.Supplier;
+
 import org.dbflute.exception.EntityAlreadyDeletedException;
 import org.dbflute.exception.EntityAlreadyExistsException;
 import org.dbflute.exception.EntityAlreadyUpdatedException;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
+import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.api.ApiResultResource;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
 import org.lastaflute.web.exception.MessageKeyApplicationException;
 import org.lastaflute.web.login.LoginManager;
@@ -38,12 +40,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jflute
  */
-public class TypicalGodHandExceptionMonologue {
+public class TypicalGodHandMonologue {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandExceptionMonologue.class);
+    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandMonologue.class);
     protected static final String LF = "\n";
 
     // ===================================================================================
@@ -60,7 +62,7 @@ public class TypicalGodHandExceptionMonologue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandExceptionMonologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier typicalKeySupplier,
+    public TypicalGodHandMonologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier typicalKeySupplier,
             ActionApplicationExceptionHandler applicationExceptionHandler) {
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
@@ -74,7 +76,7 @@ public class TypicalGodHandExceptionMonologue {
     // ===================================================================================
     //                                                                           Monologue
     //                                                                           =========
-    public ActionResponse performMonologue(ActionRuntimeMeta runtimeMeta) {
+    public ActionResponse performMonologue(ActionRuntime runtimeMeta) {
         final RuntimeException cause = runtimeMeta.getFailureCause();
         RuntimeException translated = null;
         try {
@@ -109,7 +111,7 @@ public class TypicalGodHandExceptionMonologue {
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The forward path. (NullAllowed: if not null, it goes to the path)
      */
-    protected ActionResponse handleApplicationException(ActionRuntimeMeta executeMeta, RuntimeException cause) { // called by callback
+    protected ActionResponse handleApplicationException(ActionRuntime executeMeta, RuntimeException cause) { // called by callback
         final ActionResponse forwardTo = doHandleApplicationException(executeMeta, cause);
         showApplicationExceptionHandlingIfNeeds(cause, forwardTo);
         if (needsApplicationExceptionApiDispatch(executeMeta, forwardTo)) {
@@ -121,7 +123,7 @@ public class TypicalGodHandExceptionMonologue {
     // -----------------------------------------------------
     //                                     Actually Handling
     //                                     -----------------
-    protected ActionResponse doHandleApplicationException(ActionRuntimeMeta executeMeta, RuntimeException cause) {
+    protected ActionResponse doHandleApplicationException(ActionRuntime executeMeta, RuntimeException cause) {
         ActionResponse forwardTo = ActionResponse.empty();
         if (cause instanceof LaApplicationException) {
             final LaApplicationException appEx = (LaApplicationException) cause;
@@ -182,8 +184,8 @@ public class TypicalGodHandExceptionMonologue {
         if (response.isEmpty()) {
             return;
         }
-        if (logger.isDebugEnabled()) {
-            // not show forwardTo because of forwarding log later
+        showAppEx(cause, () -> {
+            /* not show forwardTo because of forwarding log later */
             final StringBuilder sb = new StringBuilder();
             sb.append("...Handling application exception:");
             sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
@@ -194,7 +196,15 @@ public class TypicalGodHandExceptionMonologue {
             });
             buildApplicationExceptionStackTrace(cause, sb, 0);
             sb.append("\n_/_/_/_/_/_/_/_/_/_/");
-            logger.debug(sb.toString());
+            return sb.toString();
+        });
+    }
+
+    protected void showAppEx(RuntimeException cause, Supplier<String> msgSupplier) {
+        // basically trace in production just in case
+        // if it's noisy and unneeded, override this method
+        if (logger.isInfoEnabled()) {
+            logger.info(msgSupplier.get());
         }
     }
 
@@ -230,17 +240,17 @@ public class TypicalGodHandExceptionMonologue {
         }
     }
 
-    protected boolean needsApplicationExceptionApiDispatch(ActionRuntimeMeta executeMeta, ActionResponse forwardTo) {
+    protected boolean needsApplicationExceptionApiDispatch(ActionRuntime executeMeta, ActionResponse forwardTo) {
         return forwardTo.isPresent() && executeMeta.isApiAction();
     }
 
-    protected ActionResponse dispatchApiApplicationException(ActionRuntimeMeta executeMeta, RuntimeException cause) {
-        final ApiResultResource resource = createApiApplicationExceptionResource();
-        return apiManager.prepareApplicationException(resource, executeMeta, cause);
+    protected ActionResponse dispatchApiApplicationException(ActionRuntime executeMeta, RuntimeException cause) {
+        final ApiFailureResource resource = createApiApplicationExceptionResource();
+        return apiManager.handleApplicationException(resource, executeMeta, cause);
     }
 
-    protected ApiResultResource createApiApplicationExceptionResource() {
-        return new ApiResultResource(sessionManager.errors().get(), requestManager);
+    protected ApiFailureResource createApiApplicationExceptionResource() {
+        return new ApiFailureResource(sessionManager.errors().get(), requestManager);
     }
 
     // -----------------------------------------------------

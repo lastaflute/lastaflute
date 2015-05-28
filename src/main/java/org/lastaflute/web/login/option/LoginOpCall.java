@@ -15,7 +15,6 @@
  */
 package org.lastaflute.web.login.option;
 
-
 /**
  * @author jflute
  */

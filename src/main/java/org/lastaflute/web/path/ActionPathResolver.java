@@ -30,7 +30,7 @@ import org.lastaflute.di.core.LaContainer;
 import org.lastaflute.di.naming.NamingConvention;
 import org.lastaflute.di.util.LdiStringUtil;
 import org.lastaflute.web.UrlChain;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -78,13 +78,13 @@ public class ActionPathResolver {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalWebDirection direction = assistOptionalActionDirection();
+        final FwWebDirection direction = assistOptionalActionDirection();
         actionAdjustmentProvider = direction.assistActionAdjustmentProvider();
         showBootLogging();
     }
 
-    protected OptionalWebDirection assistOptionalActionDirection() {
-        return assistantDirector.assistOptionalWebDirection();
+    protected FwWebDirection assistOptionalActionDirection() {
+        return assistantDirector.assistWebDirection();
     }
 
     protected void showBootLogging() {
@@ -476,17 +476,9 @@ public class ActionPathResolver {
         // e.g. / or /123/ or /123/foo/
         if (tokenList.isEmpty() || mayBeParameterToken(tokenList.get(0))) {
             final List<String> nameList = new ArrayList<String>(1);
-            nameList.add("IndexAction#index()");
+            nameList.add("RootAction#index()");
             return nameList;
         }
-        // e.g. /foo/ or /foo/123/ or /foo/123/bar/
-        //   web.FooAction#index()
-        //   web.IndexAction#foo()
-        //   web.foo.FooIndexAction#index()
-        // e.g. /foo/bar/ or /foo/bar/123/ or /foo/bar/123/qux/
-        //   foo.FooBarAction#index()
-        //   foo.FooAction#bar()
-        //   foo.bar.FooBarIndexAction#index()
         final StringBuilder namedActionSb = new StringBuilder();
         final StringBuilder methodActionSb = new StringBuilder();
         final StringBuilder wholePkgActionSb = new StringBuilder();

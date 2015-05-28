@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.login;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 
 import javax.annotation.Resource;
@@ -90,6 +92,70 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     @Resource
     private TransactionStage transactionStage;;
+
+    // ===================================================================================
+    //                                                                           Find User
+    //                                                                           =========
+    /**
+     * Check the user is login-able. (basically for validation)
+     * @param email The email address for the login user. (NotNull)
+     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @return true if the user is login-able.
+     */
+    public boolean checkUserLoginable(String email, String password) {
+        return doCheckUserLoginable(email, encryptPassword(password));
+    }
+
+    /**
+     * Check the user is login-able. (basically for validation)
+     * @param email The email address for the login user. (NotNull)
+     * @param cipheredPassword The ciphered password for the login user. (NotNull)
+     * @return true if the user is login-able.
+     */
+    protected abstract boolean doCheckUserLoginable(String email, String cipheredPassword);
+
+    /**
+     * Find the login user in the database.
+     * @param email The email address for the login user. (NotNull)
+     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
+     */
+    public OptionalEntity<USER_ENTITY> findLoginUser(String email, String password) {
+        return doFindLoginUser(email, encryptPassword(password));
+    }
+
+    /**
+     * Finding the login user in the database.
+     * @param email The email address for the login user. (NotNull)
+     * @param cipheredPassword The ciphered password for the login user. (NotNull)
+     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
+     */
+    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(String email, String cipheredPassword);
+
+    /**
+     * Encrypt the password of the login user.
+     * @param plainPassword The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @return The encrypted string of the password. (NotNull)
+     */
+    protected String encryptPassword(String plainPassword) {
+        return primaryCipher.oneway(plainPassword);
+    }
+
+    /**
+     * Find the login user in the database.
+     * @param userId for the login user. (NotNull)
+     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
+     */
+    public OptionalEntity<USER_ENTITY> findLoginUser(Long userId) {
+        return doFindLoginUser(userId);
+    }
+
+    /**
+     * Finding the login user in the database.
+     * @param userId for the login user. (NotNull)
+     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
+     */
+    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(Long userId);
 
     // ===================================================================================
     //                                                                         Login Logic
@@ -184,7 +250,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         assertUserEntityRequired(userEntity);
         final USER_BEAN userBean = saveLoginInfoToSession(userEntity);
         if (userBean instanceof SyncCheckable) {
-            ((SyncCheckable) userBean).setLastestSyncCheckDateTime(timeManager.getCurrentDateTime());
+            ((SyncCheckable) userBean).setLastestSyncCheckDateTime(timeManager.currentDateTime());
         }
         if (option.isRememberMe()) {
             saveAutoLoginKeyToCookie(userEntity, userBean);
@@ -308,7 +374,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     protected String buildAutoLoginCookieValue(USER_ENTITY userEntity, USER_BEAN userBean, int expireDays) {
         final String autoLoginKey = createAutoLoginKey(userEntity, userBean);
         final String delimiter = getAutoLoginDelimiter();
-        final HandyDate currentHandyDate = timeManager.getCurrentHandyDate();
+        final HandyDate currentHandyDate = timeManager.currentHandyDate();
         final HandyDate expireDate = currentHandyDate.addDay(expireDays); // access token's expire
         return autoLoginKey + delimiter + formatForAutoLoginExpireDate(expireDate);
     }
@@ -391,70 +457,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     }
 
     // ===================================================================================
-    //                                                                      Find Interface
-    //                                                                      ==============
-    /**
-     * Check the user is login-able. (basically for validation)
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return true if the user is login-able.
-     */
-    public boolean checkUserLoginable(String email, String password) {
-        return doCheckUserLoginable(email, encryptPassword(password));
-    }
-
-    /**
-     * Check the user is login-able. (basically for validation)
-     * @param email The email address for the login user. (NotNull)
-     * @param cipheredPassword The ciphered password for the login user. (NotNull)
-     * @return true if the user is login-able.
-     */
-    protected abstract boolean doCheckUserLoginable(String email, String cipheredPassword);
-
-    /**
-     * Find the login user in the database.
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
-     */
-    public OptionalEntity<USER_ENTITY> findLoginUser(String email, String password) {
-        return doFindLoginUser(email, encryptPassword(password));
-    }
-
-    /**
-     * Finding the login user in the database.
-     * @param email The email address for the login user. (NotNull)
-     * @param cipheredPassword The ciphered password for the login user. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
-     */
-    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(String email, String cipheredPassword);
-
-    /**
-     * Encrypt the password of the login user.
-     * @param plainPassword The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return The encrypted string of the password. (NotNull)
-     */
-    protected String encryptPassword(String plainPassword) {
-        return primaryCipher.oneway(plainPassword);
-    }
-
-    /**
-     * Find the login user in the database.
-     * @param userId for the login user. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
-     */
-    public OptionalEntity<USER_ENTITY> findLoginUser(Long userId) {
-        return doFindLoginUser(userId);
-    }
-
-    /**
-     * Finding the login user in the database.
-     * @param userId for the login user. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
-     */
-    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(Long userId);
-
-    // ===================================================================================
     //                                                                    RememberMe Login
     //                                                                    ================
     @Override
@@ -523,7 +525,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @return Is a validation for auto login OK?
      */
     protected boolean isValidAutoLoginCookie(String userKey, String expireDate) {
-        final String currentDate = formatForAutoLoginExpireDate(timeManager.getCurrentHandyDate());
+        final String currentDate = formatForAutoLoginExpireDate(timeManager.currentHandyDate());
         if (currentDate.compareTo(expireDate) < 0) { // String v.s. String
             return true; // valid access token within time limit
         }
@@ -628,10 +630,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected OptionalThing<String> processLoginRequired(LoginHandlingResource resource) {
         logger.debug("...Checking login status for login required");
-        if (processAlreadyLogin(resource)) {
-            return processAuthority(resource);
-        }
-        if (processAutoLogin(resource)) {
+        if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
             return processAuthority(resource);
         }
         saveRequestedLoginRedirectInfo();
@@ -672,7 +671,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         }
         final SyncCheckable checkable = (SyncCheckable) userBean;
         final OptionalThing<LocalDateTime> checkDt = checkable.getLastestSyncCheckDateTime(); // might be null
-        final LocalDateTime currentDt = timeManager.getCurrentDateTime();
+        final LocalDateTime currentDt = timeManager.currentDateTime();
         if (!needsLoginSessionSyncCheck(userBean, checkDt, currentDt)) {
             return true; // means no check
         }
@@ -734,6 +733,26 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     }
 
     // -----------------------------------------------------
+    //                                       Required Action
+    //                                       ---------------
+    @Override
+    public boolean isLoginRequiredAction(LoginHandlingResource resource) {
+        return !isImplicitEverybodyOpenAction(resource) && !isExplicitAllowAnyoneAccessAction(resource);
+    }
+
+    protected boolean isImplicitEverybodyOpenAction(LoginHandlingResource resource) {
+        return isLoginActionOrRedirectLoginAction(resource);
+    }
+
+    protected boolean isExplicitAllowAnyoneAccessAction(LoginHandlingResource resource) {
+        return hasAnnotation(resource.getActionClass(), resource.getExecuteMethod(), getAllowAnyoneAccessAnnotationType());
+    }
+
+    protected Class<? extends Annotation> getAllowAnyoneAccessAnnotationType() {
+        return AllowAnyoneAccess.class;
+    }
+
+    // -----------------------------------------------------
     //                                      Session UserBean
     //                                      ----------------
     @Override
@@ -754,16 +773,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @return The forward path, basically for authority redirect. (NotNull, EmptyAllowed: then authority check passed)
      */
     protected OptionalThing<String> processAuthority(LoginHandlingResource resource) {
-        return processAuthority(resource, getSessionUserBean());
-    }
-
-    /**
-     * Process for the authority of the login user. (called in login status)
-     * @param resource The resource of login handling to determine. (NotNull)
-     * @param userBean The optional bean of the login user. (NotNull)
-     * @return The forward path, basically for authority redirect. (NotNull, EmptyAllowed: then authority check passed)
-     */
-    protected OptionalThing<String> processAuthority(LoginHandlingResource resource, OptionalThing<USER_BEAN> userBean) {
         return OptionalObject.empty(); // no check as default, you can override
     }
 
@@ -778,10 +787,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     protected OptionalThing<String> processNotLoginRequired(LoginHandlingResource resource) {
         if (isAutoLoginWhenNotLoginRequired(resource)) {
             logger.debug("...Checking login status for not-login required");
-            if (processAlreadyLogin(resource)) {
-                return processAuthority(resource);
-            }
-            if (processAutoLogin(resource)) {
+            if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
                 return processAuthority(resource);
             }
         }
@@ -802,7 +808,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected boolean isLoginRedirectBeanKeptAction(LoginHandlingResource resource) {
         // normally both are same action, but redirect action might be changed
-        return isLoginAction(resource) || isRedirectLoginAction(resource);
+        return isLoginActionOrRedirectLoginAction(resource);
     }
 
     /**
@@ -859,6 +865,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         return ApiAction.class.isAssignableFrom(actionClass);
     }
 
+    protected boolean isLoginActionOrRedirectLoginAction(LoginHandlingResource resource) {
+        return isLoginAction(resource) || isRedirectLoginAction(resource);
+    }
+
     // ===================================================================================
     //                                                                      Login Redirect
     //                                                                      ==============
@@ -911,6 +921,21 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         } else {
             return response;
         }
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected boolean hasAnnotation(Class<?> targetClass, Method targetMethod, Class<? extends Annotation> annoType) {
+        return hasAnnotationOnClass(targetClass, annoType) || hasAnnotationOnMethod(targetMethod, annoType);
+    }
+
+    protected boolean hasAnnotationOnClass(Class<?> targetClass, Class<? extends Annotation> annoType) {
+        return targetClass.getAnnotation(annoType) != null;
+    }
+
+    protected boolean hasAnnotationOnMethod(Method targetMethod, Class<? extends Annotation> annoType) {
+        return targetMethod.getAnnotation(annoType) != null;
     }
 
     // ===================================================================================

@@ -41,7 +41,7 @@ import org.lastaflute.di.DisposableUtil;
 import org.lastaflute.di.helper.message.MessageResourceBundle;
 import org.lastaflute.di.helper.message.MessageResourceBundleFactory;
 import org.lastaflute.di.util.LdiResourceUtil;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.ruts.message.MessageResources;
 import org.lastaflute.web.ruts.message.exception.MessageLabelByLabelParameterNotFoundException;
 import org.lastaflute.web.ruts.message.exception.MessageLabelByLabelVariableInfinityLoopException;
@@ -94,11 +94,11 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
     protected FwAssistantDirector cachedAssistantDirector;
 
     /**
-     * The cache of domain message name, which can be lazy-loaded when you get it. <br>
+     * The cache of application message name, which can be lazy-loaded when you get it. <br>
      * Don't use these variables directly, you should use the getter.
      * e.g. admin_message (NotNull: after lazy-load)
      */
-    protected String cachedDomainMessageName;
+    protected String cachedAppMessageName;
 
     /**
      * The cache of message name list for extends, which can be lazy-loaded when you get it.
@@ -247,51 +247,51 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
     //                                                                    ================
     /**
      * Get the bundle by the locale and message names from the assistant director. <br>
-     * Returned bundle has merged properties for domain and extends messages like this:
+     * Returned bundle has merged properties for application and extends messages like this:
      * <pre>
-     * e.g. domain_message extends common_message, locale = ja
+     * e.g. app_message extends common_message, locale = ja
      * common-ex3                 : common_message.properties *last search
-     *  |-domain-ex3              : domain_message.properties
+     *  |-app-ex3                 : app_message.properties
      *    |-common-ex2            : common_message_ja_JP_xx.properties
-     *      |-domain-ex2          : domain_message_ja_JP_xx.properties
+     *      |-app-ex2             : app_message_ja_JP_xx.properties
      *        |-common-ex1        : common_message_ja_JP.properties
-     *          |-domain-ex1      : domain_message_ja_JP.properties
+     *          |-app-ex1         : app_message_ja_JP.properties
      *            |-common-root   : common_message_ja.properties
-     *              |-domain-root : domain_message_ja.properties *first search
+     *              |-app-root    : app_message_ja.properties *first search
      * </pre>
      * @param locale The locale of current request. (NullAllowed: when system default locale)
      * @return The found bundle that has extends hierarchy. (NotNull)
      */
     protected MessageResourceBundle getBundle(Locale locale) {
-        return getBundleResolvedExtends(getDomainMessageName(), getExtendsMessageNameList(), locale);
+        return getBundleResolvedExtends(getAppMessageName(), getExtendsMessageNameList(), locale);
     }
 
     /**
      * Resolve the extends bundle, basically called by {@link #getBundle(Locale)}. <br>
-     * Returned bundle has merged properties for domain and extends messages. <br>
+     * Returned bundle has merged properties for application and extends messages. <br>
      * You can get your message by normal way.
-     * @param domainMessageName The message name for domain. (NotNull)
+     * @param appMessageName The message name for application. (NotNull)
      * @param extendsNameList The list of extends-message name. (NotNull, EmptyAllowed)
      * @param locale The locale of current request. (NullAllowed: when system default locale)
      * @return The found bundle that has extends hierarchy. (NotNull)
      */
-    protected MessageResourceBundle getBundleResolvedExtends(String domainMessageName, List<String> extendsNameList, Locale locale) {
-        final MessageResourceBundle domainBundle = findBundleSimply(domainMessageName, locale);
+    protected MessageResourceBundle getBundleResolvedExtends(String appMessageName, List<String> extendsNameList, Locale locale) {
+        final MessageResourceBundle appBundle = findBundleSimply(appMessageName, locale);
         if (extendsNameList.isEmpty()) { // no extends, no logic
-            return domainBundle;
+            return appBundle;
         }
-        if (isAlreadyExtends(domainBundle)) { // means the bundle is cached
-            return domainBundle;
+        if (isAlreadyExtends(appBundle)) { // means the bundle is cached
+            return appBundle;
         }
         synchronized (this) { // synchronize to set up
-            if (isAlreadyExtends(domainBundle)) {
-                return domainBundle;
+            if (isAlreadyExtends(appBundle)) {
+                return appBundle;
             }
-            // set up extends references to the domain bundle specified as argument
+            // set up extends references to the application bundle specified as argument
             // so the bundle has been resolved extends after calling
-            setupExtendsReferences(domainMessageName, extendsNameList, locale, domainBundle);
+            setupExtendsReferences(appMessageName, extendsNameList, locale, appBundle);
         }
-        return domainBundle;
+        return appBundle;
     }
 
     /**
@@ -353,13 +353,13 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
     }
 
     /**
-     * Does the domain bundle already have extends handling? <br>
+     * Does the application bundle already have extends handling? <br>
      * It returns true if the bundle has a parent instance of {@link MessageResourceBundleObjectiveWrapper}.
-     * @param domainBundle The bundle for domain for determination. (NotNull)
+     * @param appBundle The bundle for application for determination. (NotNull)
      * @return The determination, true or false.
      */
-    protected boolean isAlreadyExtends(MessageResourceBundle domainBundle) {
-        MessageResourceBundle currentBundle = domainBundle;
+    protected boolean isAlreadyExtends(MessageResourceBundle appBundle) {
+        MessageResourceBundle currentBundle = appBundle;
         boolean found = false;
         while (true) {
             MessageResourceBundle parentBundle = currentBundle.getParent();
@@ -376,17 +376,17 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
     }
 
     /**
-     * Set up extends references to the domain bundle. <br>
-     * @param domainMessageName The message name for domain properties. (NotNull)
+     * Set up extends references to the application bundle. <br>
+     * @param appMessageName The message name for application properties. (NotNull)
      * @param extendsNameList The list of message name for extends properties. The first element is first extends (NotNull)
      * @param locale The locale of current request. (NotNull)
-     * @param domainBundle The bundle for domain that does not set up extends handling yet. (NotNull)
+     * @param appBundle The bundle for application that does not set up extends handling yet. (NotNull)
      */
-    protected void setupExtendsReferences(String domainMessageName, List<String> extendsNameList, Locale locale,
-            MessageResourceBundle domainBundle) {
+    protected void setupExtendsReferences(String appMessageName, List<String> extendsNameList, Locale locale,
+            MessageResourceBundle appBundle) {
         final TreeSet<MessageResourceBundle> hierarchySet = new TreeSet<MessageResourceBundle>();
-        final MessageResourceBundle wrappedDomainBundle = wrapBundle(domainMessageName, domainBundle, null);
-        hierarchySet.addAll(convertToHierarchyList(wrappedDomainBundle));
+        final MessageResourceBundle wrappedAppBundle = wrapBundle(appMessageName, appBundle, null);
+        hierarchySet.addAll(convertToHierarchyList(wrappedAppBundle));
         int extendsLevel = 1;
         for (String extendsName : extendsNameList) {
             final MessageResourceBundle extendsBundle = findBundleSimply(extendsName, locale);
@@ -411,7 +411,7 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
      * The parents also wrapped.
      * @param messageName The message name for the bundle. (NotNull)
      * @param bundle The bundle of message resource. (NotNull)
-     * @param extendsLevel The level as integer for extends. e.g. first extends is 1 (NullAllowed: when domain)
+     * @param extendsLevel The level as integer for extends. e.g. first extends is 1 (NullAllowed: when application)
      * @return The wrapper for the bundle. (NotNull)
      */
     protected MessageResourceBundleObjectiveWrapper wrapBundle(String messageName, MessageResourceBundle bundle, Integer extendsLevel) {
@@ -654,19 +654,19 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
         return cachedAssistantDirector;
     }
 
-    protected String getDomainMessageName() {
-        if (cachedDomainMessageName != null) {
-            return cachedDomainMessageName;
+    protected String getAppMessageName() {
+        if (cachedAppMessageName != null) {
+            return cachedAppMessageName;
         }
         synchronized (this) {
-            if (cachedDomainMessageName != null) {
-                return cachedDomainMessageName;
+            if (cachedAppMessageName != null) {
+                return cachedAppMessageName;
             }
             final FwAssistantDirector assistantDirector = getAssistantDirector();
-            final OptionalWebDirection direction = assistantDirector.assistOptionalWebDirection();
-            cachedDomainMessageName = direction.assistDomainMessageName();
+            final FwWebDirection direction = assistantDirector.assistWebDirection();
+            cachedAppMessageName = direction.assistAppMessageName();
         }
-        return cachedDomainMessageName;
+        return cachedAppMessageName;
     }
 
     protected List<String> getExtendsMessageNameList() {
@@ -678,7 +678,7 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
                 return cachedExtendsMessageNameList;
             }
             final FwAssistantDirector assistantDirector = getAssistantDirector();
-            final OptionalWebDirection direction = assistantDirector.assistOptionalWebDirection();
+            final FwWebDirection direction = assistantDirector.assistWebDirection();
             cachedExtendsMessageNameList = direction.assistExtendsMessageNameList();
         }
         return cachedExtendsMessageNameList;
@@ -699,9 +699,9 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
         final StringBuilder sb = new StringBuilder();
         final String title = DfTypeUtil.toClassTitle(this);
         sb.append(title).append(":{");
-        sb.append("domain=");
-        if (cachedDomainMessageName != null) {
-            sb.append(cachedDomainMessageName);
+        sb.append("application=");
+        if (cachedAppMessageName != null) {
+            sb.append(cachedAppMessageName);
         } else {
             sb.append("not initialized yet");
         }

@@ -16,7 +16,7 @@
 package org.lastaflute.web.validation.exception;
 
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.validation.ValidationErrorHandler;
+import org.lastaflute.web.validation.VaErrorHook;
 
 /**
  * @author modified by jflute (originated in Seasar)
@@ -32,12 +32,12 @@ public class ValidationErrorException extends RuntimeException {
     //                                                                           Attribute
     //                                                                           =========
     protected final ActionMessages messages;
-    protected final ValidationErrorHandler errorHandler;
+    protected final VaErrorHook errorHandler;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ValidationErrorException(ActionMessages messages, ValidationErrorHandler errorHandler) {
+    public ValidationErrorException(ActionMessages messages, VaErrorHook errorHandler) {
         if (messages == null) {
             throw new IllegalArgumentException("The argument 'messages' should not be null.");
         }
@@ -49,13 +49,21 @@ public class ValidationErrorException extends RuntimeException {
     }
 
     // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        return "validationError:{messages=" + messages + ", handler=" + errorHandler + "}";
+    }
+
+    // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
     public ActionMessages getMessages() {
         return messages;
     }
 
-    public ValidationErrorHandler getErrorHandler() {
+    public VaErrorHook getErrorHandler() {
         return errorHandler;
     }
 }

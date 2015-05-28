@@ -32,21 +32,24 @@ public class NextJourney implements Serializable {
     //                                                                           Attribute
     //                                                                           =========
     protected final String routingPath;
-    protected final boolean redirect;
+    protected final boolean redirectTo;
+    protected final boolean asIs; // when redirect
     protected final boolean empty;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public NextJourney(String routingPath, boolean redirect) {
+    public NextJourney(String routingPath, boolean redirectTo, boolean asIs) {
         this.routingPath = routingPath;
-        this.redirect = redirect;
+        this.redirectTo = redirectTo;
+        this.asIs = asIs;
         this.empty = false;
     }
 
     protected NextJourney() {
         this.routingPath = "empty";
-        this.redirect = false;
+        this.redirectTo = false;
+        this.asIs = false;
         this.empty = true;
     }
 
@@ -61,7 +64,9 @@ public class NextJourney implements Serializable {
     public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append("transition:{");
-        sb.append("path=").append(routingPath).append(", redirect=").append(redirect);
+        sb.append("path=").append(routingPath);
+        sb.append(redirectTo ? ", redirect" : ", forward");
+        sb.append(asIs ? ", asIs" : "");
         sb.append("}");
         return sb.toString();
     }
@@ -77,8 +82,12 @@ public class NextJourney implements Serializable {
         return routingPath;
     }
 
-    public boolean isRedirect() {
-        return redirect;
+    public boolean isRedirectTo() {
+        return redirectTo;
+    }
+
+    public boolean isAsIs() {
+        return asIs;
     }
 
     public boolean isEmpty() {

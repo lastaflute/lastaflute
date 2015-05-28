@@ -50,8 +50,8 @@ public class ComponentEnvDispatcher {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ComponentEnvDispatcher(NamingConvention namingConvention, InstanceDef instanceDef,
-            AutoBindingDef autoBindingDef, boolean externalBinding, ComponentCustomizer customizer) {
+    public ComponentEnvDispatcher(NamingConvention namingConvention, InstanceDef instanceDef, AutoBindingDef autoBindingDef,
+            boolean externalBinding, ComponentCustomizer customizer) {
         this.namingConvention = namingConvention;
         this.instanceDef = instanceDef;
         this.autoBindingDef = autoBindingDef;
@@ -63,13 +63,11 @@ public class ComponentEnvDispatcher {
     //                                                                        Check Before
     //                                                                        ============
     public static boolean canDispatch(Class<?> componentClass) { // check before without instance
-        if (SingletonLaContainerFactory.hasContainer()) {
-            final EnvDispatch dispatch = componentClass.getAnnotation(EnvDispatch.class);
-            if (dispatch != null) {
-                return true;
-            }
-        }
-        return false;
+        return SingletonLaContainerFactory.hasContainer() && findEnvDispatch(componentClass) != null;
+    }
+
+    protected static EnvDispatch findEnvDispatch(Class<?> componentClass) {
+        return componentClass.getAnnotation(EnvDispatch.class);
     }
 
     // ===================================================================================
@@ -79,17 +77,17 @@ public class ComponentEnvDispatcher {
         if (!canDispatch(componentClass)) { // just in case
             return null;
         }
-        return doDispatch(componentClass, componentClass.getAnnotation(EnvDispatch.class));
+        return doDispatch(componentClass, findEnvDispatch(componentClass));
     }
 
     protected ComponentDef doDispatch(Class<?> componentClass, EnvDispatch dispatch) {
         final AccessibleConfig config = ContainerUtil.getComponent(AccessibleConfig.class);
         final String devHereKey = getDevlopmentHereKey();
         if (config.get(devHereKey) == null) {
-            String msg = "The property is required in the config: " + devHereKey;
+            String msg = "The property is required in the config for environment dispatch: " + devHereKey;
             throw new IllegalStateException(msg);
         }
-        final Class<?> implType = config.is(devHereKey) ? dispatch.dev() : dispatch.real();
+        final Class<?> implType = config.is(devHereKey) ? dispatch.development() : dispatch.production();
         return actuallyCreateComponentDef(implType);
     }
 
@@ -106,8 +104,7 @@ public class ComponentEnvDispatcher {
         final AnnotationHandler handler = AnnotationHandlerFactory.getAnnotationHandler();
         final ComponentDef cd = handler.createComponentDef(targetClass, instanceDef, autoBindingDef, externalBinding);
         if (cd.getComponentName() == null) {
-            final String componentName = deriveComponentName(targetClass);
-            cd.setComponentName(componentName);
+            cd.setComponentName(deriveComponentName(targetClass));
         }
         handler.appendDI(cd);
         customizer.customize(cd);
@@ -118,15 +115,14 @@ public class ComponentEnvDispatcher {
         return cd;
     }
 
-    protected String deriveComponentName(Class<?> targetClass) {
-        final String targetName = targetClass.getName();
-        return namingConvention.fromClassNameToComponentName(targetName);
-    }
-
     protected void checkImplClass(Class<?> targetClass) {
         if (targetClass.isInterface() || Modifier.isAbstract(targetClass.getModifiers())) {
-            String msg = "Not implementation class for dispatch: " + targetClass;
+            String msg = "Not implementation class for environment dispatch: " + targetClass;
             throw new IllegalStateException(msg);
         }
+    }
+
+    protected String deriveComponentName(Class<?> targetClass) {
+        return namingConvention.fromClassNameToComponentName(targetClass.getName());
     }
 }

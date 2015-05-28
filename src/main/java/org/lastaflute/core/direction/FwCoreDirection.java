@@ -15,6 +15,7 @@
  */
 package org.lastaflute.core.direction;
 
+import org.dbflute.mail.send.SMailDeliveryDepartment;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.core.exception.ExceptionTranslationProvider;
 import org.lastaflute.core.json.JsonResourceProvider;
@@ -33,7 +34,7 @@ import org.lastaflute.core.time.TimeResourceProvider;
  * </pre>
  * @author jflute
  */
-public class OptionalCoreDirection {
+public class FwCoreDirection {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -63,14 +64,14 @@ public class OptionalCoreDirection {
     protected SecurityResourceProvider securityResourceProvider;
 
     // -----------------------------------------------------
-    //                                                  Time
-    //                                                  ----
+    //                                                 Time
+    //                                                ------
     /** The provider of time resource, e.g. cipher. (NotNull: after direction) */
     protected TimeResourceProvider timeResourceProvider;
 
     // -----------------------------------------------------
-    //                                                  JSON
-    //                                                  ----
+    //                                                 JSON
+    //                                                ------
     /** The provider of JSON resource. (NullAllowed) */
     protected JsonResourceProvider jsonResourceProvider;
 
@@ -85,6 +86,12 @@ public class OptionalCoreDirection {
     //                                          ------------
     /** The provider of concurrent executor. (NullAllowed) */
     protected ConcurrentAsyncExecutorProvider concurrentAsyncExecutorProvider;
+
+    // -----------------------------------------------------
+    //                                                 Mail
+    //                                                ------
+    /** The delivery department of send mail. (NullAllowed) */
+    protected SMailDeliveryDepartment mailDeliveryDepartment;
 
     // ===================================================================================
     //                                                                     Direct Property
@@ -118,15 +125,15 @@ public class OptionalCoreDirection {
     }
 
     // -----------------------------------------------------
-    //                                                  Time
-    //                                                  ----
+    //                                                 Time
+    //                                                ------
     public void directTime(TimeResourceProvider timeResourceProvider) {
         this.timeResourceProvider = timeResourceProvider;
     }
 
     // -----------------------------------------------------
-    //                                                  JSON
-    //                                                  ----
+    //                                                 JSON
+    //                                                ------
     public void directJson(JsonResourceProvider jsonResourceProvider) {
         this.jsonResourceProvider = jsonResourceProvider;
     }
@@ -145,6 +152,13 @@ public class OptionalCoreDirection {
         this.concurrentAsyncExecutorProvider = concurrentAsyncExecutorProvider;
     }
 
+    // -----------------------------------------------------
+    //                                                 Mail
+    //                                                ------
+    public void directMail(SMailDeliveryDepartment mailDeliveryDepartment) {
+        this.mailDeliveryDepartment = mailDeliveryDepartment;
+    }
+
     // ===================================================================================
     //                                                                              Assist
     //                                                                              ======
@@ -152,19 +166,13 @@ public class OptionalCoreDirection {
         return developmentHere;
     }
 
-    public String assistDomainTitle() { // required
-        if (domainTitle == null) {
-            String msg = "Not found the title of domain application.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
+    public String assistDomainTitle() {
+        assertAssistObjectNotNull(domainTitle, "Not found the title of domain application.");
         return domainTitle;
     }
 
-    public String assistEnvironmentTitle() { // required
-        if (environmentTitle == null) {
-            String msg = "Not found the title of current environment.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
+    public String assistEnvironmentTitle() {
+        assertAssistObjectNotNull(environmentTitle, "Not found the title of current environment.");
         return environmentTitle;
     }
 
@@ -180,42 +188,52 @@ public class OptionalCoreDirection {
     //                                              Security
     //                                              --------
     public SecurityResourceProvider assistSecurityResourceProvider() {
-        if (securityResourceProvider == null) {
-            String msg = "Not found the provider of security resource.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
+        assertAssistObjectNotNull(securityResourceProvider, "Not found the provider of security resource.");
         return securityResourceProvider;
     }
 
     // -----------------------------------------------------
-    //                                                  Time
-    //                                                  ----
+    //                                                 Time
+    //                                                ------
     public TimeResourceProvider assistTimeResourceProvider() {
-        if (timeResourceProvider == null) {
-            String msg = "Not found the provider of time resource.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
+        assertAssistObjectNotNull(timeResourceProvider, "Not found the provider of time resource.");
         return timeResourceProvider;
     }
 
     // -----------------------------------------------------
-    //                                                  JSON
-    //                                                  ----
+    //                                                 JSON
+    //                                                ------
     public JsonResourceProvider assistJsonResourceProvider() {
-        return jsonResourceProvider; // not required, has default for compatibility
+        return jsonResourceProvider; // not required, has default
     }
 
     // -----------------------------------------------------
     //                                             Exception
     //                                             ---------
     public ExceptionTranslationProvider assistExceptionTranslationProvider() {
-        return exceptionTranslationProvider; // not required, has default for compatibility
+        return exceptionTranslationProvider; // not required, has default
     }
 
     // -----------------------------------------------------
     //                                          Asynchronous
     //                                          ------------
     public ConcurrentAsyncExecutorProvider assistConcurrentAsyncExecutorProvider() {
-        return concurrentAsyncExecutorProvider; // not required, has default for compatibility
+        return concurrentAsyncExecutorProvider; // not required, has default
+    }
+
+    // -----------------------------------------------------
+    //                                                 Mail
+    //                                                ------
+    public SMailDeliveryDepartment assistMailDeliveryDepartment() {
+        return mailDeliveryDepartment; // not required, big optional function
+    }
+
+    // -----------------------------------------------------
+    //                                         Assert Helper
+    //                                         -------------
+    protected void assertAssistObjectNotNull(Object obj, String msg) {
+        if (obj == null) {
+            throw new FwRequiredAssistNotFoundException(msg);
+        }
     }
 }

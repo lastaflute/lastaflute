@@ -109,19 +109,19 @@ public interface LoginManager {
     OptionalThing<String> checkLoginRequired(LoginHandlingResource resource);
 
     /**
+     * Is the action login-required?
+     * @param resource The resource of login handling to determine required or not. (NotNull)
+     * @return The determination, true or false.
+     */
+    boolean isLoginRequiredAction(LoginHandlingResource resource);
+
+    /**
      * Get the user bean in session. (you can determine login or not) <br>
      * Also you can use lookupSessionUserBean() from concrete type instance,
      * which provides user bean as generic type.
      * @return The user bean in session. (NullAllowed: if null, means not-login)
      */
     OptionalThing<? extends UserBean> getSessionUserBean(); // thanks, feedback of "? extends" way
-
-    /**
-     * Is the action login-required?
-     * @param resource The resource of login handling to determine required or not. (NotNull)
-     * @return The determination, true or false.
-     */
-    boolean isLoginRequiredAction(LoginHandlingResource resource);
 
     /**
      * Is the action for login? (login action or not)

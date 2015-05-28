@@ -13,22 +13,16 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process;
+package org.lastaflute.web.validation;
 
-import java.util.Map;
+import org.lastaflute.web.ruts.message.ActionMessages;
 
 /**
+ * @param <MESSAGES> The type of action messages.
  * @author jflute
  */
-public class ActionRequestResource {
+@FunctionalInterface
+public interface VaMore<MESSAGES extends ActionMessages> {
 
-    protected final Map<Integer, Object> urlParamValueMap;
-
-    public ActionRequestResource(Map<Integer, Object> urlParamValueMap) {
-        this.urlParamValueMap = urlParamValueMap;
-    }
-
-    public Map<Integer, Object> getUrlParamValueMap() {
-        return urlParamValueMap;
-    }
+    void more(MESSAGES messages);
 }

@@ -16,7 +16,6 @@
 package org.lastaflute.web.servlet.filter;
 
 import java.io.IOException;
-import java.util.Map;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -30,13 +29,13 @@ import javax.servlet.http.HttpServletResponse;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ActionFoundPathHandler;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.process.ActionRequestResource;
+import org.lastaflute.web.ruts.process.RequestUrlParam;
 import org.lastaflute.web.ruts.process.RequestUrlParamAnalyzer;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -146,7 +145,7 @@ public class RequestRoutingFilter implements Filter {
     }
 
     protected ActionAdjustmentProvider assistActionAdjustmentProvider() {
-        final OptionalWebDirection direction = getAssistantDirector().assistOptionalWebDirection();
+        final FwWebDirection direction = getAssistantDirector().assistWebDirection();
         return direction.assistActionAdjustmentProvider();
     }
 
@@ -224,22 +223,14 @@ public class RequestRoutingFilter implements Filter {
             throws IOException, ServletException {
         logger.debug("...Routing to action: name={} params={}", execute.getActionMapping().getActionName(), paramPath);
         LaActionExecuteUtil.setActionExecute(request, execute); // for e.g. tag-library use
-        getRequestProcessor().process(execute, prepareActionRequestResource(execute, paramPath)); // #to_action
+        getRequestProcessor().process(execute, analyzeUrlParam(execute, paramPath)); // #to_action
     }
 
     // -----------------------------------------------------
-    //                                      Request Resource
+    //                                      Request UrlParam
     //                                      ----------------
-    protected ActionRequestResource prepareActionRequestResource(ActionExecute execute, String paramPath) {
-        return newActionRequestResource(analyzeUrlParamValue(execute, paramPath));
-    }
-
-    protected Map<Integer, Object> analyzeUrlParamValue(ActionExecute execute, String paramPath) {
-        return getUrlParamAnalyzer().analyzeUrlParamValue(execute, paramPath);
-    }
-
-    protected ActionRequestResource newActionRequestResource(Map<Integer, Object> urlParamValueMap) {
-        return new ActionRequestResource(urlParamValueMap);
+    protected RequestUrlParam analyzeUrlParam(ActionExecute execute, String paramPath) {
+        return getUrlParamAnalyzer().analyzeUrlParam(execute, paramPath);
     }
 
     // -----------------------------------------------------

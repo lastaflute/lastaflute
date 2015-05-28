@@ -17,14 +17,13 @@ package org.lastaflute.web.api;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
-import org.lastaflute.web.direction.OptionalWebDirection;
+import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.slf4j.Logger;
@@ -55,8 +54,8 @@ public class SimpleApiManager implements ApiManager {
     @Resource
     protected ResponseManager responseManager;
 
-    /** The provider of API result. (NotNull: after initialization) */
-    protected ApiResultProvider apiResultProvider;
+    /** The hook for API failures. (NotNull: after initialization) */
+    protected ApiFailureHook apiFailureHook;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -67,47 +66,50 @@ public class SimpleApiManager implements ApiManager {
      */
     @PostConstruct
     public synchronized void initialize() {
-        final OptionalWebDirection direction = assistOptionalActionDirection();
-        final ApiResultProvider assistedProvider = direction.assistApiResultProvider();
-        if (assistedProvider != null) {
-            apiResultProvider = assistedProvider;
-        } else {
-            apiResultProvider = new UnsupportedApiResultProvider();
-        }
+        final FwWebDirection direction = assistActionDirection();
+        apiFailureHook = direction.assistApiFailureHook();
         showBootLogging();
     }
 
-    protected OptionalWebDirection assistOptionalActionDirection() {
-        return assistantDirector.assistOptionalWebDirection();
+    protected FwWebDirection assistActionDirection() {
+        return assistantDirector.assistWebDirection();
     }
 
     protected void showBootLogging() {
         if (LOG.isInfoEnabled()) {
             LOG.info("[API Manager]");
-            LOG.info(" apiResultProvider: " + DfTypeUtil.toClassTitle(apiResultProvider));
+            LOG.info(" apiFailureHook: " + DfTypeUtil.toClassTitle(apiFailureHook));
         }
     }
 
     // ===================================================================================
-    //                                                                       Create Result
-    //                                                                       =============
+    //                                                                    Business Failure
+    //                                                                    ================
     @Override
-    public ApiResponse prepareLoginRequiredFailure(ApiResultResource resource, ActionRuntimeMeta meta) {
-        return apiResultProvider.prepareLoginRequiredFailure(resource, meta);
+    public ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime) {
+        return apiFailureHook.handleLoginRequiredFailure(resource, runtime);
     }
 
     @Override
-    public ApiResponse prepareValidationError(ApiResultResource resource, ActionRuntimeMeta meta) {
-        return apiResultProvider.prepareValidationError(resource, meta);
+    public ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntime runtime) {
+        return apiFailureHook.handleValidationError(resource, runtime);
     }
 
     @Override
-    public ApiResponse prepareApplicationException(ApiResultResource resource, ActionRuntimeMeta meta, RuntimeException cause) {
-        return apiResultProvider.prepareApplicationException(resource, meta, cause);
+    public ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause) {
+        return apiFailureHook.handleApplicationException(resource, runtime, cause);
+    }
+
+    // ===================================================================================
+    //                                                                      System Failure
+    //                                                                      ==============
+    @Override
+    public OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause) {
+        return apiFailureHook.handleClientException(resource, runtime, cause);
     }
 
     @Override
-    public OptionalThing<ApiResponse> prepareSystemException(HttpServletResponse response, ActionRuntimeMeta meta, Throwable cause) {
-        return apiResultProvider.prepareSystemException(response, meta, cause);
+    public OptionalThing<ApiResponse> handleServerException(ApiFailureResource resource, ActionRuntime runtime, Throwable cause) {
+        return apiFailureHook.handleServerException(resource, runtime, cause);
     }
 }

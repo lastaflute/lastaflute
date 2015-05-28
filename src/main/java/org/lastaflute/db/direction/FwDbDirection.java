@@ -21,7 +21,7 @@ import org.lastaflute.db.dbflute.classification.ListedClassificationProvider;
 /**
  * @author jflute
  */
-public class OptionalDbDirection {
+public class FwDbDirection {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -48,10 +48,16 @@ public class OptionalDbDirection {
     //                                        Classification
     //                                        --------------
     public ListedClassificationProvider assistListedClassificationProvider() {
-        if (listedClassificationProvider == null) {
-            String msg = "Not found the provider for listed classification.";
+        assertAssistObjectNotNull(listedClassificationProvider, "Not found the provider for listed classification.");
+        return listedClassificationProvider;
+    }
+
+    // -----------------------------------------------------
+    //                                         Assert Helper
+    //                                         -------------
+    protected void assertAssistObjectNotNull(Object obj, String msg) {
+        if (obj == null) {
             throw new FwRequiredAssistNotFoundException(msg);
         }
-        return listedClassificationProvider;
     }
 }

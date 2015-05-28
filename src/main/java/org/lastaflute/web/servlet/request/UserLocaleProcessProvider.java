@@ -18,7 +18,7 @@ package org.lastaflute.web.servlet.request;
 import java.util.Locale;
 
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.callback.ActionRuntimeMeta;
+import org.lastaflute.web.callback.ActionRuntime;
 
 /**
  * The provider of user locale process for current request.
@@ -34,11 +34,11 @@ public interface UserLocaleProcessProvider {
 
     /**
      * Find the business locale. (prevails over cookie)
-     * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
+     * @param runtimeMeta The runtime meta of action execution which you can get the calling method. (NotNull)
      * @param requestManager The manager of request to find your locale. (NotNull)
      * @return The found locale by your business rule. (NotNull, EmptyAllowed: when not found)
      */
-    OptionalThing<Locale> findBusinessLocale(ActionRuntimeMeta runtimeMeta, RequestManager requestManager);
+    OptionalThing<Locale> findBusinessLocale(ActionRuntime runtimeMeta, RequestManager requestManager);
 
     /**
      * Get the requested locale. (for when not found in session or cookie)

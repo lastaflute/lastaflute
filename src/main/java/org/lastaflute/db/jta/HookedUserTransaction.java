@@ -117,7 +117,7 @@ public class HookedUserTransaction extends UserTransactionImpl {
         // *see the blog for the details:
         //   http://d.hatena.ne.jp/jflute/20130129/1359432974
         final TimeManager timeManager = getTimeManager();
-        final Date transactionTime = timeManager.getFlashDate();
+        final Date transactionTime = timeManager.flashDate();
         TransactionTimeContext.setTransactionTime(transactionTime);
         if (PreparedAccessContext.isExistAccessContextOnThread()) {
             PreparedAccessContext.beginAccessContext();

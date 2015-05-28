@@ -26,7 +26,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.web.exception.ActionFormNotFoundException;
@@ -38,8 +37,8 @@ import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
-import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer.ExecuteArgBox;
+import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternBox;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
@@ -95,7 +94,7 @@ public class ActionExecute implements Serializable {
         executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
         this.urlParamTypeList = executeArgBox.getUrlParamTypeList(); // not null, empty allowed
         this.optionalGenericTypeList = executeArgBox.getOptionalGenericTypeMap();
-        this.formMeta = prepareFormMeta(executeArgBox.getFormType(), executeArgBox.getListFormGenericType());
+        this.formMeta = prepareFormMeta(executeArgBox.getFormType(), executeArgBox.getListFormParameter());
 
         // URL pattern (using urlParamTypeList)
         final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
@@ -143,20 +142,20 @@ public class ActionExecute implements Serializable {
     //                                           -----------
     /**
      * @param formType The type of action form. (NullAllowed: if null, no form for the method)
-     * @param listFormGenericType The generic type of list form. (NullAllowed: normally null, for e.g. JSON list)
+     * @param listFormParameter The parameter of list form. (NullAllowed: normally null, for e.g. JSON list)
      * @return The optional form meta to be prepared. (NotNull)
      */
-    protected OptionalThing<ActionFormMeta> prepareFormMeta(Class<?> formType, Class<?> listFormGenericType) {
-        final ActionFormMeta meta = formType != null ? createFormMeta(formType, listFormGenericType) : null;
+    protected OptionalThing<ActionFormMeta> prepareFormMeta(Class<?> formType, Parameter listFormParameter) {
+        final ActionFormMeta meta = formType != null ? createFormMeta(formType, listFormParameter) : null;
         return OptionalThing.ofNullable(meta, () -> {
             String msg = "Not found the form meta as parameter for the execute method: " + executeMethod;
             throw new ActionFormNotFoundException(msg);
         });
     }
 
-    protected ActionFormMeta createFormMeta(Class<?> formType, Class<?> listFormGenericType) {
-        return newActionFormMeta(buildFormKey(), formType, OptionalThing.ofNullable(listFormGenericType, () -> {
-            String msg = "Not found the listFormGenericType: execute=" + buildSimpleMethodExp() + " form=" + formType;
+    protected ActionFormMeta createFormMeta(Class<?> formType, Parameter listFormParameter) {
+        return newActionFormMeta(buildFormKey(), formType, OptionalThing.ofNullable(listFormParameter, () -> {
+            String msg = "Not found the listFormGenericType: execute=" + toSimpleMethodExp() + " form=" + formType;
             throw new IllegalStateException(msg);
         }));
     }
@@ -165,8 +164,8 @@ public class ActionExecute implements Serializable {
         return actionMapping.getActionDef().getComponentName() + "_" + executeMethod.getName() + "_Form";
     }
 
-    protected ActionFormMeta newActionFormMeta(String formKey, Class<?> formType, OptionalThing<Class<?>> listFormGenericType) {
-        return new ActionFormMeta(formKey, formType, listFormGenericType);
+    protected ActionFormMeta newActionFormMeta(String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter) {
+        return new ActionFormMeta(formKey, formType, listFormParameter);
     }
 
     // -----------------------------------------------------
@@ -201,7 +200,7 @@ public class ActionExecute implements Serializable {
         br.addElement("    @Execute // OK: abbreviate it");
         br.addElement("    public void index(int pageNumber, String keyword) {");
         br.addItem("Execute Method");
-        br.addElement(buildSimpleMethodExp());
+        br.addElement(toSimpleMethodExp());
         br.addItem("Specified urlPattern");
         br.addElement(specifiedUrlPattern);
         final String msg = br.buildExceptionMessage();
@@ -225,7 +224,7 @@ public class ActionExecute implements Serializable {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the URL parameter arguments for the execute method.");
         br.addItem("Execute Method");
-        br.addElement(buildSimpleMethodExp());
+        br.addElement(toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
         throw new UrlParamArgsNotFoundException(msg);
     }
@@ -284,7 +283,7 @@ public class ActionExecute implements Serializable {
         br.addElement("    @Execute(\"{}/sea/{}\")");
         br.addElement("    public HtmlResponse index(int land, String ikspiary) { // OK");
         br.addItem("Execute Method");
-        br.addElement(buildSimpleMethodExp());
+        br.addElement(toSimpleMethodExp());
         br.addItem("urlPattern Variable List");
         br.addElement(urlPatternVarList);
         br.addItem("Defined Argument List");
@@ -445,9 +444,9 @@ public class ActionExecute implements Serializable {
 
     public boolean isTargetExecute(HttpServletRequest request) {
         final String methodName = executeMethod.getName();
-        return !isParameterEmpty(request.getParameter(methodName)) //
-                || !isParameterEmpty(request.getParameter(methodName + ".x")) //
-                || !isParameterEmpty(request.getParameter(methodName + ".y"));
+        return !isParameterEmpty(request.getParameter(methodName)) // e.g. doUpdate=update
+                || !isParameterEmpty(request.getParameter(methodName + ".x")) // e.g. doUpdate.x=update
+                || !isParameterEmpty(request.getParameter(methodName + ".y")); // e.g. doUpdate.y=update
     }
 
     protected boolean isParameterEmpty(String str) {
@@ -467,15 +466,15 @@ public class ActionExecute implements Serializable {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append(DfTypeUtil.toClassTitle(this)).append(":{");
-        sb.append(buildSimpleMethodExp());
+        sb.append("execute:{");
+        sb.append(toSimpleMethodExp());
         sb.append(", urlPattern=").append(urlPattern);
         sb.append(", regexp=").append(urlPatternRegexp);
         sb.append("}@").append(Integer.toHexString(hashCode()));
         return sb.toString();
     }
 
-    protected String buildSimpleMethodExp() {
+    public String toSimpleMethodExp() {
         return LaActionExecuteUtil.buildSimpleMethodExp(executeMethod);
     }
 

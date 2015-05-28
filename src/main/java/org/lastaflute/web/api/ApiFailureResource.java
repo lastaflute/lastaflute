@@ -26,7 +26,7 @@ import org.lastaflute.web.servlet.request.RequestManager;
 /**
  * @author jflute
  */
-public class ApiResultResource {
+public class ApiFailureResource {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -37,7 +37,7 @@ public class ApiResultResource {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ApiResultResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
+    public ApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
         this.errors = errors;
         this.requestManager = requestManager;
     }

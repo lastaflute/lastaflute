@@ -26,7 +26,7 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 /**
  * The manager of message. <br>
  * You can get the message resource as various type. <br>
- * But saving and adding message is provided at {@link #RequestManager}, {@link #SessionManager}.
+ * But saving and adding message is provided at RequestManager, SessionManager.
  * @author jflute
  */
 public interface MessageManager {

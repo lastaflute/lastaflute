@@ -18,42 +18,59 @@ package org.lastaflute.core.direction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 
 /**
  * @author jflute
  */
-public class OptionalAssistDirection {
+public class FwAssistDirection {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected String domainConfigFile;
-    protected final List<String> extendsConfigFileList = new ArrayList<String>(4);
+    protected String appConfig; // not null
+    protected final List<String> extendsConfigList = new ArrayList<String>(4);
+    protected PropertyFilter configPropertyFilter; // null allowed
 
     // ===================================================================================
     //                                                                     Direct Property
     //                                                                     ===============
-    public void directConfiguration(String domainConfigFile, String... extendsConfigFiles) {
-        this.domainConfigFile = domainConfigFile;
-        if (extendsConfigFiles != null && extendsConfigFiles.length > 0) {
-            this.extendsConfigFileList.addAll(Arrays.asList(extendsConfigFiles));
-        }
+    public void directConfig(Consumer<List<String>> appSetupper, String... commonNames) {
+        final List<String> nameList = new ArrayList<String>(4);
+        appSetupper.accept(nameList);
+        nameList.addAll(Arrays.asList(commonNames));
+        appConfig = nameList.remove(0);
+        extendsConfigList.addAll(nameList);
+    }
+
+    public void directPropertyFilter(PropertyFilter configPropertyFilter) {
+        this.configPropertyFilter = configPropertyFilter;
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public String assistDomainConfigFile() {
-        if (domainConfigFile == null) {
-            String msg = "Not found the file for domain configuration.";
-            throw new FwRequiredAssistNotFoundException(msg);
-        }
-        return domainConfigFile;
+    public String assistAppConfig() {
+        assertAssistObjectNotNull(appConfig, "Not found the file for domain configuration.");
+        return appConfig;
     }
 
-    public List<String> assistExtendsConfigFileList() {
-        return extendsConfigFileList;
+    public List<String> assistExtendsConfigList() {
+        return extendsConfigList; // empty allowed but almost exists
+    }
+
+    public PropertyFilter assistConfigPropertyFilter() {
+        return configPropertyFilter; // not required: no filter
+    }
+
+    // -----------------------------------------------------
+    //                                         Assert Helper
+    //                                         -------------
+    protected void assertAssistObjectNotNull(Object obj, String msg) {
+        if (obj == null) {
+            throw new FwRequiredAssistNotFoundException(msg);
+        }
     }
 }

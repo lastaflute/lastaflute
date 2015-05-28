@@ -15,18 +15,22 @@
  */
 package org.lastaflute.web.ruts.config;
 
+import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.exception.ActionFormCreateFailureException;
 import org.lastaflute.web.ruts.VirtualActionForm;
+import org.lastaflute.web.ruts.VirtualActionForm.RealFormSupplier;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
 /**
@@ -39,16 +43,16 @@ public class ActionFormMeta {
     //                                                                           =========
     protected final String formKey; // not null
     protected final Class<?> formType; // not null
-    protected final OptionalThing<Class<?>> listFormGenericType; // not null
+    protected final OptionalThing<Parameter> listFormParameter; // not null
     protected final Map<String, ActionFormProperty> propertyMap; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionFormMeta(String formKey, Class<?> formType, OptionalThing<Class<?>> listFormGenericType) {
+    public ActionFormMeta(String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter) {
         this.formKey = formKey;
         this.formType = formType;
-        this.listFormGenericType = listFormGenericType;
+        this.listFormParameter = listFormParameter;
         this.propertyMap = setupProperties(formType);
     }
 
@@ -96,19 +100,27 @@ public class ActionFormMeta {
         return newVirtualActionForm(getActionFormSupplier(), this);
     }
 
-    protected VirtualActionForm newVirtualActionForm(Supplier<Object> formSupplier, ActionFormMeta formMeta) {
+    protected VirtualActionForm newVirtualActionForm(RealFormSupplier formSupplier, ActionFormMeta formMeta) {
         return new VirtualActionForm(formSupplier, formMeta);
     }
 
-    protected Supplier<Object> getActionFormSupplier() {
+    protected RealFormSupplier getActionFormSupplier() {
         return () -> {
             try {
+                checkInstantiatedFormType();
                 return formType.newInstance();
             } catch (Exception e) {
                 throwActionFormCreateFailureException(e);
                 return null; // unreachable
             }
         };
+    }
+
+    protected void checkInstantiatedFormType() {
+        if (List.class.isAssignableFrom(formType)) { // e.g. List<SeaForm>, JSON body of list type
+            String msg = "Cannot instantiate the form because of list type, should not come here:" + formType;
+            throw new IllegalStateException(msg);
+        }
     }
 
     protected void throwActionFormCreateFailureException(Exception cause) {
@@ -134,8 +146,10 @@ public class ActionFormMeta {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("formMeta:{").append(formKey).append(", ");
-        sb.append(formType.getName()).append(listFormGenericType.map(tp -> "<" + tp.getSimpleName() + ">").orElse(""));
+        sb.append("formMeta:{").append(formKey);
+        sb.append(", ").append(listFormParameter.map(pm -> {
+            return pm.getParameterizedType().getTypeName();
+        }).orElse(formType.getName()));
         sb.append(", props=").append(propertyMap.size());
         return sb.toString();
     }
@@ -151,7 +165,24 @@ public class ActionFormMeta {
         return formType;
     }
 
-    public OptionalThing<Class<?>> getListFormGenericType() {
-        return listFormGenericType;
+    // -----------------------------------------------------
+    //                                             List Form
+    //                                             ---------
+    public OptionalThing<Parameter> getListFormParameter() {
+        return listFormParameter;
+    }
+
+    public OptionalThing<Class<?>> getListFormParameterGenericType() {
+        return listFormParameter.map(pm -> {
+            /* always exists, already checked in romantic action customizer */
+            return DfReflectionUtil.getGenericFirstClass(pm.getParameterizedType());
+        });
+    }
+
+    public OptionalThing<ParameterizedType> getListFormParameterParameterizedType() {
+        return listFormParameter.map(pm -> {
+            /* always parameterized, already checked in romantic action customizer */
+            return (ParameterizedType) pm.getParameterizedType();
+        });
     }
 }

@@ -32,14 +32,13 @@ import org.lastaflute.db.dbflute.accesscontext.AccessContextResource;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
+import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.api.ApiResultResource;
 import org.lastaflute.web.login.LoginHandlingResource;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.slf4j.Logger;
@@ -48,12 +47,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jflute
  */
-public class TypicalGodHandActionPrologue {
+public class TypicalGodHandPrologue {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandActionPrologue.class);
+    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandPrologue.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -69,7 +68,7 @@ public class TypicalGodHandActionPrologue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandActionPrologue(TypicalGodHandResource resource, AccessContextArranger accessContextArranger,
+    public TypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger accessContextArranger,
             Supplier<OptionalThing<? extends UserBean>> userBeanSupplier, Supplier<String> appTypeSupplier) {
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
@@ -83,28 +82,28 @@ public class TypicalGodHandActionPrologue {
     // ===================================================================================
     //                                                                            Prologue
     //                                                                            ========
-    public ActionResponse performPrologue(ActionRuntimeMeta executeMeta) { // fixed process
-        arrangeThreadCacheContextBasicItem(executeMeta);
-        arrangePreparedAccessContext(executeMeta);
-        arrangeCallbackContext(executeMeta); // should be after access-context (using access context's info)
+    public ActionResponse performPrologue(ActionRuntime runtime) { // fixed process
+        arrangeThreadCacheContextBasicItem(runtime);
+        arrangePreparedAccessContext(runtime);
+        arrangeCallbackContext(runtime); // should be after access-context (using access context's info)
 
         // should be after access-context (may have update)
-        final ActionResponse redirectTo = handleLoginRequiredCheck(executeMeta);
+        final ActionResponse redirectTo = handleLoginRequiredCheck(runtime);
         if (redirectTo.isPresent()) {
             return redirectTo;
         }
-        arrangeThreadCacheContextLoginItem(executeMeta);
+        arrangeThreadCacheContextLoginItem(runtime);
         return ActionResponse.empty();
     }
 
-    protected void arrangeThreadCacheContextBasicItem(ActionRuntimeMeta executeMeta) {
+    protected void arrangeThreadCacheContextBasicItem(ActionRuntime runtime) {
         if (ThreadCacheContext.exists()) { // basically true, just in case
             ThreadCacheContext.registerRequestPath(requestManager.getRequestPathAndQuery());
-            ThreadCacheContext.registerEntryMethod(executeMeta.getExecuteMethod());
+            ThreadCacheContext.registerEntryMethod(runtime.getExecuteMethod());
         }
     }
 
-    protected void arrangeThreadCacheContextLoginItem(ActionRuntimeMeta executeMeta) {
+    protected void arrangeThreadCacheContextLoginItem(ActionRuntime runtime) {
         if (ThreadCacheContext.exists()) { // basically true, just in case
             ThreadCacheContext.registerUserBean(userBeanSupplier.get().orElse(null)); // basically for asynchronous
         }
@@ -116,21 +115,20 @@ public class TypicalGodHandActionPrologue {
     /**
      * Arrange prepared access context for DBFlute, which is used for common columns setup. <br>
      * This is called by callback process so you should NOT call this directly in your action.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      */
-    protected void arrangePreparedAccessContext(ActionRuntimeMeta executeMeta) { // called by callback
-        final AccessContextResource resource = createAccessContextResource(executeMeta);
+    protected void arrangePreparedAccessContext(ActionRuntime runtime) { // called by callback
+        final AccessContextResource resource = createAccessContextResource(runtime);
         final AccessContext accessContext = accessContextArranger.arrangePreparedAccessContext(resource);
         PreparedAccessContext.setAccessContextOnThread(accessContext);
     }
 
-    protected AccessContextResource createAccessContextResource(ActionRuntimeMeta executeMeta) {
-        final Method method = executeMeta.getExecuteMethod();
-        final String classTitle = DfTypeUtil.toClassTitle(method.getDeclaringClass());
-        return newAccessContextResource(method, classTitle);
+    protected AccessContextResource createAccessContextResource(ActionRuntime runtime) {
+        final String classTitle = DfTypeUtil.toClassTitle(runtime.getActionType());
+        return newAccessContextResource(classTitle, runtime.getExecuteMethod());
     }
 
-    protected AccessContextResource newAccessContextResource(Method method, String classTitle) {
+    protected AccessContextResource newAccessContextResource(String classTitle, Method method) {
         return new AccessContextResource(classTitle, method);
     }
 
@@ -148,21 +146,21 @@ public class TypicalGodHandActionPrologue {
     /**
      * Arrange callback context for DBFlute, which is used for several purpose. <br>
      * This is called by callback process so you should NOT call this directly in your action.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      */
-    protected void arrangeCallbackContext(final ActionRuntimeMeta executeMeta) {
-        final SqlFireHook sqlFireHook = createSqlFireHook(executeMeta);
+    protected void arrangeCallbackContext(final ActionRuntime runtime) {
+        final SqlFireHook sqlFireHook = createSqlFireHook(runtime);
         CallbackContext.setSqlFireHookOnThread(sqlFireHook);
-        final SqlStringFilter filter = createSqlStringFilter(executeMeta);
+        final SqlStringFilter filter = createSqlStringFilter(runtime);
         CallbackContext.setSqlStringFilterOnThread(filter);
     }
 
     /**
      * Create the filter of SQL string for DBFlute.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      * @return The hook of SQL fire. (NullAllowed: if null, no hook)
      */
-    protected SqlFireHook createSqlFireHook(ActionRuntimeMeta executeMeta) {
+    protected SqlFireHook createSqlFireHook(ActionRuntime runtime) {
         return newRomanticTraceableSqlFireHook();
     }
 
@@ -172,11 +170,11 @@ public class TypicalGodHandActionPrologue {
 
     /**
      * Create the filter of SQL string for DBFlute.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      * @return The filter of SQL string. (NullAllowed: if null, no filter)
      */
-    protected SqlStringFilter createSqlStringFilter(final ActionRuntimeMeta executeMeta) {
-        final Method actionMethod = executeMeta.getExecuteMethod();
+    protected SqlStringFilter createSqlStringFilter(ActionRuntime runtime) {
+        final Method actionMethod = runtime.getExecuteMethod();
         return newRomanticTraceableSqlStringFilter(actionMethod, new TraceableSqlAdditionalInfoProvider() {
             @Override
             public String provide() { // lazy because it may be auto-login later
@@ -200,9 +198,9 @@ public class TypicalGodHandActionPrologue {
 
     /**
      * Handle count of SQL execution in the request.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      */
-    protected void handleSqlCount(final ActionRuntimeMeta executeMeta) {
+    protected void handleSqlCount(final ActionRuntime runtime) {
         final CallbackContext context = CallbackContext.getCallbackContextOnThread();
         if (context == null) {
             return;
@@ -212,9 +210,9 @@ public class TypicalGodHandActionPrologue {
             return;
         }
         final ExecutedSqlCounter counter = ((ExecutedSqlCounter) filter);
-        final int limitCountOfSql = getLimitCountOfSql(executeMeta);
+        final int limitCountOfSql = getLimitCountOfSql(runtime);
         if (limitCountOfSql >= 0 && counter.getTotalCountOfSql() > limitCountOfSql) {
-            handleTooManySqlExecution(executeMeta, counter);
+            handleTooManySqlExecution(runtime, counter);
         }
         final String exp = counter.toLineDisp();
         requestManager.setAttribute(RequestManager.DBFLUTE_SQL_COUNT_KEY, exp); // logged by logging filter
@@ -222,27 +220,25 @@ public class TypicalGodHandActionPrologue {
 
     /**
      * Handle too many SQL executions.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      * @param sqlCounter The counter object for SQL executions. (NotNull)
      */
-    protected void handleTooManySqlExecution(final ActionRuntimeMeta executeMeta, final ExecutedSqlCounter sqlCounter) {
-        final String actionDisp = buildActionDisp(executeMeta);
+    protected void handleTooManySqlExecution(ActionRuntime runtime, ExecutedSqlCounter sqlCounter) {
+        final String actionDisp = buildActionDisp(runtime);
         logger.warn("*Too many SQL executions: " + sqlCounter.getTotalCountOfSql() + " in " + actionDisp);
     }
 
-    protected String buildActionDisp(ActionRuntimeMeta executeMeta) {
-        final Method method = executeMeta.getExecuteMethod();
-        final Class<?> declaringClass = method.getDeclaringClass();
-        return declaringClass.getSimpleName() + "." + method.getName() + "()";
+    protected String buildActionDisp(ActionRuntime runtime) {
+        return runtime.getActionType().getSimpleName() + "." + runtime.getExecuteMethod().getName() + "()";
     }
 
     /**
      * Get the limit count of SQL execution. <br>
      * You can override if you need.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      * @return The max count allowed for SQL executions. (MinusAllowed: if minus, no check)
      */
-    protected int getLimitCountOfSql(ActionRuntimeMeta executeMeta) {
+    protected int getLimitCountOfSql(ActionRuntime runtime) {
         return 30; // as default
     }
 
@@ -260,15 +256,15 @@ public class TypicalGodHandActionPrologue {
     //                                                                      ==============
     /**
      * Handle the login required check for the requested action.
-     * @param runtimeMeta The runtime meta of action execute to determine required action. (NotNull)
+     * @param runtime The runtime meta of action execute to determine required action. (NotNull)
      * @return The forward path, basically for login-redirect. (NullAllowed)
      */
-    protected ActionResponse handleLoginRequiredCheck(ActionRuntimeMeta runtimeMeta) {
+    protected ActionResponse handleLoginRequiredCheck(ActionRuntime runtime) {
         return loginManager.map(nager -> {
-            final LoginHandlingResource resource = createLogingHandlingResource(runtimeMeta);
+            final LoginHandlingResource resource = createLogingHandlingResource(runtime);
             return nager.checkLoginRequired(resource).map(forwardTo -> {
-                if (runtimeMeta.isApiAction()) {
-                    return dispatchApiLoginRequiredFailure(runtimeMeta);
+                if (runtime.isApiAction()) {
+                    return dispatchApiLoginRequiredFailure(runtime);
                 } else {
                     return HtmlResponse.fromRedirectPath(forwardTo);
                 }
@@ -278,19 +274,16 @@ public class TypicalGodHandActionPrologue {
         });
     }
 
-    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntimeMeta executeMeta) {
-        final ApiResultResource resource = createApiLoginRequiredFailureResource();
-        return apiManager.prepareLoginRequiredFailure(resource, executeMeta);
+    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime) {
+        final ApiFailureResource resource = createApiLoginRequiredFailureResource();
+        return apiManager.handleLoginRequiredFailure(resource, runtime);
     }
 
-    protected ApiResultResource createApiLoginRequiredFailureResource() {
-        return new ApiResultResource(sessionManager.errors().get(), requestManager);
+    protected ApiFailureResource createApiLoginRequiredFailureResource() {
+        return new ApiFailureResource(sessionManager.errors().get(), requestManager);
     }
 
-    protected LoginHandlingResource createLogingHandlingResource(ActionRuntimeMeta executeMeta) {
-        final Method actionMethod = executeMeta.getExecuteMethod();
-        final RuntimeException failureCause = executeMeta.getFailureCause();
-        final ActionMessages validationErrors = executeMeta.getValidationErrors();
-        return new LoginHandlingResource(actionMethod.getDeclaringClass(), actionMethod, failureCause, validationErrors);
+    protected LoginHandlingResource createLogingHandlingResource(ActionRuntime runtime) {
+        return new LoginHandlingResource(runtime);
     }
 }
