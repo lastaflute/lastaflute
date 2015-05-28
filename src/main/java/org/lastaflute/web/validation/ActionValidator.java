@@ -59,6 +59,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    protected static final Class<?>[] EMPTY_GROUPS = new Class<?>[0];
     protected static final String ITEM_VARIABLE = "{item}";
     protected static final String LABELS_PREFIX = "labels.";
 
@@ -67,14 +68,16 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                                                           =========
     protected final RequestManager requestManager;
     protected final MessagesCreator<MESSAGES> messageCreator;
+    protected final Class<?>[] groups; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(RequestManager requestManager, MessagesCreator<MESSAGES> noArgInLambda) {
+    public ActionValidator(RequestManager requestManager, MessagesCreator<MESSAGES> noArgInLambda, Class<?>... groups) {
         assertArgumentNotNull("requestManager", requestManager);
         this.requestManager = requestManager;
         this.messageCreator = noArgInLambda;
+        this.groups = groups != null ? groups : EMPTY_GROUPS;
     }
 
     // ===================================================================================
@@ -136,7 +139,8 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                                                 ===================
     protected ActionMessages hibernateValidate(Object form) {
         final Validator validator = comeOnHibernateValidator();
-        final Set<ConstraintViolation<Object>> vioSet = validator.validate(form);
+        // TODO jflute lastaflute: [C] fitting: hibernate validator, groups
+        final Set<ConstraintViolation<Object>> vioSet = validator.validate(form, groups);
         final TreeMap<String, Object> orderedMap = prepareOrderedMap(form, vioSet);
         final ActionMessages messages = prepareActionMessages();
         for (Entry<String, Object> entry : orderedMap.entrySet()) {
