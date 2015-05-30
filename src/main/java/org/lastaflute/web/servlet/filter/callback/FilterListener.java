@@ -9,23 +9,22 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.direction;
+package org.lastaflute.web.servlet.filter.callback;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
 
 /**
- * The callback for boot process. <br>
- * You can add your own process when your application is booting.
  * @author jflute
+ * @since 0.6.0 (2015/05/30 Saturday)
  */
-public interface BootProcessCallback {
+@FunctionalInterface
+public interface FilterListener {
 
-    /**
-     * Callback your process. <br>
-     * You can know whether the current environment is development or not by the assistant director.
-     * @param assistantDirector The assistant director for the framework. (NotNull)
-     */
-    void callback(FwAssistantDirector assistantDirector);
+    void listen(FilterListenerChain chain) throws IOException, ServletException;
 }

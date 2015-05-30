@@ -55,7 +55,7 @@ public class FwCoreDirection {
     protected boolean frameworkDebug;
 
     /** The callback for boot process, called-back when your application is booting. (NullAllowed: not required) */
-    protected BootProcessCallback bootProcessCallback;
+    protected BootListener bootProcessCallback;
 
     // -----------------------------------------------------
     //                                              Security
@@ -113,7 +113,7 @@ public class FwCoreDirection {
         this.frameworkDebug = frameworkDebug;
     }
 
-    public void directBootProcessCallback(BootProcessCallback bootProcessCallback) {
+    public void directBoot(BootListener bootProcessCallback) {
         this.bootProcessCallback = bootProcessCallback;
     }
 
@@ -180,7 +180,7 @@ public class FwCoreDirection {
         return frameworkDebug;
     }
 
-    public BootProcessCallback assistBootProcessCallback() {
+    public BootListener assistBootProcessCallback() {
         return bootProcessCallback; // not required, no process if null
     }
 

@@ -17,6 +17,7 @@ package org.lastaflute.web.direction;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -24,6 +25,8 @@ import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
+import org.lastaflute.web.servlet.filter.callback.FilterListener;
+import org.lastaflute.web.servlet.filter.callback.MDCFilterListener;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
 import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
 import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
@@ -53,12 +56,17 @@ public class FwWebDirection {
     //                                               Message
     //                                               -------
     protected String appMessageName;
-    protected final List<String> extendsMessageNameList = new ArrayList<String>(4);
+    protected List<String> extendsMessageNameList; // lazy loaded
 
     // -----------------------------------------------------
     //                                              API Call
     //                                              --------
     protected ApiFailureHook apiFailureHook;
+
+    // -----------------------------------------------------
+    //                                       Filter Listener
+    //                                       ---------------
+    protected List<FilterListener> filterListenerList; // lazy loaded
 
     // ===================================================================================
     //                                                                     Direct Property
@@ -94,7 +102,14 @@ public class FwWebDirection {
         appSetupper.accept(nameList);
         nameList.addAll(Arrays.asList(commonNames));
         appMessageName = nameList.remove(0);
-        extendsMessageNameList.addAll(nameList);
+        getExtendsMessageNameList().addAll(nameList);
+    }
+
+    protected List<String> getExtendsMessageNameList() {
+        if (extendsMessageNameList == null) {
+            extendsMessageNameList = new ArrayList<String>(4);
+        }
+        return extendsMessageNameList;
     }
 
     // -----------------------------------------------------
@@ -102,6 +117,21 @@ public class FwWebDirection {
     //                                              --------
     public void directApiCall(ApiFailureHook apiFailureHook) {
         this.apiFailureHook = apiFailureHook;
+    }
+
+    // -----------------------------------------------------
+    //                                       Filter Listener
+    //                                       ---------------
+    // independent per purpose
+    public void directMDC(MDCFilterListener listener) {
+        getFilterListenerList().add(listener);
+    }
+
+    protected List<FilterListener> getFilterListenerList() {
+        if (filterListenerList == null) {
+            filterListenerList = new ArrayList<FilterListener>(4);
+        }
+        return filterListenerList;
     }
 
     // ===================================================================================
@@ -145,8 +175,8 @@ public class FwWebDirection {
         return appMessageName;
     }
 
-    public List<String> assistExtendsMessageNameList() {
-        return extendsMessageNameList; // empty allowed but almost exists 
+    public List<String> assistExtendsMessageNameList() { // empty allowed but almost exists
+        return extendsMessageNameList != null ? extendsMessageNameList : Collections.emptyList();
     }
 
     // -----------------------------------------------------
@@ -155,6 +185,13 @@ public class FwWebDirection {
     public ApiFailureHook assistApiFailureHook() {
         assertAssistObjectNotNull(appMessageName, "Not found the hook for API failure.");
         return apiFailureHook;
+    }
+
+    // -----------------------------------------------------
+    //                                       Filter Listener
+    //                                       ---------------
+    public List<FilterListener> assistFilterListenerList() { // empty allowed and normally empty
+        return filterListenerList != null ? filterListenerList : Collections.emptyList();
     }
 
     // -----------------------------------------------------
