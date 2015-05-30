@@ -18,11 +18,13 @@ package org.lastaflute.web.servlet.filter.callback;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import javax.servlet.ServletException;
 
 import org.jboss.logging.MDC;
+import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
  * @author jflute
@@ -30,15 +32,16 @@ import org.jboss.logging.MDC;
  */
 public class MDCFilterListener implements FilterListener {
 
-    protected final Map<String, Supplier<Object>> mdcMap; // not null, empty allowed
+    protected final Map<String, Function<RequestManager, Object>> mdcMap; // not null, empty allowed
 
-    public MDCFilterListener(Map<String, Supplier<Object>> mdcMap) {
+    public MDCFilterListener(Map<String, Function<RequestManager, Object>> mdcMap) {
         if (mdcMap == null) {
             throw new IllegalArgumentException("The argument 'mdcMap' should not be null.");
         }
         this.mdcMap = mdcMap;
     }
 
+    // TODO lastaflute: [F] test: UnitTest of MDCFilterListener by jflute (2015/05/31)
     @Override
     public void listen(FilterListenerChain chain) throws IOException, ServletException {
         final Map<String, Object> originallyMap = createOriginallyMap();
@@ -51,7 +54,8 @@ public class MDCFilterListener implements FilterListener {
             });
         }
         try {
-            mdcMap.forEach((key, value) -> MDC.put(key, value));
+            final RequestManager requestManager = getRequestManager();
+            mdcMap.forEach((key, value) -> MDC.put(key, value.apply(requestManager)));
             chain.doNext();
         } finally {
             if (originallyMap != null) {
@@ -62,5 +66,9 @@ public class MDCFilterListener implements FilterListener {
 
     protected Map<String, Object> createOriginallyMap() {
         return !mdcMap.isEmpty() ? new LinkedHashMap<String, Object>() : null;
+    }
+
+    protected RequestManager getRequestManager() {
+        return ContainerUtil.getComponent(RequestManager.class);
     }
 }
