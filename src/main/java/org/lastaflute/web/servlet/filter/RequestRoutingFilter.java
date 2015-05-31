@@ -222,7 +222,7 @@ public class RequestRoutingFilter implements Filter {
     protected void processAction(HttpServletRequest request, HttpServletResponse response, ActionExecute execute, String paramPath)
             throws IOException, ServletException {
         logger.debug("...Routing to action: name={} params={}", execute.getActionMapping().getActionName(), paramPath);
-        LaActionExecuteUtil.setActionExecute(request, execute); // for e.g. tag-library use
+        LaActionExecuteUtil.setActionExecute(execute); // for e.g. tag-library use
         getRequestProcessor().process(execute, analyzeUrlParam(execute, paramPath)); // #to_action
     }
 

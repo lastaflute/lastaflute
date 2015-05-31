@@ -31,6 +31,7 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.lastaflute.web.util.LaActionRuntimeUtil;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -127,6 +128,13 @@ public class ActionCoinHelper {
     }
 
     // ===================================================================================
+    //                                                                        Save Runtime
+    //                                                                        ============
+    public void saveRuntimeToRequest(ActionRuntime runtime) { // to get it from other area
+        LaActionRuntimeUtil.setActionRuntime(runtime);
+    }
+
+    // ===================================================================================
     //                                                               Remove Cached Message
     //                                                               =====================
     /**
@@ -159,13 +167,6 @@ public class ActionCoinHelper {
         // you can customize the process e.g. accept cookie locale
         requestManager.resolveUserLocale(runtime);
         requestManager.resolveUserTimeZone(runtime);
-    }
-
-    // ===================================================================================
-    //                                                                        Save Runtime
-    //                                                                        ============
-    public void saveRuntimeToRequest(ActionRuntime runtime) { // to get it from other area
-        requestManager.setAttribute(LastaWebKey.ACTION_RUNTIME_KEY, runtime);
     }
 
     // ===================================================================================

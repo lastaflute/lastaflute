@@ -69,10 +69,10 @@ public class ActionRuntime {
     //                                                                      ==============
     /**
      * Get the type of requested action.
-     * @return The type object of action, not enhanced. (NotNull)
+     * @return The type object of action, non enhanced. (NotNull)
      */
     public Class<?> getActionType() {
-        return getExecuteMethod().getDeclaringClass();
+        return execute.getActionMapping().getActionDef().getComponentClass();
     }
 
     /**
@@ -92,7 +92,7 @@ public class ActionRuntime {
         if (ApiResponse.class.isAssignableFrom(actionMethod.getReturnType())) {
             return true; // if JSON response, this action can be treated as API without the marker interface
         }
-        return ApiAction.class.isAssignableFrom(actionMethod.getDeclaringClass());
+        return ApiAction.class.isAssignableFrom(getActionType());
     }
 
     // ===================================================================================

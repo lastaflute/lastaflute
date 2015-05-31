@@ -55,8 +55,8 @@ public class LaActionExecuteUtil {
         return (ActionExecute) LaRequestUtil.getRequest().getAttribute(KEY);
     }
 
-    public static void setActionExecute(HttpServletRequest request, ActionExecute execute) {
-        request.setAttribute(KEY, execute);
+    public static void setActionExecute(ActionExecute execute) {
+        LaRequestUtil.getRequest().setAttribute(KEY, execute);
     }
 
     // ===================================================================================

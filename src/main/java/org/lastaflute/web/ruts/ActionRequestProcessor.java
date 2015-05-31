@@ -136,9 +136,9 @@ public class ActionRequestProcessor {
     protected void ready(ActionRuntime runtime, ActionResponseReflector reflector) {
         actionCoinHelper.prepareRequestClientErrorHandlingIfApi(runtime, reflector);
         actionCoinHelper.prepareRequestServerErrorHandlingIfApi(runtime, reflector);
+        actionCoinHelper.saveRuntimeToRequest(runtime);
         actionCoinHelper.removeCachedMessages();
         actionCoinHelper.resolveLocale(runtime);
-        actionCoinHelper.saveRuntimeToRequest(runtime);
     }
 
     // ===================================================================================
