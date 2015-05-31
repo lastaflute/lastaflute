@@ -99,7 +99,11 @@ public abstract class LastaAction {
     //                                                                          ==========
     @SuppressWarnings("unchecked")
     protected <MESSAGES extends ActionMessages> ActionValidator<MESSAGES> createValidator() { // overridden as type-safe
-        return new ActionValidator<MESSAGES>(requestManager, () -> (MESSAGES) createMessages());
+        return new ActionValidator<MESSAGES>(requestManager, () -> (MESSAGES) createMessages(), myValidationGroups());
+    }
+
+    protected Class<?>[] myValidationGroups() { // you can override
+        return null; // means default group
     }
 
     /**

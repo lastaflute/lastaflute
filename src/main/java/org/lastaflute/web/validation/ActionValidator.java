@@ -40,7 +40,6 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
-import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.response.ApiResponse;
@@ -48,6 +47,7 @@ import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.message.MessagesCreator;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 
 /**
@@ -131,7 +131,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     }
 
     protected ActionRuntime retrieveActionRuntimeMeta() {
-        return requestManager.getAttribute(LastaWebKey.ACTION_RUNTIME_KEY, ActionRuntime.class).get(); // always exists
+        return LaActionRuntimeUtil.getActionRuntime();
     }
 
     // ===================================================================================
@@ -139,7 +139,6 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                                                 ===================
     protected ActionMessages hibernateValidate(Object form) {
         final Validator validator = comeOnHibernateValidator();
-        // TODO jflute lastaflute: [C] fitting: hibernate validator, groups
         final Set<ConstraintViolation<Object>> vioSet = validator.validate(form, groups);
         final TreeMap<String, Object> orderedMap = prepareOrderedMap(form, vioSet);
         final ActionMessages messages = prepareActionMessages();
