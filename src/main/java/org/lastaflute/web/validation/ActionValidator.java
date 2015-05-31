@@ -31,6 +31,7 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.bootstrap.GenericBootstrap;
+import javax.validation.groups.Default;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
@@ -59,7 +60,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    protected static final Class<?>[] EMPTY_GROUPS = new Class<?>[0];
+    public static final Class<?>[] DEFAULT_GROUPS = new Class<?>[] { Default.class };
     protected static final String ITEM_VARIABLE = "{item}";
     protected static final String LABELS_PREFIX = "labels.";
 
@@ -75,9 +76,11 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                                                         ===========
     public ActionValidator(RequestManager requestManager, MessagesCreator<MESSAGES> noArgInLambda, Class<?>... groups) {
         assertArgumentNotNull("requestManager", requestManager);
+        assertArgumentNotNull("noArgInLambda", noArgInLambda);
+        assertArgumentNotNull("groups", groups);
         this.requestManager = requestManager;
         this.messageCreator = noArgInLambda;
-        this.groups = groups != null ? groups : EMPTY_GROUPS;
+        this.groups = groups;
     }
 
     // ===================================================================================

@@ -103,7 +103,7 @@ public abstract class LastaAction {
     }
 
     protected Class<?>[] myValidationGroups() { // you can override
-        return null; // means default group
+        return ActionValidator.DEFAULT_GROUPS; // means default group
     }
 
     /**
