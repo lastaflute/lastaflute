@@ -262,11 +262,11 @@ public class TypicalGodHandPrologue {
     protected ActionResponse handleLoginRequiredCheck(ActionRuntime runtime) {
         return loginManager.map(nager -> {
             final LoginHandlingResource resource = createLogingHandlingResource(runtime);
-            return nager.checkLoginRequired(resource).map(forwardTo -> {
+            return nager.checkLoginRequired(resource).map(routingPath -> {
                 if (runtime.isApiAction()) {
                     return dispatchApiLoginRequiredFailure(runtime);
                 } else {
-                    return HtmlResponse.fromRedirectPath(forwardTo);
+                    return HtmlResponse.fromRedirectPath(routingPath);
                 }
             }).orElse(HtmlResponse.empty());
         }).orElseGet(() -> {

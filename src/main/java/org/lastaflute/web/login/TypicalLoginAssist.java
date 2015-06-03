@@ -874,8 +874,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                                                      ==============
     @Override
     public void saveRequestedLoginRedirectInfo() {
-        final String pathAndQuery = requestManager.getRequestPathAndQuery();
-        final String redirectPath = actionPathResolver.toRedirectPath(pathAndQuery);
+        final String redirectPath = requestManager.getRequestPathAndQuery();
         final LoginRedirectBean redirectBean = createLoginRedirectBean(redirectPath);
         // not use instance type because it might be extended
         // (basically not use it when the object might be extended)

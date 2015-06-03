@@ -36,11 +36,6 @@ import org.lastaflute.web.util.LaServletContextUtil;
 public class ActionMapping {
 
     // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    public static final String REDIRECT = "redirect=true";
-
-    // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     // all not null
@@ -119,28 +114,20 @@ public class ActionMapping {
     // o routing path of forward e.g. /member/list/ -> MemberListAction
     public NextJourney createNextJourney(HtmlResponse response) { // almost copied from super
         String path = response.getRoutingPath();
-        final boolean redirectTo;
-        if (path.endsWith(REDIRECT)) {
-            redirectTo = true;
-            path = path.substring(0, path.length() - REDIRECT.length() - 1);
-        } else {
-            redirectTo = response.isRedirectTo();
-        }
+        final boolean redirectTo = response.isRedirectTo();
         if (path.indexOf(":") < 0) {
             if (!path.startsWith("/")) {
                 path = buildActionPath(getActionDef().getComponentName()) + path;
             }
-            if (!redirectTo) { // forward here
-                if (isJspForward(path)) { // e.g. JSP
-                    path = filterJspPath(path);
-                }
+            if (!redirectTo && isJspForward(path)) {
+                path = filterJspPath(path);
             }
         }
         return newNextJourney(path, redirectTo, response.isAsIs());
     }
 
-    protected NextJourney newNextJourney(String routingPath, boolean redirectTO, boolean asIs) {
-        return new NextJourney(routingPath, redirectTO, asIs);
+    protected NextJourney newNextJourney(String routingPath, boolean redirectTo, boolean asIs) {
+        return new NextJourney(routingPath, redirectTo, asIs);
     }
 
     protected String buildActionPath(String componentName) {

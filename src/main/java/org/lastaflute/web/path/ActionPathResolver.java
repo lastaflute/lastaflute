@@ -32,7 +32,6 @@ import org.lastaflute.di.util.LdiStringUtil;
 import org.lastaflute.web.UrlChain;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,9 +46,6 @@ public class ActionPathResolver {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger LOG = LoggerFactory.getLogger(ActionPathResolver.class);
-
-    /** The mark of redirect for SAStruts. */
-    public static final String REDIRECT = ActionMapping.REDIRECT;
 
     // ===================================================================================
     //                                                                           Attribute
@@ -250,7 +246,6 @@ public class ActionPathResolver {
         buildUrlParts(sb, chain);
         buildGetParam(sb, actionPath, getParamList);
         buildHashOnUrl(sb, chain);
-        buildRedirectMark(sb, redirect, getParamList);
         return sb.toString();
     }
 
@@ -300,13 +295,6 @@ public class ActionPathResolver {
         final Object hash = chain != null ? chain.getHashOnUrl() : null;
         if (hash != null) {
             sb.append("#").append(hash);
-        }
-    }
-
-    protected void buildRedirectMark(StringBuilder sb, boolean redirect, List<Object> getParamList) {
-        if (redirect) {
-            sb.append(!getParamList.isEmpty() ? "&" : "?");
-            sb.append(REDIRECT);
         }
     }
 
@@ -398,48 +386,23 @@ public class ActionPathResolver {
     //                                                                 Redirect Adjustment
     //                                                                 ===================
     /**
-     * Convert the request path (or URL) to redirect path for SAStruts. e.g. /member/list/?redirect=true
-     * @param requestPath The path of request. e.g. /member/list/ (NotNull)
-     * @return The request path (or URL) with redirect mark. (NotNull)
-     */
-    public String toRedirectPath(String requestPath) {
-        final String delimiter = requestPath.contains("?") ? "&" : "?";
-        return requestPath + delimiter + REDIRECT;
-    }
-
-    /**
-     * Convert the request path (or URL) to SSL redirect path for SAStruts. <br>
-     * e.g. https://...com/member/list/?redirect=true
+     * Convert the request path (or URL) to SSL redirect path for LastaFlute. <br>
+     * e.g. https://...com/member/list/
      * @param requestPath The path (or URL) of request. e.g. http://...com/member/list/ (NotNull)
      * @return The request path (or URL) with redirect mark. (NotNull)
      */
     public String toSslRedirectPath(String requestPath) {
-        return toRedirectPath(requestPath.replaceFirst("http:", "https:"));
+        return requestPath.replaceFirst("http:", "https:");
     }
 
     /**
-     * Convert the request path (or URL) to non-SSL redirect path for SAStruts. <br>
-     * e.g. http://...com/member/list/?redirect=true
+     * Convert the request path (or URL) to non-SSL redirect path for LastaFlute. <br>
+     * e.g. http://...com/member/list/
      * @param requestPath The path (or URL) of request. e.g. https://...com/member/list/ (NotNull)
      * @return The request path (or URL) with redirect mark. (NotNull)
      */
     public String toNonSslRedirectPath(String requestPath) {
-        return toRedirectPath(requestPath.replaceFirst("https:", "http:"));
-    }
-
-    /**
-     * Remove the redirect mark from redirect path for SAStruts. <br>
-     * e.g. /member/list/?redirect=true -&gt; /member/list/
-     * @param redirectPath The path to redirect for SAStruts. e.g. /member/list/?redirect=true (NotNull)
-     * @return The plain redirect path without redirect mark. (NotNull)
-     */
-    public String removeRedirectMark(String redirectPath) {
-        final String redirectMark = REDIRECT;
-        if (redirectPath.endsWith(redirectMark)) {
-            final String removed = substringLastFront(redirectPath, redirectMark);
-            return removed.substring(0, removed.length() - 1); // and remove delimiter
-        }
-        return redirectPath;
+        return requestPath.replaceFirst("https:", "http:");
     }
 
     // ===================================================================================

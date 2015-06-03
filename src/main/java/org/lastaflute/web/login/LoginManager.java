@@ -104,7 +104,7 @@ public interface LoginManager {
     /**
      * Check login required for the requested action. (with remember-me, preparing login-redirect)
      * @param resource The resource of login handling to determine required or not. (NotNull)
-     * @return The optional forward path, basically for login redirect. (NotNull: means checked, EmptyAllowed: then login check passed)
+     * @return The optional routing path, basically for login redirect. (NotNull: means checked, EmptyAllowed: then login check passed)
      */
     OptionalThing<String> checkLoginRequired(LoginHandlingResource resource);
 
