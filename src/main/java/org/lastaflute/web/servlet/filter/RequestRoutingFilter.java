@@ -33,6 +33,7 @@ import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ActionFoundPathHandler;
 import org.lastaflute.web.path.ActionPathResolver;
+import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.process.RequestUrlParam;
@@ -176,44 +177,56 @@ public class RequestRoutingFilter implements Filter {
     //                                                                   Routing to Action
     //                                                                   =================
     protected boolean routingToAction(HttpServletRequest request, HttpServletResponse response, String contextPath, String requestPath,
-            String actionName, String paramPath, ActionExecute execute) throws IOException, ServletException {
-        if (execute == null) {
-            if (needsSlashRedirect(request, requestPath, execute)) {
-                // TODO jflute lastaflute: [E] thinking: redirectWithSlash() needed? or arrange
-                redirectWithSlash(request, response, contextPath, requestPath);
-                return true;
-            } else {
-                final OptionalThing<ActionExecute> foundExecute = LaActionExecuteUtil.findActionExecute(actionName, request);
-                if (foundExecute.isPresent()) { // not use lambda because of throws definition
-                    processAction(request, response, foundExecute.get(), null); // #to_action
-                    return true;
-                } else { // e.g. not found index()
-                    return false;
-                }
-            }
-        } else {
-            processAction(request, response, execute, paramPath); // #to_action
+            String actionName, String paramPath, ActionExecute execByParam) throws IOException, ServletException {
+        if (execByParam != null) { // already found
+            processAction(request, response, execByParam, paramPath); // #to_action
             return true;
+        }
+        final OptionalThing<ActionExecute> found = LaActionExecuteUtil.findActionExecute(actionName, request);
+        if (found.isPresent()) { // not use lambda because of throws definition
+            final ActionExecute execute = found.get();
+            if (needsTrailingSlashRedirect(request, requestPath, execute)) { // index() or by request parameter
+                redirectWithTrailingSlash(request, response, contextPath, requestPath);
+            } else {
+                processAction(request, response, execute, null); // #to_action
+            }
+            return true;
+        } else { // e.g. not found index()
+            return false;
         }
     }
 
-    protected boolean needsSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute executeConfig) {
-        if (isForcedSuppressRedirectWithSlash(request, requestPath, executeConfig)) {
+    // -----------------------------------------------------
+    //                                        Trailing Slash
+    //                                        --------------
+    protected boolean needsTrailingSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute execute) {
+        if (isOutOfTrailingSlashRedirect(request, requestPath, execute)) {
             return false;
         }
+        if (isSuppressTrailingSlashRedirect(request, requestPath, execute)) {
+            return false;
+        }
+        return isNonTrailingSlashRequest(request, requestPath, execute);
+    }
+
+    protected boolean isOutOfTrailingSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute execute) {
+        return execute.isApiExecute(); // API does not need it (SEO handling)
+    }
+
+    protected boolean isSuppressTrailingSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute execute) {
+        return assistActionAdjustmentProvider().isSuppressTrailingSlashRedirect(request, requestPath, execute);
+    }
+
+    protected boolean isNonTrailingSlashRequest(HttpServletRequest request, String requestPath, ActionExecute execute) {
         return "GET".equalsIgnoreCase(request.getMethod()) && !requestPath.endsWith("/"); // default determination
     }
 
-    protected boolean isForcedSuppressRedirectWithSlash(HttpServletRequest request, String requestPath, ActionExecute executeConfig) {
-        return assistActionAdjustmentProvider().isForcedSuppressRedirectWithSlash(request, requestPath, executeConfig);
-    }
-
-    protected void redirectWithSlash(HttpServletRequest httpReq, HttpServletResponse httpRes, String contextPath, String requestPath)
-            throws IOException {
-        final String queryString = httpReq.getQueryString();
+    protected void redirectWithTrailingSlash(HttpServletRequest request, HttpServletResponse response, String contextPath,
+            String requestPath) throws IOException {
+        final String queryString = request.getQueryString();
         final String redirectUrl = contextPath + requestPath + "/" + (queryString != null ? "?" + queryString : "");
-        logger.debug("...Redirecting (with slash) to: {}", redirectUrl);
-        httpRes.sendRedirect(redirectUrl);
+        logger.debug("...Redirecting (with trailing slash) to: {}", redirectUrl);
+        getRequestManager().getResponseManager().movedPermanently(HtmlResponse.fromRedirectPathAsIs(redirectUrl));
     }
 
     // ===================================================================================

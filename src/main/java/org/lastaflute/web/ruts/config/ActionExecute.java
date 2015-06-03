@@ -28,6 +28,7 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.db.jta.stage.TransactionGenre;
+import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.exception.ActionFormNotFoundException;
 import org.lastaflute.web.exception.ActionUrlParameterDifferentArgsException;
 import org.lastaflute.web.exception.ExecuteMethodOptionalNotContinuedException;
@@ -35,6 +36,7 @@ import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
 import org.lastaflute.web.exception.UrlParamArgsNotFoundException;
 import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
 import org.lastaflute.web.response.ActionResponse;
+import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer.ExecuteArgBox;
@@ -417,23 +419,27 @@ public class ActionExecute implements Serializable {
     }
 
     // ===================================================================================
-    //                                                                      Target Execute
-    //                                                                      ==============
-    public boolean isTargetExecute(String paramPath) {
+    //                                                                    Determine Target
+    //                                                                    ================
+    // -----------------------------------------------------
+    //                                      by URL Parameter
+    //                                      ----------------
+    public boolean determineTargetByUrlParameter(String paramPath) {
         if (!isParameterEmpty(paramPath)) {
             return handleOptionalParameterMapping(paramPath) || urlPatternRegexp.matcher(paramPath).find();
+        } else {
+            return "index".equals(urlPattern);
         }
-        return "index".equals(urlPattern);
     }
 
     protected boolean handleOptionalParameterMapping(String paramPath) {
         if (!indexMethod && hasOptionalUrlParameter()) { // e.g. sea() and any parameters are optional
+            // required parameter may not be specified but checked later as 404
             final String firstElement = Srl.substringFirstFront(paramPath, "/"); // e.g. sea from sea or sea/3/
-            if (firstElement.equals(getExecuteMethod().getName())) {
-                return true; // required parameter may not be specified but checked later as 404
-            }
+            return firstElement.equals(getExecuteMethod().getName());
+        } else {
+            return false;
         }
-        return false;
     }
 
     protected boolean hasOptionalUrlParameter() {
@@ -442,7 +448,10 @@ public class ActionExecute implements Serializable {
         }).orElse(false);
     }
 
-    public boolean isTargetExecute(HttpServletRequest request) {
+    // -----------------------------------------------------
+    //                                  by Request Parameter
+    //                                  --------------------
+    public boolean determineTargetByRequestParameter(HttpServletRequest request) {
         final String methodName = executeMethod.getName();
         return !isParameterEmpty(request.getParameter(methodName)) // e.g. doUpdate=update
                 || !isParameterEmpty(request.getParameter(methodName + ".x")) // e.g. doUpdate.x=update
@@ -451,6 +460,25 @@ public class ActionExecute implements Serializable {
 
     protected boolean isParameterEmpty(String str) {
         return str == null || str.isEmpty();
+    }
+
+    // ===================================================================================
+    //                                                                          API Action
+    //                                                                          ==========
+    /**
+     * Is the action execute for API request? (contains e.g. JSON response return type)
+     * @return The determination, true or false.
+     */
+    public boolean isApiExecute() {
+        return isReturnApiResponse() && isImpelementApiAction();
+    }
+
+    protected boolean isReturnApiResponse() {
+        return ApiResponse.class.isAssignableFrom(getExecuteMethod().getReturnType());
+    }
+
+    protected boolean isImpelementApiAction() {
+        return ApiAction.class.isAssignableFrom(getActionMapping().getActionDef().getComponentClass());
     }
 
     // ===================================================================================

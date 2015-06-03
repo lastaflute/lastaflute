@@ -241,7 +241,7 @@ public class TypicalGodHandMonologue {
     }
 
     protected boolean needsApplicationExceptionApiDispatch(ActionRuntime executeMeta, ActionResponse forwardTo) {
-        return forwardTo.isPresent() && executeMeta.isApiAction();
+        return forwardTo.isPresent() && executeMeta.isApiExecute();
     }
 
     protected ActionResponse dispatchApiApplicationException(ActionRuntime executeMeta, RuntimeException cause) {

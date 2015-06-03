@@ -75,7 +75,7 @@ public class ActionMapping {
     // optional unused for performance
     public ActionExecute findActionExecute(String paramPath) { // null allowed when not found
         for (ActionExecute execute : executeMap.values()) {
-            if (execute.isTargetExecute(paramPath)) {
+            if (execute.determineTargetByUrlParameter(paramPath)) {
                 return execute;
             }
         }
@@ -84,7 +84,7 @@ public class ActionMapping {
 
     public ActionExecute findActionExecute(HttpServletRequest request) { // null allowed when not found
         for (ActionExecute execute : executeMap.values()) {
-            if (execute.isTargetExecute(request)) { // request parameter contains e.g. doUpdate=update
+            if (execute.determineTargetByRequestParameter(request)) { // request parameter contains e.g. doUpdate=update
                 return execute;
             }
         }

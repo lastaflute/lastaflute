@@ -216,9 +216,9 @@ public class ActionPathResolver {
     protected boolean doHandleActionPath(String requestPath, ActionFoundPathHandler handler, String actionName, String paramPath)
             throws Exception {
         final boolean emptyParam = paramPath == null || paramPath.isEmpty();
-        final ActionExecute configByParam = !emptyParam ? findExecuteConfig(actionName, paramPath).orElse(null) : null;
-        if (emptyParam || configByParam != null) { // certainly hit
-            return handler.handleActionPath(requestPath, actionName, paramPath, configByParam);
+        final ActionExecute execByParam = !emptyParam ? findExecuteConfig(actionName, paramPath).orElse(null) : null;
+        if (emptyParam || execByParam != null) { // certainly hit
+            return handler.handleActionPath(requestPath, actionName, paramPath, execByParam);
         }
         return false;
     }

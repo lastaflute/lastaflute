@@ -22,9 +22,7 @@ import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
-import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.VirtualActionForm;
@@ -84,15 +82,11 @@ public class ActionRuntime {
     }
 
     /**
-     * Is the action for API request? (contains e.g. JSON response return type)
+     * Is the action execute for API request? (contains e.g. JSON response return type)
      * @return The determination, true or false.
      */
-    public boolean isApiAction() {
-        final Method actionMethod = getExecuteMethod();
-        if (ApiResponse.class.isAssignableFrom(actionMethod.getReturnType())) {
-            return true; // if JSON response, this action can be treated as API without the marker interface
-        }
-        return ApiAction.class.isAssignableFrom(getActionType());
+    public boolean isApiExecute() {
+        return execute.isApiExecute();
     }
 
     // ===================================================================================

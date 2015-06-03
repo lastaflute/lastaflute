@@ -76,7 +76,7 @@ public class ActionCoinHelper {
     //                                          Client Error
     //                                          ------------
     public void prepareRequestClientErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
-        if (runtime.isApiAction()) {
+        if (runtime.isApiExecute()) {
             RequestLoggingFilter.setClientErrorHandlerOnThread((request, response, cause) -> {
                 dispatchApiClientException(runtime, reflector, cause);
             }); // cleared at logging filter's finally
@@ -96,7 +96,7 @@ public class ActionCoinHelper {
     //                                          Server Error
     //                                          ------------
     public void prepareRequestServerErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
-        if (runtime.isApiAction()) {
+        if (runtime.isApiExecute()) {
             RequestLoggingFilter.setServerErrorHandlerOnThread((request, response, cause) -> {
                 dispatchApiServerException(runtime, reflector, cause);
             }); // cleared at logging filter's finally
@@ -116,7 +116,7 @@ public class ActionCoinHelper {
     //                                          Assist Logic
     //                                          ------------
     protected boolean canHandleApiException(ActionRuntime runtime) {
-        return runtime.isApiAction() && !requestManager.getResponseManager().isCommitted();
+        return runtime.isApiExecute() && !requestManager.getResponseManager().isCommitted();
     }
 
     protected ApiFailureResource createApiFailureResource() {
