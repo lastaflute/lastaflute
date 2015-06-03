@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.filter.callback;
+package org.lastaflute.web.servlet.filter;
 
 import java.io.IOException;
 
@@ -24,7 +24,7 @@ import javax.servlet.ServletException;
  * @since 0.6.0 (2015/05/30 Saturday)
  */
 @FunctionalInterface
-public interface FilterListener {
+public interface FilterListenerChain {
 
-    void listen(FilterListenerChain chain) throws IOException, ServletException;
+    void doNext() throws IOException, ServletException;
 }

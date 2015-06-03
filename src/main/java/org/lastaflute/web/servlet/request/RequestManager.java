@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionRuntime;
@@ -152,19 +153,25 @@ public interface RequestManager extends ScopedAttributeHolder {
      * Get 'Host' from header.
      * @return The optional string for the header 'Host'. (NotNull, EmptyAllowed)
      */
-    OptionalThing<String> getHost();
+    OptionalThing<String> getHeaderHost();
 
     /**
      * Get 'Referer' from header.
      * @return The optional string for the header 'Referer'. (NotNull, EmptyAllowed)
      */
-    OptionalThing<String> getReferer();
+    OptionalThing<String> getHeaderReferer();
 
     /**
      * Get 'User-Agent' from header.
      * @return The optional string for the header 'User-Agent'. (NotNull, EmptyAllowed)
      */
-    OptionalThing<String> getUserAgent();
+    OptionalThing<String> getHeaderUserAgent();
+
+    /**
+     * Get 'X-Forwarded-For' from header.
+     * @return The optional string for the header 'X-Forwarded-For'. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getHeaderXForwardedFor();
 
     // ===================================================================================
     //                                                                     Region Handling
@@ -275,6 +282,12 @@ public interface RequestManager extends ScopedAttributeHolder {
      * @return The injected manager of cookie. (NotNull)
      */
     CookieManager getCookieManager();
+
+    /**
+     * Get the manager of time.
+     * @return The injected manager of time. (NotNull)
+     */
+    TimeManager getTimeManager();
 
     /**
      * Get the manager of message.

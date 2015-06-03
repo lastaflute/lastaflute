@@ -34,6 +34,7 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionRuntime;
@@ -78,6 +79,10 @@ public class SimpleRequestManager implements RequestManager {
     /** The manager of cookie. (NotNull: after initialization) */
     @Resource
     protected CookieManager cookieManager;
+
+    /** The manager of time. (NotNull: after initialization) */
+    @Resource
+    protected TimeManager timeManager;
 
     /** The manager of message. (NotNull: after initialization) */
     @Resource
@@ -356,18 +361,23 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public OptionalThing<String> getHost() {
+    public OptionalThing<String> getHeaderHost() {
         return getHeader("Host");
     }
 
     @Override
-    public OptionalThing<String> getReferer() {
+    public OptionalThing<String> getHeaderReferer() {
         return getHeader("Referer");
     }
 
     @Override
-    public OptionalThing<String> getUserAgent() {
+    public OptionalThing<String> getHeaderUserAgent() {
         return getHeader("User-Agent");
+    }
+
+    @Override
+    public OptionalThing<String> getHeaderXForwardedFor() {
+        return getHeader("X-Forwarded-For");
     }
 
     // ===================================================================================
@@ -666,6 +676,11 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public CookieManager getCookieManager() {
         return cookieManager;
+    }
+
+    @Override
+    public TimeManager getTimeManager() {
+        return timeManager;
     }
 
     @Override

@@ -13,18 +13,14 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.filter.callback;
-
-import java.io.IOException;
-
-import javax.servlet.ServletException;
+package org.lastaflute.web.servlet.filter.accesslog;
 
 /**
  * @author jflute
- * @since 0.6.0 (2015/05/30 Saturday)
+ * @since 0.6.0 (2015/06/03 Wednesday)
  */
 @FunctionalInterface
-public interface FilterListenerChain {
+public interface AccessLogHandler {
 
-    void doNext() throws IOException, ServletException;
+    void handle(AccessLogResource resource);
 }

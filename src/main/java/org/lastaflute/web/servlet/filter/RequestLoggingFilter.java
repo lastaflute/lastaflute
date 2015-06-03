@@ -73,9 +73,10 @@ public class RequestLoggingFilter implements Filter {
     public static final String ERROR_ATTRIBUTE_KEY = "javax.servlet.error.exception";
     protected static final String LF = "\n";
     protected static final String IND = "  ";
-    protected static final ThreadLocal<String> duplicateCheckLocal = new ThreadLocal<String>();
-    protected static final ThreadLocal<RequestServerErrorHandler> serverErrorHandlerLocal = new ThreadLocal<RequestServerErrorHandler>();
-    protected static final ThreadLocal<RequestClientErrorHandler> clientErrorHandlerLocal = new ThreadLocal<RequestClientErrorHandler>();
+    protected static final ThreadLocal<String> begunLocal = new ThreadLocal<String>();
+    protected static final ThreadLocal<RequestClientErrorHandler> clientErrorHandlerLocal = new ThreadLocal<>();
+    protected static final ThreadLocal<RequestServerErrorHandler> serverErrorHandlerLocal = new ThreadLocal<>();
+    protected static final ThreadLocal<RequestAccessLogHandler> accessLogHandlerLocal = new ThreadLocal<>();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -162,7 +163,7 @@ public class RequestLoggingFilter implements Filter {
         }
         final HttpServletRequest request = (HttpServletRequest) servRequest;
         final HttpServletResponse response = (HttpServletResponse) servResponse;
-        if (isNestedProcess() || isOutOfTargetPath(request)) { // e.g. forwarding to JSP or .html
+        if (isAlreadyBegun() || isOutOfTargetPath(request)) { // e.g. forwarding to JSP or .html
             chain.doFilter(request, response);
         } else { // target top level process
             actuallyFilter(chain, request, response);
@@ -177,49 +178,59 @@ public class RequestLoggingFilter implements Filter {
         }
         String specifiedErrorTitle = null;
         boolean existsServerError = false;
+        Throwable cause = null;
         try {
-            markBegin();
+            markBegun();
             chain.doFilter(request, response);
             if (handleErrorAttribute(request, response)) {
                 existsServerError = true;
             }
         } catch (RequestClientErrorException e) {
-            specifiedErrorTitle = handleDelicateError(request, response, e);
+            specifiedErrorTitle = handleClientError(request, response, e);
+            cause = e;
         } catch (RuntimeException e) {
             // no throw the exception to suppress duplicate error message
             // (Jetty's message doesn't have line separator so hard to see it)
             sendInternalServerError(request, response, e);
             logError(request, response, "*RuntimeException occurred.", before, e);
             existsServerError = true;
+            cause = e;
         } catch (ServletException e) { // also no throw same reason as RuntimeException catch
             final Throwable rootCause = e.getRootCause();
             if (rootCause instanceof RequestClientErrorException) {
-                specifiedErrorTitle = handleDelicateError(request, response, (RequestClientErrorException) rootCause);
+                specifiedErrorTitle = handleClientError(request, response, (RequestClientErrorException) rootCause);
+                cause = rootCause;
             } else {
                 final Throwable realCause = rootCause != null ? rootCause : e;
                 sendInternalServerError(request, response, realCause);
                 logError(request, response, "*ServletException occurred.", before, realCause);
                 existsServerError = true;
+                cause = realCause;
             }
         } catch (IOException e) { // also no throw
             sendInternalServerError(request, response, e);
             logError(request, response, "*IOException occurred.", before, e);
             existsServerError = true;
+            cause = e;
         } catch (Error e) { // also no throw
             sendInternalServerError(request, response, e);
             logError(request, response, "*Error occurred.", before, e);
             existsServerError = true;
+            cause = e;
         } finally {
-            clearMark();
-            clearHandler();
-            if (logger.isDebugEnabled()) {
-                if (existsServerError) {
-                    attention(request, response);
-                } else {
-                    // only when success request
-                    // because error logging contains request info
-                    Long after = System.currentTimeMillis();
-                    after(request, response, before, after, specifiedErrorTitle);
+            try {
+                handleAccessLog(request, response, cause, before);
+            } finally {
+                clearMark();
+                clearHandler();
+                if (logger.isDebugEnabled()) {
+                    if (existsServerError) {
+                        attention(request, response);
+                    } else {
+                        // only when success request because error logging contains request info
+                        final Long after = System.currentTimeMillis();
+                        after(request, response, before, after, specifiedErrorTitle);
+                    }
                 }
             }
         }
@@ -250,21 +261,22 @@ public class RequestLoggingFilter implements Filter {
         return false;
     }
 
-    protected boolean isNestedProcess() {
-        return duplicateCheckLocal.get() != null;
+    public boolean isAlreadyBegun() { // for e.g. enabling access log
+        return begunLocal.get() != null;
     }
 
-    protected void markBegin() {
-        duplicateCheckLocal.set("begin");
+    protected void markBegun() {
+        begunLocal.set("begun");
     }
 
     protected void clearMark() {
-        duplicateCheckLocal.set(null);
+        begunLocal.set(null);
     }
 
     protected void clearHandler() {
-        serverErrorHandlerLocal.set(null);
         clientErrorHandlerLocal.set(null);
+        serverErrorHandlerLocal.set(null);
+        accessLogHandlerLocal.set(null);
     }
 
     protected void prepareCharacterEncodingIfNeeds(HttpServletRequest request) throws UnsupportedEncodingException {
@@ -560,7 +572,7 @@ public class RequestLoggingFilter implements Filter {
     // ===================================================================================
     //                                                               Client Error e.g. 404
     //                                                               =====================
-    protected String handleDelicateError(HttpServletRequest request, HttpServletResponse response, RequestClientErrorException cause)
+    protected String handleClientError(HttpServletRequest request, HttpServletResponse response, RequestClientErrorException cause)
             throws IOException {
         final boolean beforeHandlingCommitted = response.isCommitted();
         processClientErrorCallback(request, response, cause);
@@ -636,7 +648,7 @@ public class RequestLoggingFilter implements Filter {
         void handle(HttpServletRequest request, HttpServletResponse response, RequestClientErrorException cause);
     }
 
-    public static void setRequestClientHandlerOnThread(RequestClientErrorHandler handler) {
+    public static void setClientErrorHandlerOnThread(RequestClientErrorHandler handler) {
         clientErrorHandlerLocal.set(handler);
     }
 
@@ -810,7 +822,7 @@ public class RequestLoggingFilter implements Filter {
         void handle(HttpServletRequest request, HttpServletResponse response, Throwable cause);
     }
 
-    public static void setRequestServerErrorHandlerOnThread(RequestServerErrorHandler handler) {
+    public static void setServerErrorHandlerOnThread(RequestServerErrorHandler handler) {
         serverErrorHandlerLocal.set(handler);
     }
 
@@ -872,6 +884,37 @@ public class RequestLoggingFilter implements Filter {
         sb.append(" *Read the exception message!");
         sb.append(LF);
         logger.debug(sb.toString());
+    }
+
+    // ===================================================================================
+    //                                                                          Access Log
+    //                                                                          ==========
+    protected void handleAccessLog(HttpServletRequest request, HttpServletResponse response, Throwable cause, Long before) {
+        final RequestAccessLogHandler handler = accessLogHandlerLocal.get();
+        if (handler != null) {
+            handler.handle(request, response, cause, before);
+        }
+    }
+
+    /**
+     * The handler of 'Access Log' in the request.
+     */
+    @FunctionalInterface
+    public interface RequestAccessLogHandler {
+
+        /**
+         * Handle the 'Access Log' process. <br>
+         * The error logging is executed after your handling so basically you don't need logging.
+         * @param request The request provided by caller. (NotNull)
+         * @param response The response provided by caller, might be already committed. (NotNull)
+         * @param cause The cause of this 'Access Log'. (NotNull)
+         * @param before The time milliseconds before request process, you can derive performance cost of request.
+         */
+        void handle(HttpServletRequest request, HttpServletResponse response, Throwable cause, long before);
+    }
+
+    public static void setAccessLogHandlerOnThread(RequestAccessLogHandler handler) {
+        accessLogHandlerLocal.set(handler);
     }
 
     // ===================================================================================

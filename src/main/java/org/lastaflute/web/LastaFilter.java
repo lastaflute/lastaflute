@@ -51,9 +51,11 @@ import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.message.MessageResources;
 import org.lastaflute.web.ruts.message.RutsMessageResourceGateway;
 import org.lastaflute.web.ruts.message.objective.ObjectiveMessageResources;
+import org.lastaflute.web.servlet.filter.FilterListener;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.filter.RequestRoutingFilter;
-import org.lastaflute.web.servlet.filter.callback.FilterListener;
+import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
+import org.lastaflute.web.servlet.filter.accesslog.AccessLogResource;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpServletRequest;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpSession;
 import org.slf4j.Logger;
@@ -369,8 +371,20 @@ public class LastaFilter implements Filter {
     protected void viaEmbeddedFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
             ServletException {
         loggingFilter.doFilter(request, response, (req, res) -> {
+            enableAccessLogIfNeeds();
             routingFilter.doFilter(req, res, prepareFinalChain(chain)); /* #to_action */
         });
+    }
+
+    protected void enableAccessLogIfNeeds() { // for e.g. access log
+        if (loggingFilter.isAlreadyBegun()) { // means handler to be set here always be cleared later
+            final AccessLogHandler handler = getAssistantDirector().assistWebDirection().assistAccessLogHandler();
+            if (handler != null) { // specified by application
+                RequestLoggingFilter.setAccessLogHandlerOnThread((request, response, cause, before) -> {
+                    handler.handle(new AccessLogResource(request, response, cause, before));
+                });
+            }
+        }
     }
 
     protected FilterChain prepareFinalChain(FilterChain chain) {

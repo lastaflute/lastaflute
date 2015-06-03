@@ -25,8 +25,9 @@ import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
-import org.lastaflute.web.servlet.filter.callback.FilterListener;
-import org.lastaflute.web.servlet.filter.callback.MDCFilterListener;
+import org.lastaflute.web.servlet.filter.FilterListener;
+import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
+import org.lastaflute.web.servlet.filter.mdc.MDCListener;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
 import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
 import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
@@ -67,6 +68,11 @@ public class FwWebDirection {
     //                                       Filter Listener
     //                                       ---------------
     protected List<FilterListener> filterListenerList; // lazy loaded
+
+    // -----------------------------------------------------
+    //                                            Access Log
+    //                                            ----------
+    protected AccessLogHandler accessLogHandler;
 
     // ===================================================================================
     //                                                                     Direct Property
@@ -123,7 +129,7 @@ public class FwWebDirection {
     //                                       Filter Listener
     //                                       ---------------
     // independent per purpose
-    public void directMDC(MDCFilterListener listener) {
+    public void directMDC(MDCListener listener) {
         getFilterListenerList().add(listener);
     }
 
@@ -132,6 +138,13 @@ public class FwWebDirection {
             filterListenerList = new ArrayList<FilterListener>(4);
         }
         return filterListenerList;
+    }
+
+    // -----------------------------------------------------
+    //                                            Access Log
+    //                                            ----------
+    public void directAccessLog(AccessLogHandler accessLogHandler) {
+        this.accessLogHandler = accessLogHandler;
     }
 
     // ===================================================================================
@@ -192,6 +205,13 @@ public class FwWebDirection {
     //                                       ---------------
     public List<FilterListener> assistFilterListenerList() { // empty allowed and normally empty
         return filterListenerList != null ? filterListenerList : Collections.emptyList();
+    }
+
+    // -----------------------------------------------------
+    //                                            Access Log
+    //                                            ----------
+    public AccessLogHandler assistAccessLogHandler() {
+        return accessLogHandler; // not required, it's optional assist
     }
 
     // -----------------------------------------------------

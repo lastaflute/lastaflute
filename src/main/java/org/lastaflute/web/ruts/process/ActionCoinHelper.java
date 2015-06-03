@@ -77,7 +77,7 @@ public class ActionCoinHelper {
     //                                          ------------
     public void prepareRequestClientErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
         if (runtime.isApiAction()) {
-            RequestLoggingFilter.setRequestClientHandlerOnThread((request, response, cause) -> {
+            RequestLoggingFilter.setClientErrorHandlerOnThread((request, response, cause) -> {
                 dispatchApiClientException(runtime, reflector, cause);
             }); // cleared at logging filter's finally
         }
@@ -97,7 +97,7 @@ public class ActionCoinHelper {
     //                                          ------------
     public void prepareRequestServerErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
         if (runtime.isApiAction()) {
-            RequestLoggingFilter.setRequestServerErrorHandlerOnThread((request, response, cause) -> {
+            RequestLoggingFilter.setServerErrorHandlerOnThread((request, response, cause) -> {
                 dispatchApiServerException(runtime, reflector, cause);
             }); // cleared at logging filter's finally
         }
