@@ -262,12 +262,17 @@ public class ActionPathResolver {
 
     protected void buildUrlParts(StringBuilder sb, UrlChain chain) {
         final Object[] urlParts = chain != null ? chain.getUrlParts() : null;
+        boolean existsParts = false;
         if (urlParts != null) {
             for (Object param : urlParts) {
                 if (param != null) {
                     sb.append(param).append("/");
+                    existsParts = true;
                 }
             }
+        }
+        if (existsParts) {
+            sb.delete(sb.length() - 1, sb.length()); // e.g. member/edit/3/ to member/edit/3
         }
     }
 
