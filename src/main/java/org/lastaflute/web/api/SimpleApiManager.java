@@ -86,8 +86,8 @@ public class SimpleApiManager implements ApiManager {
     //                                                                    Business Failure
     //                                                                    ================
     @Override
-    public ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime) {
-        return apiFailureHook.handleLoginRequiredFailure(resource, runtime);
+    public ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime, String loginRedirectPath) {
+        return apiFailureHook.handleLoginRequiredFailure(resource, runtime, loginRedirectPath);
     }
 
     @Override

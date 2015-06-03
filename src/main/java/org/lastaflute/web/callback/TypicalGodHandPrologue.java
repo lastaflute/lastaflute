@@ -264,7 +264,7 @@ public class TypicalGodHandPrologue {
             final LoginHandlingResource resource = createLogingHandlingResource(runtime);
             return nager.checkLoginRequired(resource).map(routingPath -> {
                 if (runtime.isApiExecute()) {
-                    return dispatchApiLoginRequiredFailure(runtime);
+                    return dispatchApiLoginRequiredFailure(runtime, routingPath);
                 } else {
                     return HtmlResponse.fromRedirectPath(routingPath);
                 }
@@ -274,12 +274,12 @@ public class TypicalGodHandPrologue {
         });
     }
 
-    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime) {
-        final ApiFailureResource resource = createApiLoginRequiredFailureResource();
-        return apiManager.handleLoginRequiredFailure(resource, runtime);
+    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime, String routingPath) {
+        final ApiFailureResource resource = createLoginRequiredApiFailureResource();
+        return apiManager.handleLoginRequiredFailure(resource, runtime, routingPath);
     }
 
-    protected ApiFailureResource createApiLoginRequiredFailureResource() {
+    protected ApiFailureResource createLoginRequiredApiFailureResource() {
         return new ApiFailureResource(sessionManager.errors().get(), requestManager);
     }
 
