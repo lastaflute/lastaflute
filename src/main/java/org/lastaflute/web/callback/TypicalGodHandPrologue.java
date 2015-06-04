@@ -33,6 +33,7 @@ import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
 import org.lastaflute.web.api.ApiFailureResource;
+import org.lastaflute.web.api.ApiLoginRedirectProvider;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginHandlingResource;
 import org.lastaflute.web.login.LoginManager;
@@ -274,16 +275,22 @@ public class TypicalGodHandPrologue {
         });
     }
 
+    protected LoginHandlingResource createLogingHandlingResource(ActionRuntime runtime) {
+        return new LoginHandlingResource(runtime);
+    }
+
     protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime, String routingPath) {
         final ApiFailureResource resource = createLoginRequiredApiFailureResource();
-        return apiManager.handleLoginRequiredFailure(resource, runtime, routingPath);
+        final ApiLoginRedirectProvider provider = createApiLoginRedirectProvider(routingPath);
+        return apiManager.handleLoginRequiredFailure(resource, runtime, provider);
     }
 
     protected ApiFailureResource createLoginRequiredApiFailureResource() {
         return new ApiFailureResource(sessionManager.errors().get(), requestManager);
     }
 
-    protected LoginHandlingResource createLogingHandlingResource(ActionRuntime runtime) {
-        return new LoginHandlingResource(runtime);
+    protected ApiLoginRedirectProvider createApiLoginRedirectProvider(String routingPath) {
+        final String contextAbsolutePath = requestManager.toContextAbsolutePath(routingPath);
+        return new ApiLoginRedirectProvider(contextAbsolutePath, routingPath);
     }
 }

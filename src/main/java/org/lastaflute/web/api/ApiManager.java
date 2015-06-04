@@ -34,10 +34,10 @@ public interface ApiManager {
      * @param resource The resource of API result for login, contains e.g. error messages if it exists. (NotNull)
      * @param errors The optional action message for errors, but basically no errors. (NullAllowed)
      * @param runtime The runtime meta of action execute for the current request. (NotNull)
-     * @param loginRedirectPath The path of login redirect, e.g. /signin/, without context path. (NotNull)
+     * @param provider The provider of login redirect info, e.g. redirect path /signin/. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
-    ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime, String loginRedirectPath);
+    ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime, ApiLoginRedirectProvider provider);
 
     /**
      * Handle API failure when validation error. <br>

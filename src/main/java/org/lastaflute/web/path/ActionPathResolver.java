@@ -350,7 +350,7 @@ public class ActionPathResolver {
         if (firstHit != null) {
             return firstHit; // e.g. /member/list/ (from /member/member_list.jsp)
         }
-        final List<String> retryList = prepareJspRetryWordList(requestPath, wordList);
+        final List<String> retryList = prepareHtmlRetryWordList(requestPath, wordList);
         if (retryList != null && !retryList.isEmpty()) { // e.g. [member, list] (from sp_member_list.jsp)
             final String retryHit = resolveJspActionPath(requestPath, frontPathElement, pathBase, retryList);
             if (retryHit != null) {
@@ -383,31 +383,8 @@ public class ActionPathResolver {
         return null;
     }
 
-    protected List<String> prepareJspRetryWordList(String requestPath, List<String> wordList) {
+    protected List<String> prepareHtmlRetryWordList(String requestPath, List<String> wordList) {
         return actionAdjustmentProvider.prepareHtmlRetryWordList(requestPath, wordList);
-    }
-
-    // ===================================================================================
-    //                                                                 Redirect Adjustment
-    //                                                                 ===================
-    /**
-     * Convert the request path (or URL) to SSL redirect path for LastaFlute. <br>
-     * e.g. https://...com/member/list/
-     * @param requestPath The path (or URL) of request. e.g. http://...com/member/list/ (NotNull)
-     * @return The request path (or URL) with redirect mark. (NotNull)
-     */
-    public String toSslRedirectPath(String requestPath) {
-        return requestPath.replaceFirst("http:", "https:");
-    }
-
-    /**
-     * Convert the request path (or URL) to non-SSL redirect path for LastaFlute. <br>
-     * e.g. http://...com/member/list/
-     * @param requestPath The path (or URL) of request. e.g. https://...com/member/list/ (NotNull)
-     * @return The request path (or URL) with redirect mark. (NotNull)
-     */
-    public String toNonSslRedirectPath(String requestPath) {
-        return requestPath.replaceFirst("https:", "http:");
     }
 
     // ===================================================================================

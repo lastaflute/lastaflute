@@ -139,6 +139,14 @@ public interface RequestManager extends ScopedAttributeHolder {
      */
     OptionalThing<String> getQueryString();
 
+    /**
+     * Convert to absolute path from context, e.g. /dockside/product/list/. <br>
+     * If the context is empty or '/', it returns the specified path plainly.
+     * @param contextRelativePath The relative path from context, e.g. /product/list/ (NotNull)
+     * @return The converted path as absolute path. (NotNull)
+     */
+    String toContextAbsolutePath(String contextRelativePath);
+
     // ===================================================================================
     //                                                                     Header Handling
     //                                                                     ===============

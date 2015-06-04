@@ -350,6 +350,12 @@ public class SimpleRequestManager implements RequestManager {
         }); // empty check just in case
     }
 
+    @Override
+    public String toContextAbsolutePath(String contextRelativePath) {
+        final String ctx = getContextPath();
+        return (!ctx.isEmpty() && !ctx.equals("/") ? ctx : "") + contextRelativePath;
+    }
+
     // ===================================================================================
     //                                                                     Header Handling
     //                                                                     ===============
