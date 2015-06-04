@@ -470,7 +470,7 @@ public class ActionExecute implements Serializable {
      * @return The determination, true or false.
      */
     public boolean isApiExecute() {
-        return isReturnApiResponse() && isImpelementApiAction();
+        return isReturnApiResponse() || isImpelementApiAction();
     }
 
     protected boolean isReturnApiResponse() {
