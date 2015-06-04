@@ -51,7 +51,7 @@ public class ApiFailureResource {
      */
     public List<String> getMessageList() {
         return errors.map(er -> {
-            return requestManager.getMessageManager().getMessageList(requestManager.getUserLocale(), er);
+            return requestManager.getMessageManager().toMessageList(requestManager.getUserLocale(), er);
         }).orElse(Collections.emptyList());
     }
 
@@ -61,7 +61,7 @@ public class ApiFailureResource {
      */
     public Map<String, List<String>> getPropertyMessageMap() {
         return errors.map(er -> {
-            return requestManager.getMessageManager().getPropertyMessageMap(requestManager.getUserLocale(), er);
+            return requestManager.getMessageManager().toPropertyMessageMap(requestManager.getUserLocale(), er);
         }).orElse(Collections.emptyMap());
     }
 

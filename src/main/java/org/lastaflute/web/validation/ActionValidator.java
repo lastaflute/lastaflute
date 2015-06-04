@@ -97,8 +97,9 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         assertArgumentNotNull("form", form);
         assertArgumentNotNull("doValidateLambda", doValidateLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
+        final Set<ConstraintViolation<Object>> vioSet = hibernateValidate(form);
         @SuppressWarnings("unchecked")
-        final MESSAGES messages = (MESSAGES) hibernateValidate(form);
+        final MESSAGES messages = (MESSAGES) toActionMessages(form, vioSet);
         doValidateLambda.more(messages);
         if (!messages.isEmpty()) {
             throwValidationErrorException(messages, validationErrorLambda);
@@ -126,42 +127,23 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
 
     protected ApiResponse hookApiValidationError() { // for API
         final ApiFailureResource resource = newApiFailureResource(requestManager.errors().get(), requestManager);
-        return requestManager.getApiManager().handleValidationError(resource, retrieveActionRuntimeMeta());
+        return requestManager.getApiManager().handleValidationError(resource, getActionRuntime());
     }
 
     protected ApiFailureResource newApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
         return new ApiFailureResource(errors, requestManager);
     }
 
-    protected ActionRuntime retrieveActionRuntimeMeta() {
+    protected ActionRuntime getActionRuntime() {
         return LaActionRuntimeUtil.getActionRuntime();
     }
 
     // ===================================================================================
     //                                                                 Hibernate Validator
     //                                                                 ===================
-    protected ActionMessages hibernateValidate(Object form) {
+    protected Set<ConstraintViolation<Object>> hibernateValidate(Object form) {
         final Validator validator = comeOnHibernateValidator();
-        final Set<ConstraintViolation<Object>> vioSet = validator.validate(form, groups);
-        final TreeMap<String, Object> orderedMap = prepareOrderedMap(form, vioSet);
-        final ActionMessages messages = prepareActionMessages();
-        for (Entry<String, Object> entry : orderedMap.entrySet()) {
-            final Object holder = entry.getValue();
-            if (holder instanceof ConstraintViolation) {
-                @SuppressWarnings("unchecked")
-                final ConstraintViolation<Object> vio = (ConstraintViolation<Object>) holder;
-                registerActionMessage(messages, vio);
-            } else if (holder instanceof List<?>) {
-                @SuppressWarnings("unchecked")
-                final List<ConstraintViolation<Object>> vioList = ((List<ConstraintViolation<Object>>) holder);
-                for (ConstraintViolation<Object> vio : vioList) {
-                    registerActionMessage(messages, vio);
-                }
-            } else {
-                throw new IllegalStateException("Unknown type of holder: " + holder);
-            }
-        }
-        return messages;
+        return validator.validate(form, groups);
     }
 
     // -----------------------------------------------------
@@ -246,6 +228,31 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         }
     }
 
+    // ===================================================================================
+    //                                                                     Action Messages
+    //                                                                     ===============
+    protected ActionMessages toActionMessages(Object form, Set<ConstraintViolation<Object>> vioSet) {
+        final TreeMap<String, Object> orderedMap = prepareOrderedMap(form, vioSet);
+        final ActionMessages messages = prepareActionMessages();
+        for (Entry<String, Object> entry : orderedMap.entrySet()) {
+            final Object holder = entry.getValue();
+            if (holder instanceof ConstraintViolation) {
+                @SuppressWarnings("unchecked")
+                final ConstraintViolation<Object> vio = (ConstraintViolation<Object>) holder;
+                registerActionMessage(messages, vio);
+            } else if (holder instanceof List<?>) {
+                @SuppressWarnings("unchecked")
+                final List<ConstraintViolation<Object>> vioList = ((List<ConstraintViolation<Object>>) holder);
+                for (ConstraintViolation<Object> vio : vioList) {
+                    registerActionMessage(messages, vio);
+                }
+            } else {
+                throw new IllegalStateException("Unknown type of holder: " + holder);
+            }
+        }
+        return messages;
+    }
+
     // -----------------------------------------------------
     //                                           Ordered Map
     //                                           -----------
@@ -277,16 +284,26 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
                 priorityMap.put(propertyName, i);
             }
         }
-        final TreeMap<String, Object> orderedMap = new TreeMap<String, Object>((o1, o2) -> {
-            return priorityMap.getOrDefault(o1, Integer.MAX_VALUE).compareTo(priorityMap.getOrDefault(o2, Integer.MAX_VALUE));
+        final TreeMap<String, Object> orderedMap = new TreeMap<String, Object>((key1, key2) -> {
+            final String rootProperty1 = Srl.substringFirstFront(key1, "[", ".");
+            final String rootProperty2 = Srl.substringFirstFront(key2, "[", ".");
+            final Integer priority1 = priorityMap.getOrDefault(rootProperty1, Integer.MAX_VALUE);
+            final Integer priority2 = priorityMap.getOrDefault(rootProperty2, Integer.MAX_VALUE);
+            if (priority1 > priority2) {
+                return 1;
+            } else if (priority2 > priority1) {
+                return -1;
+            } else { /* same group */
+                return key1.compareTo(key2);
+            }
         });
         orderedMap.putAll(vioPropMap);
         return orderedMap;
     }
 
     // -----------------------------------------------------
-    //                                        Action Message
-    //                                        --------------
+    //                                       Messages Assist
+    //                                       ---------------
     protected MESSAGES prepareActionMessages() {
         return messageCreator.provide();
     }
@@ -309,9 +326,6 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return new ActionMessage(msg, false);
     }
 
-    // -----------------------------------------------------
-    //                                        Filter Message
-    //                                        --------------
     protected String filterMessage(String message, String propertyPath) {
         final String itemVariable = getItemVariable(message, propertyPath);
         if (message.contains(itemVariable)) {

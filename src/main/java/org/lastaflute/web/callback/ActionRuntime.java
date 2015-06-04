@@ -197,7 +197,7 @@ public class ActionRuntime {
             sb.append(", failure=").append(DfTypeUtil.toClassTitle(failureCause));
         }
         if (validationErrors != null) {
-            sb.append(", errors=").append(validationErrors.toPropertyList());
+            sb.append(", errors=").append(validationErrors.toPropertySet());
         }
         if (displayDataMap != null) {
             sb.append(", display=").append(displayDataMap.keySet());

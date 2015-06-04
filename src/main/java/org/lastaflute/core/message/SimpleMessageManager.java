@@ -17,11 +17,13 @@ package org.lastaflute.core.message;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -153,40 +155,37 @@ public class SimpleMessageManager implements MessageManager {
     //                                                                    Resolved Message
     //                                                                    ================
     @Override
-    public List<String> getMessageList(Locale locale, ActionMessages errors) {
+    public List<String> toMessageList(Locale locale, ActionMessages errors) {
         assertArgumentNotNull("locale", locale);
         assertArgumentNotNull("errors", errors);
-        final List<String> messageList = new ArrayList<String>();
         if (errors.isEmpty()) {
-            return messageList;
+            return Collections.emptyList();
         }
+        final List<String> messageList = new ArrayList<String>();
         final Iterator<ActionMessage> ite = errors.accessByFlatIterator();
         while (ite.hasNext()) {
             messageList.add(resolveMessageText(locale, ite.next()));
         }
-        return messageList;
+        return Collections.unmodifiableList(messageList);
     }
 
     @Override
-    public Map<String, List<String>> getPropertyMessageMap(Locale locale, ActionMessages errors) {
+    public Map<String, List<String>> toPropertyMessageMap(Locale locale, ActionMessages errors) {
         assertArgumentNotNull("locale", locale);
         assertArgumentNotNull("errors", errors);
-        final Map<String, List<String>> propertyMessageMap = new LinkedHashMap<String, List<String>>();
         if (errors.isEmpty()) {
-            return propertyMessageMap;
+            return Collections.emptyMap();
         }
-        final List<String> propList = errors.toPropertyList();
-        for (String property : propList) {
-            List<String> messageList = propertyMessageMap.get(property);
-            if (messageList == null) {
-                messageList = new ArrayList<String>();
-                propertyMessageMap.put(property, messageList);
-            }
+        final Map<String, List<String>> messageMap = new LinkedHashMap<String, List<String>>();
+        final Set<String> propertySet = errors.toPropertySet();
+        for (String property : propertySet) {
+            final List<String> messageList = new ArrayList<String>();
             for (Iterator<ActionMessage> ite = errors.accessByIteratorOf(property); ite.hasNext();) {
                 messageList.add(resolveMessageText(locale, ite.next()));
             }
+            messageMap.put(property, Collections.unmodifiableList(messageList));
         }
-        return propertyMessageMap;
+        return Collections.unmodifiableMap(messageMap);
     }
 
     protected String resolveMessageText(Locale locale, ActionMessage message) {

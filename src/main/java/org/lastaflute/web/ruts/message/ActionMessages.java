@@ -23,7 +23,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -37,10 +37,8 @@ public class ActionMessages implements Serializable {
 
     public static final String GLOBAL_PROPERTY_KEY = "lastaflute.message.GLOBAL_PROPERTY";
 
-    protected static final Comparator<ActionMessageItem> actionItemComparator = new Comparator<ActionMessageItem>() {
-        public int compare(ActionMessageItem item1, ActionMessageItem item2) {
-            return item1.getOrder() - item2.getOrder();
-        }
+    protected static final Comparator<ActionMessageItem> actionItemComparator = (item1, item2) -> {
+        return item1.getOrder() - item2.getOrder();
     };
 
     // ===================================================================================
@@ -81,7 +79,7 @@ public class ActionMessages implements Serializable {
         if (messages == null) {
             return;
         }
-        for (String property : messages.toPropertyList()) {
+        for (String property : messages.toPropertySet()) {
             for (Iterator<ActionMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
                 add(property, ite.next());
             }
@@ -89,8 +87,8 @@ public class ActionMessages implements Serializable {
     }
 
     // ===================================================================================
-    //                                                                         Get Message
-    //                                                                         ===========
+    //                                                                      Access Message
+    //                                                                      ==============
     public Iterator<ActionMessage> accessByFlatIterator() {
         accessed = true;
         if (messageMap.isEmpty()) {
@@ -129,14 +127,8 @@ public class ActionMessages implements Serializable {
         return item != null && item.getList().stream().anyMatch(message -> message.getKey().equals(key));
     }
 
-    public List<String> toPropertyList() {
-        if (messageMap.isEmpty()) {
-            return Collections.emptyList();
-        }
-        final List<ActionMessageItem> itemList = new ArrayList<ActionMessageItem>(messageMap.values());
-        Collections.sort(itemList, actionItemComparator);
-        final List<String> propList = itemList.stream().map(item -> item.getProperty()).collect(Collectors.toList());
-        return Collections.unmodifiableList(propList);
+    public Set<String> toPropertySet() {
+        return !messageMap.isEmpty() ? Collections.unmodifiableSet(messageMap.keySet()) : Collections.emptySet();
     }
 
     // ===================================================================================
@@ -172,7 +164,7 @@ public class ActionMessages implements Serializable {
     //                                                                      ==============
     @Override
     public String toString() {
-        return this.messageMap.toString();
+        return messageMap.toString();
     }
 
     // ===================================================================================
@@ -194,7 +186,7 @@ public class ActionMessages implements Serializable {
 
         @Override
         public String toString() {
-            return this.messageList.toString();
+            return messageList.toString();
         }
 
         public List<ActionMessage> getList() {

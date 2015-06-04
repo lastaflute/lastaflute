@@ -68,23 +68,23 @@ public interface MessageManager {
     OptionalThing<String> findMessage(Locale locale, String key, Object[] values);
 
     /**
-     * Get the list of message text for the errors.
+     * Convert to the list of message text for the errors.
      * @param locale The locale for the message. (NotNull)
      * @param errors The action messages for the errors. (NotNull)
-     * @return The list of message, resolved by resource. (NotNull, EmptyAllowed)
+     * @return The read-only list of message, resolved by resource. (NotNull, EmptyAllowed)
      */
-    List<String> getMessageList(Locale locale, ActionMessages errors);
+    List<String> toMessageList(Locale locale, ActionMessages errors);
 
     /**
-     * Get the map (property : list of message text) of message for the errors.
+     * Convert to the map (property : list of message text) of message for the errors.
      * @param locale The locale for the message. (NotNull)
      * @param errors The action messages for the errors. (NotNull)
-     * @return The map of message, resolved by resource. (NotNull, EmptyAllowed)
+     * @return The read-only map of message, resolved by resource. (NotNull, EmptyAllowed)
      */
-    Map<String, List<String>> getPropertyMessageMap(Locale locale, ActionMessages errors);
+    Map<String, List<String>> toPropertyMessageMap(Locale locale, ActionMessages errors);
 
     /**
-     * Get the gateway for message resources of e.g. Struts.
+     * Get the gateway for message resources managed in request handling.
      * @return The instance of gateway. (NotNull: if not prepared, throws exception)
      */
     MessageResourcesGateway getMessageResourceGateway();
