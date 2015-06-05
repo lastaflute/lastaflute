@@ -23,16 +23,20 @@ import org.lastaflute.web.ruts.message.ActionMessages;
  */
 public interface LaValidatable<MESSAGES extends ActionMessages> {
 
-    default void validate(Object form, VaMore<MESSAGES> doValidateLambda, VaErrorHook validationErrorLambda) {
-        createValidator().validate(form, doValidateLambda, validationErrorLambda);
+    default void validate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
+        createValidator().validate(form, moreValidationLambda, validationErrorLambda);
     }
 
-    default void validateApi(Object form, VaMore<MESSAGES> doValidateLambda) {
-        createValidator().validateApi(form, doValidateLambda);
+    default void validateApi(Object form, VaMore<MESSAGES> moreValidationLambda) {
+        createValidator().validateApi(form, moreValidationLambda);
     }
 
-    default void letsValidationError(VaMessenger<MESSAGES> messagesLambda, VaErrorHook validationErrorLambda) {
-        createValidator().letsValidationError(() -> createMessages(), validationErrorLambda);
+    default void letsValidationError(VaMessenger<MESSAGES> validationMessagesLambda, VaErrorHook validationErrorLambda) {
+        createValidator().letsValidationError(() -> {
+            final MESSAGES messages = createMessages();
+            validationMessagesLambda.message(messages);
+            return messages;
+        }, validationErrorLambda);
     }
 
     default void letsValidationErrorApi(VaMessenger<MESSAGES> messagesLambda) {
