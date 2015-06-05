@@ -23,10 +23,48 @@ import org.lastaflute.web.ruts.message.ActionMessages;
  */
 public interface LaValidatable<MESSAGES extends ActionMessages> {
 
+    /**
+     * Validate the form values. <br>
+     * <pre>
+     * <span style="color: #3F7E5E">// by-annotation only</span>
+     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {}, () <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaListJsp</span>);
+     * });
+     * 
+     * <span style="color: #3F7E5E">// by-annotation and by-program</span>
+     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">if</span> (...) {
+     *         <span style="color: #553000">messages</span>.addConstraint...
+     *     }
+     * }, () <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaListJsp</span>);
+     * });
+     * </pre>
+     * @param form The form that has request parameters. (NotNull)
+     * @param moreValidationLambda The callback for more validation, e.g. correlation rule. (NotNull)
+     * @param validationErrorLambda The callback for response when validation error. (NotNull)
+     */
     default void validate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
         createValidator().validate(form, moreValidationLambda, validationErrorLambda);
     }
 
+    /**
+     * Validate the form values for API, when e.g. JsonResponse. <br>
+     * The validation error handling is in ApiFailureHook.
+     * <pre>
+     * <span style="color: #3F7E5E">// by-annotation only</span>
+     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {});
+     * 
+     * <span style="color: #3F7E5E">// by-annotation and by-program</span>
+     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">if</span> (...) {
+     *         <span style="color: #553000">messages</span>.addConstraint...
+     *     }
+     * });
+     * </pre>
+     * @param form The form that has request parameters. (NotNull)
+     * @param moreValidationLambda The callback for more validation, e.g. correlation rule, very complex rule. (NotNull)
+     */
     default void validateApi(Object form, VaMore<MESSAGES> moreValidationLambda) {
         createValidator().validateApi(form, moreValidationLambda);
     }
