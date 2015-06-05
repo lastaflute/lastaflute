@@ -298,7 +298,24 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
         return Srl.is_NotNull_and_NotEmpty(str);
     }
 
-    protected <CLS extends Classification> CLS toCDef(Class<CLS> cdefType, Object code) {
+    // -----------------------------------------------------
+    //                                        Classification
+    //                                        --------------
+    protected boolean isCls(Class<? extends Classification> cdefType, Object code) {
+        return invokeClassificationCodeOf(cdefType, code) != null;
+    }
+
+    protected <CLS extends Classification> CLS toCls(Class<CLS> cdefType, Object code) {
+        @SuppressWarnings("unchecked")
+        final CLS cdef = (CLS) invokeClassificationCodeOf(cdefType, code);
+        if (cdef == null) {
+            String msg = "Unknow classification code for " + cdefType.getName() + ": " + code;
+            throw new ForcedRequest404NotFoundException(msg);
+        }
+        return cdef;
+    }
+
+    private Object invokeClassificationCodeOf(Class<? extends Classification> cdefType, Object code) {
         assertArgumentNotNull("cdefType", cdefType);
         assertArgumentNotNull("code", code);
         if (code instanceof String && ((String) code).isEmpty()) {
@@ -306,13 +323,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
         }
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(cdefType);
         final Method method = beanDesc.getMethod("codeOf", new Class<?>[] { Object.class });
-        @SuppressWarnings("unchecked")
-        final CLS cdef = (CLS) DfReflectionUtil.invoke(method, null, new Object[] { code });
-        if (cdef == null) {
-            String msg = "Unknow classification code for " + cdefType.getName() + ": " + code;
-            throw new ForcedRequest404NotFoundException(msg);
-        }
-        return cdef;
+        return DfReflectionUtil.invoke(method, null, new Object[] { code });
     }
 
     // ===================================================================================
@@ -350,5 +361,14 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      * </pre>
      */
     protected void documentOfMethods() {
+    }
+
+    /**
+     * <pre>
+     * o Cls : is Classification (CDef)
+     * o CDef : is auto-generated ENUM as Classification Definition
+     * </pre>
+     */
+    protected void documentOfWordDictionary() {
     }
 }
