@@ -54,8 +54,8 @@ public class FwCoreDirection {
     /** Is debug enabled for framework? (you should set true only when you want internal debug) */
     protected boolean frameworkDebug;
 
-    /** The callback for boot process, called-back when your application is booting. (NullAllowed: not required) */
-    protected BootListener bootProcessCallback;
+    /** The listener for application boot, called-back when your application is booting. (NullAllowed: not required) */
+    protected BootListener bootListener;
 
     // -----------------------------------------------------
     //                                              Security
@@ -114,7 +114,7 @@ public class FwCoreDirection {
     }
 
     public void directBoot(BootListener bootProcessCallback) {
-        this.bootProcessCallback = bootProcessCallback;
+        this.bootListener = bootProcessCallback;
     }
 
     // -----------------------------------------------------
@@ -180,8 +180,8 @@ public class FwCoreDirection {
         return frameworkDebug;
     }
 
-    public BootListener assistBootProcessCallback() {
-        return bootProcessCallback; // not required, no process if null
+    public BootListener assistBootListener() {
+        return bootListener; // not required, no process if null
     }
 
     // -----------------------------------------------------
