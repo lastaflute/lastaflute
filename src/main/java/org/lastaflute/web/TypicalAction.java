@@ -299,26 +299,18 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                        Classification
     //                                        --------------
     protected boolean isCls(Class<? extends Classification> cdefType, Object code) {
-        return convertToClassification(cdefType, code) != null;
+        return LaDBFluteUtil.invokeClassificationCodeOf(cdefType, code) != null;
     }
 
     protected <CLS extends Classification> OptionalThing<CLS> toCls(Class<CLS> cdefType, Object code) {
         if (code == null || (code instanceof String && isEmpty((String) code))) {
             return OptionalThing.ofNullable(null, () -> {
-                throw new IllegalStateException("Unknown classification code: type=" + cdefType + " code=" + code);
+                throw new IllegalStateException("Not found the classification code for " + cdefType.getName() + ": " + code);
             });
         }
         @SuppressWarnings("unchecked")
-        final CLS cdef = (CLS) convertToClassification(cdefType, code);
-        if (cdef == null) {
-            String msg = "Unknow classification code for " + cdefType.getName() + ": " + code;
-            throw new ForcedRequest404NotFoundException(msg);
-        }
-        return OptionalThing.of(cdef);
-    }
-
-    private Classification convertToClassification(Class<?> cdefType, Object code) {
-        return LaDBFluteUtil.invokeClassificationCodeOf(cdefType, code);
+        final CLS cls = (CLS) LaDBFluteUtil.toVerifiedClassification(cdefType, code);
+        return OptionalThing.of(cls);
     }
 
     // ===================================================================================

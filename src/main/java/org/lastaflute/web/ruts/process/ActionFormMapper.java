@@ -416,7 +416,7 @@ public class ActionFormMapper {
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
                 pd.setValue(bean, parseJsonProperty(bean, name, realValue, pd));
             } else if (isClassificationProperty(propertyType)) { // means CDef
-                pd.setValue(bean, convertToClassification(propertyType, realValue));
+                pd.setValue(bean, toVerifiedClassification(propertyType, realValue));
             } else { // mainly here, e.g. String, Integer
                 pd.setValue(bean, realValue);
             }
@@ -605,11 +605,11 @@ public class ActionFormMapper {
     //                                        Classification
     //                                        --------------
     protected boolean isClassificationProperty(Class<?> propertyType) {
-        return Classification.class.isAssignableFrom(propertyType);
+        return LaDBFluteUtil.isClassificationType(propertyType);
     }
 
-    protected Classification convertToClassification(Class<?> cdefType, String code) {
-        return LaDBFluteUtil.invokeClassificationCodeOf(cdefType, code);
+    protected Classification toVerifiedClassification(Class<?> cdefType, String code) {
+        return LaDBFluteUtil.toVerifiedClassification(cdefType, code);
     }
 
     // ===================================================================================

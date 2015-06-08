@@ -30,7 +30,6 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
-import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.DfTypeUtil.ParseDateException;
@@ -232,8 +231,8 @@ public class RequestUrlParamAnalyzer {
             filtered = DfTypeUtil.toLocalDateTime(filtered);
         } else if (LocalTime.class.isAssignableFrom(paramType)) {
             filtered = DfTypeUtil.toLocalTime(filtered);
-        } else if (Classification.class.isAssignableFrom(paramType)) {
-            filtered = convertToClassification(paramType, filtered);
+        } else if (LaDBFluteUtil.isClassificationType(paramType)) {
+            filtered = LaDBFluteUtil.toVerifiedClassification(paramType, filtered);
         } else if (isOptionalParameterType(paramType)) {
             final Class<?> optGenType = optGenTypeMap.get(index);
             if (optGenType != null) {
@@ -244,10 +243,6 @@ public class RequestUrlParamAnalyzer {
             }
         }
         return filtered;
-    }
-
-    protected Classification convertToClassification(Class<?> cdefType, Object code) {
-        return LaDBFluteUtil.invokeClassificationCodeOf(cdefType, code);
     }
 
     protected void throwOptionalGenericTypeNotFoundException(ActionExecute execute, int index, Class<?> urlParamType,

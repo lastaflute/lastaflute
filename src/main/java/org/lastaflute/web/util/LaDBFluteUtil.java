@@ -21,11 +21,28 @@ import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.util.DfReflectionUtil;
+import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 
 /**
  * @author jflute
  */
 public class LaDBFluteUtil {
+
+    public static boolean isClassificationType(Class<?> tp) {
+        return Classification.class.isAssignableFrom(tp);
+    }
+
+    public static Classification toVerifiedClassification(Class<?> cdefType, Object code) {
+        if (code == null || (code instanceof String && ((String) code).isEmpty())) {
+            return null;
+        }
+        final Classification cls = invokeClassificationCodeOf(cdefType, code);
+        if (cls == null) {
+            String msg = "Unknow the classification code for " + cdefType.getName() + ": " + code;
+            throw new ForcedRequest404NotFoundException(msg);
+        }
+        return cls;
+    }
 
     public static Classification invokeClassificationCodeOf(Class<?> cdefType, Object code) {
         assertArgumentNotNull("cdefType", cdefType);
