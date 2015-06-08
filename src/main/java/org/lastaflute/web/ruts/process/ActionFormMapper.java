@@ -34,9 +34,13 @@ import java.util.Map.Entry;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
+import org.dbflute.helper.beans.DfBeanDesc;
+import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
+import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
@@ -410,9 +414,11 @@ public class ActionFormMapper {
                 pd.setValue(bean, prepareStringList(value, propertyType));
             }
         } else { // not array or list, e.g. String, Object
-            final String realValue = prepareStringScalar(value);
+            final String realValue = prepareStringScalar(value); // not null (empty if null)
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
                 pd.setValue(bean, parseJsonProperty(bean, name, realValue, pd));
+            } else if (isClassificationProperty(propertyType)) { // means CDef
+                pd.setValue(bean, invokeClassificationCodeOf(propertyType, realValue));
             } else { // mainly here, e.g. String, Integer
                 pd.setValue(bean, realValue);
             }
@@ -595,6 +601,23 @@ public class ActionFormMapper {
         sb.append("\n").append(json);
         sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
         throwRequestJsonParseFailureException(sb.toString(), e);
+    }
+
+    // -----------------------------------------------------
+    //                                        Classification
+    //                                        --------------
+    protected boolean isClassificationProperty(Class<?> propertyType) {
+        return Classification.class.isAssignableFrom(propertyType);
+    }
+
+    protected Classification invokeClassificationCodeOf(Class<?> cdefType, String code) {
+        if (!code.isEmpty()) {
+            final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(cdefType);
+            final Method method = beanDesc.getMethod("codeOf", new Class<?>[] { Object.class });
+            return (Classification) DfReflectionUtil.invoke(method, null, new Object[] { code });
+        } else {
+            return null;
+        }
     }
 
     // ===================================================================================
