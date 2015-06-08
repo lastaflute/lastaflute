@@ -15,16 +15,12 @@
  */
 package org.lastaflute.web;
 
-import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
 import javax.annotation.Resource;
 
-import org.dbflute.helper.beans.DfBeanDesc;
-import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
@@ -49,6 +45,7 @@ import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.lastaflute.web.util.LaDBFluteUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -302,7 +299,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                        Classification
     //                                        --------------
     protected boolean isCls(Class<? extends Classification> cdefType, Object code) {
-        return invokeClsCodeOf(cdefType, code) != null;
+        return convertToClassification(cdefType, code) != null;
     }
 
     protected <CLS extends Classification> OptionalThing<CLS> toCls(Class<CLS> cdefType, Object code) {
@@ -312,7 +309,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
             });
         }
         @SuppressWarnings("unchecked")
-        final CLS cdef = (CLS) invokeClsCodeOf(cdefType, code);
+        final CLS cdef = (CLS) convertToClassification(cdefType, code);
         if (cdef == null) {
             String msg = "Unknow classification code for " + cdefType.getName() + ": " + code;
             throw new ForcedRequest404NotFoundException(msg);
@@ -320,15 +317,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
         return OptionalThing.of(cdef);
     }
 
-    private Object invokeClsCodeOf(Class<? extends Classification> cdefType, Object code) {
-        assertArgumentNotNull("cdefType", cdefType);
-        assertArgumentNotNull("code", code);
-        if (code instanceof String && ((String) code).isEmpty()) {
-            throw new IllegalArgumentException("The argument 'code' should not be empty: cdefType=" + cdefType);
-        }
-        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(cdefType);
-        final Method method = beanDesc.getMethod("codeOf", new Class<?>[] { Object.class });
-        return DfReflectionUtil.invoke(method, null, new Object[] { code });
+    private Classification convertToClassification(Class<?> cdefType, Object code) {
+        return LaDBFluteUtil.invokeClassificationCodeOf(cdefType, code);
     }
 
     // ===================================================================================

@@ -34,13 +34,10 @@ import java.util.Map.Entry;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
-import org.dbflute.helper.beans.DfBeanDesc;
-import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
-import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
@@ -71,6 +68,7 @@ import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.util.LaDBFluteUtil;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -418,7 +416,7 @@ public class ActionFormMapper {
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
                 pd.setValue(bean, parseJsonProperty(bean, name, realValue, pd));
             } else if (isClassificationProperty(propertyType)) { // means CDef
-                pd.setValue(bean, invokeClassificationCodeOf(propertyType, realValue));
+                pd.setValue(bean, convertToClassification(propertyType, realValue));
             } else { // mainly here, e.g. String, Integer
                 pd.setValue(bean, realValue);
             }
@@ -610,14 +608,8 @@ public class ActionFormMapper {
         return Classification.class.isAssignableFrom(propertyType);
     }
 
-    protected Classification invokeClassificationCodeOf(Class<?> cdefType, String code) {
-        if (!code.isEmpty()) {
-            final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(cdefType);
-            final Method method = beanDesc.getMethod("codeOf", new Class<?>[] { Object.class });
-            return (Classification) DfReflectionUtil.invoke(method, null, new Object[] { code });
-        } else {
-            return null;
-        }
+    protected Classification convertToClassification(Class<?> cdefType, String code) {
+        return LaDBFluteUtil.invokeClassificationCodeOf(cdefType, code);
     }
 
     // ===================================================================================
