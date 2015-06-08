@@ -302,20 +302,25 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                        Classification
     //                                        --------------
     protected boolean isCls(Class<? extends Classification> cdefType, Object code) {
-        return invokeClassificationCodeOf(cdefType, code) != null;
+        return invokeClsCodeOf(cdefType, code) != null;
     }
 
-    protected <CLS extends Classification> CLS toCls(Class<CLS> cdefType, Object code) {
+    protected <CLS extends Classification> OptionalThing<CLS> toCls(Class<CLS> cdefType, Object code) {
+        if (code == null || (code instanceof String && isEmpty((String) code))) {
+            return OptionalThing.ofNullable(null, () -> {
+                throw new IllegalStateException("Unknown classification code: type=" + cdefType + " code=" + code);
+            });
+        }
         @SuppressWarnings("unchecked")
-        final CLS cdef = (CLS) invokeClassificationCodeOf(cdefType, code);
+        final CLS cdef = (CLS) invokeClsCodeOf(cdefType, code);
         if (cdef == null) {
             String msg = "Unknow classification code for " + cdefType.getName() + ": " + code;
             throw new ForcedRequest404NotFoundException(msg);
         }
-        return cdef;
+        return OptionalThing.of(cdef);
     }
 
-    private Object invokeClassificationCodeOf(Class<? extends Classification> cdefType, Object code) {
+    private Object invokeClsCodeOf(Class<? extends Classification> cdefType, Object code) {
         assertArgumentNotNull("cdefType", cdefType);
         assertArgumentNotNull("code", code);
         if (code instanceof String && ((String) code).isEmpty()) {
