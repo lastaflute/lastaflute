@@ -123,9 +123,17 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
             @Override
             public String get(String propertyKey) {
                 final String propertyValue = super.get(propertyKey);
-                return propertyFilter.filter(propertyKey, propertyValue);
+                return filterPropertyAsDefault(propertyFilter.filter(propertyKey, propertyValue));
             }
         };
+    }
+
+    protected String filterPropertyAsDefault(String propertyValue) {
+        return filterPropertyTrimming(propertyValue);
+    }
+
+    protected String filterPropertyTrimming(String propertyValue) {
+        return propertyValue != null ? propertyValue.trim() : null; // rear space is unneeded as business
     }
 
     protected void showBootLogging() {
