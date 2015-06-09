@@ -18,15 +18,15 @@ package org.lastaflute.web.exception;
 /**
  * @author jflute
  */
-public class RequestPropertyMappingFailureException extends ForcedRequest400BadRequestException {
+public class RequestClassifiationConvertFailureException extends ForcedRequest400BadRequestException {
 
     private static final long serialVersionUID = 1L;
 
-    public RequestPropertyMappingFailureException(String msg) {
+    public RequestClassifiationConvertFailureException(String msg) {
         super(msg);
     }
 
-    public RequestPropertyMappingFailureException(String msg, Throwable cause) {
+    public RequestClassifiationConvertFailureException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

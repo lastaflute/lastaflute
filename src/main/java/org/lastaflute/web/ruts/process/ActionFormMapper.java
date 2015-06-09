@@ -57,6 +57,7 @@ import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.exception.IndexedPropertyNotListArrayRuntimeException;
 import org.lastaflute.web.exception.NoParameterizedListRuntimeException;
+import org.lastaflute.web.exception.RequestClassifiationConvertFailureException;
 import org.lastaflute.web.exception.RequestJsonParseFailureException;
 import org.lastaflute.web.exception.RequestPropertyMappingFailureException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
@@ -69,6 +70,7 @@ import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaDBFluteUtil;
+import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -175,6 +177,10 @@ public class ActionFormMapper {
         throwActionFormPopulateFailureException(form, name, value, runtime, cause);
     }
 
+    protected boolean isRequest404NotFoundException(Throwable cause) {
+        return cause instanceof ForcedRequest404NotFoundException;
+    }
+
     protected void throwActionFormPopulateFailureException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Failed to populate the parameter to the form.");
@@ -188,10 +194,6 @@ public class ActionFormMapper {
         br.addElement(value instanceof String[] ? DfCollectionUtil.toListFromArray(value) : value);
         final String msg = br.buildExceptionMessage();
         throw new ActionFormPopulateFailureException(msg, cause);
-    }
-
-    protected boolean isRequest404NotFoundException(Throwable cause) {
-        return cause instanceof ForcedRequest404NotFoundException;
     }
 
     // ===================================================================================
@@ -416,7 +418,7 @@ public class ActionFormMapper {
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
                 pd.setValue(bean, parseJsonProperty(bean, name, realValue, pd));
             } else if (isClassificationProperty(propertyType)) { // means CDef
-                pd.setValue(bean, toVerifiedClassification(propertyType, realValue));
+                pd.setValue(bean, toVerifiedClassification(bean, name, realValue, pd));
             } else { // mainly here, e.g. String, Integer
                 pd.setValue(bean, realValue);
             }
@@ -593,11 +595,7 @@ public class ActionFormMapper {
     protected void throwJsonPropertyParseFailureException(Object bean, String name, String json, Type propertyType, RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
         sb.append("Cannot parse json of the request parameter:");
-        sb.append("\n[JsonProperty Parse Failure]");
-        sb.append("\n").append(bean.getClass().getSimpleName()).append("#").append(name);
-        sb.append(" (").append(propertyType.getTypeName()).append(")");
-        sb.append("\n").append(json);
-        sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
+        buildClientErrorHeader(sb, "JsonProperty Parse Failure", bean, name, json, propertyType);
         throwRequestJsonParseFailureException(sb.toString(), e);
     }
 
@@ -608,8 +606,17 @@ public class ActionFormMapper {
         return LaDBFluteUtil.isClassificationType(propertyType);
     }
 
-    protected Classification toVerifiedClassification(Class<?> cdefType, String code) {
-        return LaDBFluteUtil.toVerifiedClassification(cdefType, code);
+    protected Classification toVerifiedClassification(Object bean, String name, String code, PropertyDesc pd) {
+        final Class<?> propertyType = pd.getPropertyType();
+        try {
+            return LaDBFluteUtil.toVerifiedClassification(propertyType, code);
+        } catch (ClassificationConvertFailureException e) {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("Cannot convert the code of the request parameter to the classification:");
+            buildClientErrorHeader(sb, "Classification Convert Failure", bean, name, "code=" + code, propertyType);
+            throwRequestClassifiationConvertFailureException(sb.toString(), e);
+            return null; // unreachable
+        }
     }
 
     // ===================================================================================
@@ -876,6 +883,13 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                        Client Error
     //                                                                        ============
+    protected void buildClientErrorHeader(StringBuilder sb, String title, Object bean, String name, String value, Type propertyType) {
+        sb.append("\n[").append(title).append("]");
+        sb.append("\n").append(bean.getClass().getSimpleName()).append("#").append(name);
+        sb.append(" (").append(propertyType.getTypeName()).append(")");
+        sb.append("\n").append(value);
+    }
+
     // no server error because it can occur by user's trick
     // while, is likely to due to client bugs (or server) so request client error
     protected void throwRequestJsonParseFailureException(String msg, RuntimeException e) {
@@ -888,5 +902,9 @@ public class ActionFormMapper {
 
     protected void throwRequestPropertyMappingFailureException(String msg, RuntimeException e) {
         throw new RequestPropertyMappingFailureException(msg, e);
+    }
+
+    protected void throwRequestClassifiationConvertFailureException(String msg, Exception e) {
+        throw new RequestClassifiationConvertFailureException(msg, e);
     }
 }

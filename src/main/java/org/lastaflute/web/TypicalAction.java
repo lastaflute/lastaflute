@@ -45,7 +45,9 @@ import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.util.LaDBFluteUtil;
+import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -299,18 +301,35 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                        Classification
     //                                        --------------
     protected boolean isCls(Class<? extends Classification> cdefType, Object code) {
+        assertArgumentNotNull("cdefType", cdefType);
         return LaDBFluteUtil.invokeClassificationCodeOf(cdefType, code) != null;
     }
 
     protected <CLS extends Classification> OptionalThing<CLS> toCls(Class<CLS> cdefType, Object code) {
+        assertArgumentNotNull("cdefType", cdefType);
         if (code == null || (code instanceof String && isEmpty((String) code))) {
             return OptionalThing.ofNullable(null, () -> {
                 throw new IllegalStateException("Not found the classification code for " + cdefType.getName() + ": " + code);
             });
         }
-        @SuppressWarnings("unchecked")
-        final CLS cls = (CLS) LaDBFluteUtil.toVerifiedClassification(cdefType, code);
-        return OptionalThing.of(cls);
+        try {
+            @SuppressWarnings("unchecked")
+            final CLS cls = (CLS) LaDBFluteUtil.toVerifiedClassification(cdefType, code);
+            return OptionalThing.of(cls);
+        } catch (ClassificationConvertFailureException e) {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("Cannot convert the code to the classification:");
+            sb.append("\n[Classification Convert Failure]");
+            try {
+                sb.append("\n").append(LaActionRuntimeUtil.getActionRuntime());
+            } catch (RuntimeException continued) { // just in case
+                logger.info("Not found the action runtime when toCls() called: " + cdefType.getName() + ", " + code, continued);
+            }
+            sb.append("\ncode=").append(code);
+            //sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
+            final String msg = sb.toString();
+            throw new ForcedRequest404NotFoundException(msg, e);
+        }
     }
 
     // ===================================================================================

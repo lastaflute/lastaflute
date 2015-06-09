@@ -21,7 +21,6 @@ import org.dbflute.helper.beans.DfBeanDesc;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.util.DfReflectionUtil;
-import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 
 /**
  * @author jflute
@@ -32,16 +31,25 @@ public class LaDBFluteUtil {
         return Classification.class.isAssignableFrom(tp);
     }
 
-    public static Classification toVerifiedClassification(Class<?> cdefType, Object code) {
+    public static Classification toVerifiedClassification(Class<?> cdefType, Object code) throws ClassificationConvertFailureException {
         if (code == null || (code instanceof String && ((String) code).isEmpty())) {
             return null;
         }
         final Classification cls = invokeClassificationCodeOf(cdefType, code);
         if (cls == null) {
-            String msg = "Unknow the classification code for " + cdefType.getName() + ": " + code;
-            throw new ForcedRequest404NotFoundException(msg);
+            final String msg = "Unknow the classification code for " + cdefType.getName() + ": code=" + code;
+            throw new ClassificationConvertFailureException(msg);
         }
         return cls;
+    }
+
+    public static class ClassificationConvertFailureException extends Exception {
+
+        private static final long serialVersionUID = 1L;
+
+        public ClassificationConvertFailureException(String msg) {
+            super(msg);
+        }
     }
 
     public static Classification invokeClassificationCodeOf(Class<?> cdefType, Object code) {
