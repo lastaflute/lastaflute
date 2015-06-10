@@ -120,10 +120,19 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // -----------------------------------------------------
     //                                            Attachment
     //                                            ----------
-    public void attach(String filename, InputStream stream) {
-        assertArgumentNotNull("filename", filename);
+    public void attachPlainText(String filenameOnHeader, InputStream stream) {
+        doAttach(filenameOnHeader, "text/plain", stream);
+    }
+
+    public void attachVarious(String filenameOnHeader, String contentType, InputStream stream) {
+        doAttach(filenameOnHeader, contentType, stream);
+    }
+
+    protected void doAttach(String filenameOnHeader, String contentType, InputStream stream) {
+        assertArgumentNotNull("filenameOnHeader", filenameOnHeader);
+        assertArgumentNotNull("contentType", contentType);
         assertArgumentNotNull("stream", stream);
-        postcard.attach(filename, stream);
+        postcard.attach(filenameOnHeader, contentType, stream);
     }
 
     // ===================================================================================
