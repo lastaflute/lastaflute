@@ -136,6 +136,21 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     }
 
     // ===================================================================================
+    //                                                                       Postie Option
+    //                                                                       =============
+    public void async() {
+        postcard.async();
+    }
+
+    public void retry(int retryCount, long intervalMillis) {
+        postcard.retry(retryCount, intervalMillis);
+    }
+
+    public void suppressSendFailure() {
+        postcard.suppressSendFailure();
+    }
+
+    // ===================================================================================
     //                                                                        Variable Map
     //                                                                        ============
     protected void registerVariable(String key, Object value) {
