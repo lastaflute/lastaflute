@@ -77,8 +77,12 @@ public interface LaValidatable<MESSAGES extends ActionMessages> {
         }, validationErrorLambda);
     }
 
-    default void letsValidationErrorApi(VaMessenger<MESSAGES> messagesLambda) {
-        createValidator().letsValidationErrorApi(() -> createMessages());
+    default void letsValidationErrorApi(VaMessenger<MESSAGES> validationMessagesLambda) {
+        createValidator().letsValidationErrorApi(() -> {
+            final MESSAGES messages = createMessages();
+            validationMessagesLambda.message(messages);
+            return messages;
+        });
     }
 
     ActionValidator<MESSAGES> createValidator();
