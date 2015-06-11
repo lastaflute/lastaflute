@@ -230,14 +230,12 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                      Verify Parameter
     //                                      ----------------
     protected void verifyParameterExists(Object parameter) { // application may call
-        logger.debug("...Verifying the parameter exists: {}", parameter);
         if (parameter == null || (parameter instanceof String && ((String) parameter).isEmpty())) {
-            handleParameterFailure("Not found the parameter: parameter=" + parameter);
+            handleParameterFailure("Not found the parameter: " + parameter);
         }
     }
 
     protected void verifyParameterTrue(String msg, boolean expectedBool) { // application may call
-        logger.debug("...Verifying the parameter is true: {}", expectedBool);
         if (!expectedBool) {
             handleParameterFailure(msg);
         }
@@ -258,7 +256,6 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      * @param expectedBool The expected determination for your business, true or false. (false: 404 not found)
      */
     protected void verifyTrueOr404NotFound(String msg, boolean expectedBool) { // application may call
-        logger.debug("...Verifying the condition is true or 404 not found: {}", expectedBool);
         if (!expectedBool) {
             lets404(msg);
         }
@@ -271,7 +268,6 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      * @param expectedBool The expected determination for your business, true or false. (false: illegal transition)
      */
     protected void verifyTrueOrIllegalTransition(String msg, boolean expectedBool) { // application may call
-        logger.debug("...Verifying the condition is true or illegal transition: {}", expectedBool);
         if (!expectedBool) {
             letsIllegalTransition(msg);
         }
