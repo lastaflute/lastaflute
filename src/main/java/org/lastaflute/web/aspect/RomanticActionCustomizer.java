@@ -98,10 +98,6 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         verifyExecuteMethodDefinedInConcreteClassOnly(actionMapping, actionType);
     }
 
-    protected boolean isExecuteMethod(Method actionMethod) {
-        return LdiModifierUtil.isPublic(actionMethod) && actionMethod.getAnnotation(Execute.class) != null;
-    }
-
     // -----------------------------------------------------
     //                                     Verify Definition
     //                                     -----------------
@@ -145,16 +141,24 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     //                                                                      Action Execute
     //                                                                      ==============
     protected ActionExecute createActionExecute(ActionMapping actionMapping, Method executeMethod) {
-        final Execute anno = executeMethod.getAnnotation(Execute.class); // exists, already checked
-        final ExecuteOption executeOption = newExecuteOption(anno);
+        final Execute anno = getExecuteAnnotation(executeMethod); // exists, already checked
+        final ExecuteOption executeOption = createExecuteOption(anno);
         return newActionExecute(actionMapping, executeMethod, executeOption);
     }
 
-    protected ExecuteOption newExecuteOption(Execute anno) {
+    protected Execute getExecuteAnnotation(Method executeMethod) {
+        return executeMethod.getAnnotation(Execute.class);
+    }
+
+    protected ExecuteOption createExecuteOption(Execute anno) {
         return new ExecuteOption(anno.urlPattern(), anno.suppressTransaction());
     }
 
     protected ActionExecute newActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {
         return new ActionExecute(actionMapping, executeMethod, executeOption);
+    }
+
+    protected boolean isExecuteMethod(Method actionMethod) {
+        return LdiModifierUtil.isPublic(actionMethod) && getExecuteAnnotation(actionMethod) != null;
     }
 }
