@@ -75,14 +75,16 @@ public class SimpleTemplateManager implements TemplateManager {
         assertArgumentNotNull("pmb", pmb);
         final String templatePath = pmb.getTemplatePath();
         assertArgumentNotNull("pmb.getTemplatePath()", templatePath);
-        return evaluate(readText(templatePath), pmb);
+        final String evaluated = evaluate(readText(templatePath), pmb);
+        return filterBodyMeta(templatePath, evaluated);
     }
 
     @Override
     public String parse(String templatePath, Map<String, Object> variableMap) {
         assertArgumentNotNull("templatePath", templatePath);
         assertArgumentNotNull("variableMap", variableMap);
-        return evaluate(readText(templatePath), variableMap);
+        final String evaluated = evaluate(readText(templatePath), variableMap);
+        return filterBodyMeta(templatePath, evaluated);
     }
 
     protected String readText(String templatePath) {
@@ -91,6 +93,11 @@ public class SimpleTemplateManager implements TemplateManager {
             throw new IllegalStateException("Not found the template path: " + templatePath);
         }
         return textIO.read(ins);
+    }
+
+    protected String filterBodyMeta(String templatePath, String evaluated) {
+        // TODO jflute temlate body meta (2015/06/13)
+        return evaluated;
     }
 
     // ===================================================================================

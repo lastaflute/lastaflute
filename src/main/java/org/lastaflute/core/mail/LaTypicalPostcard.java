@@ -17,6 +17,7 @@ package org.lastaflute.core.mail;
 
 import java.io.InputStream;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.mail.Address;
@@ -25,6 +26,7 @@ import javax.mail.internet.InternetAddress;
 
 import org.dbflute.mail.DeliveryCategory;
 import org.dbflute.mail.Postcard;
+import org.dbflute.mail.Postcard.BodyFileOption;
 import org.dbflute.util.DfTypeUtil;
 
 /**
@@ -38,6 +40,7 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     //                                                                           =========
     protected final Postcard postcard;
     protected final Map<String, Object> variableMap;
+    protected final BodyFileOption bodyFileOption;
     protected boolean strictAddress = true; // as default
 
     // ===================================================================================
@@ -46,7 +49,7 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     public LaTypicalPostcard() {
         postcard = createNativePostcard();
         variableMap = createVariableMap();
-        useBodyFile();
+        bodyFileOption = useBodyFile();
     }
 
     protected Postcard createNativePostcard() {
@@ -62,8 +65,10 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
         return variableMap;
     }
 
-    protected void useBodyFile() {
-        postcard.useBodyFile(getBodyFile()).useTemplateText(variableMap);
+    protected BodyFileOption useBodyFile() {
+        final BodyFileOption option = postcard.useBodyFile(getBodyFile());
+        option.useTemplateText(variableMap);
+        return option;
     }
 
     // -----------------------------------------------------
@@ -133,6 +138,13 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
         assertArgumentNotNull("contentType", contentType);
         assertArgumentNotNull("stream", stream);
         postcard.attach(filenameOnHeader, contentType, stream);
+    }
+
+    // -----------------------------------------------------
+    //                                       Receiver Locale
+    //                                       ---------------
+    public void asReceiverLocale(Locale receiverLocale) {
+        bodyFileOption.receiverLocale(receiverLocale);
     }
 
     // ===================================================================================
