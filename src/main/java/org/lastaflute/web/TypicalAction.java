@@ -330,7 +330,6 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     // ===================================================================================
     //                                                                            Document
     //                                                                            ========
-    // TODO jflute lastaflute: [C] function: make document()
     /**
      * <pre>
      * [AtMark]Execute

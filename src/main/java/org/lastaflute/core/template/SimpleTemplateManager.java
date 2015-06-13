@@ -101,7 +101,7 @@ public class SimpleTemplateManager implements TemplateManager {
         }
         final String delimiter = ">>>";
         if (evaluated.contains(delimiter)) {
-            // TODO jflute lastaflute: [D] fitting: temlate body meta check (2015/06/13)
+            // TODO jflute lastaflute: [C] fitting: temlate body meta check (2015/06/13)
             //final String front = Srl.substringFirstFront(evaluated, delimiter);
             final String rear = Srl.substringFirstRear(evaluated, delimiter);
             final String realText;
