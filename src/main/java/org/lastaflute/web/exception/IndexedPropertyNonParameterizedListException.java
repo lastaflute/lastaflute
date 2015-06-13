@@ -15,29 +15,18 @@
  */
 package org.lastaflute.web.exception;
 
-import org.lastaflute.di.exception.SRuntimeException;
-
 /**
  * @author modified by jflute (originated in Seasar)
  */
-public class IllegalValidateMethodRuntimeException extends SRuntimeException {
+public class IndexedPropertyNonParameterizedListException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    private Class<?> actionClass;
-    private String validateMethodName;
-
-    public IllegalValidateMethodRuntimeException(Class<?> actionClass, String validateMethodName) {
-        super("ESAS0006", new Object[] { actionClass.getName(), validateMethodName });
-        this.actionClass = actionClass;
-        this.validateMethodName = validateMethodName;
+    public IndexedPropertyNonParameterizedListException(String msg) {
+        super(msg);
     }
 
-    public Class<?> getActionClass() {
-        return actionClass;
-    }
-
-    public String getValidateMethodName() {
-        return validateMethodName;
+    public IndexedPropertyNonParameterizedListException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

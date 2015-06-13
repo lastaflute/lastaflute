@@ -55,8 +55,8 @@ import org.lastaflute.web.api.JsonParameter;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
-import org.lastaflute.web.exception.IndexedPropertyNotListArrayRuntimeException;
-import org.lastaflute.web.exception.NoParameterizedListRuntimeException;
+import org.lastaflute.web.exception.IndexedPropertyNonParameterizedListException;
+import org.lastaflute.web.exception.IndexedPropertyNotListArrayException;
 import org.lastaflute.web.exception.RequestClassifiationConvertFailureException;
 import org.lastaflute.web.exception.RequestJsonParseFailureException;
 import org.lastaflute.web.exception.RequestPropertyMappingFailureException;
@@ -740,7 +740,7 @@ public class ActionFormMapper {
                     for (int j = 0; j <= i; j++) {
                         sb.append("[").append(indexes[j]).append("]");
                     }
-                    throw new NoParameterizedListRuntimeException(getRealClass(beanDesc.getBeanClass()), pd.getPropertyName() + sb);
+                    throwIndexedPropertyNonParameterizedListException(beanDesc, pd);
                 }
                 int size = list.size();
                 pcd = pcd.getArguments()[0];
@@ -757,7 +757,7 @@ public class ActionFormMapper {
             }
             list.set(indexes[indexes.length - 1], value);
         } else {
-            throw new IndexedPropertyNotListArrayRuntimeException(getRealClass(beanDesc.getBeanClass()), pd.getPropertyName());
+            throwIndexedPropertyNotListArrayException(beanDesc, pd);
         }
     }
 
@@ -792,37 +792,40 @@ public class ActionFormMapper {
             array = expand(array, indexes, elementType);
             pd.setValue(bean, array);
             return getArrayValue(array, indexes, elementType);
-        } else if (List.class.isAssignableFrom(pd.getPropertyType())) {
-            List<Object> list = (List<Object>) pd.getValue(bean);
-            if (list == null) {
-                list = new ArrayList<Object>(Math.max(50, indexes[0]));
-                pd.setValue(bean, list);
-            }
-            ParameterizedClassDesc pcd = pd.getParameterizedClassDesc();
-            for (int i = 0; i < indexes.length; i++) {
-                if (pcd == null || !pcd.isParameterizedClass() || !List.class.isAssignableFrom(pcd.getRawClass())) {
-                    StringBuilder sb = new StringBuilder();
-                    for (int j = 0; j <= i; j++) {
-                        sb.append("[").append(indexes[j]).append("]");
-                    }
-                    throw new NoParameterizedListRuntimeException(getRealClass(beanDesc.getBeanClass()), pd.getPropertyName() + sb);
-                }
-                int size = list.size();
-                pcd = pcd.getArguments()[0];
-                for (int j = size; j <= indexes[i]; j++) {
-                    if (i == indexes.length - 1) {
-                        list.add(LdiClassUtil.newInstance(convertClass(pcd.getRawClass())));
-                    } else {
-                        list.add(new ArrayList<Integer>());
-                    }
-                }
-                if (i < indexes.length - 1) {
-                    list = (List<Object>) list.get(indexes[i]);
-                }
-            }
-            return list.get(indexes[indexes.length - 1]);
         } else {
-            throw new IndexedPropertyNotListArrayRuntimeException(getRealClass(beanDesc.getBeanClass()), pd.getPropertyName());
+            if (List.class.isAssignableFrom(pd.getPropertyType())) {
+                List<Object> list = (List<Object>) pd.getValue(bean);
+                if (list == null) {
+                    list = new ArrayList<Object>(Math.max(50, indexes[0]));
+                    pd.setValue(bean, list);
+                }
+                ParameterizedClassDesc pcd = pd.getParameterizedClassDesc();
+                for (int i = 0; i < indexes.length; i++) {
+                    if (pcd == null || !pcd.isParameterizedClass() || !List.class.isAssignableFrom(pcd.getRawClass())) {
+                        StringBuilder sb = new StringBuilder();
+                        for (int j = 0; j <= i; j++) {
+                            sb.append("[").append(indexes[j]).append("]");
+                        }
+                        throwIndexedPropertyNonParameterizedListException(beanDesc, pd);
+                    }
+                    int size = list.size();
+                    pcd = pcd.getArguments()[0];
+                    for (int j = size; j <= indexes[i]; j++) {
+                        if (i == indexes.length - 1) {
+                            list.add(LdiClassUtil.newInstance(convertClass(pcd.getRawClass())));
+                        } else {
+                            list.add(new ArrayList<Integer>());
+                        }
+                    }
+                    if (i < indexes.length - 1) {
+                        list = (List<Object>) list.get(indexes[i]);
+                    }
+                }
+                return list.get(indexes[indexes.length - 1]);
+            } else {
+                throwIndexedPropertyNotListArrayException(beanDesc, pd);
+                return null; // unreachable
+            }
         }
     }
 
@@ -838,6 +841,28 @@ public class ActionFormMapper {
             value = element;
         }
         return value;
+    }
+
+    protected void throwIndexedPropertyNonParameterizedListException(final BeanDesc beanDesc, final PropertyDesc pd) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The list of indexed property was not parameterized.");
+        br.addItem("ActionForm");
+        br.addElement(getRealClass(beanDesc.getBeanClass()));
+        br.addItem("Property");
+        br.addElement(pd);
+        final String msg = br.buildExceptionMessage();
+        throw new IndexedPropertyNonParameterizedListException(msg);
+    }
+
+    protected void throwIndexedPropertyNotListArrayException(BeanDesc beanDesc, PropertyDesc pd) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The indexed property was not list or array.");
+        br.addItem("ActionForm");
+        br.addElement(getRealClass(beanDesc.getBeanClass()));
+        br.addItem("Property");
+        br.addElement(pd);
+        final String msg = br.buildExceptionMessage();
+        throw new IndexedPropertyNotListArrayException(msg);
     }
 
     // -----------------------------------------------------

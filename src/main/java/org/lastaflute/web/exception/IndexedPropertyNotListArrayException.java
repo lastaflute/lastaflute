@@ -15,29 +15,18 @@
  */
 package org.lastaflute.web.exception;
 
-import org.lastaflute.di.exception.SRuntimeException;
-
 /**
  * @author modified by jflute (originated in Seasar)
  */
-public class NoParameterizedListRuntimeException extends SRuntimeException {
+public class IndexedPropertyNotListArrayException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    private Class<?> targetClass;
-    private String propertyName;
-
-    public NoParameterizedListRuntimeException(Class<?> targetClass, String propertyName) {
-        super("ESAS0003", new Object[] { targetClass.getName(), propertyName });
-        this.targetClass = targetClass;
-        this.propertyName = propertyName;
+    public IndexedPropertyNotListArrayException(String msg) {
+        super(msg);
     }
 
-    public Class<?> getTargetClass() {
-        return targetClass;
-    }
-
-    public String getPropertyName() {
-        return propertyName;
+    public IndexedPropertyNotListArrayException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }
