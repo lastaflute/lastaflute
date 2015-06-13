@@ -41,7 +41,6 @@ import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
@@ -243,7 +242,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
 
     protected void handleParameterFailure(String msg) {
         // no server error because it can occur by user's trick easily e.g. changing GET parameter
-        lets404(msg);
+        throw404(msg);
     }
 
     // -----------------------------------------------------
@@ -257,7 +256,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      */
     protected void verifyTrueOr404NotFound(String msg, boolean expectedBool) { // application may call
         if (!expectedBool) {
-            lets404(msg);
+            throw404(msg);
         }
     }
 
@@ -269,15 +268,15 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      */
     protected void verifyTrueOrIllegalTransition(String msg, boolean expectedBool) { // application may call
         if (!expectedBool) {
-            letsIllegalTransition(msg);
+            throwIllegalTransition(msg);
         }
     }
 
-    protected HtmlResponse lets404(String msg) { // e.g. used by error handling of validation for GET parameter
+    protected void throw404(String msg) { // e.g. used by error handling of validation for GET parameter
         throw new ForcedRequest404NotFoundException(msg);
     }
 
-    protected void letsIllegalTransition(String msg) {
+    protected void throwIllegalTransition(String msg) {
         final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
         throw new ForcedIllegalTransitionApplicationException(msg, transitionKey);
     }

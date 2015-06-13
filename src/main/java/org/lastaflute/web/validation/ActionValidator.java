@@ -106,7 +106,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         }
     }
 
-    public void letsValidationError(MessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
+    public void throwValidationError(MessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
         throwValidationErrorException(noArgInLambda.provide(), validationErrorLambda);
     }
 
@@ -121,7 +121,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         doValidate(form, doValidateLambda, () -> hookApiValidationError());
     }
 
-    public void letsValidationErrorApi(MessagesCreator<MESSAGES> noArgInLambda) {
+    public void throwValidationErrorApi(MessagesCreator<MESSAGES> noArgInLambda) {
         throwValidationErrorException(noArgInLambda.provide(), () -> hookApiValidationError());
     }
 

@@ -23,12 +23,33 @@ import org.lastaflute.web.ruts.message.ActionMessages;
  */
 public interface LaValidatableApi<MESSAGES extends ActionMessages> {
 
-    default void validateApi(Object form, VaMore<MESSAGES> doValidateLambda) {
-        createValidator().validateApi(form, doValidateLambda);
+    /**
+     * Validate the form values for API, when e.g. JsonResponse. <br>
+     * The validation error handling is in ApiFailureHook.
+     * <pre>
+     * <span style="color: #3F7E5E">// by-annotation only</span>
+     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {});
+     * 
+     * <span style="color: #3F7E5E">// by-annotation and by-program</span>
+     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">if</span> (...) {
+     *         <span style="color: #553000">messages</span>.addConstraint...
+     *     }
+     * });
+     * </pre>
+     * @param form The form that has request parameters. (NotNull)
+     * @param moreValidationLambda The callback for more validation, e.g. correlation rule, very complex rule. (NotNull)
+     */
+    default void validate(Object form, VaMore<MESSAGES> moreValidationLambda) {
+        createValidator().validateApi(form, moreValidationLambda);
     }
 
-    default void letsValidationErrorApi(VaMessenger<MESSAGES> messagesLambda) {
-        createValidator().letsValidationErrorApi(() -> createMessages());
+    default void throwValidationError(VaMessenger<MESSAGES> validationMessagesLambda) {
+        createValidator().throwValidationErrorApi(() -> {
+            final MESSAGES messages = createMessages();
+            validationMessagesLambda.message(messages);
+            return messages;
+        });
     }
 
     ActionValidator<MESSAGES> createValidator();
