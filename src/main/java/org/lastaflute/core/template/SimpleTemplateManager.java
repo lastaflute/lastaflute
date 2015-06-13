@@ -96,8 +96,26 @@ public class SimpleTemplateManager implements TemplateManager {
     }
 
     protected String filterBodyMeta(String templatePath, String evaluated) {
-        // TODO jflute temlate body meta (2015/06/13)
-        return evaluated;
+        if (evaluated == null) {
+            throw new IllegalStateException("Not found the evaluated text: " + templatePath);
+        }
+        final String delimiter = ">>>";
+        if (evaluated.contains(delimiter)) {
+            // TODO jflute lastaflute: [D] temlate body meta check (2015/06/13)
+            //final String front = Srl.substringFirstFront(evaluated, delimiter);
+            final String rear = Srl.substringFirstRear(evaluated, delimiter);
+            final String realText;
+            if (rear.startsWith(LF)) {
+                realText = rear.substring(LF.length());
+            } else if (rear.startsWith(CRLF)) {
+                realText = rear.substring(CRLF.length());
+            } else { // e.g. >>> Hello
+                realText = rear;
+            }
+            return realText;
+        } else {
+            return evaluated;
+        }
     }
 
     // ===================================================================================

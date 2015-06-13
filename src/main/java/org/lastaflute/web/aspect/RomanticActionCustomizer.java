@@ -26,6 +26,7 @@ import org.lastaflute.di.core.customizer.ComponentCustomizer;
 import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.web.Execute;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.exception.ExecuteMethodIllegalDefinitionException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
@@ -88,12 +89,13 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
             final ActionExecute existing = actionMapping.getActionExecute(declaredMethod);
             if (existing != null) {
                 String msg = "Cannot define overload method of action execute: " + existing;
-                throw new IllegalStateException(msg);
+                throw new ExecuteMethodIllegalDefinitionException(msg);
             }
             actionMapping.registerExecute(createActionExecute(actionMapping, declaredMethod));
         }
-        checkExecuteMethodSize(actionMapping, actionType);
-        checkExecuteMethodBothIndexNamedUrlParameter(actionMapping, actionType);
+        verifyExecuteMethodSize(actionMapping, actionType);
+        verifyExecuteMethodEitherIndexAndNamedUsingUrlParameter(actionMapping, actionType);
+        verifyExecuteMethodDefinedInConcreteClassOnly(actionMapping, actionType);
     }
 
     protected boolean isExecuteMethod(Method actionMethod) {
@@ -101,17 +103,17 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     }
 
     // -----------------------------------------------------
-    //                                      Check Definition
-    //                                      ----------------
+    //                                     Verify Definition
+    //                                     -----------------
     // TODO jflute lastaflute: [E] fitting: exception message
-    protected void checkExecuteMethodSize(ActionMapping actionMapping, Class<?> actionType) {
+    protected void verifyExecuteMethodSize(ActionMapping actionMapping, Class<?> actionType) {
         if (actionMapping.getExecuteMap().size() == 0) {
             String msg = "Not found execute method in the action class (needs at least one method): " + actionType;
-            throw new IllegalStateException(msg);
+            throw new ExecuteMethodIllegalDefinitionException(msg);
         }
     }
 
-    protected void checkExecuteMethodBothIndexNamedUrlParameter(ActionMapping actionMapping, Class<?> actionType) {
+    protected void verifyExecuteMethodEitherIndexAndNamedUsingUrlParameter(ActionMapping actionMapping, Class<?> actionType) {
         final Map<String, ActionExecute> executeMap = actionMapping.getExecuteMap();
         final ActionExecute index = executeMap.get("index");
         if (index != null && index.getUrlParamArgs().isPresent()) {
@@ -119,7 +121,21 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
                 final ActionExecute execute = entry.getValue();
                 if (!execute.isIndexMethod() && execute.getUrlParamArgs().isPresent()) {
                     String msg = "Cannot use URL parameter both index() and named execute: named=" + execute;
-                    throw new IllegalStateException(msg);
+                    throw new ExecuteMethodIllegalDefinitionException(msg);
+                }
+            }
+        }
+    }
+
+    protected void verifyExecuteMethodDefinedInConcreteClassOnly(ActionMapping actionMapping, Class<?> actionType) {
+        for (Class<?> clazz = actionType.getSuperclass(); !Object.class.equals(clazz); clazz = clazz.getSuperclass()) {
+            if (clazz == null) { // just in case
+                break;
+            }
+            for (Method declaredMethod : clazz.getDeclaredMethods()) {
+                if (isExecuteMethod(declaredMethod)) {
+                    String msg = "Cannot define execute method at super class: " + declaredMethod;
+                    throw new ExecuteMethodIllegalDefinitionException(msg);
                 }
             }
         }
