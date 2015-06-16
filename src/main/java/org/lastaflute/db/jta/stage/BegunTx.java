@@ -16,11 +16,18 @@
 package org.lastaflute.db.jta.stage;
 
 /**
- * @param <RESULT> The type of transaction result.
+ * @param <RESULT> The type of result.
  * @author jflute
  */
-@FunctionalInterface
-public interface TransactionShow<RESULT> {
+public class BegunTx<RESULT> {
 
-    void perform(BegunTx<RESULT> tx);
+    protected RESULT result;
+
+    public RESULT getResult() {
+        return result;
+    }
+
+    public void returns(RESULT result) {
+        this.result = result;
+    }
 }

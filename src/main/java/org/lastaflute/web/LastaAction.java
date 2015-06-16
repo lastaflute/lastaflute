@@ -142,6 +142,11 @@ public abstract class LastaAction {
     //                                                                             =======
     /**
      * Execute asynchronous process by other thread. <br>
+     * <pre>
+     * async(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
+     * });
+     * </pre>
      * You can inherit...
      * <pre>
      * o ThreadCacheContext (copied plainly)
@@ -159,11 +164,25 @@ public abstract class LastaAction {
 
     /**
      * Perform the show in transaction (always new transaction), roll-backed if exception.
-     * @param noArgLambda The callback for your transaction show on the stage. (NotNull)
+     * <pre>
+     * <span style="color: #3F7E5E">// if no return</span> 
+     * requiresNew(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...); <span style="color: #3F7E5E">// already in transaction</span>
+     *     insert(...); <span style="color: #3F7E5E">// also here</span>
+     * });
+     * 
+     * <span style="color: #3F7E5E">// if returns anything to caller</span> 
+     * <span style="color: #994747">Member member</span> = (Member)requiresNew(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...);
+     *     Member member = select(...);
+     *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
+     * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
+     * </pre>
+     * @param txLambda The callback for your transaction show on the stage. (NotNull)
      * @return The result of the transaction show. (NotNull, EmptyAllowed: when no result)
      */
-    protected <RESULT> OptionalThing<RESULT> newTx(TransactionShow<RESULT> noArgLambda) {
-        return transactionStage.requiresNew(noArgLambda);
+    protected <RESULT> OptionalThing<RESULT> requiresNew(TransactionShow<RESULT> txLambda) {
+        return transactionStage.requiresNew(txLambda);
     }
 
     // ===================================================================================

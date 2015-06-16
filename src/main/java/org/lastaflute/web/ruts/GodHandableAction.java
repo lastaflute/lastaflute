@@ -122,9 +122,10 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
-        return stage.selectable(() -> {
+        return (NextJourney) stage.selectable(tx -> {
             final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
-            return reflect(response); /* also response handling in transaction */
+            final NextJourney journey = reflect(response); /* also response handling in transaction */
+            tx.returns(journey);
         }, getExecuteTransactionGenre()).get(); // because of not null
     }
 

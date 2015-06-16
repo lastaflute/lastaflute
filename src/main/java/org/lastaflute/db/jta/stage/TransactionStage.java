@@ -24,23 +24,51 @@ public interface TransactionStage {
 
     /**
      * Execute the show in transaction (inherits outer transaction), roll-backed if exception.
-     * @param noArgLambda The callback for your transaction show on the stage. (NotNull)
+     * <pre>
+     * <span style="color: #3F7E5E">// if no return</span> 
+     * required(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...); <span style="color: #3F7E5E">// already in transaction</span>
+     *     insert(...); <span style="color: #3F7E5E">// also here</span>
+     * });
+     * 
+     * <span style="color: #3F7E5E">// if returns anything to caller</span> 
+     * <span style="color: #994747">Member member</span> = (Member)required(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...);
+     *     Member member = select(...);
+     *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
+     * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
+     * </pre>
+     * @param txLambda The callback for your transaction show on the stage. (NotNull)
      * @return The optional result of the transaction show. (NullAllowed)
      */
-    <RESULT> OptionalThing<RESULT> required(TransactionShow<RESULT> noArgLambda);
+    <RESULT> OptionalThing<RESULT> required(TransactionShow<RESULT> txLambda);
 
     /**
      * Execute the show in transaction (always new transaction), roll-backed if exception.
-     * @param noArgLambda The callback for your transaction show on the stage. (NotNull)
+     * <pre>
+     * <span style="color: #3F7E5E">// if no return</span> 
+     * requiresNew(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...); <span style="color: #3F7E5E">// already in transaction</span>
+     *     insert(...); <span style="color: #3F7E5E">// also here</span>
+     * });
+     * 
+     * <span style="color: #3F7E5E">// if returns anything to caller</span> 
+     * <span style="color: #994747">Member member</span> = (Member)requiresNew(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...);
+     *     Member member = select(...);
+     *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
+     * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
+     * </pre>
+     * @param txLambda The callback for your transaction show on the stage. (NotNull)
      * @return The optional result of the transaction show. (NullAllowed)
      */
-    <RESULT> OptionalThing<RESULT> requiresNew(TransactionShow<RESULT> noArgLambda);
+    <RESULT> OptionalThing<RESULT> requiresNew(TransactionShow<RESULT> txLambda);
 
     /**
      * Execute the show in transaction by selected genre, roll-backed if exception.
-     * @param noArgLambda The callback for your transaction show on the stage. (NotNull)
+     * @param txLambda The callback for your transaction show on the stage. (NotNull)
      * @param genre The genre of transaction, also contains non transaction. (NotNull)
      * @return The optional result of the transaction show. (NullAllowed)
      */
-    <RESULT> OptionalThing<RESULT> selectable(TransactionShow<RESULT> noArgLambda, TransactionGenre genre);
+    <RESULT> OptionalThing<RESULT> selectable(TransactionShow<RESULT> txLambda, TransactionGenre genre);
 }
