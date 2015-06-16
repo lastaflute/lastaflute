@@ -404,9 +404,8 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     protected void transactionCallSaveLoginHistory(USER_ENTITY userEntity, USER_BEAN userBean, LoginSpecifiedOption option) {
         try {
             // inherit when e.g. called by action, begin new when e.g. remember-me
-            transactionStage.requiresNew(() -> {
+            transactionStage.requiresNew(tx -> {
                 saveLoginHistory(userEntity, userBean, option);
-                return null;
             });
         } catch (Throwable e) {
             handleSavingLoginHistoryTransactionFailure(userBean, e);
