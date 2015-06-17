@@ -30,6 +30,8 @@ public interface ScopedAttributeHolder {
      */
     <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey);
 
+    // second argument 'genericType' is to write like this:
+    // getAttribute("sea", SeaBean.class).ifPresent(seaBean -> ...)
     /**
      * Get the attribute value of request by the key.
      * @param <ATTRIBUTE> The type of attribute object.

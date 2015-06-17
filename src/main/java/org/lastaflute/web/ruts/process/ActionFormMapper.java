@@ -42,6 +42,7 @@ import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.core.util.GenericTypeRef;
 import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
@@ -55,7 +56,6 @@ import org.lastaflute.web.api.JsonBody;
 import org.lastaflute.web.api.JsonParameter;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
-import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.exception.IndexedPropertyNonParameterizedListException;
 import org.lastaflute.web.exception.IndexedPropertyNotListArrayException;
 import org.lastaflute.web.exception.RequestClassifiationConvertFailureException;
@@ -70,6 +70,7 @@ import org.lastaflute.web.ruts.multipart.ActionMultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaDBFluteUtil;
 import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
@@ -174,14 +175,14 @@ public class ActionFormMapper {
 
     protected void handleIllegalPropertyPopulateException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause)
             throws ServletException {
-        if (isRequest404NotFoundException(cause)) { // for indexed property check
+        if (isRequestClientErrorException(cause)) { // for indexed property check
             throw new ServletException(cause);
         }
         throwActionFormPopulateFailureException(form, name, value, runtime, cause);
     }
 
-    protected boolean isRequest404NotFoundException(Throwable cause) {
-        return cause instanceof ForcedRequest404NotFoundException;
+    protected boolean isRequestClientErrorException(Throwable cause) {
+        return cause instanceof RequestClientErrorException;
     }
 
     protected void throwActionFormPopulateFailureException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause) {
@@ -214,7 +215,7 @@ public class ActionFormMapper {
             mappingJsonBody(runtime, virtualActionForm, getRequestBody());
             return true;
         }
-        if (isJsonBodyListForm(virtualActionForm)) {
+        if (isListJsonBodyForm(virtualActionForm)) {
             mappingListJsonBody(runtime, virtualActionForm, getRequestBody());
             return true;
         }
@@ -225,7 +226,7 @@ public class ActionFormMapper {
         return formType.getAnnotation(JsonBody.class) != null;
     }
 
-    protected boolean isJsonBodyListForm(VirtualActionForm virtualActionForm) {
+    protected boolean isListJsonBodyForm(VirtualActionForm virtualActionForm) {
         return virtualActionForm.getFormMeta().getListFormParameterGenericType().map(genericType -> {
             return isJsonBodyForm(genericType);
         }).orElse(false);
@@ -235,39 +236,58 @@ public class ActionFormMapper {
         return requestManager.getRequestBody();
     }
 
+    // -----------------------------------------------------
+    //                                             Bean JSON
+    //                                             ---------
     protected void mappingJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json) {
         final JsonManager jsonManager = getJsonManager();
         try {
             final Object fromJson = jsonManager.fromJson(json, virtualActionForm.getFormMeta().getFormType());
             acceptJsonRealForm(virtualActionForm, fromJson);
         } catch (RuntimeException e) {
-            final Map<String, Object> retryMap = retryJsonAsMapForDebug(json, jsonManager);
-            throwJsonBodyParseFailureException(runtime, virtualActionForm, json, retryMap, e);
+            throwJsonBodyParseFailureException(runtime, virtualActionForm, json, e);
         }
     }
 
-    protected void acceptJsonRealForm(VirtualActionForm virtualActionForm, Object realForm) {
-        virtualActionForm.acceptRealForm(realForm);
-    }
-
     protected void throwJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
-            Map<String, Object> retryMap, RuntimeException e) {
+            RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
         sb.append("Cannot parse json of the request body:");
         sb.append(LF).append("[JsonBody Parse Failure]");
         sb.append(LF).append(runtime);
         sb.append(LF).append(virtualActionForm);
         sb.append(LF).append(json);
-        if (retryMap != null) {
+        final Map<String, Object> retryMap = retryJsonAsMapForDebug(json);
+        List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
+        if (!retryMap.isEmpty()) {
             sb.append(LF).append(buildDebugChallengeTitle());
-            for (ActionFormProperty property : virtualActionForm.getFormMeta().properties()) {
-                buildJsonDebugChallenge(sb, retryMap, property.getPropertyName(), property.getPropertyDesc().getPropertyType());
+            final List<JsonDebugChallenge> nestedList = prepareJsonBodyDebugChallengeList(virtualActionForm, retryMap);
+            for (JsonDebugChallenge challenge : nestedList) {
+                sb.append(challenge.toChallengeDisp());
             }
+            challengeList.addAll(nestedList);
         }
         sb.append(LF).append(e.getClass().getName()).append(LF).append(e.getMessage());
-        throwRequestJsonParseFailureException(sb.toString(), e);
+        throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
     }
 
+    protected List<JsonDebugChallenge> prepareJsonBodyDebugChallengeList(VirtualActionForm virtualActionForm, Map<String, Object> retryMap) {
+        if (retryMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
+        for (ActionFormProperty property : virtualActionForm.getFormMeta().properties()) {
+            final String propertyName = property.getPropertyName();
+            final Class<?> propertyType = property.getPropertyDesc().getPropertyType();
+            final JsonDebugChallenge challenge = createJsonDebugChallenge(retryMap, propertyName, propertyType);
+            challengeList.add(challenge);
+        }
+        return Collections.unmodifiableList(challengeList);
+    }
+
+    // -----------------------------------------------------
+    //                                             List JSON
+    //                                             ---------
     protected void mappingListJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json) {
         try {
             final ActionFormMeta formMeta = virtualActionForm.getFormMeta();
@@ -275,25 +295,39 @@ public class ActionFormMapper {
             final List<Object> fromJsonList = getJsonManager().fromJsonList(json, pt);
             acceptJsonRealForm(virtualActionForm, fromJsonList);
         } catch (RuntimeException e) {
-            // TODO jflute lastaflute: [A] fitting: List Json debug challenge (2015/06/17)
-            //getJsonManager().fromJsonList(json, (ParameterizedType) new TypeToken<List<Map<?, ?>>>() {
-            //}.getType());
-            throwListJsonBodyParseFailureException(runtime, virtualActionForm, json, null, e);
+            throwListJsonBodyParseFailureException(runtime, virtualActionForm, json, e);
         }
     }
 
     protected void throwListJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
-            String debugChallenge, RuntimeException e) {
+            RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Cannot parse list json of the request body:");
+        sb.append("Cannot parse list json of the request body.");
         sb.append("\n[List JsonBody Parse Failure]");
         sb.append(LF).append(runtime);
         sb.append(LF).append(virtualActionForm);
         sb.append(LF).append(json);
-        if (debugChallenge != null) {
-            sb.append(LF).append(debugChallenge);
+        final List<Map<String, Object>> retryList = retryJsonListAsMapForDebug(json);
+        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
+        if (!retryList.isEmpty()) {
+            sb.append(LF).append(buildDebugChallengeTitle());
+            int rowNumber = 1;
+            for (Map<String, Object> retryMap : retryList) {
+                sb.append(LF).append(" (element: ").append(rowNumber).append(")");
+                final List<JsonDebugChallenge> nestedList = prepareJsonBodyDebugChallengeList(virtualActionForm, retryMap);
+                challengeList.addAll(nestedList);
+                nestedList.forEach(challenge -> sb.append(challenge.toChallengeDisp()));
+                ++rowNumber;
+            }
         }
-        throwRequestJsonParseFailureException(sb.toString(), e);
+        throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
+    }
+
+    // -----------------------------------------------------
+    //                                          Assist Logic
+    //                                          ------------
+    protected void acceptJsonRealForm(VirtualActionForm virtualActionForm, Object realForm) {
+        virtualActionForm.acceptRealForm(realForm);
     }
 
     // ===================================================================================
@@ -531,45 +565,46 @@ public class ActionFormMapper {
     protected Object parseJsonParameter(Object bean, String name, String json, PropertyDesc pd) {
         final JsonManager jsonManager = getJsonManager();
         final Class<?> propertyType = pd.getPropertyType();
-        if (isJsonPropertyListType(propertyType)) { // e.g. public List<...> beanList;
+        if (isListJsonProperty(propertyType)) { // e.g. public List<...> beanList;
             if (!pd.isParameterized()) { // e.g. public List anyList;
-                throwJsonPropertyListTypeNonGenericException(bean, name, json, pd); // program mistake
+                throwListJsonPropertyNonGenericException(bean, name, json, pd); // program mistake
                 return null; // unreachable
             }
             final ParameterizedClassDesc paramedDesc = pd.getParameterizedClassDesc();
             final Type plainType = paramedDesc.getParameterizedType(); // not null
             if (!(plainType instanceof ParameterizedType)) { // generic array type? anyway check it
-                throwJsonPropertyListTypeNonParameterizedException(bean, name, json, pd, plainType); // program mistake
+                throwListJsonPropertyNonParameterizedException(bean, name, json, pd, plainType); // program mistake
                 return null; // unreachable
             }
             final ParameterizedType paramedType = (ParameterizedType) plainType;
             if (Object.class.equals(paramedDesc.getGenericFirstType())) { // e.g. public List<?> beanList;
-                throwJsonPropertyListTypeGenericNotScalarException(bean, name, json, pd, paramedType);
+                throwListJsonPropertyGenericNotScalarException(bean, name, json, pd, paramedType);
                 return null; // unreachable
             }
             try {
                 return jsonManager.fromJsonList(json, paramedType); // e.g. public List<SeaBean> beanList;
             } catch (RuntimeException e) {
-                // TODO jflute lastaflute: [A] fitting: List JSON debug challenge, JSON parameter (2015/06/17)
-                throwJsonParameterParseFailureException(bean, name, json, paramedType, null, e);
+                throwListJsonParameterParseFailureException(bean, name, json, paramedType, e);
                 return null; // unreachable
             }
         } else { // e.g. public SeaBean seaBean;
             try {
                 return jsonManager.fromJson(json, propertyType);
             } catch (RuntimeException e) {
-                final Map<String, Object> retryMap = retryJsonAsMapForDebug(json, jsonManager);
-                throwJsonParameterParseFailureException(bean, name, json, propertyType, retryMap, e);
+                throwJsonParameterParseFailureException(bean, name, json, propertyType, e);
                 return null; // unreachable
             }
         }
     }
 
-    protected boolean isJsonPropertyListType(Class<?> propertyType) { // just type
+    // -----------------------------------------------------
+    //                                             List JSON
+    //                                             ---------
+    protected boolean isListJsonProperty(Class<?> propertyType) { // just type
         return List.class.equals(propertyType);
     }
 
-    protected void throwJsonPropertyListTypeNonGenericException(Object bean, String name, String json, PropertyDesc pd) {
+    protected void throwListJsonPropertyNonGenericException(Object bean, String name, String json, PropertyDesc pd) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Non-generic list cannot handle the JSON.");
         br.addItem("Action Form");
@@ -582,7 +617,7 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg);
     }
 
-    protected void throwJsonPropertyListTypeNonParameterizedException(Object bean, String name, String json, PropertyDesc pd, Type plainType) {
+    protected void throwListJsonPropertyNonParameterizedException(Object bean, String name, String json, PropertyDesc pd, Type plainType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Non-parameterized list cannot handle the JSON.");
         br.addItem("Action Form");
@@ -597,7 +632,7 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg);
     }
 
-    protected void throwJsonPropertyListTypeGenericNotScalarException(Object bean, String name, String json, PropertyDesc pd,
+    protected void throwListJsonPropertyGenericNotScalarException(Object bean, String name, String json, PropertyDesc pd,
             ParameterizedType paramedType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not scalar generic type for the list JSON parameter.");
@@ -613,28 +648,64 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg);
     }
 
-    protected void throwJsonParameterParseFailureException(Object bean, String name, String json, Type propertyType,
-            Map<String, Object> retryMap, RuntimeException e) {
+    protected void throwListJsonParameterParseFailureException(Object bean, String name, String json, Type propertyType, RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Cannot parse json of the request parameter:");
-        final String debugChallenge = retryMap != null ? buildJsonParameterDebugChallenge(propertyType, retryMap) : null;
-        buildClientErrorHeader(sb, "JsonParameter Parse Failure", bean, name, json, propertyType, debugChallenge);
-        throwRequestJsonParseFailureException(sb.toString(), e);
+        sb.append("Cannot parse list json of the request parameter.");
+        final List<Map<String, Object>> retryList = retryJsonListAsMapForDebug(json);
+        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
+        final StringBuilder challengeSb = new StringBuilder();
+        if (!retryList.isEmpty()) {
+            final Class<?> elementType = DfReflectionUtil.getGenericFirstClass(propertyType);
+            if (elementType != null) { // just in case
+                int rowNumber = 1;
+                for (Map<String, Object> retryMap : retryList) {
+                    challengeSb.append(LF).append(" (element: ").append(rowNumber).append(")");
+                    final List<JsonDebugChallenge> nestedList = prepareJsonParameterDebugChallengeList(retryMap, elementType, json);
+                    challengeList.addAll(nestedList);
+                    nestedList.forEach(challenge -> challengeSb.append(challenge.toChallengeDisp()));
+                    ++rowNumber;
+                }
+            }
+        }
+        final String challengeDisp = challengeSb.toString();
+        buildClientErrorHeader(sb, "List JsonParameter Parse Failure", bean, name, json, propertyType, challengeDisp);
+        throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
     }
 
-    protected String buildJsonParameterDebugChallenge(Type propertyType, Map<String, Object> retryMap) {
-        final Class<?> rawClass = DfReflectionUtil.getRawClass(propertyType);
-        if (rawClass == null) { // just in case
-            return null;
-        }
-        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(rawClass);
+    // -----------------------------------------------------
+    //                                             Bean JSON
+    //                                             ---------
+    protected void throwJsonParameterParseFailureException(Object bean, String name, String json, Class<?> propertyType, RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append(buildDebugChallengeTitle());
+        sb.append("Cannot parse json of the request parameter.");
+        final Map<String, Object> retryMap = retryJsonAsMapForDebug(json);
+        final List<JsonDebugChallenge> challengeList = prepareJsonParameterDebugChallengeList(retryMap, propertyType, json);
+        final String challengeDisp = buildJsonParameterDebugChallengeDisp(challengeList);
+        buildClientErrorHeader(sb, "JsonParameter Parse Failure", bean, name, json, propertyType, challengeDisp);
+        throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
+    }
+
+    protected List<JsonDebugChallenge> prepareJsonParameterDebugChallengeList(Map<String, Object> retryMap, Class<?> beanType, String json) {
+        if (retryMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(beanType);
+        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
         for (int i = 0; i < beanDesc.getFieldSize(); i++) {
             final Field field = beanDesc.getField(i);
-            final String fieldName = field.getName();
-            final Class<?> fieldType = field.getType();
-            buildJsonDebugChallenge(sb, retryMap, fieldName, fieldType);
+            final JsonDebugChallenge challenge = createJsonDebugChallenge(retryMap, field.getName(), field.getType());
+            challengeList.add(challenge);
+        }
+        return Collections.unmodifiableList(challengeList);
+    }
+
+    protected String buildJsonParameterDebugChallengeDisp(List<JsonDebugChallenge> challengeList) {
+        if (challengeList.isEmpty()) {
+            return null;
+        }
+        final StringBuilder sb = new StringBuilder();
+        for (JsonDebugChallenge challenge : challengeList) {
+            sb.append(challenge.toChallengeDisp());
         }
         return sb.toString();
     }
@@ -653,7 +724,7 @@ public class ActionFormMapper {
         } catch (ClassificationConvertFailureException e) {
             final StringBuilder sb = new StringBuilder();
             sb.append("Cannot convert the code of the request parameter to the classification:");
-            buildClientErrorHeader(sb, "Classification Convert Failure", bean, name, "code=" + code, propertyType, null);
+            buildClientErrorHeader(sb, "Classification Convert Failure", bean, name, code, propertyType, null);
             throwRequestClassifiationConvertFailureException(sb.toString(), e);
             return null; // unreachable
         }
@@ -953,11 +1024,39 @@ public class ActionFormMapper {
     }
 
     @SuppressWarnings("unchecked")
-    protected Map<String, Object> retryJsonAsMapForDebug(String json, final JsonManager jsonManager) {
+    protected Map<String, Object> retryJsonAsMapForDebug(String json) {
         try {
-            return jsonManager.fromJson(json, Map.class); // retry for debug
+            return getJsonManager().fromJson(json, Map.class);
         } catch (RuntimeException ignored) {
-            return null;
+            return Collections.emptyMap();
+        }
+    }
+
+    protected List<Map<String, Object>> retryJsonListAsMapForDebug(String json) {
+        try {
+            return getJsonManager().fromJsonList(json, new GenericTypeRef<List<Map<String, Object>>>() {
+            }.getParameterizedType());
+        } catch (RuntimeException ignored) {
+            return Collections.emptyList();
+        }
+    }
+
+    protected JsonDebugChallenge createJsonDebugChallenge(Map<String, Object> retryMap, String propertyName, Class<?> propertyType) {
+        return new JsonDebugChallenge(propertyName, propertyType, retryMap.get(propertyName));
+    }
+
+    // ===================================================================================
+    //                                                                        Client Error
+    //                                                                        ============
+    protected void buildClientErrorHeader(StringBuilder sb, String title, Object bean, String name, String value, Type propertyType,
+            String challengeDisp) {
+        sb.append(LF).append(LF).append("[").append(title).append("]");
+        sb.append(LF).append("Mapping To: ");
+        sb.append(bean.getClass().getSimpleName()).append("#").append(name).append(" (").append(propertyType.getTypeName()).append(")");
+        sb.append(LF).append("Requested Value: ").append(value != null && value.contains(LF) ? LF : "").append(value);
+        if (challengeDisp != null && challengeDisp.length() > 0) {
+            sb.append(LF).append(buildDebugChallengeTitle());
+            sb.append(challengeDisp); // debugChallenge starts with LF
         }
     }
 
@@ -965,37 +1064,10 @@ public class ActionFormMapper {
         return "Debug Challenge:";
     }
 
-    protected void buildJsonDebugChallenge(StringBuilder sb, Map<String, Object> retryMap, String propertyName, final Class<?> propertyType) {
-        final Object mappedValue = retryMap.get(propertyName);
-        final Class<? extends Object> valueType = mappedValue != null ? mappedValue.getClass() : null;
-        final String possible = mappedValue != null ? (propertyType.isAssignableFrom(valueType) ? "o" : "x") : "v";
-        sb.append(LF).append("  ").append(possible).append(" ");
-        sb.append(propertyType.getSimpleName()).append(" ").append(propertyName);
-        if (mappedValue != null) {
-            sb.append(" = (").append(valueType.getSimpleName()).append(") \"").append(mappedValue).append("\"");
-        } else {
-            sb.append(" = null");
-        }
-    }
-
-    // ===================================================================================
-    //                                                                        Client Error
-    //                                                                        ============
-    protected void buildClientErrorHeader(StringBuilder sb, String title, Object bean, String name, String value, Type propertyType,
-            String debugChallenge) {
-        sb.append(LF).append("[").append(title).append("]");
-        sb.append(LF).append(bean.getClass().getSimpleName()).append("#").append(name);
-        sb.append(": ").append(propertyType.getTypeName());
-        sb.append(LF).append(value);
-        if (debugChallenge != null) {
-            sb.append(LF).append(debugChallenge);
-        }
-    }
-
     // no server error because it can occur by user's trick
     // while, is likely to due to client bugs (or server) so request client error
-    protected void throwRequestJsonParseFailureException(String msg, RuntimeException e) {
-        throw new RequestJsonParseFailureException(msg, e);
+    protected void throwRequestJsonParseFailureException(String msg, List<JsonDebugChallenge> challengeList, RuntimeException e) {
+        throw new RequestJsonParseFailureException(msg, e).withChallengeList(challengeList);
     }
 
     protected void throwRequestPropertyMappingFailureException(String msg) {

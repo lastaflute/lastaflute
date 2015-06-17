@@ -1,0 +1,144 @@
+/*
+ * Copyright 2014-2015 the original author or authors.
+ * Copyright 2014-2015 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
+package org.lastaflute.web.ruts.process;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+
+import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.DfTypeUtil.ParseDateException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author jflute
+ */
+public class JsonDebugChallenge {
+
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(JsonDebugChallenge.class);
+
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final String propertyName;
+    protected final Class<?> propertyType;
+    protected final Object mappedValue; // null allowed
+
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public JsonDebugChallenge(String propertyName, Class<?> propertyType, Object mappedValue) {
+        this.propertyName = propertyName;
+        this.propertyType = propertyType;
+        this.mappedValue = filterMappedValue(propertyType, mappedValue);
+    }
+
+    protected Object filterMappedValue(Class<?> propertyType, Object mappedValue) {
+        if (mappedValue == null) {
+            return null;
+        }
+        final Class<?> valueType = mappedValue.getClass();
+        if (propertyType.isAssignableFrom(valueType)) {
+            return mappedValue;
+        }
+        try {
+            if (mappedValue instanceof String) {
+                final String plainStr = (String) mappedValue;
+                try {
+                    if (LocalDate.class.isAssignableFrom(propertyType)) {
+                        return DfTypeUtil.toLocalDate(plainStr, "yyyy-MM-dd");
+                    } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
+                        return DfTypeUtil.toLocalDateTime(plainStr, "yyyy-MM-dd'T'HH:mm:ss");
+                    } else if (LocalTime.class.isAssignableFrom(propertyType)) {
+                        return DfTypeUtil.toLocalTime(plainStr, "HH:mm:ss");
+                    }
+                } catch (ParseDateException ignored) {}
+            } else if (mappedValue instanceof Double) { // Gson converts to double if "20" when map
+                final Double plainDouble = (Double) mappedValue;
+                if (Integer.class.isAssignableFrom(propertyType)) {
+                    if (((double) plainDouble.intValue()) == plainDouble.doubleValue()) { // no digits
+                        return Integer.valueOf(plainDouble.intValue());
+                    }
+                } else if (BigDecimal.class.isAssignableFrom(propertyType)) {
+                    try {
+                        return new BigDecimal(plainDouble.toString()); // to avoid long digits
+                    } catch (RuntimeException ignored) { // just in case
+                        return new BigDecimal(plainDouble); // allow long digits
+                    }
+                }
+            }
+        } catch (RuntimeException continued) { // just in case
+            String msg = "Cannot filter the mapped value: mappedValue={}, valueType={}";
+            logger.debug(msg, mappedValue, valueType, continued);
+        }
+        return mappedValue;
+    }
+
+    // ===================================================================================
+    //                                                                   Challenge Display
+    //                                                                   =================
+    public String toChallengeDisp() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("\n ").append(toTypeAssignableMark()).append(" ");
+        sb.append(propertyType.getSimpleName()).append(" ").append(propertyName);
+        if (mappedValue != null) {
+            sb.append(" = (").append(getValueType().get().getSimpleName()).append(") \"").append(mappedValue).append("\"");
+        } else {
+            sb.append(" = null");
+        }
+        return sb.toString();
+    }
+
+    public String toTypeAssignableMark() {
+        return getValueType().map(valueType -> {
+            return isAssignableFrom(valueType) ? "o" : "x";
+        }).orElse("v");
+    }
+
+    protected boolean isAssignableFrom(Class<?> valueType) {
+        return propertyType.isAssignableFrom(valueType);
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public String getPropertyName() {
+        return propertyName;
+    }
+
+    public Class<?> getPropertyType() {
+        return propertyType;
+    }
+
+    public OptionalThing<Object> getMappedValue() {
+        return OptionalThing.ofNullable(mappedValue, () -> {
+            throw new IllegalStateException("Not found the mapped value: property=" + propertyName);
+        });
+    }
+
+    public OptionalThing<Class<?>> getValueType() {
+        return OptionalThing.ofNullable(mappedValue != null ? mappedValue.getClass() : null, () -> {
+            throw new IllegalStateException("Not found the mapped value: property=" + propertyName);
+        });
+    }
+}

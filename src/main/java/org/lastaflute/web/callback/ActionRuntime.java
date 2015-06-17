@@ -178,8 +178,10 @@ public class ActionRuntime {
     }
 
     public void clearDisplayData() { // called by system exception dispatch for API, just in case leak
-        displayDataMap.clear();
-        displayDataMap = null;
+        if (displayDataMap != null) {
+            displayDataMap.clear();
+            displayDataMap = null;
+        }
     }
 
     // ===================================================================================

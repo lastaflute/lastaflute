@@ -46,9 +46,9 @@ public interface Java8TimeGson {
     Type localTimeType = new TypeToken<LocalTime>() {
     }.getType();
 
-    class LocalDatelizer implements JsonSerializer<LocalDate>, JsonDeserializer<LocalDate> {
+    public class LocalDatelizer implements JsonSerializer<LocalDate>, JsonDeserializer<LocalDate> {
 
-        protected static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
+        public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
 
         @Override
         public JsonElement serialize(LocalDate src, Type typeOfSrc, JsonSerializationContext context) {
@@ -61,9 +61,9 @@ public interface Java8TimeGson {
         }
     }
 
-    class LocalDateTimelizer implements JsonSerializer<LocalDateTime>, JsonDeserializer<LocalDateTime> {
+    public class LocalDateTimelizer implements JsonSerializer<LocalDateTime>, JsonDeserializer<LocalDateTime> {
 
-        protected static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
         @Override
         public JsonElement serialize(LocalDateTime src, Type typeOfSrc, JsonSerializationContext context) {
@@ -76,9 +76,9 @@ public interface Java8TimeGson {
         }
     }
 
-    class LocalTimelizer implements JsonSerializer<LocalTime>, JsonDeserializer<LocalTime> {
+    public class LocalTimelizer implements JsonSerializer<LocalTime>, JsonDeserializer<LocalTime> {
 
-        protected static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_TIME;
+        public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_TIME;
 
         @Override
         public JsonElement serialize(LocalTime src, Type typeOfSrc, JsonSerializationContext context) {
