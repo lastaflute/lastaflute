@@ -108,7 +108,7 @@ public class JsonDebugChallenge {
         if (mappedValue != null) {
             final Class<?> valueType = getValueType().get();
             if (isNestedProperty(valueType)) {
-                sb.append(" = ... (unknown)"); // nested is unsupported about challenge for now (so difficult)
+                sb.append(" = ... (unknown if assignable)"); // nested is unsupported about challenge for now (so difficult)
             } else {
                 sb.append(" = (").append(valueType.getSimpleName()).append(") \"").append(mappedValue).append("\"");
             }

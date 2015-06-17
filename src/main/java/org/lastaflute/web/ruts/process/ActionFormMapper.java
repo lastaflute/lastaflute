@@ -1063,7 +1063,7 @@ public class ActionFormMapper {
     }
 
     protected String buildDebugChallengeTitle() {
-        return "Debug Challenge: (o: maybe assignable, x: cannot assign, v: no value, ?: unknown)";
+        return "Debug Challenge: (o: maybe assignable, x: cannot, v: no value, ?: unknown)";
     }
 
     // no server error because it can occur by user's trick
