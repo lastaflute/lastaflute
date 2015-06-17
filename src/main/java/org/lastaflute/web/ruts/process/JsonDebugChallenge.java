@@ -20,6 +20,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
+import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
@@ -43,14 +45,16 @@ public class JsonDebugChallenge {
     protected final String propertyName;
     protected final Class<?> propertyType;
     protected final Object mappedValue; // null allowed
+    protected final Integer elementIndex; // null allowed, exists if the property is on bean in list
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public JsonDebugChallenge(String propertyName, Class<?> propertyType, Object mappedValue) {
+    public JsonDebugChallenge(String propertyName, Class<?> propertyType, Object mappedValue, Integer elementIndex) {
         this.propertyName = propertyName;
         this.propertyType = propertyType;
         this.mappedValue = filterMappedValue(propertyType, mappedValue);
+        this.elementIndex = elementIndex;
     }
 
     protected Object filterMappedValue(Class<?> propertyType, Object mappedValue) {
@@ -102,7 +106,12 @@ public class JsonDebugChallenge {
         sb.append("\n ").append(toTypeAssignableMark()).append(" ");
         sb.append(propertyType.getSimpleName()).append(" ").append(propertyName);
         if (mappedValue != null) {
-            sb.append(" = (").append(getValueType().get().getSimpleName()).append(") \"").append(mappedValue).append("\"");
+            final Class<?> valueType = getValueType().get();
+            if (isNestedProperty(valueType)) {
+                sb.append(" = ... (unknown)"); // nested is unsupported about challenge for now (so difficult)
+            } else {
+                sb.append(" = (").append(valueType.getSimpleName()).append(") \"").append(mappedValue).append("\"");
+            }
         } else {
             sb.append(" = null");
         }
@@ -111,8 +120,16 @@ public class JsonDebugChallenge {
 
     public String toTypeAssignableMark() {
         return getValueType().map(valueType -> {
-            return isAssignableFrom(valueType) ? "o" : "x";
+            if (isNestedProperty(valueType)) {
+                return "?";
+            } else {
+                return isAssignableFrom(valueType) ? "o" : "x";
+            }
         }).orElse("v");
+    }
+
+    protected boolean isNestedProperty(Class<?> valueType) {
+        return List.class.isAssignableFrom(valueType) || Map.class.isAssignableFrom(valueType);
     }
 
     protected boolean isAssignableFrom(Class<?> valueType) {
@@ -139,6 +156,12 @@ public class JsonDebugChallenge {
     public OptionalThing<Class<?>> getValueType() {
         return OptionalThing.ofNullable(mappedValue != null ? mappedValue.getClass() : null, () -> {
             throw new IllegalStateException("Not found the mapped value: property=" + propertyName);
+        });
+    }
+
+    public OptionalThing<Integer> getElementIndex() {
+        return OptionalThing.ofNullable(elementIndex, () -> {
+            throw new IllegalStateException("Not found the element index: property=" + propertyName);
         });
     }
 }

@@ -261,7 +261,7 @@ public class ActionFormMapper {
         List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
         if (!retryMap.isEmpty()) {
             sb.append(LF).append(buildDebugChallengeTitle());
-            final List<JsonDebugChallenge> nestedList = prepareJsonBodyDebugChallengeList(virtualActionForm, retryMap);
+            final List<JsonDebugChallenge> nestedList = prepareJsonBodyDebugChallengeList(virtualActionForm, retryMap, null);
             for (JsonDebugChallenge challenge : nestedList) {
                 sb.append(challenge.toChallengeDisp());
             }
@@ -271,7 +271,8 @@ public class ActionFormMapper {
         throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
     }
 
-    protected List<JsonDebugChallenge> prepareJsonBodyDebugChallengeList(VirtualActionForm virtualActionForm, Map<String, Object> retryMap) {
+    protected List<JsonDebugChallenge> prepareJsonBodyDebugChallengeList(VirtualActionForm virtualActionForm, Map<String, Object> retryMap,
+            Integer elementIndex) {
         if (retryMap.isEmpty()) {
             return Collections.emptyList();
         }
@@ -279,7 +280,7 @@ public class ActionFormMapper {
         for (ActionFormProperty property : virtualActionForm.getFormMeta().properties()) {
             final String propertyName = property.getPropertyName();
             final Class<?> propertyType = property.getPropertyDesc().getPropertyType();
-            final JsonDebugChallenge challenge = createJsonDebugChallenge(retryMap, propertyName, propertyType);
+            final JsonDebugChallenge challenge = createJsonDebugChallenge(retryMap, propertyName, propertyType, elementIndex);
             challengeList.add(challenge);
         }
         return Collections.unmodifiableList(challengeList);
@@ -311,13 +312,13 @@ public class ActionFormMapper {
         final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
         if (!retryList.isEmpty()) {
             sb.append(LF).append(buildDebugChallengeTitle());
-            int rowNumber = 1;
+            int index = 1;
             for (Map<String, Object> retryMap : retryList) {
-                sb.append(LF).append(" (element: ").append(rowNumber).append(")");
-                final List<JsonDebugChallenge> nestedList = prepareJsonBodyDebugChallengeList(virtualActionForm, retryMap);
+                sb.append(LF).append(" (index: ").append(index).append(")");
+                final List<JsonDebugChallenge> nestedList = prepareJsonBodyDebugChallengeList(virtualActionForm, retryMap, index);
                 challengeList.addAll(nestedList);
                 nestedList.forEach(challenge -> sb.append(challenge.toChallengeDisp()));
-                ++rowNumber;
+                ++index;
             }
         }
         throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
@@ -657,13 +658,13 @@ public class ActionFormMapper {
         if (!retryList.isEmpty()) {
             final Class<?> elementType = DfReflectionUtil.getGenericFirstClass(propertyType);
             if (elementType != null) { // just in case
-                int rowNumber = 1;
+                int index = 0;
                 for (Map<String, Object> retryMap : retryList) {
-                    challengeSb.append(LF).append(" (element: ").append(rowNumber).append(")");
-                    final List<JsonDebugChallenge> nestedList = prepareJsonParameterDebugChallengeList(retryMap, elementType, json);
+                    challengeSb.append(LF).append(" (index: ").append(index).append(")");
+                    final List<JsonDebugChallenge> nestedList = prepareJsonParameterDebugChallengeList(retryMap, elementType, json, index);
                     challengeList.addAll(nestedList);
                     nestedList.forEach(challenge -> challengeSb.append(challenge.toChallengeDisp()));
-                    ++rowNumber;
+                    ++index;
                 }
             }
         }
@@ -679,21 +680,23 @@ public class ActionFormMapper {
         final StringBuilder sb = new StringBuilder();
         sb.append("Cannot parse json of the request parameter.");
         final Map<String, Object> retryMap = retryJsonAsMapForDebug(json);
-        final List<JsonDebugChallenge> challengeList = prepareJsonParameterDebugChallengeList(retryMap, propertyType, json);
+        final List<JsonDebugChallenge> challengeList = prepareJsonParameterDebugChallengeList(retryMap, propertyType, json, null);
         final String challengeDisp = buildJsonParameterDebugChallengeDisp(challengeList);
         buildClientErrorHeader(sb, "JsonParameter Parse Failure", bean, name, json, propertyType, challengeDisp);
         throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
     }
 
-    protected List<JsonDebugChallenge> prepareJsonParameterDebugChallengeList(Map<String, Object> retryMap, Class<?> beanType, String json) {
+    protected List<JsonDebugChallenge> prepareJsonParameterDebugChallengeList(Map<String, Object> retryMap, Class<?> beanType, String json,
+            Integer elementIndex) {
         if (retryMap.isEmpty()) {
             return Collections.emptyList();
         }
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(beanType);
-        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
-        for (int i = 0; i < beanDesc.getFieldSize(); i++) {
+        final int fieldSize = beanDesc.getFieldSize();
+        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>(fieldSize);
+        for (int i = 0; i < fieldSize; i++) {
             final Field field = beanDesc.getField(i);
-            final JsonDebugChallenge challenge = createJsonDebugChallenge(retryMap, field.getName(), field.getType());
+            final JsonDebugChallenge challenge = createJsonDebugChallenge(retryMap, field.getName(), field.getType(), elementIndex);
             challengeList.add(challenge);
         }
         return Collections.unmodifiableList(challengeList);
@@ -704,9 +707,7 @@ public class ActionFormMapper {
             return null;
         }
         final StringBuilder sb = new StringBuilder();
-        for (JsonDebugChallenge challenge : challengeList) {
-            sb.append(challenge.toChallengeDisp());
-        }
+        challengeList.forEach(challenge -> sb.append(challenge.toChallengeDisp()));
         return sb.toString();
     }
 
@@ -1041,8 +1042,9 @@ public class ActionFormMapper {
         }
     }
 
-    protected JsonDebugChallenge createJsonDebugChallenge(Map<String, Object> retryMap, String propertyName, Class<?> propertyType) {
-        return new JsonDebugChallenge(propertyName, propertyType, retryMap.get(propertyName));
+    protected JsonDebugChallenge createJsonDebugChallenge(Map<String, Object> retryMap, String propertyName, Class<?> propertyType,
+            Integer elementIndex) {
+        return new JsonDebugChallenge(propertyName, propertyType, retryMap.get(propertyName), elementIndex);
     }
 
     // ===================================================================================
@@ -1061,7 +1063,7 @@ public class ActionFormMapper {
     }
 
     protected String buildDebugChallengeTitle() {
-        return "Debug Challenge:";
+        return "Debug Challenge: (o: maybe assignable, x: cannot assign, v: no value, ?: unknown)";
     }
 
     // no server error because it can occur by user's trick
