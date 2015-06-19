@@ -162,12 +162,21 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     }
 
     // ===================================================================================
-    //                                                                        Variable Map
-    //                                                                        ============
+    //                                                                   Template Variable
+    //                                                                   =================
     protected void registerVariable(String key, Object value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
         variableMap.put(key, value);
+    }
+
+    // ===================================================================================
+    //                                                                      Pushed Logging
+    //                                                                      ==============
+    public void pushLogging(String key, Object value) {
+        assertArgumentNotNull("key", key);
+        assertArgumentNotNull("value", value);
+        postcard.pushLogging(key, value);
     }
 
     // ===================================================================================
