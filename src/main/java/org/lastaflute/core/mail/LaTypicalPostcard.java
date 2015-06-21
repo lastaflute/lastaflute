@@ -16,6 +16,7 @@
 package org.lastaflute.core.mail;
 
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -93,54 +94,73 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // -----------------------------------------------------
     //                                               Address
     //                                               -------
-    // TODO jflute mailflute personal (2015/06/21)
-    public void setFrom(String from) {
-        assertArgumentNotNull("from", from);
-        postcard.setFrom(createAddress(from));
+    // public methods are prepared at sub-class
+    protected void doSetFrom(String from, String personal) {
+        assertArgumentNotEmpty("from", from);
+        assertArgumentNotEmpty("personal", personal);
+        postcard.setFrom(createAddress(from, personal));
     }
 
-    public void addTo(String to) {
-        assertArgumentNotNull("to", to);
-        postcard.addTo(createAddress(to));
+    // TODO jflute lastaflute: [B] fitting: personel, overload or withPersonal (2015/06/21)
+    protected void doAddTo(String to) {
+        assertArgumentNotEmpty("to", to);
+        postcard.addTo(createAddress(to, null));
     }
 
-    public void addCc(String cc) {
-        assertArgumentNotNull("cc", cc);
-        postcard.addCc(createAddress(cc));
+    protected void doAddCc(String cc) {
+        assertArgumentNotEmpty("cc", cc);
+        postcard.addCc(createAddress(cc, null));
     }
 
-    public void addBcc(String bcc) {
-        assertArgumentNotNull("bcc", bcc);
-        postcard.addBcc(createAddress(bcc));
+    protected void doAddBcc(String bcc) {
+        assertArgumentNotEmpty("bcc", bcc);
+        postcard.addBcc(createAddress(bcc, null));
     }
 
-    public void addReplyTo(String replyTo) {
-        assertArgumentNotNull("replyTo", replyTo);
-        postcard.addReplyTo(createAddress(replyTo));
+    protected void doAddReplyTo(String replyTo) {
+        assertArgumentNotEmpty("replyTo", replyTo);
+        postcard.addReplyTo(createAddress(replyTo, null));
     }
 
-    protected Address createAddress(String address) {
+    protected Address createAddress(String address, String personal) {
+        final String encoding = getPersonalEncoding();
+        final InternetAddress internetAddress;
         try {
-            return new InternetAddress(address, isStrictAddress());
+            internetAddress = newInternetAddress(address, isStrictAddress());
         } catch (AddressException e) {
-            String msg = "Failed to create internet address: " + address;
-            throw new IllegalStateException(msg, e);
+            throw new IllegalStateException("Failed to create internet address: " + address, e);
         }
+        if (personal != null) {
+            try {
+                internetAddress.setPersonal(personal, encoding);
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException("Unknown encoding for personal: encoding=" + encoding + " personal=" + personal, e);
+            }
+        }
+        return internetAddress;
+    }
+
+    protected InternetAddress newInternetAddress(String address, boolean strict) throws AddressException {
+        return new InternetAddress(address, strict);
+    }
+
+    protected String getPersonalEncoding() {
+        return "UTF-8";
     }
 
     // -----------------------------------------------------
     //                                            Attachment
     //                                            ----------
     public void attachPlainText(String filenameOnHeader, InputStream resourceStream, String textEncoding) {
-        assertArgumentNotNull("filenameOnHeader", filenameOnHeader);
+        assertArgumentNotEmpty("filenameOnHeader", filenameOnHeader);
         assertArgumentNotNull("resourceStream", resourceStream);
-        assertArgumentNotNull("textEncoding", textEncoding);
+        assertArgumentNotEmpty("textEncoding", textEncoding);
         postcard.attachPlainText(filenameOnHeader, resourceStream, textEncoding);
     }
 
     public void attachVarious(String filenameOnHeader, String contentType, InputStream resourceStream) {
-        assertArgumentNotNull("filenameOnHeader", filenameOnHeader);
-        assertArgumentNotNull("contentType", contentType);
+        assertArgumentNotEmpty("filenameOnHeader", filenameOnHeader);
+        assertArgumentNotEmpty("contentType", contentType);
         assertArgumentNotNull("resourceStream", resourceStream);
         postcard.attachVarious(filenameOnHeader, contentType, resourceStream);
     }
@@ -196,6 +216,13 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // ===================================================================================
     //                                                                       Assist Helper
     //                                                                       =============
+    protected void assertArgumentNotEmpty(String variableName, String value) {
+        assertArgumentNotNull(variableName, value);
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be empty.");
+        }
+    }
+
     protected void assertArgumentNotNull(String variableName, Object value) {
         if (variableName == null) {
             throw new IllegalArgumentException("The variableName should not be null.");
