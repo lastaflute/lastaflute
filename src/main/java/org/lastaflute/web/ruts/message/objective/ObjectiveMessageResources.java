@@ -214,10 +214,6 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
         return format.format(args);
     }
 
-    protected HashSet<String> createCallerKeySet() {
-        return new LinkedHashSet<String>(4); // order for exception message
-    }
-
     protected String doGetMessage(Locale locale, String key) {
         // almost same as super's (seasar's) process
         // only changed is how to get bundle
@@ -225,6 +221,10 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
         final String message = bundle.get(key);
         final Set<String> callerKeySet = createCallerKeySet();
         return resolveLabelVariableMessage(locale, key, message, callerKeySet); // also resolve label variables
+    }
+
+    protected HashSet<String> createCallerKeySet() {
+        return new LinkedHashSet<String>(4); // order for exception message
     }
 
     // ===================================================================================

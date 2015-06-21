@@ -103,6 +103,50 @@ public class SimpleTemplateManager implements TemplateManager {
         if (evaluated.contains(delimiter)) {
             // TODO jflute lastaflute: [C] fitting: temlate body meta check (2015/06/13)
             //final String front = Srl.substringFirstFront(evaluated, delimiter);
+            //if (!meta.endsWith(LF)) { // also CRLF checked
+            //    throwMailBodyMetaNoIndependentDelimiterException(bodyFile, fileText);
+            //}
+            //final int rearIndex = fileText.indexOf(delimiter) + delimiter.length();
+            //if (fileText.length() > rearIndex) { // just in case (empty mail possible?)
+            //    final String rearFirstStr = fileText.substring(rearIndex, rearIndex + 1);
+            //    if (!Srl.equalsPlain(rearFirstStr, LF, CR)) { // e.g. >>> Hello, ...
+            //        throwMailBodyMetaNoIndependentDelimiterException(bodyFile, fileText);
+            //    }
+            //}
+            //final List<String> splitList = Srl.splitList(meta, LF);
+            //if (!splitList.get(0).startsWith(SUBJECT_LABEL)) {
+            //    throwMailBodyMetaSubjectNotFoundException(bodyFile, fileText);
+            //}
+            //if (splitList.size() > 1) {
+            //    final List<String> nextList = splitList.subList(1, splitList.size());
+            //    final int nextSize = nextList.size();
+            //    int index = 0;
+            //    int lineNumber = 2;
+            //    for (String line : nextList) {
+            //        if (index == nextSize - 1) { // last loop
+            //            if (line.isEmpty()) { // empty line only allowed in last loop
+            //                break;
+            //            }
+            //        }
+            //        if (!line.startsWith(OPTION_LABEL) && !line.startsWith(PROPDEF_PREFIX)) {
+            //            throwMailBodyMetaUnknownLineException(bodyFile, fileText, line, lineNumber);
+            //        }
+            //        if (line.startsWith(OPTION_LABEL)) {
+            //            final String options = Srl.substringFirstRear(line, OPTION_LABEL);
+            //            final List<String> optionList = Srl.splitListTrimmed(options, ".");
+            //            for (String option : optionList) {
+            //                if (!optionSet.contains(option)) {
+            //                    throwMailBodyMetaUnknownOptionException(bodyFile, fileText, option);
+            //                }
+            //            }
+            //        }
+            //        ++lineNumber;
+            //        ++index;
+            //    }
+            //} else { // already checked so basically no way but just in case
+            //    throwMailBodyMetaNoIndependentDelimiterException(bodyFile, fileText);
+            //}
+            // xxxxxx
             final String rear = Srl.substringFirstRear(evaluated, delimiter);
             final String realText;
             if (rear.startsWith(LF)) {
@@ -113,7 +157,13 @@ public class SimpleTemplateManager implements TemplateManager {
                 realText = rear;
             }
             return realText;
-        } else {
+        } else { // no delimiter
+            // basically already checked when you generate postcards by DBFlute
+            //final List<String> splitList = Srl.splitList(evaluated, LF);
+            //final String firstLine = splitList.get(0);
+            //if (Srl.containsIgnoreCase(firstLine, SUBJECT_LABEL)) { // may be mistake?
+            //    throwMailBodyMetaNotFoundException(bodyFile, fileText);
+            //}
             return evaluated;
         }
     }
