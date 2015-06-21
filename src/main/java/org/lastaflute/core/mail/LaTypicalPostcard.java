@@ -93,6 +93,7 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // -----------------------------------------------------
     //                                               Address
     //                                               -------
+    // TODO jflute mailflute personal (2015/06/21)
     public void setFrom(String from) {
         assertArgumentNotNull("from", from);
         postcard.setFrom(createAddress(from));
@@ -111,6 +112,11 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     public void addBcc(String bcc) {
         assertArgumentNotNull("bcc", bcc);
         postcard.addBcc(createAddress(bcc));
+    }
+
+    public void addReplyTo(String replyTo) {
+        assertArgumentNotNull("replyTo", replyTo);
+        postcard.addReplyTo(createAddress(replyTo));
     }
 
     protected Address createAddress(String address) {
