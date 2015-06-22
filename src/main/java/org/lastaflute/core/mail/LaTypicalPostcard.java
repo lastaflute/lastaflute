@@ -92,36 +92,90 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     }
 
     // -----------------------------------------------------
-    //                                               Address
-    //                                               -------
+    //                                          From Address
+    //                                          ------------
     // public methods are prepared at sub-class
     protected void doSetFrom(String from, String personal) {
         assertArgumentNotEmpty("from", from);
-        assertArgumentNotEmpty("personal", personal);
+        assertArgumentNotEmpty("personal", personal); // only from required
         postcard.setFrom(createAddress(from, personal));
     }
 
-    // TODO jflute lastaflute: [B] fitting: personel, overload or withPersonal (2015/06/21)
+    // -----------------------------------------------------
+    //                                            To Address
+    //                                            ----------
     protected void doAddTo(String to) {
         assertArgumentNotEmpty("to", to);
-        postcard.addTo(createAddress(to, null));
+        actuallyAddTo(to, null);
     }
 
+    protected void doAddTo(String to, String personal) {
+        assertArgumentNotEmpty("to", to);
+        assertArgumentNotEmpty("personal", personal);
+        actuallyAddTo(to, personal);
+    }
+
+    protected void actuallyAddTo(String to, String personal) {
+        postcard.addTo(createAddress(to, personal));
+    }
+
+    // -----------------------------------------------------
+    //                                            Cc Address
+    //                                            ----------
     protected void doAddCc(String cc) {
         assertArgumentNotEmpty("cc", cc);
-        postcard.addCc(createAddress(cc, null));
+        actuallyAddCc(cc, null);
     }
 
+    protected void doAddCc(String cc, String personal) {
+        assertArgumentNotEmpty("cc", cc);
+        assertArgumentNotEmpty("personal", personal);
+        actuallyAddCc(cc, personal);
+    }
+
+    protected void actuallyAddCc(String cc, String personal) {
+        postcard.addCc(createAddress(cc, personal));
+    }
+
+    // -----------------------------------------------------
+    //                                           Bcc Address
+    //                                           -----------
     protected void doAddBcc(String bcc) {
         assertArgumentNotEmpty("bcc", bcc);
-        postcard.addBcc(createAddress(bcc, null));
+        actuallyAddBcc(bcc, null);
     }
 
+    protected void doAddBcc(String bcc, String personal) {
+        assertArgumentNotEmpty("bcc", bcc);
+        assertArgumentNotEmpty("personal", personal);
+        actuallyAddBcc(bcc, personal);
+    }
+
+    protected void actuallyAddBcc(String bcc, String personal) {
+        postcard.addBcc(createAddress(bcc, personal));
+    }
+
+    // -----------------------------------------------------
+    //                                       ReplyTo Address
+    //                                       ---------------
     protected void doAddReplyTo(String replyTo) {
         assertArgumentNotEmpty("replyTo", replyTo);
-        postcard.addReplyTo(createAddress(replyTo, null));
+        actuallyAddReplyTo(replyTo, null);
     }
 
+    protected void doAddReplyTo(String replyTo, String personal) {
+        assertArgumentNotEmpty("replyTo", replyTo);
+        assertArgumentNotEmpty("personal", personal);
+        actuallyAddReplyTo(replyTo, personal);
+    }
+
+    protected void actuallyAddReplyTo(String replyTo, String personal) {
+        postcard.addReplyTo(createAddress(replyTo, personal));
+    }
+
+    // -----------------------------------------------------
+    //                                        Address Assist
+    //                                        --------------
     protected Address createAddress(String address, String personal) {
         final String encoding = getPersonalEncoding();
         final InternetAddress internetAddress;
