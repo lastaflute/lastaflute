@@ -31,6 +31,7 @@ import org.lastaflute.web.servlet.filter.mdc.MDCListener;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
 import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
 import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
+import org.lastaflute.web.token.CsrfResourceProvider;
 
 /**
  * @author jflute
@@ -74,6 +75,11 @@ public class FwWebDirection {
     //                                            ----------
     protected AccessLogHandler accessLogHandler;
 
+    // -----------------------------------------------------
+    //                                                 Token
+    //                                                 -----
+    protected CsrfResourceProvider csrfResourceProvider;
+
     // ===================================================================================
     //                                                                     Direct Property
     //                                                                     ===============
@@ -81,15 +87,19 @@ public class FwWebDirection {
     //                                               Servlet
     //                                               -------
     public void directRequest(UserLocaleProcessProvider userLocaleProcessProvider, UserTimeZoneProcessProvider userTimeZoneProcessProvider) {
+        assertArgumentNotNull("userLocaleProcessProvider", userLocaleProcessProvider);
+        assertArgumentNotNull("userTimeZoneProcessProvider", userTimeZoneProcessProvider);
         this.userLocaleProcessProvider = userLocaleProcessProvider;
         this.userTimeZoneProcessProvider = userTimeZoneProcessProvider;
     }
 
     public void directCookie(CookieResourceProvider cookieResourceProvider) {
+        assertArgumentNotNull("cookieResourceProvider", cookieResourceProvider);
         this.cookieResourceProvider = cookieResourceProvider;
     }
 
     public void directResponse(ResponseHandlingProvider responseHandlingProvider) {
+        assertArgumentNotNull("responseHandlingProvider", responseHandlingProvider);
         this.responseHandlingProvider = responseHandlingProvider;
     }
 
@@ -97,6 +107,7 @@ public class FwWebDirection {
     //                                            Adjustment
     //                                            ----------
     public void directAdjustment(ActionAdjustmentProvider actionAdjustmentProvider) {
+        assertArgumentNotNull("actionAdjustmentProvider", actionAdjustmentProvider);
         this.actionAdjustmentProvider = actionAdjustmentProvider;
     }
 
@@ -104,6 +115,8 @@ public class FwWebDirection {
     //                                               Message
     //                                               -------
     public void directMessage(Consumer<List<String>> appSetupper, String... commonNames) {
+        assertArgumentNotNull("appSetupper", appSetupper);
+        assertArgumentNotNull("commonNames", commonNames);
         final List<String> nameList = new ArrayList<String>(4);
         appSetupper.accept(nameList);
         nameList.addAll(Arrays.asList(commonNames));
@@ -122,6 +135,7 @@ public class FwWebDirection {
     //                                              API Call
     //                                              --------
     public void directApiCall(ApiFailureHook apiFailureHook) {
+        assertArgumentNotNull("apiFailureHook", apiFailureHook);
         this.apiFailureHook = apiFailureHook;
     }
 
@@ -130,6 +144,7 @@ public class FwWebDirection {
     //                                       ---------------
     // independent per purpose
     public void directMDC(MDCListener listener) {
+        assertArgumentNotNull("listener", listener);
         getFilterListenerList().add(listener);
     }
 
@@ -144,7 +159,16 @@ public class FwWebDirection {
     //                                            Access Log
     //                                            ----------
     public void directAccessLog(AccessLogHandler accessLogHandler) {
+        assertArgumentNotNull("accessLogHandler", accessLogHandler);
         this.accessLogHandler = accessLogHandler;
+    }
+
+    // -----------------------------------------------------
+    //                                                 Token
+    //                                                 -----
+    public void directCsrf(CsrfResourceProvider csrfResourceProvider) {
+        assertArgumentNotNull("csrfResourceProvider", csrfResourceProvider);
+        this.csrfResourceProvider = csrfResourceProvider;
     }
 
     // ===================================================================================
@@ -215,8 +239,24 @@ public class FwWebDirection {
     }
 
     // -----------------------------------------------------
-    //                                         Assert Helper
-    //                                         -------------
+    //                                                 Token
+    //                                                 -----
+    public CsrfResourceProvider assistCsrfResourceProvider() {
+        return csrfResourceProvider; // not required, it's optional assist
+    }
+
+    // ===================================================================================
+    //                                                                       Assert Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
+    }
+
     protected void assertAssistObjectNotNull(Object obj, String msg) {
         if (obj == null) {
             throw new FwRequiredAssistNotFoundException(msg);

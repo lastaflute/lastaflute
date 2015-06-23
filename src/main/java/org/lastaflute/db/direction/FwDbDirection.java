@@ -38,6 +38,7 @@ public class FwDbDirection {
     //                                        Classification
     //                                        --------------
     public void directClassification(ListedClassificationProvider listedClassificationProvider) {
+        assertArgumentNotNull("listedClassificationProvider", listedClassificationProvider);
         this.listedClassificationProvider = listedClassificationProvider;
     }
 
@@ -52,9 +53,18 @@ public class FwDbDirection {
         return listedClassificationProvider;
     }
 
-    // -----------------------------------------------------
-    //                                         Assert Helper
-    //                                         -------------
+    // ===================================================================================
+    //                                                                       Assert Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
+    }
+
     protected void assertAssistObjectNotNull(Object obj, String msg) {
         if (obj == null) {
             throw new FwRequiredAssistNotFoundException(msg);

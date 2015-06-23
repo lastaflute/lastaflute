@@ -17,15 +17,20 @@ package org.lastaflute.web.token;
 
 import java.util.List;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.di.util.UUID;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.CrossSiteRequestForgeriesForbiddenException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
@@ -36,19 +41,47 @@ public class SimpleCsrfManager implements CsrfManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(SimpleCsrfManager.class);
     public static final String CSRF_TOKEN_HEADER = "X-CSRF-TOKEN";
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    /** The assistant directory (AD) for framework. (NotNull: after initialization) */
     @Resource
-    private RequestManager requestManager;
+    protected FwAssistantDirector assistantDirector;
 
     @Resource
-    private ResponseManager responseManager;
+    protected RequestManager requestManager;
 
     @Resource
-    private SessionManager sessionManager;
+    protected ResponseManager responseManager;
+
+    @Resource
+    protected SessionManager sessionManager;
+
+    protected CsrfResourceProvider resourceProvider; // null allowed
+
+    // ===================================================================================
+    //                                                                          Initialize
+    //                                                                          ==========
+    @PostConstruct
+    public void initialize() {
+        final FwWebDirection direction = assistWebDirection();
+        resourceProvider = direction.assistCsrfResourceProvider();
+        showBootLogging();
+    }
+
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
+    }
+
+    protected void showBootLogging() {
+        if (logger.isInfoEnabled()) {
+            logger.info("[Csrf Manager]");
+            logger.info(" resourceProvider: " + resourceProvider);
+        }
+    }
 
     // ===================================================================================
     //                                                                      Token Handling
@@ -56,17 +89,27 @@ public class SimpleCsrfManager implements CsrfManager {
     @Override
     public void beginToken() {
         final String token = generateToken();
-        responseManager.addHeader(CSRF_TOKEN_HEADER, token);
+        responseManager.addHeader(getTokenHeaderName(), token);
         sessionManager.setAttribute(LastaWebKey.CSRF_TOKEN_KEY, token);
     }
 
     protected String generateToken() {
+        if (resourceProvider != null) {
+            final CsrfTokenGenerator generator = resourceProvider.provideTokenGenerator();
+            if (generator != null) {
+                final String generated = generator.generate();
+                if (generated == null) {
+                    throw new IllegalStateException("Returned null from provided token generator: " + generator);
+                }
+                return generated;
+            }
+        }
         return UUID.create();
     }
 
     @Override
     public void verifyToken() {
-        requestManager.getHeader(CSRF_TOKEN_HEADER).ifPresent(headerToken -> {
+        requestManager.getHeader(getTokenHeaderName()).ifPresent(headerToken -> {
             sessionManager.getAttribute(LastaWebKey.CSRF_TOKEN_KEY, String.class).ifPresent(savedToken -> {
                 if (!headerToken.equals(savedToken)) {
                     throwCsrfHeaderSavedTokenNotMatchedException(headerToken, savedToken);
@@ -77,6 +120,16 @@ public class SimpleCsrfManager implements CsrfManager {
         }).orElse(() -> {
             throwCsrfHeaderNotFoundException();
         });
+    }
+
+    protected String getTokenHeaderName() {
+        if (resourceProvider != null) {
+            final String provided = resourceProvider.provideTokenHeaderName();
+            if (provided != null) {
+                return provided;
+            }
+        }
+        return CSRF_TOKEN_HEADER;
     }
 
     protected void throwCsrfHeaderSavedTokenNotMatchedException(String headerToken, String savedToken) {

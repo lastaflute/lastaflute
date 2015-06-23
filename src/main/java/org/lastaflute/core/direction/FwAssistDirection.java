@@ -38,6 +38,8 @@ public class FwAssistDirection {
     //                                                                     Direct Property
     //                                                                     ===============
     public void directConfig(Consumer<List<String>> appSetupper, String... commonNames) {
+        assertArgumentNotNull("appSetupper", appSetupper);
+        assertArgumentNotNull("commonNames", commonNames);
         final List<String> nameList = new ArrayList<String>(4);
         appSetupper.accept(nameList);
         nameList.addAll(Arrays.asList(commonNames));
@@ -46,6 +48,7 @@ public class FwAssistDirection {
     }
 
     public void directPropertyFilter(PropertyFilter configPropertyFilter) {
+        assertArgumentNotNull("configPropertyFilter", configPropertyFilter);
         this.configPropertyFilter = configPropertyFilter;
     }
 
@@ -65,9 +68,18 @@ public class FwAssistDirection {
         return configPropertyFilter; // not required: no filter
     }
 
-    // -----------------------------------------------------
-    //                                         Assert Helper
-    //                                         -------------
+    // ===================================================================================
+    //                                                                       Assert Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
+    }
+
     protected void assertAssistObjectNotNull(Object obj, String msg) {
         if (obj == null) {
             throw new FwRequiredAssistNotFoundException(msg);
