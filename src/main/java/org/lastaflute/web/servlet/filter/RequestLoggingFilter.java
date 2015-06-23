@@ -590,12 +590,21 @@ public class RequestLoggingFilter implements Filter {
         }
         showCliEx(cause, () -> {
             final StringBuilder sb = new StringBuilder();
-            sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
-            sb.append("\n...Sending error as '").append(title).append("' manually");
-            sb.append("\n request : ").append(request.getRequestURI());
-            sb.append("\n message : ").append(cause.getMessage());
+            sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
+            sb.append(LF).append("...Sending error as '").append(title).append("' manually");
+            sb.append(LF).append(" Request: ").append(request.getRequestURI());
+            final String queryString = request.getQueryString();
+            if (queryString != null && !queryString.isEmpty()) {
+                sb.append("?").append(queryString);
+            }
+            sb.append(LF);
+            buildRequestHeaders(sb, request);
+            buildSessionAttributes(sb, request);
+            sb.append(" Message: ").append(cause.getMessage());
+            sb.append(LF).append(" Stack Traces:");
             buildClientErrorStackTrace(cause, sb, 0);
-            sb.append("\n_/_/_/_/_/_/_/_/_/_/");
+            sb.append(LF);
+            sb.append("_/_/_/_/_/_/_/_/_/_/");
             return sb.toString();
         });
         try {
