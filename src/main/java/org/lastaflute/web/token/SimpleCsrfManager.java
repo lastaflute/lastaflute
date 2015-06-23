@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.token;
 
+import java.util.List;
+
 import javax.annotation.Resource;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
@@ -84,6 +86,7 @@ public class SimpleCsrfManager implements CsrfManager {
         br.addElement("Not match the header token with saved token in session.");
         br.addItem("Request Path");
         br.addElement(requestManager.getRequestPathAndQuery());
+        setupSessionInfo(br);
         br.addItem("Header Token");
         br.addElement(headerToken);
         br.addItem("Saved Token");
@@ -99,7 +102,20 @@ public class SimpleCsrfManager implements CsrfManager {
         br.addElement("Not found the CSRF header in the request.");
         br.addItem("Request Path");
         br.addElement(requestManager.getRequestPathAndQuery());
+        setupSessionInfo(br);
         final String msg = br.buildExceptionMessage();
         throw new CrossSiteRequestForgeriesForbiddenException(msg);
+    }
+
+    protected void setupSessionInfo(ExceptionMessageBuilder br) {
+        br.addItem("Session");
+        final List<String> attributeNameList = sessionManager.getAttributeNameList();
+        if (!attributeNameList.isEmpty()) {
+            for (String attr : attributeNameList) {
+                br.addElement(attr + " = " + sessionManager.getAttribute(attr, Object.class).orElse(null));
+            }
+        } else {
+            br.addElement("{}");
+        }
     }
 }

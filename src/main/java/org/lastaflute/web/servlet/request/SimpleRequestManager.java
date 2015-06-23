@@ -17,6 +17,9 @@ package org.lastaflute.web.servlet.request;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -229,6 +232,16 @@ public class SimpleRequestManager implements RequestManager {
             String msg = "Not found the request attribute by the string key: " + key;
             throw new RequestAttributeNotFoundException(msg);
         });
+    }
+
+    @Override
+    public List<String> getAttributeNameList() {
+        final Enumeration<String> attributeNames = getRequest().getAttributeNames();
+        final List<String> nameList = new ArrayList<String>();
+        while (attributeNames.hasMoreElements()) {
+            nameList.add((String) attributeNames.nextElement());
+        }
+        return Collections.unmodifiableList(nameList);
     }
 
     @Override
