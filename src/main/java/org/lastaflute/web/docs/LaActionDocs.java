@@ -13,12 +13,12 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.direction;
+package org.lastaflute.web.docs;
 
 /**
  * @author jflute
  */
-public interface LaDocs {
+public interface LaActionDocs {
 
     /**
      * <pre>

@@ -24,7 +24,6 @@ import javax.annotation.Resource;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
-import org.lastaflute.core.direction.LaDocs;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.time.TimeManager;
@@ -38,6 +37,7 @@ import org.lastaflute.web.callback.TypicalGodHandMonologue;
 import org.lastaflute.web.callback.TypicalGodHandPrologue;
 import org.lastaflute.web.callback.TypicalGodHandResource;
 import org.lastaflute.web.callback.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
+import org.lastaflute.web.docs.LaActionDocs;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
 import org.lastaflute.web.exception.ForcedIllegalTransitionApplicationException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  * And you can add methods for all applications.
  * @author jflute
  */
-public abstract class TypicalAction extends LastaAction implements ActionHook, LaDocs {
+public abstract class TypicalAction extends LastaAction implements ActionHook, LaActionDocs {
 
     // ===================================================================================
     //                                                                          Definition
