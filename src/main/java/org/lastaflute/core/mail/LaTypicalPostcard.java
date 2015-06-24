@@ -92,6 +92,15 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     }
 
     // -----------------------------------------------------
+    //                                                Locale
+    //                                                ------
+    @SuppressWarnings("unchecked")
+    public <SELF extends LaTypicalPostcard> SELF asReceiverLocale(Locale receiverLocale) {
+        postcard.asReceiverLocale(receiverLocale);
+        return (SELF) this;
+    }
+
+    // -----------------------------------------------------
     //                                          From Address
     //                                          ------------
     // public methods are prepared at sub-class
@@ -217,13 +226,6 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
         assertArgumentNotEmpty("contentType", contentType);
         assertArgumentNotNull("resourceStream", resourceStream);
         postcard.attachVarious(filenameOnHeader, contentType, resourceStream);
-    }
-
-    // -----------------------------------------------------
-    //                                       Receiver Locale
-    //                                       ---------------
-    public void asReceiverLocale(Locale receiverLocale) {
-        bodyFileOption.receiverLocale(receiverLocale);
     }
 
     // ===================================================================================
