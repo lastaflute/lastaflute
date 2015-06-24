@@ -144,8 +144,8 @@ public class LastaFilter implements Filter {
     }
 
     // -----------------------------------------------------
-    //                                              LastaDi
-    //                                             ---------
+    //                                              Lasta Di
+    //                                              --------
     protected void initializeContainer(ServletContext servletContext) {
         final WebLastaContainerInitializer initializer = newWebLastaContainerInitializer();
         initializer.setApplication(servletContext);
@@ -154,21 +154,6 @@ public class LastaFilter implements Filter {
 
     protected WebLastaContainerInitializer newWebLastaContainerInitializer() {
         return new WebLastaContainerInitializer();
-    }
-
-    // -----------------------------------------------------
-    //                                    Assistant Director
-    //                                    ------------------
-    protected FwAssistantDirector getAssistantDirector() {
-        return ContainerUtil.getComponent(FwAssistantDirector.class);
-    }
-
-    protected FwWebDirection assistWebDirection() {
-        return getAssistantDirector().assistWebDirection();
-    }
-
-    protected List<FilterListener> assistFilterListenerList() {
-        return assistWebDirection().assistFilterListenerList();
     }
 
     // -----------------------------------------------------
@@ -211,10 +196,6 @@ public class LastaFilter implements Filter {
         return new RutsMessageResourceGateway(messages);
     }
 
-    protected MessageResourcesHolder getMessageResourceHolder() {
-        return ContainerUtil.getComponent(MessageResourcesHolder.class);
-    }
-
     // -----------------------------------------------------
     //                                      Callback Process
     //                                      ----------------
@@ -224,10 +205,6 @@ public class LastaFilter implements Filter {
         if (callback != null) {
             callback.listen(assistantDirector);
         }
-    }
-
-    protected BehaviorSelector getBehaviorSelector() {
-        return ContainerUtil.getComponent(BehaviorSelector.class);
     }
 
     // -----------------------------------------------------
@@ -255,10 +232,6 @@ public class LastaFilter implements Filter {
                 }
             }
         };
-    }
-
-    protected RequestManager getRequestManager() {
-        return ContainerUtil.getComponent(RequestManager.class);
     }
 
     protected RequestRoutingFilter createRequestRoutingFilter() {
@@ -426,5 +399,32 @@ public class LastaFilter implements Filter {
         if (routingFilter != null) {
             routingFilter.destroy();
         }
+    }
+
+    // ===================================================================================
+    //                                                                           Component
+    //                                                                           =========
+    protected FwAssistantDirector getAssistantDirector() {
+        return ContainerUtil.getComponent(FwAssistantDirector.class);
+    }
+
+    protected FwWebDirection assistWebDirection() {
+        return getAssistantDirector().assistWebDirection();
+    }
+
+    protected List<FilterListener> assistFilterListenerList() {
+        return assistWebDirection().assistFilterListenerList();
+    }
+
+    protected MessageResourcesHolder getMessageResourceHolder() {
+        return ContainerUtil.getComponent(MessageResourcesHolder.class);
+    }
+
+    protected BehaviorSelector getBehaviorSelector() {
+        return ContainerUtil.getComponent(BehaviorSelector.class);
+    }
+
+    protected RequestManager getRequestManager() {
+        return ContainerUtil.getComponent(RequestManager.class);
     }
 }
