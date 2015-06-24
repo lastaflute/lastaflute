@@ -47,6 +47,7 @@ import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.container.WebLastaContainerDestroyer;
 import org.lastaflute.web.container.WebLastaContainerInitializer;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.message.MessageResources;
 import org.lastaflute.web.ruts.message.RutsMessageResourceGateway;
@@ -58,6 +59,7 @@ import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogResource;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpServletRequest;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpSession;
+import org.lastaflute.web.servlet.request.RequestManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -232,17 +234,34 @@ public class LastaFilter implements Filter {
     //                                       Embedded Filter
     //                                       ---------------
     protected void initEmbeddedFilter(FilterConfig filterConfig) throws ServletException {
-        loggingFilter = newRequestLoggingFilter();
+        loggingFilter = createRequestLoggingFilter();
         loggingFilter.init(filterConfig);
-        routingFilter = newRequestRoutingFilter();
+        routingFilter = createRequestRoutingFilter();
         routingFilter.init(filterConfig);
     }
 
-    protected RequestLoggingFilter newRequestLoggingFilter() {
-        return new RequestLoggingFilter();
+    protected RequestLoggingFilter createRequestLoggingFilter() {
+        final FwWebDirection webDirection = getAssistantDirector().assistWebDirection();
+        final ActionAdjustmentProvider adjustmentProvider = webDirection.assistActionAdjustmentProvider();
+        final RequestManager requestManager = getRequestManager();
+        return new RequestLoggingFilter() {
+            @Override
+            protected boolean isTargetPath(HttpServletRequest request) {
+                // forced routings also should be logging control target
+                if (adjustmentProvider.isForcedRoutingTarget(request, requestManager.getRequestPath())) {
+                    return true;
+                } else {
+                    return super.isTargetPath(request);
+                }
+            }
+        };
     }
 
-    protected RequestRoutingFilter newRequestRoutingFilter() {
+    protected RequestManager getRequestManager() {
+        return ContainerUtil.getComponent(RequestManager.class);
+    }
+
+    protected RequestRoutingFilter createRequestRoutingFilter() {
         return new RequestRoutingFilter();
     }
 

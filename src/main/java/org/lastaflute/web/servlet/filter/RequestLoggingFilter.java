@@ -163,7 +163,7 @@ public class RequestLoggingFilter implements Filter {
         }
         final HttpServletRequest request = (HttpServletRequest) servRequest;
         final HttpServletResponse response = (HttpServletResponse) servResponse;
-        if (isAlreadyBegun() || isOutOfTargetPath(request)) { // e.g. forwarding to JSP or .html
+        if (isAlreadyBegun() || !isTargetPath(request)) { // e.g. forwarding to JSP or .html
             chain.doFilter(request, response);
         } else { // target top level process
             actuallyFilter(chain, request, response);
@@ -240,11 +240,11 @@ public class RequestLoggingFilter implements Filter {
         return (servletRequest instanceof HttpServletRequest) && (servletResponse instanceof HttpServletResponse);
     }
 
-    protected boolean isOutOfTargetPath(HttpServletRequest request) {
+    protected boolean isTargetPath(HttpServletRequest request) {
         if (exceptUrlPattern != null) {
             final String uri = getRequestURI(request);
             if (exceptUrlPattern.matcher(uri).find()) {
-                return true;
+                return false;
             }
         }
         if (exceptExtSet != null) {
@@ -254,11 +254,11 @@ public class RequestLoggingFilter implements Filter {
                 final int indexOf = path.lastIndexOf(".");
                 final String ext = path.substring(indexOf);
                 if (exceptExtSet.contains(ext)) {
-                    return true;
+                    return false;
                 }
             }
         }
-        return false;
+        return true;
     }
 
     public boolean isAlreadyBegun() { // for e.g. enabling access log
@@ -574,10 +574,11 @@ public class RequestLoggingFilter implements Filter {
     //                                                               =====================
     protected String handleClientError(HttpServletRequest request, HttpServletResponse response, RequestClientErrorException cause)
             throws IOException {
-        final boolean beforeHandlingCommitted = response.isCommitted();
+        final boolean beforeHandlingCommitted = response.isCommitted(); // basically false
         processClientErrorCallback(request, response, cause);
-        final String title = cause.getTitle();
+        final String title;
         if (response.isCommitted()) {
+            title = response.getStatus() + " (thrown as " + cause.getTitle() + ")";
             if (beforeHandlingCommitted) {
                 showCliEx(cause, () -> {
                     final StringBuilder sb = new StringBuilder();
@@ -585,8 +586,11 @@ public class RequestLoggingFilter implements Filter {
                     sb.append(" path=").append(request.getRequestURI());
                     return sb.toString();
                 });
+                return title; // cannot help it
             }
-            return title; // cannot help it
+            // committed in callback process
+        } else {
+            title = cause.getTitle();
         }
         showCliEx(cause, () -> {
             final StringBuilder sb = new StringBuilder();
