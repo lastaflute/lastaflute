@@ -79,9 +79,10 @@ public class SimpleCsrfManager implements CsrfManager {
             final CsrfTokenGenerator providedGenerator = resourceProvider.provideTokenGenerator();
             if (providedGenerator != null) {
                 tokenGenerator = providedGenerator;
-            } else {
-                tokenGenerator = createDefaultTokenGenerator();
             }
+        }
+        if (tokenGenerator == null) {
+            tokenGenerator = createDefaultTokenGenerator();
         }
         showBootLogging();
     }
