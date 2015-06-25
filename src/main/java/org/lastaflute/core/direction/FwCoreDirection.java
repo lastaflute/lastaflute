@@ -55,7 +55,7 @@ public class FwCoreDirection {
     protected boolean frameworkDebug;
 
     /** The listener for application boot, called-back when your application is booting. (NullAllowed: not required) */
-    protected BootListener bootListener;
+    protected CurtainBeforeListener bootListener;
 
     // -----------------------------------------------------
     //                                              Security
@@ -115,7 +115,7 @@ public class FwCoreDirection {
         this.frameworkDebug = frameworkDebug;
     }
 
-    public void directBoot(BootListener bootListener) {
+    public void directBoot(CurtainBeforeListener bootListener) {
         assertArgumentNotNull("bootListener", bootListener);
         this.bootListener = bootListener;
     }
@@ -189,7 +189,7 @@ public class FwCoreDirection {
         return frameworkDebug;
     }
 
-    public BootListener assistBootListener() {
+    public CurtainBeforeListener assistBootListener() {
         return bootListener; // not required, no process if null
     }
 

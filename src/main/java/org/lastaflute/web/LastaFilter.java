@@ -33,7 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.bhv.BehaviorSelector;
-import org.lastaflute.core.direction.BootListener;
+import org.lastaflute.core.direction.CurtainBeforeListener;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.message.MessageResourcesHolder;
@@ -201,7 +201,7 @@ public class LastaFilter implements Filter {
     //                                      ----------------
     protected void callbackProcess(FwAssistantDirector assistantDirector) {
         final FwCoreDirection coreDirection = assistantDirector.assistCoreDirection();
-        final BootListener callback = coreDirection.assistBootListener();
+        final CurtainBeforeListener callback = coreDirection.assistBootListener();
         if (callback != null) {
             callback.listen(assistantDirector);
         }

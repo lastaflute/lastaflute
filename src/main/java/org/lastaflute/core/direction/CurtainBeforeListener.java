@@ -16,14 +16,14 @@
 package org.lastaflute.core.direction;
 
 /**
- * The listener (callback) for boot process. <br>
+ * The listener (callback) for curtain before the application performance. <br>
  * You can add your own process when your application is booting.
  * @author jflute
  */
-public interface BootListener {
+public interface CurtainBeforeListener {
 
     /**
-     * Listen your process in boot process. <br>
+     * Listen your process when curtain before the application performance. <br>
      * You can know whether the current environment is development or not by the assistant director.
      * @param assistantDirector The assistant director for the framework. (NotNull)
      */
