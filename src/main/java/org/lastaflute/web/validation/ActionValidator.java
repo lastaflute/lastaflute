@@ -267,6 +267,13 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
             if (holder == null) {
                 holder = nested ? new ArrayList<>(4) : vio; // direct holder for performance
                 vioPropMap.put(propertyName, holder);
+            } else if (holder instanceof ConstraintViolation<?>) {
+                @SuppressWarnings("unchecked")
+                final ConstraintViolation<Object> existing = ((ConstraintViolation<Object>) holder);
+                final List<Object> listHolder = new ArrayList<>(4);
+                listHolder.add(existing);
+                listHolder.add(vio);
+                vioPropMap.put(propertyName, listHolder); // override
             }
             if (holder instanceof List<?>) {
                 @SuppressWarnings("unchecked")
