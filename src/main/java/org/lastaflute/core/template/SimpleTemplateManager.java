@@ -453,7 +453,7 @@ public class SimpleTemplateManager implements TemplateManager {
         br.addElement("  (x):");
         br.addElement("    /*");
         br.addElement("     [...your template's title]");
-        br.addElement("    */                                 // *NG");
+        br.addElement("    */                                  // *NG");
         br.addElement("    >>>");
         br.addElement("    ...your template body");
         br.addElement("  (o):");
