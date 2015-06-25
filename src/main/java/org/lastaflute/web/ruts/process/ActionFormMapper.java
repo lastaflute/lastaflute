@@ -649,7 +649,8 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg);
     }
 
-    protected void throwListJsonParameterParseFailureException(Object bean, String name, String json, Type propertyType, RuntimeException e) {
+    protected void throwListJsonParameterParseFailureException(Object bean, String name, String json, Type propertyType,
+            RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
         sb.append("Cannot parse list json of the request parameter.");
         final List<Map<String, Object>> retryList = retryJsonListAsMapForDebug(json);
@@ -676,7 +677,8 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                             Bean JSON
     //                                             ---------
-    protected void throwJsonParameterParseFailureException(Object bean, String name, String json, Class<?> propertyType, RuntimeException e) {
+    protected void throwJsonParameterParseFailureException(Object bean, String name, String json, Class<?> propertyType,
+            RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
         sb.append("Cannot parse json of the request parameter.");
         final Map<String, Object> retryMap = retryJsonAsMapForDebug(json);

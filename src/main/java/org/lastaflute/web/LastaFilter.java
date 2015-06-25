@@ -276,8 +276,8 @@ public class LastaFilter implements Filter {
     // -----------------------------------------------------
     //                                   via LastaDi Context
     //                                   -------------------
-    protected void viaLastaDiContext(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
+    protected void viaLastaDiContext(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
         final LaContainer container = SingletonLaContainerFactory.getContainer();
         final ExternalContext externalContext = container.getExternalContext();
         if (externalContext == null) {
@@ -298,8 +298,8 @@ public class LastaFilter implements Filter {
     // -----------------------------------------------------
     //                                via HotDeploy Handling
     //                                ----------------------
-    protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
+    protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
         if (!HotdeployUtil.isHotdeploy()) {
             viaFilterListener(request, response, chain); // #to_action
             return;
@@ -337,8 +337,8 @@ public class LastaFilter implements Filter {
     // -----------------------------------------------------
     //                                   via Filter Listener
     //                                   -------------------
-    protected void viaFilterListener(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
+    protected void viaFilterListener(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
         viaListenerDeque(request, response, chain, prepareFilterListener()); // #to_action
     }
 
@@ -347,8 +347,8 @@ public class LastaFilter implements Filter {
         return !listenerList.isEmpty() ? new LinkedList<FilterListener>(listenerList) : null;
     }
 
-    protected void viaListenerDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Deque<FilterListener> deque)
-            throws IOException, ServletException {
+    protected void viaListenerDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
+            Deque<FilterListener> deque) throws IOException, ServletException {
         final FilterListener next = deque != null ? deque.poll() : null; // null if no listener
         if (next != null) {
             next.listen(() -> viaListenerDeque(request, response, chain, deque)); // e.g. MDC
@@ -360,8 +360,8 @@ public class LastaFilter implements Filter {
     // -----------------------------------------------------
     //                                   via Embedded Filter
     //                                   -------------------
-    protected void viaEmbeddedFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
+    protected void viaEmbeddedFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
         loggingFilter.doFilter(request, response, (req, res) -> {
             enableAccessLogIfNeeds();
             routingFilter.doFilter(req, res, prepareFinalChain(chain)); /* #to_action */

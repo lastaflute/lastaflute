@@ -59,13 +59,17 @@ public class SimpleTemplateManager implements TemplateManager {
     public static final String OPTION_LABEL = "option:";
     public static final String PROPDEF_PREFIX = "-- !!";
     public static final Set<String> optionSet;
+
     static {
         optionSet = Collections.unmodifiableSet(DfCollectionUtil.newLinkedHashSet("genAsIs"));
     }
+
     public static final List<String> allowedPrefixList; // except first line (comment)
+
     static {
         allowedPrefixList = Arrays.asList(OPTION_LABEL, PROPDEF_PREFIX);
     }
+
     protected static final String LF = "\n";
     protected static final String CR = "\r";
     protected static final String CRLF = "\r\n";

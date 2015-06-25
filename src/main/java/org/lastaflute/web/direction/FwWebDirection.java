@@ -86,7 +86,8 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                               Servlet
     //                                               -------
-    public void directRequest(UserLocaleProcessProvider userLocaleProcessProvider, UserTimeZoneProcessProvider userTimeZoneProcessProvider) {
+    public void directRequest(UserLocaleProcessProvider userLocaleProcessProvider,
+            UserTimeZoneProcessProvider userTimeZoneProcessProvider) {
         assertArgumentNotNull("userLocaleProcessProvider", userLocaleProcessProvider);
         assertArgumentNotNull("userTimeZoneProcessProvider", userTimeZoneProcessProvider);
         this.userLocaleProcessProvider = userLocaleProcessProvider;

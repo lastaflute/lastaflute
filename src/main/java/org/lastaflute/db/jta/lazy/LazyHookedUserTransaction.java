@@ -141,8 +141,8 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
         return !isLazyTxAllowed() || !isLazyTransactionReadyLazy() || isLazyTransactionRealBegun();
     }
 
-    protected final void superDoCommit() throws HeuristicMixedException, HeuristicRollbackException, RollbackException, SecurityException,
-            SystemException {
+    protected final void superDoCommit()
+            throws HeuristicMixedException, HeuristicRollbackException, RollbackException, SecurityException, SystemException {
         super.doCommit();
     }
 

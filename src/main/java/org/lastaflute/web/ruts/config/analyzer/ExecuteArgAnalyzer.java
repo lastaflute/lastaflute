@@ -188,7 +188,8 @@ public class ExecuteArgAnalyzer {
         throw new ExecuteMethodOptionalParameterGenericNotFoundException(msg);
     }
 
-    protected void throwExecuteMethodOptionalParameterGenericNotScalarException(Method executeMethod, Type paramedType, Class<?> genericType) {
+    protected void throwExecuteMethodOptionalParameterGenericNotScalarException(Method executeMethod, Type paramedType,
+            Class<?> genericType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not scalar generic type for the optional parameter.");
         br.addItem("Advice");
