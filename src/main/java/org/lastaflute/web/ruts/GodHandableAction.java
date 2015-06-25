@@ -70,7 +70,8 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public GodHandableAction(ActionRuntime runtime, ActionResponseReflector reflector, TransactionStage stage, RequestManager requestManager) {
+    public GodHandableAction(ActionRuntime runtime, ActionResponseReflector reflector, TransactionStage stage,
+            RequestManager requestManager) {
         this.execute = runtime.getActionExecute();
         this.runtime = runtime;
         this.reflector = reflector;
@@ -126,7 +127,7 @@ public class GodHandableAction implements VirtualAction {
             final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
             final NextJourney journey = reflect(response); /* also response handling in transaction */
             tx.returns(journey);
-        }, getExecuteTransactionGenre()).get(); // because of not null
+        } , getExecuteTransactionGenre()).get(); // because of not null
     }
 
     protected TransactionGenre getExecuteTransactionGenre() {
@@ -339,7 +340,7 @@ public class GodHandableAction implements VirtualAction {
     protected String buildActionDisp(ActionRuntime runtime) {
         final Method method = runtime.getExecuteMethod();
         final Class<?> declaringClass = method.getDeclaringClass();
-        return declaringClass.getSimpleName() + "." + method.getName() + "()";
+        return declaringClass.getSimpleName() + "@" + method.getName() + "()";
     }
 
     protected String buildActionName(ActionRuntime runtime) {
