@@ -18,6 +18,7 @@ package org.lastaflute.web.login;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import javax.annotation.Resource;
 
@@ -26,6 +27,7 @@ import org.dbflute.helper.HandyDate;
 import org.dbflute.optional.OptionalEntity;
 import org.dbflute.optional.OptionalObject;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfCollectionUtil;
 import org.lastaflute.core.security.PrimaryCipher;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionStage;
@@ -210,8 +212,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         assertLoginAccountRequired(account);
         assertLoginPasswordRequired(password);
         handleLoginSuccess(findLoginUser(account, password).orElseThrow(() -> {
-            String msg = "Not found the user by the account and password: " + account + ", " + option;
-            return newLoginFailureException(msg);
+            final String msg = "Not found the user by the account and password: " + account + ", " + option;
+            final Map<String, String> authMap = DfCollectionUtil.newHashMap("account", account, "password", password);
+            return handleLoginFailure(msg, authMap, OptionalThing.of(option));
         }), option);
     }
 
@@ -236,7 +239,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         assertUserIdRequired(userId);
         handleLoginSuccess(findLoginUser(userId).orElseThrow(() -> {
             String msg = "Not found the user by the user ID: " + userId + ", " + option;
-            return newLoginFailureException(msg);
+            return handleLoginFailure(msg, userId, OptionalThing.of(option));
         }), option);
     }
 
@@ -263,8 +266,8 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         }
     }
 
-    protected void throwLoginFailureException(String msg) {
-        throw newLoginFailureException(msg);
+    protected LoginFailureException handleLoginFailure(String msg, Object resource, OptionalThing<LoginSpecifiedOption> option) {
+        return newLoginFailureException(msg);
     }
 
     protected LoginFailureException newLoginFailureException(String msg) {
@@ -311,7 +314,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             logger.debug("...Re-selecting user bean in session: userId={}", userId);
             sessionManager.setAttribute(createUserBean(findLoginUser(userId).orElseThrow(() -> { /* might be already left */
                 logout(); /* to clear old user info in session */
-                return newLoginFailureException("Not found the user by the user ID: " + userId);
+                String msg = "Not found the user by the user ID: " + userId;
+                return handleLoginFailure(msg, userId, OptionalThing.ofNullable(null, () -> {
+                    throw new IllegalStateException("Not found the login option when reselect: userId=" + userId);
+                }));
             })));
         });
     }
