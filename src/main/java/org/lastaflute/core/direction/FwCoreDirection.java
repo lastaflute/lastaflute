@@ -54,8 +54,8 @@ public class FwCoreDirection {
     /** Is debug enabled for framework? (you should set true only when you want internal debug) */
     protected boolean frameworkDebug;
 
-    /** The listener for application boot, called-back when your application is booting. (NullAllowed: not required) */
-    protected CurtainBeforeListener bootListener;
+    /** The listener for application curtain before, called after boot and before open. (NullAllowed: not required) */
+    protected CurtainBeforeListener curtainBeforeListener;
 
     // -----------------------------------------------------
     //                                              Security
@@ -115,9 +115,9 @@ public class FwCoreDirection {
         this.frameworkDebug = frameworkDebug;
     }
 
-    public void directBoot(CurtainBeforeListener bootListener) {
-        assertArgumentNotNull("bootListener", bootListener);
-        this.bootListener = bootListener;
+    public void directCurtainBefore(CurtainBeforeListener curtainBeforeListener) {
+        assertArgumentNotNull("curtainBeforeListener", curtainBeforeListener);
+        this.curtainBeforeListener = curtainBeforeListener;
     }
 
     // -----------------------------------------------------
@@ -189,8 +189,8 @@ public class FwCoreDirection {
         return frameworkDebug;
     }
 
-    public CurtainBeforeListener assistBootListener() {
-        return bootListener; // not required, no process if null
+    public CurtainBeforeListener assistCurtainBeforeListener() {
+        return curtainBeforeListener; // not required, no process if null
     }
 
     // -----------------------------------------------------

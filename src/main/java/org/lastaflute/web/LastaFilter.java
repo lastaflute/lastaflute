@@ -201,9 +201,9 @@ public class LastaFilter implements Filter {
     //                                      ----------------
     protected void callbackProcess(FwAssistantDirector assistantDirector) {
         final FwCoreDirection coreDirection = assistantDirector.assistCoreDirection();
-        final CurtainBeforeListener callback = coreDirection.assistBootListener();
-        if (callback != null) {
-            callback.listen(assistantDirector);
+        final CurtainBeforeListener listener = coreDirection.assistCurtainBeforeListener();
+        if (listener != null) {
+            listener.listen(assistantDirector);
         }
     }
 
