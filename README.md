@@ -23,7 +23,7 @@ public HtmlResponse index(OptionalThing<Integer> pageNumber, ProductSearchForm f
     });
 }
 ```
-## Rythem & Speed Programming
+## Rhythm & Speed Programming
 - HotDeploy
 - Lightening Boot
 
@@ -38,12 +38,23 @@ public HtmlResponse index(OptionalThing<Integer> pageNumber, ProductSearchForm f
 - Default Libraries
 
 # Quick Trial
+Can boot it by example of LastaFlute:
+
 1. prepare Java8 compile environment
 2. clone https://github.com/dbflute-session/lastaflute-example-harbor
 3. execute the main method of (org.docksidestage.boot) HarborBoot
 4. access to http://localhost:8090/harbor
 
-*you can login by user 'Pixy' and password 'sea', and can see debug log at console
+```java
+public class HarborBoot {
+
+    public static void main(String[] args) {
+        new JettyBoot(8090, "/harbor").asDevelopment().bootAwait();
+    }
+}
+```
+
+Can login by user 'Pixy' and password 'sea', and can see debug log at console.
 
 # Information
 ## Maven Dependency
@@ -61,13 +72,12 @@ Apache License 2.0
 ## Japanese site (English comming soon...)
 http://dbflute.seasar.org/ja/lastaflute/
 
-# Special Thanks
-## Thanks, Framewoks
-LastaFlute forks SAStruts, Struts and Commons utilities and (heavily) extends it.
+# Thanks, Framewoks
+LastaFlute forks SAStruts, Struts and Commons utilities and (heavily) extends it.  
 If the frameworks were not there, no LastaFlute here.
 
 I appreciate every framework.
 
-## Thanks, Friends
-LastaFlute is used by:
+# Thanks, Friends
+LastaFlute is used by:  
 comming soon...
