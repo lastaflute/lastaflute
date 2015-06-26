@@ -45,5 +45,14 @@ public HtmlResponse index(OptionalThing<Integer> pageNumber, ProductSearchForm f
 
 *you can login by user 'Pixy' and password 'sea', and can see debug log at console
 
+# Maven Dependency
+```xml
+<dependency>
+    <groupId>org.lastaflute</groupId>
+    <artifactId>lastaflute</artifactId>
+    <version>0.6.0-RCL</version>
+</dependency>
+```
+
 # Japanese site (English comming soon...)
 http://dbflute.seasar.org/ja/lastaflute/
