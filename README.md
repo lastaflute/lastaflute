@@ -45,7 +45,8 @@ public HtmlResponse index(OptionalThing<Integer> pageNumber, ProductSearchForm f
 
 *you can login by user 'Pixy' and password 'sea', and can see debug log at console
 
-# Maven Dependency
+# Information
+## Maven Dependency
 ```xml
 <dependency>
     <groupId>org.lastaflute</groupId>
@@ -54,5 +55,19 @@ public HtmlResponse index(OptionalThing<Integer> pageNumber, ProductSearchForm f
 </dependency>
 ```
 
-# Japanese site (English comming soon...)
+## License
+Apache License 2.0
+
+## Japanese site (English comming soon...)
 http://dbflute.seasar.org/ja/lastaflute/
+
+# Special Thanks
+## Thanks, Framewoks
+LastaFlute forks SAStruts, Struts and Commons utilities and (heavily) extends it.
+If the frameworks were not there, no LastaFlute here.
+
+I appreciate every framework.
+
+## Thanks, Friends
+LastaFlute is used by:
+comming soon...
