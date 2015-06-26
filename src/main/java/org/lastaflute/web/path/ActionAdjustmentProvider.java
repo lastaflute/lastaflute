@@ -75,13 +75,13 @@ public interface ActionAdjustmentProvider {
     boolean isForcedRoutingTarget(HttpServletRequest request, String requestPath);
 
     /**
-     * Does it suppress redirecting with slash forcedly?
+     * Does it suppress 'trailing slash redirect' for SEO?
      * @param request The request object provided from filter. (NotNull)
      * @param requestPath The path of request to search action. (NotNull)
-     * @param executeConfig The configuration for execute-action. (NotNull)
+     * @param execute The action execute of the request. (NotNull)
      * @return The determination, true or false. If false, default determination for routing.
      */
-    boolean isForcedSuppressRedirectWithSlash(HttpServletRequest request, String requestPath, ActionExecute executeConfig);
+    boolean isSuppressTrailingSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute execute);
 
     /**
      * Customize the request path for action mapping. <br>

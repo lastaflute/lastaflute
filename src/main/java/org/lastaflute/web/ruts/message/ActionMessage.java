@@ -46,7 +46,7 @@ public class ActionMessage implements Serializable {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("values", values);
         this.key = filterKey(key);
-        this.values = values;
+        this.values = filterValues(values);
         this.resource = true;
     }
 
@@ -58,6 +58,19 @@ public class ActionMessage implements Serializable {
     }
 
     protected String filterKey(String key) {
+        return unquoteBracesIfQuoted(key);
+    }
+
+    protected Object[] filterValues(Object[] values) {
+        final Object[] filtered = new Object[values.length];
+        for (int i = 0; i < values.length; i++) {
+            final Object val = values[i];
+            filtered[i] = val instanceof String ? unquoteBracesIfQuoted((String) val) : val;
+        }
+        return filtered;
+    }
+
+    protected String unquoteBracesIfQuoted(String key) {
         final String beginMark = BEGIN_MARK;
         final String endMark = END_MARK;
         if (Srl.isQuotedAnything(key, beginMark, endMark)) {

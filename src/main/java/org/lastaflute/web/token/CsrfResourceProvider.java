@@ -9,23 +9,19 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.direction;
+package org.lastaflute.web.token;
 
 /**
- * The callback for boot process. <br>
- * You can add your own process when your application is booting.
  * @author jflute
+ * @since 0.4.0 (2015/06/23 Tuesday)
  */
-public interface BootProcessCallback {
+public interface CsrfResourceProvider {
 
-    /**
-     * Callback your process. <br>
-     * You can know whether the current environment is development or not by the assistant director.
-     * @param assistantDirector The assistant director for the framework. (NotNull)
-     */
-    void callback(FwAssistantDirector assistantDirector);
+    String provideTokenHeaderName();
+
+    CsrfTokenGenerator provideTokenGenerator();
 }

@@ -15,29 +15,18 @@
  */
 package org.lastaflute.web.exception;
 
-import org.lastaflute.di.exception.SRuntimeException;
-
 /**
- * @author modified by jflute (originated in Seasar)
+ * @author jflute
  */
-public class NoParameterizedListRuntimeException extends SRuntimeException {
+public class RequestClassifiationConvertFailureException extends ForcedRequest400BadRequestException {
 
     private static final long serialVersionUID = 1L;
 
-    private Class<?> targetClass;
-    private String propertyName;
-
-    public NoParameterizedListRuntimeException(Class<?> targetClass, String propertyName) {
-        super("ESAS0003", new Object[] { targetClass.getName(), propertyName });
-        this.targetClass = targetClass;
-        this.propertyName = propertyName;
+    public RequestClassifiationConvertFailureException(String msg) {
+        super(msg);
     }
 
-    public Class<?> getTargetClass() {
-        return targetClass;
-    }
-
-    public String getPropertyName() {
-        return propertyName;
+    public RequestClassifiationConvertFailureException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

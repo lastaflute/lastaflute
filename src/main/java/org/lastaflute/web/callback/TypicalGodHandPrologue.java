@@ -33,6 +33,7 @@ import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
 import org.lastaflute.web.api.ApiFailureResource;
+import org.lastaflute.web.api.ApiLoginRedirectProvider;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginHandlingResource;
 import org.lastaflute.web.login.LoginManager;
@@ -262,11 +263,11 @@ public class TypicalGodHandPrologue {
     protected ActionResponse handleLoginRequiredCheck(ActionRuntime runtime) {
         return loginManager.map(nager -> {
             final LoginHandlingResource resource = createLogingHandlingResource(runtime);
-            return nager.checkLoginRequired(resource).map(forwardTo -> {
-                if (runtime.isApiAction()) {
-                    return dispatchApiLoginRequiredFailure(runtime);
+            return nager.checkLoginRequired(resource).map(routingPath -> {
+                if (runtime.isApiExecute()) {
+                    return dispatchApiLoginRequiredFailure(runtime, routingPath);
                 } else {
-                    return HtmlResponse.fromRedirectPath(forwardTo);
+                    return HtmlResponse.fromRedirectPath(routingPath);
                 }
             }).orElse(HtmlResponse.empty());
         }).orElseGet(() -> {
@@ -274,16 +275,22 @@ public class TypicalGodHandPrologue {
         });
     }
 
-    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime) {
-        final ApiFailureResource resource = createApiLoginRequiredFailureResource();
-        return apiManager.handleLoginRequiredFailure(resource, runtime);
+    protected LoginHandlingResource createLogingHandlingResource(ActionRuntime runtime) {
+        return new LoginHandlingResource(runtime);
     }
 
-    protected ApiFailureResource createApiLoginRequiredFailureResource() {
+    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime, String routingPath) {
+        final ApiFailureResource resource = createLoginRequiredApiFailureResource();
+        final ApiLoginRedirectProvider provider = createApiLoginRedirectProvider(routingPath);
+        return apiManager.handleLoginRequiredFailure(resource, runtime, provider);
+    }
+
+    protected ApiFailureResource createLoginRequiredApiFailureResource() {
         return new ApiFailureResource(sessionManager.errors().get(), requestManager);
     }
 
-    protected LoginHandlingResource createLogingHandlingResource(ActionRuntime runtime) {
-        return new LoginHandlingResource(runtime);
+    protected ApiLoginRedirectProvider createApiLoginRedirectProvider(String routingPath) {
+        final String contextAbsolutePath = requestManager.toContextAbsolutePath(routingPath);
+        return new ApiLoginRedirectProvider(contextAbsolutePath, routingPath);
     }
 }

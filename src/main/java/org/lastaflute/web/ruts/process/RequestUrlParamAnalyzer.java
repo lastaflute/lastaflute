@@ -40,6 +40,8 @@ import org.lastaflute.web.exception.UrlParamOptionalParameterEmptyAccessExceptio
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
+import org.lastaflute.web.util.LaDBFluteUtil;
+import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
 
 /**
  * @author jflute
@@ -230,6 +232,8 @@ public class RequestUrlParamAnalyzer {
             filtered = DfTypeUtil.toLocalDateTime(filtered);
         } else if (LocalTime.class.isAssignableFrom(paramType)) {
             filtered = DfTypeUtil.toLocalTime(filtered);
+        } else if (LaDBFluteUtil.isClassificationType(paramType)) {
+            filtered = toVerifiedClassification(execute, paramType, filtered);
         } else if (isOptionalParameterType(paramType)) {
             final Class<?> optGenType = optGenTypeMap.get(index);
             if (optGenType != null) {
@@ -240,6 +244,21 @@ public class RequestUrlParamAnalyzer {
             }
         }
         return filtered;
+    }
+
+    protected Object toVerifiedClassification(ActionExecute execute, Class<?> paramType, Object filtered) {
+        try {
+            return LaDBFluteUtil.toVerifiedClassification(paramType, filtered);
+        } catch (ClassificationConvertFailureException e) {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("Cannot convert the code of the URL parameter to the classification:");
+            sb.append("\n[Classification Convert Failure]");
+            sb.append("\n").append(execute);
+            sb.append("\ncode=").append(filtered);
+            sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
+            final String msg = sb.toString();
+            throw new ForcedRequest404NotFoundException(msg, e);
+        }
     }
 
     protected void throwOptionalGenericTypeNotFoundException(ActionExecute execute, int index, Class<?> urlParamType,

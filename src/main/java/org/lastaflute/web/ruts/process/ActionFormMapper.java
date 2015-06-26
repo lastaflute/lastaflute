@@ -35,11 +35,14 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
+import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.core.util.GenericTypeRef;
 import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
@@ -53,20 +56,24 @@ import org.lastaflute.web.api.JsonBody;
 import org.lastaflute.web.api.JsonParameter;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
-import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
-import org.lastaflute.web.exception.IndexedPropertyNotListArrayRuntimeException;
-import org.lastaflute.web.exception.NoParameterizedListRuntimeException;
+import org.lastaflute.web.exception.IndexedPropertyNonParameterizedListException;
+import org.lastaflute.web.exception.IndexedPropertyNotListArrayException;
+import org.lastaflute.web.exception.RequestClassifiationConvertFailureException;
 import org.lastaflute.web.exception.RequestJsonParseFailureException;
 import org.lastaflute.web.exception.RequestPropertyMappingFailureException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
+import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.multipart.ActionMultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.util.LaDBFluteUtil;
+import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -86,6 +93,7 @@ public class ActionFormMapper {
     protected static final char MAPPED_DELIM = '(';
     protected static final char MAPPED_DELIM2 = ')';
     protected static final String[] EMPTY_STRING_ARRAY = new String[0];
+    protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -167,10 +175,14 @@ public class ActionFormMapper {
 
     protected void handleIllegalPropertyPopulateException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause)
             throws ServletException {
-        if (isRequest404NotFoundException(cause)) { // for indexed property check
+        if (isRequestClientErrorException(cause)) { // for indexed property check
             throw new ServletException(cause);
         }
         throwActionFormPopulateFailureException(form, name, value, runtime, cause);
+    }
+
+    protected boolean isRequestClientErrorException(Throwable cause) {
+        return cause instanceof RequestClientErrorException;
     }
 
     protected void throwActionFormPopulateFailureException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause) {
@@ -183,13 +195,16 @@ public class ActionFormMapper {
         br.addItem("Property Name");
         br.addElement(name);
         br.addItem("Property Value");
-        br.addElement(value instanceof String[] ? DfCollectionUtil.toListFromArray(value) : value);
+        final Object valueObj;
+        if (value instanceof String[]) {
+            final List<Object> objList = DfCollectionUtil.toListFromArray(value);
+            valueObj = objList.size() == 1 ? objList.get(0) : objList;
+        } else {
+            valueObj = (String[]) value;
+        }
+        br.addElement(valueObj);
         final String msg = br.buildExceptionMessage();
         throw new ActionFormPopulateFailureException(msg, cause);
-    }
-
-    protected boolean isRequest404NotFoundException(Throwable cause) {
-        return cause instanceof ForcedRequest404NotFoundException;
     }
 
     // ===================================================================================
@@ -200,7 +215,7 @@ public class ActionFormMapper {
             mappingJsonBody(runtime, virtualActionForm, getRequestBody());
             return true;
         }
-        if (isJsonBodyListForm(virtualActionForm)) {
+        if (isListJsonBodyForm(virtualActionForm)) {
             mappingListJsonBody(runtime, virtualActionForm, getRequestBody());
             return true;
         }
@@ -211,7 +226,7 @@ public class ActionFormMapper {
         return formType.getAnnotation(JsonBody.class) != null;
     }
 
-    protected boolean isJsonBodyListForm(VirtualActionForm virtualActionForm) {
+    protected boolean isListJsonBodyForm(VirtualActionForm virtualActionForm) {
         return virtualActionForm.getFormMeta().getListFormParameterGenericType().map(genericType -> {
             return isJsonBodyForm(genericType);
         }).orElse(false);
@@ -221,56 +236,99 @@ public class ActionFormMapper {
         return requestManager.getRequestBody();
     }
 
+    // -----------------------------------------------------
+    //                                             Bean JSON
+    //                                             ---------
     protected void mappingJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json) {
+        final JsonManager jsonManager = getJsonManager();
         try {
-            final Object realForm = getJsonManager().fromJson(json, virtualActionForm.getFormMeta().getFormType());
-            acceptJsonRealForm(virtualActionForm, realForm);
+            final Object fromJson = jsonManager.fromJson(json, virtualActionForm.getFormMeta().getFormType());
+            acceptJsonRealForm(virtualActionForm, fromJson);
         } catch (RuntimeException e) {
             throwJsonBodyParseFailureException(runtime, virtualActionForm, json, e);
         }
-    }
-
-    protected void mappingListJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json) {
-        try {
-            final ActionFormMeta formMeta = virtualActionForm.getFormMeta();
-            final ParameterizedType pt = formMeta.getListFormParameterParameterizedType().get(); // already checked
-            final Object realForm = getJsonManager().fromJsonList(json, pt);
-            acceptJsonRealForm(virtualActionForm, realForm);
-        } catch (RuntimeException e) {
-            throwListJsonBodyParseFailureException(runtime, virtualActionForm, json, e);
-        }
-    }
-
-    protected JsonManager getJsonManager() {
-        return ContainerUtil.getComponent(JsonManager.class);
-    }
-
-    protected void acceptJsonRealForm(VirtualActionForm virtualActionForm, Object realForm) {
-        virtualActionForm.acceptRealForm(realForm);
     }
 
     protected void throwJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
             RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
         sb.append("Cannot parse json of the request body:");
-        sb.append("\n[JsonBody Parse Failure]");
-        sb.append("\n").append(runtime);
-        sb.append("\n").append(virtualActionForm);
-        sb.append("\n").append(json);
-        sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        throwRequestJsonParseFailureException(sb.toString(), e);
+        sb.append(LF).append("[JsonBody Parse Failure]");
+        sb.append(LF).append(runtime);
+        sb.append(LF).append(virtualActionForm);
+        sb.append(LF).append(json);
+        final Map<String, Object> retryMap = retryJsonAsMapForDebug(json);
+        List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
+        if (!retryMap.isEmpty()) {
+            sb.append(LF).append(buildDebugChallengeTitle());
+            final List<JsonDebugChallenge> nestedList = prepareJsonBodyDebugChallengeList(virtualActionForm, retryMap, null);
+            for (JsonDebugChallenge challenge : nestedList) {
+                sb.append(challenge.toChallengeDisp());
+            }
+            challengeList.addAll(nestedList);
+        }
+        sb.append(LF).append(e.getClass().getName()).append(LF).append(e.getMessage());
+        throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
+    }
+
+    protected List<JsonDebugChallenge> prepareJsonBodyDebugChallengeList(VirtualActionForm virtualActionForm, Map<String, Object> retryMap,
+            Integer elementIndex) {
+        if (retryMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
+        for (ActionFormProperty property : virtualActionForm.getFormMeta().properties()) {
+            final String propertyName = property.getPropertyName();
+            final Class<?> propertyType = property.getPropertyDesc().getPropertyType();
+            final JsonDebugChallenge challenge = createJsonDebugChallenge(retryMap, propertyName, propertyType, elementIndex);
+            challengeList.add(challenge);
+        }
+        return Collections.unmodifiableList(challengeList);
+    }
+
+    // -----------------------------------------------------
+    //                                             List JSON
+    //                                             ---------
+    protected void mappingListJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json) {
+        try {
+            final ActionFormMeta formMeta = virtualActionForm.getFormMeta();
+            final ParameterizedType pt = formMeta.getListFormParameterParameterizedType().get(); // already checked
+            final List<Object> fromJsonList = getJsonManager().fromJsonList(json, pt);
+            acceptJsonRealForm(virtualActionForm, fromJsonList);
+        } catch (RuntimeException e) {
+            throwListJsonBodyParseFailureException(runtime, virtualActionForm, json, e);
+        }
     }
 
     protected void throwListJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
             RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Cannot parse list json of the request body:");
+        sb.append("Cannot parse list json of the request body.");
         sb.append("\n[List JsonBody Parse Failure]");
-        sb.append("\n").append(runtime);
-        sb.append("\n").append(virtualActionForm);
-        sb.append("\n").append(json);
-        sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        throwRequestJsonParseFailureException(sb.toString(), e);
+        sb.append(LF).append(runtime);
+        sb.append(LF).append(virtualActionForm);
+        sb.append(LF).append(json);
+        final List<Map<String, Object>> retryList = retryJsonListAsMapForDebug(json);
+        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
+        if (!retryList.isEmpty()) {
+            sb.append(LF).append(buildDebugChallengeTitle());
+            int index = 1;
+            for (Map<String, Object> retryMap : retryList) {
+                sb.append(LF).append(" (index: ").append(index).append(")");
+                final List<JsonDebugChallenge> nestedList = prepareJsonBodyDebugChallengeList(virtualActionForm, retryMap, index);
+                challengeList.addAll(nestedList);
+                nestedList.forEach(challenge -> sb.append(challenge.toChallengeDisp()));
+                ++index;
+            }
+        }
+        throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
+    }
+
+    // -----------------------------------------------------
+    //                                          Assist Logic
+    //                                          ------------
+    protected void acceptJsonRealForm(VirtualActionForm virtualActionForm, Object realForm) {
+        virtualActionForm.acceptRealForm(realForm);
     }
 
     // ===================================================================================
@@ -405,14 +463,16 @@ public class ActionFormMapper {
             pd.setValue(bean, prepareStringArray(value)); // plain mapping to array, e.g. JSON not supported
         } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
             if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
-                pd.setValue(bean, parseJsonProperty(bean, name, prepareStringScalar(value), pd));
+                pd.setValue(bean, parseJsonParameter(bean, name, prepareStringScalar(value), pd));
             } else { // e.g. public List<String> strList;
                 pd.setValue(bean, prepareStringList(value, propertyType));
             }
         } else { // not array or list, e.g. String, Object
-            final String realValue = prepareStringScalar(value);
+            final String realValue = prepareStringScalar(value); // not null (empty if null)
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
-                pd.setValue(bean, parseJsonProperty(bean, name, realValue, pd));
+                pd.setValue(bean, parseJsonParameter(bean, name, realValue, pd));
+            } else if (isClassificationProperty(propertyType)) { // means CDef
+                pd.setValue(bean, toVerifiedClassification(bean, name, realValue, pd));
             } else { // mainly here, e.g. String, Integer
                 pd.setValue(bean, realValue);
             }
@@ -503,47 +563,50 @@ public class ActionFormMapper {
         return false;
     }
 
-    protected Object parseJsonProperty(Object bean, String name, String json, PropertyDesc pd) {
+    protected Object parseJsonParameter(Object bean, String name, String json, PropertyDesc pd) {
         final JsonManager jsonManager = getJsonManager();
         final Class<?> propertyType = pd.getPropertyType();
-        if (isJsonPropertyListType(propertyType)) { // e.g. public List<...> beanList;
+        if (isListJsonProperty(propertyType)) { // e.g. public List<...> beanList;
             if (!pd.isParameterized()) { // e.g. public List anyList;
-                throwJsonPropertyListTypeNonGenericException(bean, name, json, pd); // program mistake
+                throwListJsonPropertyNonGenericException(bean, name, json, pd); // program mistake
                 return null; // unreachable
             }
             final ParameterizedClassDesc paramedDesc = pd.getParameterizedClassDesc();
             final Type plainType = paramedDesc.getParameterizedType(); // not null
             if (!(plainType instanceof ParameterizedType)) { // generic array type? anyway check it
-                throwJsonPropertyListTypeNonParameterizedException(bean, name, json, pd, plainType); // program mistake
+                throwListJsonPropertyNonParameterizedException(bean, name, json, pd, plainType); // program mistake
                 return null; // unreachable
             }
             final ParameterizedType paramedType = (ParameterizedType) plainType;
             if (Object.class.equals(paramedDesc.getGenericFirstType())) { // e.g. public List<?> beanList;
-                throwJsonPropertyListTypeGenericNotScalarException(bean, name, json, pd, paramedType);
+                throwListJsonPropertyGenericNotScalarException(bean, name, json, pd, paramedType);
                 return null; // unreachable
             }
             try {
                 return jsonManager.fromJsonList(json, paramedType); // e.g. public List<SeaBean> beanList;
             } catch (RuntimeException e) {
-                throwJsonPropertyParseFailureException(bean, name, json, paramedType, e);
+                throwListJsonParameterParseFailureException(bean, name, json, paramedType, e);
                 return null; // unreachable
             }
         } else { // e.g. public SeaBean seaBean;
             try {
                 return jsonManager.fromJson(json, propertyType);
             } catch (RuntimeException e) {
-                throwJsonPropertyParseFailureException(bean, name, json, propertyType, e);
+                throwJsonParameterParseFailureException(bean, name, json, propertyType, e);
                 return null; // unreachable
             }
         }
     }
 
-    protected boolean isJsonPropertyListType(Class<?> propertyType) { // just type
+    // -----------------------------------------------------
+    //                                             List JSON
+    //                                             ---------
+    protected boolean isListJsonProperty(Class<?> propertyType) { // just type
         return List.class.equals(propertyType);
     }
 
-    protected void throwJsonPropertyListTypeNonGenericException(Object bean, String name, String json, PropertyDesc pd) {
-        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+    protected void throwListJsonPropertyNonGenericException(Object bean, String name, String json, PropertyDesc pd) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Non-generic list cannot handle the JSON.");
         br.addItem("Action Form");
         br.addElement(bean);
@@ -555,8 +618,8 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg);
     }
 
-    protected void throwJsonPropertyListTypeNonParameterizedException(Object bean, String name, String json, PropertyDesc pd, Type plainType) {
-        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+    protected void throwListJsonPropertyNonParameterizedException(Object bean, String name, String json, PropertyDesc pd, Type plainType) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Non-parameterized list cannot handle the JSON.");
         br.addItem("Action Form");
         br.addElement(bean);
@@ -570,9 +633,9 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg);
     }
 
-    protected void throwJsonPropertyListTypeGenericNotScalarException(Object bean, String name, String json, PropertyDesc pd,
+    protected void throwListJsonPropertyGenericNotScalarException(Object bean, String name, String json, PropertyDesc pd,
             ParameterizedType paramedType) {
-        ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not scalar generic type for the list JSON parameter.");
         br.addItem("Action Form");
         br.addElement(bean);
@@ -586,15 +649,88 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg);
     }
 
-    protected void throwJsonPropertyParseFailureException(Object bean, String name, String json, Type propertyType, RuntimeException e) {
+    protected void throwListJsonParameterParseFailureException(Object bean, String name, String json, Type propertyType,
+            RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Cannot parse json of the request parameter:");
-        sb.append("\n[JsonProperty Parse Failure]");
-        sb.append("\n").append(bean.getClass().getSimpleName()).append("#").append(name);
-        sb.append(" (").append(propertyType.getTypeName()).append(")");
-        sb.append("\n").append(json);
-        sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-        throwRequestJsonParseFailureException(sb.toString(), e);
+        sb.append("Cannot parse list json of the request parameter.");
+        final List<Map<String, Object>> retryList = retryJsonListAsMapForDebug(json);
+        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>();
+        final StringBuilder challengeSb = new StringBuilder();
+        if (!retryList.isEmpty()) {
+            final Class<?> elementType = DfReflectionUtil.getGenericFirstClass(propertyType);
+            if (elementType != null) { // just in case
+                int index = 0;
+                for (Map<String, Object> retryMap : retryList) {
+                    challengeSb.append(LF).append(" (index: ").append(index).append(")");
+                    final List<JsonDebugChallenge> nestedList = prepareJsonParameterDebugChallengeList(retryMap, elementType, json, index);
+                    challengeList.addAll(nestedList);
+                    nestedList.forEach(challenge -> challengeSb.append(challenge.toChallengeDisp()));
+                    ++index;
+                }
+            }
+        }
+        final String challengeDisp = challengeSb.toString();
+        buildClientErrorHeader(sb, "List JsonParameter Parse Failure", bean, name, json, propertyType, challengeDisp);
+        throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
+    }
+
+    // -----------------------------------------------------
+    //                                             Bean JSON
+    //                                             ---------
+    protected void throwJsonParameterParseFailureException(Object bean, String name, String json, Class<?> propertyType,
+            RuntimeException e) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("Cannot parse json of the request parameter.");
+        final Map<String, Object> retryMap = retryJsonAsMapForDebug(json);
+        final List<JsonDebugChallenge> challengeList = prepareJsonParameterDebugChallengeList(retryMap, propertyType, json, null);
+        final String challengeDisp = buildJsonParameterDebugChallengeDisp(challengeList);
+        buildClientErrorHeader(sb, "JsonParameter Parse Failure", bean, name, json, propertyType, challengeDisp);
+        throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
+    }
+
+    protected List<JsonDebugChallenge> prepareJsonParameterDebugChallengeList(Map<String, Object> retryMap, Class<?> beanType, String json,
+            Integer elementIndex) {
+        if (retryMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(beanType);
+        final int fieldSize = beanDesc.getFieldSize();
+        final List<JsonDebugChallenge> challengeList = new ArrayList<JsonDebugChallenge>(fieldSize);
+        for (int i = 0; i < fieldSize; i++) {
+            final Field field = beanDesc.getField(i);
+            final JsonDebugChallenge challenge = createJsonDebugChallenge(retryMap, field.getName(), field.getType(), elementIndex);
+            challengeList.add(challenge);
+        }
+        return Collections.unmodifiableList(challengeList);
+    }
+
+    protected String buildJsonParameterDebugChallengeDisp(List<JsonDebugChallenge> challengeList) {
+        if (challengeList.isEmpty()) {
+            return null;
+        }
+        final StringBuilder sb = new StringBuilder();
+        challengeList.forEach(challenge -> sb.append(challenge.toChallengeDisp()));
+        return sb.toString();
+    }
+
+    // -----------------------------------------------------
+    //                                        Classification
+    //                                        --------------
+    protected boolean isClassificationProperty(Class<?> propertyType) {
+        return LaDBFluteUtil.isClassificationType(propertyType);
+    }
+
+    protected Classification toVerifiedClassification(Object bean, String name, String code, PropertyDesc pd) {
+        final Class<?> propertyType = pd.getPropertyType();
+        try {
+            return LaDBFluteUtil.toVerifiedClassification(propertyType, code);
+        } catch (ClassificationConvertFailureException e) {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("Cannot convert the code of the request parameter to the classification:");
+            buildClientErrorHeader(sb, "Classification Convert Failure", bean, name, code, propertyType, null);
+            throwRequestClassifiationConvertFailureException(sb.toString(), e);
+            return null; // unreachable
+        }
     }
 
     // ===================================================================================
@@ -637,7 +773,7 @@ public class ActionFormMapper {
     }
 
     protected void throwIndexedPropertyNonNumberIndexException(String name, NumberFormatException e) {
-        String msg = "Non number index of the indexed property: name=" + name + "\n" + e.getMessage();
+        String msg = "Non number index of the indexed property: name=" + name + LF + e.getMessage();
         throwRequestPropertyMappingFailureException(msg, e);
     }
 
@@ -718,7 +854,7 @@ public class ActionFormMapper {
                     for (int j = 0; j <= i; j++) {
                         sb.append("[").append(indexes[j]).append("]");
                     }
-                    throw new NoParameterizedListRuntimeException(getRealClass(beanDesc.getBeanClass()), pd.getPropertyName() + sb);
+                    throwIndexedPropertyNonParameterizedListException(beanDesc, pd);
                 }
                 int size = list.size();
                 pcd = pcd.getArguments()[0];
@@ -735,7 +871,7 @@ public class ActionFormMapper {
             }
             list.set(indexes[indexes.length - 1], value);
         } else {
-            throw new IndexedPropertyNotListArrayRuntimeException(getRealClass(beanDesc.getBeanClass()), pd.getPropertyName());
+            throwIndexedPropertyNotListArrayException(beanDesc, pd);
         }
     }
 
@@ -770,37 +906,40 @@ public class ActionFormMapper {
             array = expand(array, indexes, elementType);
             pd.setValue(bean, array);
             return getArrayValue(array, indexes, elementType);
-        } else if (List.class.isAssignableFrom(pd.getPropertyType())) {
-            List<Object> list = (List<Object>) pd.getValue(bean);
-            if (list == null) {
-                list = new ArrayList<Object>(Math.max(50, indexes[0]));
-                pd.setValue(bean, list);
-            }
-            ParameterizedClassDesc pcd = pd.getParameterizedClassDesc();
-            for (int i = 0; i < indexes.length; i++) {
-                if (pcd == null || !pcd.isParameterizedClass() || !List.class.isAssignableFrom(pcd.getRawClass())) {
-                    StringBuilder sb = new StringBuilder();
-                    for (int j = 0; j <= i; j++) {
-                        sb.append("[").append(indexes[j]).append("]");
-                    }
-                    throw new NoParameterizedListRuntimeException(getRealClass(beanDesc.getBeanClass()), pd.getPropertyName() + sb);
-                }
-                int size = list.size();
-                pcd = pcd.getArguments()[0];
-                for (int j = size; j <= indexes[i]; j++) {
-                    if (i == indexes.length - 1) {
-                        list.add(LdiClassUtil.newInstance(convertClass(pcd.getRawClass())));
-                    } else {
-                        list.add(new ArrayList<Integer>());
-                    }
-                }
-                if (i < indexes.length - 1) {
-                    list = (List<Object>) list.get(indexes[i]);
-                }
-            }
-            return list.get(indexes[indexes.length - 1]);
         } else {
-            throw new IndexedPropertyNotListArrayRuntimeException(getRealClass(beanDesc.getBeanClass()), pd.getPropertyName());
+            if (List.class.isAssignableFrom(pd.getPropertyType())) {
+                List<Object> list = (List<Object>) pd.getValue(bean);
+                if (list == null) {
+                    list = new ArrayList<Object>(Math.max(50, indexes[0]));
+                    pd.setValue(bean, list);
+                }
+                ParameterizedClassDesc pcd = pd.getParameterizedClassDesc();
+                for (int i = 0; i < indexes.length; i++) {
+                    if (pcd == null || !pcd.isParameterizedClass() || !List.class.isAssignableFrom(pcd.getRawClass())) {
+                        StringBuilder sb = new StringBuilder();
+                        for (int j = 0; j <= i; j++) {
+                            sb.append("[").append(indexes[j]).append("]");
+                        }
+                        throwIndexedPropertyNonParameterizedListException(beanDesc, pd);
+                    }
+                    int size = list.size();
+                    pcd = pcd.getArguments()[0];
+                    for (int j = size; j <= indexes[i]; j++) {
+                        if (i == indexes.length - 1) {
+                            list.add(LdiClassUtil.newInstance(convertClass(pcd.getRawClass())));
+                        } else {
+                            list.add(new ArrayList<Integer>());
+                        }
+                    }
+                    if (i < indexes.length - 1) {
+                        list = (List<Object>) list.get(indexes[i]);
+                    }
+                }
+                return list.get(indexes[indexes.length - 1]);
+            } else {
+                throwIndexedPropertyNotListArrayException(beanDesc, pd);
+                return null; // unreachable
+            }
         }
     }
 
@@ -816,6 +955,28 @@ public class ActionFormMapper {
             value = element;
         }
         return value;
+    }
+
+    protected void throwIndexedPropertyNonParameterizedListException(final BeanDesc beanDesc, final PropertyDesc pd) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The list of indexed property was not parameterized.");
+        br.addItem("ActionForm");
+        br.addElement(getRealClass(beanDesc.getBeanClass()));
+        br.addItem("Property");
+        br.addElement(pd);
+        final String msg = br.buildExceptionMessage();
+        throw new IndexedPropertyNonParameterizedListException(msg);
+    }
+
+    protected void throwIndexedPropertyNotListArrayException(BeanDesc beanDesc, PropertyDesc pd) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The indexed property was not list or array.");
+        br.addItem("ActionForm");
+        br.addElement(getRealClass(beanDesc.getBeanClass()));
+        br.addItem("Property");
+        br.addElement(pd);
+        final String msg = br.buildExceptionMessage();
+        throw new IndexedPropertyNotListArrayException(msg);
     }
 
     // -----------------------------------------------------
@@ -859,12 +1020,58 @@ public class ActionFormMapper {
     }
 
     // ===================================================================================
+    //                                                                         JSON Assist
+    //                                                                         ===========
+    protected JsonManager getJsonManager() {
+        return ContainerUtil.getComponent(JsonManager.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected Map<String, Object> retryJsonAsMapForDebug(String json) {
+        try {
+            return getJsonManager().fromJson(json, Map.class);
+        } catch (RuntimeException ignored) {
+            return Collections.emptyMap();
+        }
+    }
+
+    protected List<Map<String, Object>> retryJsonListAsMapForDebug(String json) {
+        try {
+            return getJsonManager().fromJsonList(json, new GenericTypeRef<List<Map<String, Object>>>() {
+            }.getParameterizedType());
+        } catch (RuntimeException ignored) {
+            return Collections.emptyList();
+        }
+    }
+
+    protected JsonDebugChallenge createJsonDebugChallenge(Map<String, Object> retryMap, String propertyName, Class<?> propertyType,
+            Integer elementIndex) {
+        return new JsonDebugChallenge(propertyName, propertyType, retryMap.get(propertyName), elementIndex);
+    }
+
+    // ===================================================================================
     //                                                                        Client Error
     //                                                                        ============
+    protected void buildClientErrorHeader(StringBuilder sb, String title, Object bean, String name, String value, Type propertyType,
+            String challengeDisp) {
+        sb.append(LF).append(LF).append("[").append(title).append("]");
+        sb.append(LF).append("Mapping To: ");
+        sb.append(bean.getClass().getSimpleName()).append("#").append(name).append(" (").append(propertyType.getTypeName()).append(")");
+        sb.append(LF).append("Requested Value: ").append(value != null && value.contains(LF) ? LF : "").append(value);
+        if (challengeDisp != null && challengeDisp.length() > 0) {
+            sb.append(LF).append(buildDebugChallengeTitle());
+            sb.append(challengeDisp); // debugChallenge starts with LF
+        }
+    }
+
+    protected String buildDebugChallengeTitle() {
+        return "Debug Challenge: (o: maybe assignable, x: cannot, v: no value, ?: unknown)";
+    }
+
     // no server error because it can occur by user's trick
     // while, is likely to due to client bugs (or server) so request client error
-    protected void throwRequestJsonParseFailureException(String msg, RuntimeException e) {
-        throw new RequestJsonParseFailureException(msg, e);
+    protected void throwRequestJsonParseFailureException(String msg, List<JsonDebugChallenge> challengeList, RuntimeException e) {
+        throw new RequestJsonParseFailureException(msg, e).withChallengeList(challengeList);
     }
 
     protected void throwRequestPropertyMappingFailureException(String msg) {
@@ -873,5 +1080,9 @@ public class ActionFormMapper {
 
     protected void throwRequestPropertyMappingFailureException(String msg, RuntimeException e) {
         throw new RequestPropertyMappingFailureException(msg, e);
+    }
+
+    protected void throwRequestClassifiationConvertFailureException(String msg, Exception e) {
+        throw new RequestClassifiationConvertFailureException(msg, e);
     }
 }

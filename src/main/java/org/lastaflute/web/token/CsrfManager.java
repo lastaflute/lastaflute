@@ -13,25 +13,15 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
-
-import org.lastaflute.di.exception.SRuntimeException;
+package org.lastaflute.web.token;
 
 /**
- * @author modified by jflute (originated in Seasar)
+ * @author jflute
+ * @since 0.4.0 (2015/06/22 Monday)
  */
-public class IllegalInputPatternRuntimeException extends SRuntimeException {
+public interface CsrfManager {
 
-    private static final long serialVersionUID = 1L;
+    void beginToken();
 
-    private String inputPattern;
-
-    public IllegalInputPatternRuntimeException(String inputPattern) {
-        super("ESAS0010", new Object[] { inputPattern });
-        this.inputPattern = inputPattern;
-    }
-
-    public String getInputPattern() {
-        return inputPattern;
-    }
+    void verifyToken();
 }

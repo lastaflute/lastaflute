@@ -15,8 +15,11 @@
  */
 package org.lastaflute.core.mail;
 
+import java.util.Locale;
+
 import org.dbflute.mail.Postcard;
 import org.dbflute.mail.send.embedded.receptionist.SMailDynamicTextAssist;
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.ThreadCacheContext;
 
 /**
@@ -27,16 +30,16 @@ public abstract class LaThreadCachedDynamicTextAssist implements SMailDynamicTex
     protected static final Object NONE = new Object();
 
     @Override
-    public String assist(Postcard postcard, String path, boolean filesystem) {
+    public String assist(Postcard postcard, String path, boolean filesystem, OptionalThing<Locale> receiverLocale) {
         final boolean exists = ThreadCacheContext.exists();
-        final String cacheKey = exists ? generateCacheKey(path, filesystem) : null;
+        final String cacheKey = exists ? generateCacheKey(path, filesystem, receiverLocale) : null;
         if (exists) {
             final String cached = ThreadCacheContext.getObject(cacheKey);
             if (cached != null) {
                 return !cached.equals(NONE) ? cached : null;
             }
         }
-        final String assisted = doAssist(postcard, path, filesystem);
+        final String assisted = doAssist(postcard, path, filesystem, receiverLocale);
         if (exists) {
             if (assisted != null) {
                 ThreadCacheContext.setObject(cacheKey, assisted);
@@ -50,9 +53,9 @@ public abstract class LaThreadCachedDynamicTextAssist implements SMailDynamicTex
         }
     }
 
-    protected String generateCacheKey(String path, boolean filesystem) {
-        return "fw:mailText:" + path + ":" + filesystem;
+    protected String generateCacheKey(String path, boolean filesystem, OptionalThing<Locale> receiverLocale) {
+        return "fw:mailText:" + path + ":" + filesystem + ":" + receiverLocale;
     }
 
-    protected abstract String doAssist(Postcard postcard, String path, boolean filesystem);
+    protected abstract String doAssist(Postcard postcard, String path, boolean filesystem, OptionalThing<Locale> receiverLocale);
 }

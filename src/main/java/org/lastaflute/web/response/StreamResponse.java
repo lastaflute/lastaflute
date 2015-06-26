@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
 
 /**
@@ -40,8 +41,8 @@ public class StreamResponse implements ActionResponse {
     //                                                                          Definition
     //                                                                          ==========
     protected static final String DUMMY = "dummy";
-    protected static final StreamResponse INSTANCE_OF_EMPTY = new StreamResponse(DUMMY).asEmptyResponse();
-    protected static final StreamResponse INSTANCE_OF_SKIP = new StreamResponse(DUMMY).asSkipResponse();
+    protected static final StreamResponse INSTANCE_OF_EMPTY = new StreamResponse(DUMMY).asEmpty();
+    protected static final StreamResponse INSTANCE_OF_SKIP = new StreamResponse(DUMMY).asSkip();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -55,7 +56,7 @@ public class StreamResponse implements ActionResponse {
     protected InputStream inputStream;
     protected Integer contentLength;
     protected boolean emptyResponse;
-    protected boolean skipResponse;
+    protected boolean skip;
 
     protected Map<String, String> createHeaderMap() {
         return new LinkedHashMap<String, String>();
@@ -185,7 +186,7 @@ public class StreamResponse implements ActionResponse {
         return INSTANCE_OF_EMPTY;
     }
 
-    protected StreamResponse asEmptyResponse() { // internal use
+    protected StreamResponse asEmpty() { // internal use
         emptyResponse = true;
         return this;
     }
@@ -194,8 +195,8 @@ public class StreamResponse implements ActionResponse {
         return INSTANCE_OF_SKIP;
     }
 
-    protected StreamResponse asSkipResponse() { // internal use
-        skipResponse = true;
+    protected StreamResponse asSkip() { // internal use
+        skip = true;
         return this;
     }
 
@@ -222,7 +223,9 @@ public class StreamResponse implements ActionResponse {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "{" + fileName + ", " + contentType + ", " + headerMap + "}";
+        final String classTitle = DfTypeUtil.toClassTitle(this);
+        final String skipExp = skip ? ", skip" : "";
+        return classTitle + ":{" + fileName + ", " + contentType + ", " + headerMap + skipExp + "}";
     }
 
     // ===================================================================================
@@ -235,6 +238,6 @@ public class StreamResponse implements ActionResponse {
 
     @Override
     public boolean isSkip() {
-        return skipResponse;
+        return skip;
     }
 }

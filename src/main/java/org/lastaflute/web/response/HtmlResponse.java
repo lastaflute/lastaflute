@@ -47,7 +47,7 @@ public class HtmlResponse implements ActionResponse {
     protected final RoutingNext nextRouting;
     protected Map<String, String> headerMap; // lazy loaded (for when no use)
     protected boolean empty;
-    protected boolean skipResponse;
+    protected boolean skip;
     protected List<RenderDataRegistration> registrationList; // lazy loaded
     protected Class<?> pushedFormType; // null allowed
     protected boolean errorsToSession;
@@ -164,7 +164,9 @@ public class HtmlResponse implements ActionResponse {
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        return classTitle + ":{" + nextRouting + ", empty=" + empty + ", skip=" + skipResponse + "}";
+        final String emptyExp = empty ? ", empty" : "";
+        final String skipExp = skip ? ", skip" : "";
+        return classTitle + ":{" + nextRouting + emptyExp + skipExp + "}";
     }
 
     // ===================================================================================
@@ -193,7 +195,7 @@ public class HtmlResponse implements ActionResponse {
 
     @Override
     public boolean isSkip() {
-        return skipResponse;
+        return skip;
     }
 
     public List<RenderDataRegistration> getRegistrationList() {

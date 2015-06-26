@@ -41,6 +41,7 @@ import org.lastaflute.web.ruts.wrapper.MapWrapper;
 public class LaParamWrapperUtil {
 
     protected static final Set<Class<?>> simpleTypeSet = new HashSet<Class<?>>();
+
     static {
         simpleTypeSet.add(String.class);
         simpleTypeSet.add(char.class);

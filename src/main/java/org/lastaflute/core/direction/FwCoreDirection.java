@@ -54,8 +54,8 @@ public class FwCoreDirection {
     /** Is debug enabled for framework? (you should set true only when you want internal debug) */
     protected boolean frameworkDebug;
 
-    /** The callback for boot process, called-back when your application is booting. (NullAllowed: not required) */
-    protected BootProcessCallback bootProcessCallback;
+    /** The listener for application curtain before, called after boot and before open. (NullAllowed: not required) */
+    protected CurtainBeforeListener curtainBeforeListener;
 
     // -----------------------------------------------------
     //                                              Security
@@ -105,6 +105,8 @@ public class FwCoreDirection {
     }
 
     public void directLoggingTitle(String domainTitle, String environmentTitle) {
+        assertArgumentNotNull("domainTitle", domainTitle);
+        assertArgumentNotNull("environmentTitle", environmentTitle);
         this.domainTitle = domainTitle;
         this.environmentTitle = environmentTitle;
     }
@@ -113,14 +115,16 @@ public class FwCoreDirection {
         this.frameworkDebug = frameworkDebug;
     }
 
-    public void directBootProcessCallback(BootProcessCallback bootProcessCallback) {
-        this.bootProcessCallback = bootProcessCallback;
+    public void directCurtainBefore(CurtainBeforeListener curtainBeforeListener) {
+        assertArgumentNotNull("curtainBeforeListener", curtainBeforeListener);
+        this.curtainBeforeListener = curtainBeforeListener;
     }
 
     // -----------------------------------------------------
     //                                              Security
     //                                              --------
     public void directSecurity(SecurityResourceProvider securityResourceProvider) {
+        assertArgumentNotNull("securityResourceProvider", securityResourceProvider);
         this.securityResourceProvider = securityResourceProvider;
     }
 
@@ -128,6 +132,7 @@ public class FwCoreDirection {
     //                                                 Time
     //                                                ------
     public void directTime(TimeResourceProvider timeResourceProvider) {
+        assertArgumentNotNull("timeResourceProvider", timeResourceProvider);
         this.timeResourceProvider = timeResourceProvider;
     }
 
@@ -135,6 +140,7 @@ public class FwCoreDirection {
     //                                                 JSON
     //                                                ------
     public void directJson(JsonResourceProvider jsonResourceProvider) {
+        assertArgumentNotNull("jsonResourceProvider", jsonResourceProvider);
         this.jsonResourceProvider = jsonResourceProvider;
     }
 
@@ -142,6 +148,7 @@ public class FwCoreDirection {
     //                                             Exception
     //                                             ---------
     public void directException(ExceptionTranslationProvider exceptionTranslationProvider) {
+        assertArgumentNotNull("exceptionTranslationProvider", exceptionTranslationProvider);
         this.exceptionTranslationProvider = exceptionTranslationProvider;
     }
 
@@ -149,6 +156,7 @@ public class FwCoreDirection {
     //                                          Asynchronous
     //                                          ------------
     public void directAsync(ConcurrentAsyncExecutorProvider concurrentAsyncExecutorProvider) {
+        assertArgumentNotNull("concurrentAsyncExecutorProvider", concurrentAsyncExecutorProvider);
         this.concurrentAsyncExecutorProvider = concurrentAsyncExecutorProvider;
     }
 
@@ -156,6 +164,7 @@ public class FwCoreDirection {
     //                                                 Mail
     //                                                ------
     public void directMail(SMailDeliveryDepartment mailDeliveryDepartment) {
+        assertArgumentNotNull("mailDeliveryDepartment", mailDeliveryDepartment);
         this.mailDeliveryDepartment = mailDeliveryDepartment;
     }
 
@@ -180,8 +189,8 @@ public class FwCoreDirection {
         return frameworkDebug;
     }
 
-    public BootProcessCallback assistBootProcessCallback() {
-        return bootProcessCallback; // not required, no process if null
+    public CurtainBeforeListener assistCurtainBeforeListener() {
+        return curtainBeforeListener; // not required, no process if null
     }
 
     // -----------------------------------------------------
@@ -228,9 +237,18 @@ public class FwCoreDirection {
         return mailDeliveryDepartment; // not required, big optional function
     }
 
-    // -----------------------------------------------------
-    //                                         Assert Helper
-    //                                         -------------
+    // ===================================================================================
+    //                                                                       Assert Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
+    }
+
     protected void assertAssistObjectNotNull(Object obj, String msg) {
         if (obj == null) {
             throw new FwRequiredAssistNotFoundException(msg);

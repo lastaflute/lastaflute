@@ -17,6 +17,9 @@ package org.lastaflute.web;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -30,7 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.bhv.BehaviorSelector;
-import org.lastaflute.core.direction.BootProcessCallback;
+import org.lastaflute.core.direction.CurtainBeforeListener;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.message.MessageResourcesHolder;
@@ -43,14 +46,20 @@ import org.lastaflute.di.core.smart.hot.HotdeployBehavior;
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.container.WebLastaContainerDestroyer;
 import org.lastaflute.web.container.WebLastaContainerInitializer;
+import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.message.MessageResources;
 import org.lastaflute.web.ruts.message.RutsMessageResourceGateway;
 import org.lastaflute.web.ruts.message.objective.ObjectiveMessageResources;
+import org.lastaflute.web.servlet.filter.FilterListener;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.filter.RequestRoutingFilter;
+import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
+import org.lastaflute.web.servlet.filter.accesslog.AccessLogResource;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpServletRequest;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpSession;
+import org.lastaflute.web.servlet.request.RequestManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -135,8 +144,8 @@ public class LastaFilter implements Filter {
     }
 
     // -----------------------------------------------------
-    //                                              LastaDi
-    //                                             ---------
+    //                                              Lasta Di
+    //                                              --------
     protected void initializeContainer(ServletContext servletContext) {
         final WebLastaContainerInitializer initializer = newWebLastaContainerInitializer();
         initializer.setApplication(servletContext);
@@ -145,13 +154,6 @@ public class LastaFilter implements Filter {
 
     protected WebLastaContainerInitializer newWebLastaContainerInitializer() {
         return new WebLastaContainerInitializer();
-    }
-
-    // -----------------------------------------------------
-    //                                    Assistant Director
-    //                                    ------------------
-    protected FwAssistantDirector getAssistantDirector() {
-        return ContainerUtil.getComponent(FwAssistantDirector.class);
     }
 
     // -----------------------------------------------------
@@ -194,40 +196,45 @@ public class LastaFilter implements Filter {
         return new RutsMessageResourceGateway(messages);
     }
 
-    protected MessageResourcesHolder getMessageResourceHolder() {
-        return ContainerUtil.getComponent(MessageResourcesHolder.class);
-    }
-
     // -----------------------------------------------------
     //                                      Callback Process
     //                                      ----------------
     protected void callbackProcess(FwAssistantDirector assistantDirector) {
         final FwCoreDirection coreDirection = assistantDirector.assistCoreDirection();
-        final BootProcessCallback callback = coreDirection.assistBootProcessCallback();
-        if (callback != null) {
-            callback.callback(assistantDirector);
+        final CurtainBeforeListener listener = coreDirection.assistCurtainBeforeListener();
+        if (listener != null) {
+            listener.listen(assistantDirector);
         }
-    }
-
-    protected BehaviorSelector getBehaviorSelector() {
-        return ContainerUtil.getComponent(BehaviorSelector.class);
     }
 
     // -----------------------------------------------------
     //                                       Embedded Filter
     //                                       ---------------
     protected void initEmbeddedFilter(FilterConfig filterConfig) throws ServletException {
-        loggingFilter = newRequestLoggingFilter();
+        loggingFilter = createRequestLoggingFilter();
         loggingFilter.init(filterConfig);
-        routingFilter = newRequestRoutingFilter();
+        routingFilter = createRequestRoutingFilter();
         routingFilter.init(filterConfig);
     }
 
-    protected RequestLoggingFilter newRequestLoggingFilter() {
-        return new RequestLoggingFilter();
+    protected RequestLoggingFilter createRequestLoggingFilter() {
+        final FwWebDirection webDirection = getAssistantDirector().assistWebDirection();
+        final ActionAdjustmentProvider adjustmentProvider = webDirection.assistActionAdjustmentProvider();
+        final RequestManager requestManager = getRequestManager();
+        return new RequestLoggingFilter() {
+            @Override
+            protected boolean isTargetPath(HttpServletRequest request) {
+                // forced routings also should be logging control target
+                if (adjustmentProvider.isForcedRoutingTarget(request, requestManager.getRequestPath())) {
+                    return true;
+                } else {
+                    return super.isTargetPath(request);
+                }
+            }
+        };
     }
 
-    protected RequestRoutingFilter newRequestRoutingFilter() {
+    protected RequestRoutingFilter createRequestRoutingFilter() {
         return new RequestRoutingFilter();
     }
 
@@ -269,8 +276,8 @@ public class LastaFilter implements Filter {
     // -----------------------------------------------------
     //                                   via LastaDi Context
     //                                   -------------------
-    protected void viaLastaDiContext(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
+    protected void viaLastaDiContext(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
         final LaContainer container = SingletonLaContainerFactory.getContainer();
         final ExternalContext externalContext = container.getExternalContext();
         if (externalContext == null) {
@@ -291,17 +298,17 @@ public class LastaFilter implements Filter {
     // -----------------------------------------------------
     //                                via HotDeploy Handling
     //                                ----------------------
-    protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
+    protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
         if (!HotdeployUtil.isHotdeploy()) {
-            actuallyFilter(request, response, chain); // #to_action
+            viaFilterListener(request, response, chain); // #to_action
             return;
         }
         final String loaderKey = HOTDEPLOY_CLASSLOADER_KEY;
         if (request.getAttribute(loaderKey) != null) { // check recursive call
             final ClassLoader loader = (ClassLoader) request.getAttribute(loaderKey);
             Thread.currentThread().setContextClassLoader(loader);
-            actuallyFilter(request, response, chain); // #to_action
+            viaFilterListener(request, response, chain); // #to_action
             return;
         }
         final HotdeployBehavior ondemand = (HotdeployBehavior) LaContainerBehavior.getProvider();
@@ -311,7 +318,7 @@ public class LastaFilter implements Filter {
             ContainerUtil.overrideExternalRequest(hotdeployRequest); // override formal request
             try {
                 request.setAttribute(loaderKey, Thread.currentThread().getContextClassLoader());
-                actuallyFilter(hotdeployRequest, response, chain); // #to_action
+                viaFilterListener(hotdeployRequest, response, chain); // #to_action
             } finally {
                 final HotdeployHttpSession session = (HotdeployHttpSession) hotdeployRequest.getSession(false);
                 if (session != null) {
@@ -328,18 +335,48 @@ public class LastaFilter implements Filter {
     }
 
     // -----------------------------------------------------
-    //                                       Actually Filter
-    //                                       ---------------
-    protected void actuallyFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
-        viaEmbeddedFilterChain(request, response, chain); // #to_action
+    //                                   via Filter Listener
+    //                                   -------------------
+    protected void viaFilterListener(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        viaListenerDeque(request, response, chain, prepareFilterListener()); // #to_action
     }
 
-    protected void viaEmbeddedFilterChain(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
+    protected Deque<FilterListener> prepareFilterListener() { // null allowed (if no listener)
+        final List<FilterListener> listenerList = assistFilterListenerList();
+        return !listenerList.isEmpty() ? new LinkedList<FilterListener>(listenerList) : null;
+    }
+
+    protected void viaListenerDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
+            Deque<FilterListener> deque) throws IOException, ServletException {
+        final FilterListener next = deque != null ? deque.poll() : null; // null if no listener
+        if (next != null) {
+            next.listen(() -> viaListenerDeque(request, response, chain, deque)); // e.g. MDC
+        } else {
+            viaEmbeddedFilter(request, response, chain); // #to_action
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                   via Embedded Filter
+    //                                   -------------------
+    protected void viaEmbeddedFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
         loggingFilter.doFilter(request, response, (req, res) -> {
-            routingFilter.doFilter(request, response, prepareFinalChain(chain)); /* #to_action */
+            enableAccessLogIfNeeds();
+            routingFilter.doFilter(req, res, prepareFinalChain(chain)); /* #to_action */
         });
+    }
+
+    protected void enableAccessLogIfNeeds() { // for e.g. access log
+        if (loggingFilter.isAlreadyBegun()) { // means handler to be set here always be cleared later
+            final AccessLogHandler handler = getAssistantDirector().assistWebDirection().assistAccessLogHandler();
+            if (handler != null) { // specified by application
+                RequestLoggingFilter.setAccessLogHandlerOnThread((request, response, cause, before) -> {
+                    handler.handle(new AccessLogResource(request, response, cause, before));
+                });
+            }
+        }
     }
 
     protected FilterChain prepareFinalChain(FilterChain chain) {
@@ -362,5 +399,32 @@ public class LastaFilter implements Filter {
         if (routingFilter != null) {
             routingFilter.destroy();
         }
+    }
+
+    // ===================================================================================
+    //                                                                           Component
+    //                                                                           =========
+    protected FwAssistantDirector getAssistantDirector() {
+        return ContainerUtil.getComponent(FwAssistantDirector.class);
+    }
+
+    protected FwWebDirection assistWebDirection() {
+        return getAssistantDirector().assistWebDirection();
+    }
+
+    protected List<FilterListener> assistFilterListenerList() {
+        return assistWebDirection().assistFilterListenerList();
+    }
+
+    protected MessageResourcesHolder getMessageResourceHolder() {
+        return ContainerUtil.getComponent(MessageResourcesHolder.class);
+    }
+
+    protected BehaviorSelector getBehaviorSelector() {
+        return ContainerUtil.getComponent(BehaviorSelector.class);
+    }
+
+    protected RequestManager getRequestManager() {
+        return ContainerUtil.getComponent(RequestManager.class);
     }
 }

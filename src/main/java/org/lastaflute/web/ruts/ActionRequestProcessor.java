@@ -16,16 +16,21 @@
 package org.lastaflute.web.ruts;
 
 import java.io.IOException;
+import java.util.Collection;
 
 import javax.servlet.ServletException;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.TransactionStage;
+import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.exception.RequestForwardFailureException;
 import org.lastaflute.web.ruts.config.ActionExecute;
+import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.process.ActionCoinHelper;
 import org.lastaflute.web.ruts.process.ActionFormMapper;
@@ -136,9 +141,9 @@ public class ActionRequestProcessor {
     protected void ready(ActionRuntime runtime, ActionResponseReflector reflector) {
         actionCoinHelper.prepareRequestClientErrorHandlingIfApi(runtime, reflector);
         actionCoinHelper.prepareRequestServerErrorHandlingIfApi(runtime, reflector);
+        actionCoinHelper.saveRuntimeToRequest(runtime);
         actionCoinHelper.removeCachedMessages();
         actionCoinHelper.resolveLocale(runtime);
-        actionCoinHelper.saveRuntimeToRequest(runtime);
     }
 
     // ===================================================================================
@@ -199,10 +204,14 @@ public class ActionRequestProcessor {
         if (journey.isRedirectTo()) {
             doRedirect(runtime, routingPath, journey.isAsIs());
         } else {
+            exportFormPropertyToRequest(runtime); // for e.g. EL expression in JSP
             doForward(runtime, routingPath);
         }
     }
 
+    // -----------------------------------------------------
+    //                                              Redirect
+    //                                              --------
     protected void doRedirect(ActionRuntime runtime, String redirectPath, boolean asIs) throws IOException {
         final ResponseManager responseManager = getRequestManager().getResponseManager();
         if (asIs) {
@@ -212,8 +221,51 @@ public class ActionRequestProcessor {
         }
     }
 
+    protected void exportFormPropertyToRequest(ActionRuntime runtime) {
+        runtime.getActionExecute().getFormMeta().ifPresent(meta -> {
+            final Collection<ActionFormProperty> properties = meta.properties();
+            if (properties.isEmpty()) {
+                return;
+            }
+            final RequestManager requestManager = getRequestManager();
+            final Object form = runtime.getActionForm().get().getRealForm();
+            for (ActionFormProperty property : properties) {
+                if (isExportableProperty(property.getPropertyDesc())) {
+                    final Object propertyValue = property.getPropertyValue(form);
+                    if (propertyValue != null) {
+                        requestManager.setAttribute(property.getPropertyName(), propertyValue);
+                    }
+                }
+            }
+        });
+    }
+
+    protected boolean isExportableProperty(PropertyDesc pd) {
+        return !pd.getPropertyType().getName().startsWith("javax.servlet");
+    }
+
+    // -----------------------------------------------------
+    //                                               Forward
+    //                                               -------
     protected void doForward(ActionRuntime runtime, String forwardPath) throws IOException, ServletException {
-        getRequestManager().getResponseManager().forward(forwardPath);
+        try {
+            getRequestManager().getResponseManager().forward(forwardPath);
+        } catch (RuntimeException | IOException | ServletException e) { // because of e.g. compile error may be poor
+            throwRequestForwardFailureException(runtime, forwardPath, e);
+        }
+    }
+
+    protected void throwRequestForwardFailureException(ActionRuntime runtime, String forwardPath, Exception e) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Failed to forward the request to the path.");
+        br.addItem("Advice");
+        br.addElement("Read the nested exception message.");
+        br.addItem("Action Runtime");
+        br.addElement(runtime);
+        br.addItem("Forward Path");
+        br.addElement(forwardPath);
+        final String msg = br.buildExceptionMessage();
+        throw new RequestForwardFailureException(msg, e);
     }
 
     // ===================================================================================

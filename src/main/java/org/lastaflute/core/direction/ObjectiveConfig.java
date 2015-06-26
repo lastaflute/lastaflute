@@ -26,7 +26,9 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.helper.jprop.ObjectiveProperties;
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.core.direction.exception.ConfigPropertyNotFoundException;
 import org.lastaflute.di.Disposable;
 import org.lastaflute.di.DisposableUtil;
 import org.lastaflute.di.core.LastaDiProperties;
@@ -123,9 +125,31 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
             @Override
             public String get(String propertyKey) {
                 final String propertyValue = super.get(propertyKey);
-                return propertyFilter.filter(propertyKey, propertyValue);
+                verifyPropertyValue(propertyKey, propertyValue);
+                return filterPropertyAsDefault(propertyFilter.filter(propertyKey, propertyValue));
             }
         };
+    }
+
+    protected void verifyPropertyValue(String propertyKey, final String propertyValue) {
+        if (propertyValue == null) {
+            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("Not found the configuration property by the key.");
+            br.addItem("NotFound Property");
+            br.addElement(propertyKey);
+            br.addItem("Config Display");
+            br.addElement(toString());
+            final String msg = br.buildExceptionMessage();
+            throw new ConfigPropertyNotFoundException(msg);
+        }
+    }
+
+    protected String filterPropertyAsDefault(String propertyValue) {
+        return filterPropertyTrimming(propertyValue);
+    }
+
+    protected String filterPropertyTrimming(String propertyValue) {
+        return propertyValue != null ? propertyValue.trim() : null; // rear space is unneeded as business
     }
 
     protected void showBootLogging() {
@@ -200,6 +224,16 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         if (hotDeployRequested) {
             initialize();
         }
+    }
+
+    // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        final String title = DfTypeUtil.toClassTitle(this);
+        final String hash = Integer.toHexString(hashCode());
+        return title + ":{" + appResource + ", " + extendsResourceList + ", " + prop + "}@" + hash;
     }
 
     // ===================================================================================

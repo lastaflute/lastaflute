@@ -16,5 +16,5 @@
 	<!-- action -->
 	<component name="actionPathResolver" class="org.lastaflute.web.path.ActionPathResolver"/>
 	<component name="apiManager" class="org.lastaflute.web.api.SimpleApiManager"/>
-	<component name="tokenManager" class="org.lastaflute.web.token.SimpleTokenManager"/>
+	<component name="csrfManager" class="org.lastaflute.web.token.SimpleCsrfManager"/>
 </components>

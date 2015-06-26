@@ -35,8 +35,8 @@ public class XmlResponse implements ApiResponse {
     protected static final String ENCODING_WINDOWS_31J = "Windows-31J";
     protected static final String DEFAULT_ENCODING = ENCODING_UTF8;
     protected static final String DUMMY = "dummy";
-    protected static final XmlResponse INSTANCE_OF_EMPTY = new XmlResponse(DUMMY).asEmptyResponse();
-    protected static final XmlResponse INSTANCE_OF_SKIP = new XmlResponse(DUMMY).asSkipResponse();
+    protected static final XmlResponse INSTANCE_OF_EMPTY = new XmlResponse(DUMMY).asEmpty();
+    protected static final XmlResponse INSTANCE_OF_SKIP = new XmlResponse(DUMMY).asSkip();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -45,8 +45,8 @@ public class XmlResponse implements ApiResponse {
     protected Map<String, String> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
     protected String encoding = DEFAULT_ENCODING;
-    protected boolean emptyResponse;
-    protected boolean skipResponse;
+    protected boolean empty;
+    protected boolean skip;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -128,8 +128,8 @@ public class XmlResponse implements ApiResponse {
         return INSTANCE_OF_EMPTY;
     }
 
-    protected XmlResponse asEmptyResponse() { // internal use
-        emptyResponse = true;
+    protected XmlResponse asEmpty() { // internal use
+        empty = true;
         return this;
     }
 
@@ -137,8 +137,8 @@ public class XmlResponse implements ApiResponse {
         return INSTANCE_OF_SKIP;
     }
 
-    protected XmlResponse asSkipResponse() { // internal use
-        skipResponse = true;
+    protected XmlResponse asSkip() { // internal use
+        skip = true;
         return this;
     }
 
@@ -148,7 +148,9 @@ public class XmlResponse implements ApiResponse {
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        return classTitle + ":{" + encoding + ", " + skipResponse + "}";
+        final String emptyExp = empty ? ", empty" : "";
+        final String skipExp = skip ? ", skip" : "";
+        return classTitle + ":{" + encoding + emptyExp + skipExp + "}";
     }
 
     // ===================================================================================
@@ -164,11 +166,11 @@ public class XmlResponse implements ApiResponse {
 
     @Override
     public boolean isEmpty() {
-        return emptyResponse;
+        return empty;
     }
 
     @Override
     public boolean isSkip() {
-        return skipResponse;
+        return skip;
     }
 }

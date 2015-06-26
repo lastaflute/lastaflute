@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.servlet.request.scoped;
 
+import java.util.List;
+
 import org.dbflute.optional.OptionalThing;
 
 /**
@@ -23,24 +25,32 @@ import org.dbflute.optional.OptionalThing;
 public interface ScopedAttributeHolder {
 
     /**
-     * Get the attribute value of request by the value's type.
+     * Get the attribute value of the scope by the value's type.
      * @param <ATTRIBUTE> The type of attribute object.
      * @param typeKey The type key of attribute saved in the scope. (NotNull)
      * @return The optional attribute object for the type. (NotNull, EmptyAllowed: when not found)
      */
     <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey);
 
+    // second argument 'attributeType' is to write like this:
+    // getAttribute("sea", SeaBean.class).ifPresent(seaBean -> ...)
     /**
-     * Get the attribute value of request by the key.
+     * Get the attribute value of the scope by the key.
      * @param <ATTRIBUTE> The type of attribute object.
      * @param key The string key of attribute saved in the scope. (NotNull)
-     * @param genericType The generic type of the result for the attribute. (NotNull)
+     * @param attributeType The generic type of the result for the attribute. (NotNull)
      * @return The optional attribute object for the key. (NotNull, EmptyAllowed: when not found)
      */
-    <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> genericType);
+    <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> attributeType);
 
     /**
-     * Set the attribute value to request by the value's type. <br>
+     * Get the list of existing attribute name.
+     * @return The read-only list of existing attribute name. (NotNull, EmptyAllowed: when no attribute)
+     */
+    List<String> getAttributeNameList();
+
+    /**
+     * Set the attribute value to the scope by the value's type. <br>
      * You should not set string object to suppress mistake. <br>
      * However you should not use this when the object might be extended. <br>
      * (Then the key is changed to sub-class type so you might have mistakes...)
@@ -49,7 +59,7 @@ public interface ScopedAttributeHolder {
     void setAttribute(Object value);
 
     /**
-     * Set the attribute value to request by your original key.
+     * Set the attribute value to the scope by your original key.
      * @param key The key of the attribute. (NotNull)
      * @param value The attribute value added to the scope. (NotNull)
      */

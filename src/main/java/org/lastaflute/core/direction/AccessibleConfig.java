@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.DfTypeUtil.ParseDateNumberFormatException;
 import org.dbflute.util.DfTypeUtil.ParseDateOutOfCalendarException;
+import org.lastaflute.core.direction.exception.ConfigPropertyNotFoundException;
 
 /**
  * The basic interface of (accessible) configuration. <br>
@@ -35,14 +36,16 @@ public interface AccessibleConfig {
     /**
      * Get the value of property as {@link String}.
      * @param propertyKey The key of the property. (NotNull)
-     * @return The value of found property. (NullAllowed: if null, not found)
+     * @return The value of found property. (NotNull: if not found, exception)
+     * @throws ConfigPropertyNotFoundException When the property is not found.
      */
     String get(String propertyKey);
 
     /**
      * Get the value of property as {@link Integer}.
      * @param propertyKey The key of the property. (NotNull)
-     * @return The value of found property. (NullAllowed: if null, not found)
+     * @return The value of found property. (NotNull: if not found, exception)
+     * @throws ConfigPropertyNotFoundException When the property is not found.
      * @throws NumberFormatException When the property is not integer.
      */
     Integer getAsInteger(String propertyKey);
@@ -50,7 +53,8 @@ public interface AccessibleConfig {
     /**
      * Get the value of property as {@link Long}.
      * @param propertyKey The key of the property. (NotNull)
-     * @return The value of found property. (NullAllowed: if null, not found)
+     * @return The value of found property. (NotNull: if not found, exception)
+     * @throws ConfigPropertyNotFoundException When the property is not found.
      * @throws NumberFormatException When the property is not long.
      */
     Long getAsLong(String propertyKey);
@@ -58,7 +62,8 @@ public interface AccessibleConfig {
     /**
      * Get the value of property as {@link BigDecimal}.
      * @param propertyKey The key of the property. (NotNull)
-     * @return The value of found property. (NullAllowed: if null, not found)
+     * @return The value of found property. (NotNull: if not found, exception)
+     * @throws ConfigPropertyNotFoundException When the property is not found.
      * @throws NumberFormatException When the property is not decimal.
      */
     BigDecimal getAsDecimal(String propertyKey);
@@ -66,7 +71,8 @@ public interface AccessibleConfig {
     /**
      * Get the value of property as {@link LocalDate}.
      * @param propertyKey The key of the property. (NotNull)
-     * @return The value of found property. (NullAllowed: if null, not found)
+     * @return The value of found property. (NotNull: if not found, exception)
+     * @throws ConfigPropertyNotFoundException When the property is not found.
      * @throws ParseDateException When it failed to parse the string to date.
      * @throws ParseDateNumberFormatException When it failed to format the elements as number.
      * @throws ParseDateOutOfCalendarException When the date was out of calendar. (if BC, not thrown)
@@ -76,7 +82,8 @@ public interface AccessibleConfig {
     /**
      * Is the property true?
      * @param propertyKey The key of the property which is boolean type. (NotNull)
-     * @return The determination, true or false. (if the property can be true, returns true)
+     * @return The determination, true or false. (if not found, exception)
+     * @throws ConfigPropertyNotFoundException When the property is not found.
      */
     boolean is(String propertyKey);
 }

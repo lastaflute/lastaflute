@@ -159,7 +159,7 @@ public class SimpleResponseManager implements ResponseManager {
         if (!response.isRedirectTo()) {
             throw new IllegalArgumentException("Not redirect response for permanently: " + response);
         }
-        setLocationPermanently(actionPathResolver.removeRedirectMark(response.getRoutingPath())); // set up headers for 301
+        setLocationPermanently(response.getRoutingPath()); // set up headers for 301
         return HtmlResponse.empty(); // because of already done about response process
     }
 

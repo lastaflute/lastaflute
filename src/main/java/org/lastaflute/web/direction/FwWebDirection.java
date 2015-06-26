@@ -17,6 +17,7 @@ package org.lastaflute.web.direction;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -24,9 +25,13 @@ import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
+import org.lastaflute.web.servlet.filter.FilterListener;
+import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
+import org.lastaflute.web.servlet.filter.mdc.MDCListener;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
 import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
 import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
+import org.lastaflute.web.token.CsrfResourceProvider;
 
 /**
  * @author jflute
@@ -53,12 +58,27 @@ public class FwWebDirection {
     //                                               Message
     //                                               -------
     protected String appMessageName;
-    protected final List<String> extendsMessageNameList = new ArrayList<String>(4);
+    protected List<String> extendsMessageNameList; // lazy loaded
 
     // -----------------------------------------------------
     //                                              API Call
     //                                              --------
     protected ApiFailureHook apiFailureHook;
+
+    // -----------------------------------------------------
+    //                                       Filter Listener
+    //                                       ---------------
+    protected List<FilterListener> filterListenerList; // lazy loaded
+
+    // -----------------------------------------------------
+    //                                            Access Log
+    //                                            ----------
+    protected AccessLogHandler accessLogHandler;
+
+    // -----------------------------------------------------
+    //                                                 Token
+    //                                                 -----
+    protected CsrfResourceProvider csrfResourceProvider;
 
     // ===================================================================================
     //                                                                     Direct Property
@@ -66,16 +86,21 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                               Servlet
     //                                               -------
-    public void directRequest(UserLocaleProcessProvider userLocaleProcessProvider, UserTimeZoneProcessProvider userTimeZoneProcessProvider) {
+    public void directRequest(UserLocaleProcessProvider userLocaleProcessProvider,
+            UserTimeZoneProcessProvider userTimeZoneProcessProvider) {
+        assertArgumentNotNull("userLocaleProcessProvider", userLocaleProcessProvider);
+        assertArgumentNotNull("userTimeZoneProcessProvider", userTimeZoneProcessProvider);
         this.userLocaleProcessProvider = userLocaleProcessProvider;
         this.userTimeZoneProcessProvider = userTimeZoneProcessProvider;
     }
 
     public void directCookie(CookieResourceProvider cookieResourceProvider) {
+        assertArgumentNotNull("cookieResourceProvider", cookieResourceProvider);
         this.cookieResourceProvider = cookieResourceProvider;
     }
 
     public void directResponse(ResponseHandlingProvider responseHandlingProvider) {
+        assertArgumentNotNull("responseHandlingProvider", responseHandlingProvider);
         this.responseHandlingProvider = responseHandlingProvider;
     }
 
@@ -83,6 +108,7 @@ public class FwWebDirection {
     //                                            Adjustment
     //                                            ----------
     public void directAdjustment(ActionAdjustmentProvider actionAdjustmentProvider) {
+        assertArgumentNotNull("actionAdjustmentProvider", actionAdjustmentProvider);
         this.actionAdjustmentProvider = actionAdjustmentProvider;
     }
 
@@ -90,18 +116,60 @@ public class FwWebDirection {
     //                                               Message
     //                                               -------
     public void directMessage(Consumer<List<String>> appSetupper, String... commonNames) {
+        assertArgumentNotNull("appSetupper", appSetupper);
+        assertArgumentNotNull("commonNames", commonNames);
         final List<String> nameList = new ArrayList<String>(4);
         appSetupper.accept(nameList);
         nameList.addAll(Arrays.asList(commonNames));
         appMessageName = nameList.remove(0);
-        extendsMessageNameList.addAll(nameList);
+        getExtendsMessageNameList().addAll(nameList);
+    }
+
+    protected List<String> getExtendsMessageNameList() {
+        if (extendsMessageNameList == null) {
+            extendsMessageNameList = new ArrayList<String>(4);
+        }
+        return extendsMessageNameList;
     }
 
     // -----------------------------------------------------
     //                                              API Call
     //                                              --------
     public void directApiCall(ApiFailureHook apiFailureHook) {
+        assertArgumentNotNull("apiFailureHook", apiFailureHook);
         this.apiFailureHook = apiFailureHook;
+    }
+
+    // -----------------------------------------------------
+    //                                       Filter Listener
+    //                                       ---------------
+    // independent per purpose
+    public void directMDC(MDCListener listener) {
+        assertArgumentNotNull("listener", listener);
+        getFilterListenerList().add(listener);
+    }
+
+    protected List<FilterListener> getFilterListenerList() {
+        if (filterListenerList == null) {
+            filterListenerList = new ArrayList<FilterListener>(4);
+        }
+        return filterListenerList;
+    }
+
+    // -----------------------------------------------------
+    //                                            Access Log
+    //                                            ----------
+    public void directAccessLog(AccessLogHandler accessLogHandler) {
+        assertArgumentNotNull("accessLogHandler", accessLogHandler);
+        this.accessLogHandler = accessLogHandler;
+    }
+
+    // -----------------------------------------------------
+    //                                                 Token
+    //                                                 -----
+    public void directCsrf(CsrfResourceProvider csrfResourceProvider) {
+        assertArgumentNotNull("csrfResourceProvider", csrfResourceProvider);
+        this.csrfResourceProvider = csrfResourceProvider;
     }
 
     // ===================================================================================
@@ -145,8 +213,8 @@ public class FwWebDirection {
         return appMessageName;
     }
 
-    public List<String> assistExtendsMessageNameList() {
-        return extendsMessageNameList; // empty allowed but almost exists 
+    public List<String> assistExtendsMessageNameList() { // empty allowed but almost exists
+        return extendsMessageNameList != null ? extendsMessageNameList : Collections.emptyList();
     }
 
     // -----------------------------------------------------
@@ -158,8 +226,38 @@ public class FwWebDirection {
     }
 
     // -----------------------------------------------------
-    //                                         Assert Helper
-    //                                         -------------
+    //                                       Filter Listener
+    //                                       ---------------
+    public List<FilterListener> assistFilterListenerList() { // empty allowed and normally empty
+        return filterListenerList != null ? filterListenerList : Collections.emptyList();
+    }
+
+    // -----------------------------------------------------
+    //                                            Access Log
+    //                                            ----------
+    public AccessLogHandler assistAccessLogHandler() {
+        return accessLogHandler; // not required, it's optional assist
+    }
+
+    // -----------------------------------------------------
+    //                                                 Token
+    //                                                 -----
+    public CsrfResourceProvider assistCsrfResourceProvider() {
+        return csrfResourceProvider; // not required, it's optional assist
+    }
+
+    // ===================================================================================
+    //                                                                       Assert Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
+    }
+
     protected void assertAssistObjectNotNull(Object obj, String msg) {
         if (obj == null) {
             throw new FwRequiredAssistNotFoundException(msg);

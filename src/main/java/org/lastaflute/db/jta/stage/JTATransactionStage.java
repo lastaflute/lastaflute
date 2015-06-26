@@ -25,71 +25,88 @@ import org.lastaflute.di.tx.TransactionManagerAdapter;
  */
 public class JTATransactionStage implements TransactionStage {
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
     @Resource
     protected TransactionManagerAdapter transactionManagerAdapter;
 
+    // ===================================================================================
+    //                                                                         Transaction
+    //                                                                         ===========
     @SuppressWarnings("unchecked")
     @Override
-    public <RESULT> OptionalThing<RESULT> required(TransactionShow<RESULT> noArgLambda) {
+    public <RESULT> OptionalThing<RESULT> required(TransactionShow<RESULT> txLambda) {
         try {
             return wrapOptional((RESULT) transactionManagerAdapter.required(adapter -> {
-                return doPerform(noArgLambda, adapter);
-            }), noArgLambda);
+                return doPerform(txLambda, adapter);
+            }), txLambda);
         } catch (Throwable e) {
-            handleTransactionFailure(noArgLambda, e);
+            handleTransactionFailure(txLambda, e);
             return null; // unreachable
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public <RESULT> OptionalThing<RESULT> requiresNew(TransactionShow<RESULT> noArgLambda) {
+    public <RESULT> OptionalThing<RESULT> requiresNew(TransactionShow<RESULT> txLambda) {
         try {
             return wrapOptional((RESULT) transactionManagerAdapter.requiresNew(adapter -> {
-                return doPerform(noArgLambda, adapter);
-            }), noArgLambda);
+                return doPerform(txLambda, adapter);
+            }), txLambda);
         } catch (Throwable e) {
-            handleTransactionFailure(noArgLambda, e);
+            handleTransactionFailure(txLambda, e);
             return null; // unreachable
         }
     }
 
-    protected <RESULT> Object doPerform(TransactionShow<RESULT> noArgLambda, TransactionManagerAdapter adapter) throws Throwable {
+    protected <RESULT> RESULT doPerform(TransactionShow<RESULT> txLambda, TransactionManagerAdapter adapter) throws Throwable {
         try {
-            return noArgLambda.perform();
+            final BegunTx<RESULT> tx = newBegunTransaction();
+            txLambda.perform(tx);
+            return tx.getResult();
         } catch (Throwable e) {
             adapter.setRollbackOnly();
             throw e;
         }
     }
 
-    protected <RESULT> void handleTransactionFailure(TransactionShow<RESULT> noArgLambda, Throwable e) throws Error {
+    protected <RESULT> void handleTransactionFailure(TransactionShow<RESULT> txLambda, Throwable e) throws Error {
         if (e instanceof RuntimeException) {
             throw (RuntimeException) e;
         }
         if (e instanceof Error) {
             throw (Error) e;
         }
-        String msg = "Failed to perform the transaction show (rollbacked): " + noArgLambda;
+        String msg = "Failed to perform the transaction show (rollbacked): " + txLambda;
         throw new IllegalStateException(msg, e);
     }
 
     @Override
-    public <RESULT> OptionalThing<RESULT> selectable(TransactionShow<RESULT> noArgLambda, TransactionGenre genre) {
+    public <RESULT> OptionalThing<RESULT> selectable(TransactionShow<RESULT> txLambda, TransactionGenre genre) {
         if (TransactionGenre.REQUIRED.equals(genre)) {
-            return required(noArgLambda);
+            return required(txLambda);
         } else if (TransactionGenre.REQUIRES_NEW.equals(genre)) {
-            return required(noArgLambda);
+            return requiresNew(txLambda);
         } else if (TransactionGenre.NONE.equals(genre)) {
-            return wrapOptional(noArgLambda.perform(), noArgLambda);
+            final BegunTx<RESULT> tx = newBegunTransaction();
+            txLambda.perform(tx);
+            return wrapOptional(tx.getResult(), txLambda);
         } else { // no way
             throw new IllegalStateException("Unknown genre: " + genre);
         }
     }
 
-    protected <RESULT> OptionalThing<RESULT> wrapOptional(RESULT result, TransactionShow<RESULT> noArgLambda) {
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected <RESULT> BegunTx<RESULT> newBegunTransaction() {
+        return new BegunTx<RESULT>();
+    }
+
+    protected <RESULT> OptionalThing<RESULT> wrapOptional(RESULT result, TransactionShow<RESULT> txLambda) {
         return OptionalThing.ofNullable(result, () -> {
-            String msg = "Not found the transaction result: " + noArgLambda;
+            String msg = "Not found the transaction result: " + txLambda;
             throw new IllegalStateException(msg);
         });
     }

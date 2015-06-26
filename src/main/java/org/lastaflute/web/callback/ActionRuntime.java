@@ -22,9 +22,7 @@ import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
-import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.VirtualActionForm;
@@ -69,10 +67,10 @@ public class ActionRuntime {
     //                                                                      ==============
     /**
      * Get the type of requested action.
-     * @return The type object of action, not enhanced. (NotNull)
+     * @return The type object of action, non enhanced. (NotNull)
      */
     public Class<?> getActionType() {
-        return getExecuteMethod().getDeclaringClass();
+        return execute.getActionMapping().getActionDef().getComponentClass();
     }
 
     /**
@@ -84,15 +82,11 @@ public class ActionRuntime {
     }
 
     /**
-     * Is the action for API request? (contains e.g. JSON response return type)
+     * Is the action execute for API request? (contains e.g. JSON response return type)
      * @return The determination, true or false.
      */
-    public boolean isApiAction() {
-        final Method actionMethod = getExecuteMethod();
-        if (ApiResponse.class.isAssignableFrom(actionMethod.getReturnType())) {
-            return true; // if JSON response, this action can be treated as API without the marker interface
-        }
-        return ApiAction.class.isAssignableFrom(actionMethod.getDeclaringClass());
+    public boolean isApiExecute() {
+        return execute.isApiExecute();
     }
 
     // ===================================================================================
@@ -184,8 +178,10 @@ public class ActionRuntime {
     }
 
     public void clearDisplayData() { // called by system exception dispatch for API, just in case leak
-        displayDataMap.clear();
-        displayDataMap = null;
+        if (displayDataMap != null) {
+            displayDataMap.clear();
+            displayDataMap = null;
+        }
     }
 
     // ===================================================================================
@@ -203,7 +199,7 @@ public class ActionRuntime {
             sb.append(", failure=").append(DfTypeUtil.toClassTitle(failureCause));
         }
         if (validationErrors != null) {
-            sb.append(", errors=").append(validationErrors.toPropertyList());
+            sb.append(", errors=").append(validationErrors.toPropertySet());
         }
         if (displayDataMap != null) {
             sb.append(", display=").append(displayDataMap.keySet());

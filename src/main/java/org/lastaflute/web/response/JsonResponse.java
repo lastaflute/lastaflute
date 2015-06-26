@@ -152,7 +152,11 @@ public class JsonResponse<BEAN> implements ApiResponse {
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
         final String jsonExp = jsonBean != null ? DfTypeUtil.toClassTitle(jsonBean) : null;
-        return classTitle + ":{" + jsonExp + ", " + callback + ", " + forcedlyJavaScript + ", " + empty + ", " + skip + "}";
+        final String callbackExp = callback != null ? ", callback=" + callback : "";
+        final String forcedlyJSExp = forcedlyJavaScript ? ", JavaScript" : "";
+        final String emptyExp = empty ? ", empty" : "";
+        final String skipExp = skip ? ", skip" : "";
+        return classTitle + ":{" + jsonExp + callbackExp + forcedlyJSExp + emptyExp + skipExp + "}";
     }
 
     // ===================================================================================

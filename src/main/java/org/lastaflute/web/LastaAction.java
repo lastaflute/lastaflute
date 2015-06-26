@@ -15,9 +15,6 @@
  */
 package org.lastaflute.web;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-
 import javax.annotation.Resource;
 
 import org.dbflute.optional.OptionalThing;
@@ -99,7 +96,11 @@ public abstract class LastaAction {
     //                                                                          ==========
     @SuppressWarnings("unchecked")
     protected <MESSAGES extends ActionMessages> ActionValidator<MESSAGES> createValidator() { // overridden as type-safe
-        return new ActionValidator<MESSAGES>(requestManager, () -> (MESSAGES) createMessages());
+        return new ActionValidator<MESSAGES>(requestManager, () -> (MESSAGES) createMessages(), myValidationGroups());
+    }
+
+    protected Class<?>[] myValidationGroups() { // you can override
+        return ActionValidator.DEFAULT_GROUPS; // means default group
     }
 
     /**
@@ -111,55 +112,87 @@ public abstract class LastaAction {
     }
 
     // ===================================================================================
-    //                                                                        Current Date
-    //                                                                        ============
-    /**
-     * Get the date that specifies current date for business. <br>
-     * The word 'current' means transaction beginning in transaction if default setting of Framework. <br>
-     * You can get the same date (but different instances) in the same transaction.
-     * @return The local date that has current date. (NotNull)
-     */
-    protected LocalDate currentDate() {
-        return timeManager.currentDate();
+    //                                                                            Response
+    //                                                                            ========
+    protected HtmlResponse asHtml(ForwardNext path_) {
+        assertArgumentNotNull("path_ (as forwardNext)", path_);
+        return newHtmlResponseAsForward(path_);
+    }
+
+    protected HtmlResponse newHtmlResponseAsForward(ForwardNext forwardNext) {
+        assertArgumentNotNull("forwardNext", forwardNext);
+        return new HtmlResponse(forwardNext);
     }
 
     /**
-     * Get the date-time that specifies current time for business. <br>
-     * The word 'current' means transaction beginning in transaction if default setting of Framework. <br>
-     * You can get the same date (but different instances) in the same transaction.
-     * @return The local date-time that has current time. (NotNull)
-     */
-    protected LocalDateTime currentDateTime() {
-        return timeManager.currentDateTime();
-    }
-
-    // ===================================================================================
-    //                                                                             Advance
-    //                                                                             =======
-    /**
-     * Execute asynchronous process by other thread. <br>
-     * You can inherit...
+     * Return response as JSON.
      * <pre>
-     * o ThreadCacheContext (copied plainly)
-     * o AccessContext (copied as fixed value)
-     * o CallbackContext (optional)
-     * 
-     * *attention: possibility of multiply threads access
+     * public void index() {
+     *     ...
+     *     return asJson(bean);
+     * }
      * </pre>
-     * <p>Also you can change it from caller thread's one by interface default methods.</p>
-     * @param noArgLambda The callback for asynchronous process. (NotNull)
+     * @param bean The bean object converted to JSON string. (NotNull)
+     * @return The new-created bean for JSON response. (NotNull)
      */
-    protected void async(ConcurrentAsyncCall noArgLambda) {
-        asycnManager.async(noArgLambda);
+    protected <BEAN> JsonResponse<BEAN> asJson(BEAN bean) {
+        assertArgumentNotNull("bean", bean);
+        return newJsonResponse(bean);
     }
 
     /**
-     * Perform the show in transaction (always new transaction), roll-backed if exception.
-     * @param noArgLambda The callback for your transaction show on the stage. (NotNull)
-     * @return The result of the transaction show. (NotNull, EmptyAllowed: when no result)
+     * New-create JSON response object.
+     * @param bean The bean object converted to JSON string. (NotNull)
+     * @return The new-created bean for JSON response. (NotNull)
      */
-    protected <RESULT> OptionalThing<RESULT> newTx(TransactionShow<RESULT> noArgLambda) {
-        return transactionStage.requiresNew(noArgLambda);
+    protected <BEAN> JsonResponse<BEAN> newJsonResponse(BEAN bean) {
+        assertArgumentNotNull("bean", bean);
+        return new JsonResponse<BEAN>(bean);
+    }
+
+    /**
+     * Return response as stream.
+     * <pre>
+     * e.g. simple (content-type is octet-stream or found by extension mapping)
+     *  return asStream("classificationDefinitionMap.dfprop").stream(ins);
+     * 
+     * e.g. specify content-type
+     *  return asStream("jflute.jpg").contentTypeJpeg().stream(ins);
+     * </pre>
+     * @param fileName The file name as data of the stream. (NotNull)
+     * @return The new-created bean for XML response. (NotNull)
+     */
+    protected StreamResponse asStream(String fileName) {
+        assertArgumentNotNull("fileName", fileName);
+        return newStreamResponse(fileName);
+    }
+
+    /**
+     * New-create stream response object.
+     * @param fileName The file name as data of the stream. (NotNull)
+     * @return The new-created bean for XML response. (NotNull)
+     */
+    protected StreamResponse newStreamResponse(String fileName) {
+        return new StreamResponse(fileName);
+    }
+
+    /**
+     * Return response as XML.
+     * @param xmlStr The string of XML. (NotNull)
+     * @return The new-created bean for XML response. (NotNull)
+     */
+    protected XmlResponse asXml(String xmlStr) {
+        assertArgumentNotNull("xmlStr", xmlStr);
+        return newXmlResponse(xmlStr);
+    }
+
+    /**
+     * New-create XML response object.
+     * @param xmlStr The string of XML. (NotNull)
+     * @return The new-created bean for XML response. (NotNull)
+     */
+    protected XmlResponse newXmlResponse(String xmlStr) {
+        return new XmlResponse(xmlStr);
     }
 
     // ===================================================================================
@@ -273,6 +306,20 @@ public abstract class LastaAction {
 
     protected HtmlResponse newHtmlResponseAsRediect(String redirectPath) {
         return HtmlResponse.fromRedirectPath(redirectPath);
+    }
+
+    /**
+     * Handle the redirect URL to be MOVED_PERMANENTLY (301 redirect). <br>
+     * Remove redirect mark and add header elements as 301 and return null.
+     * <pre>
+     * <span style="color: #3F7E5E">// e.g. /member/edit/</span>
+     * return <span style="color: #FD4747">movedPermanently</span>(redirect(MemberEditAction.class));
+     * </pre>
+     * @param response The redirect URL with redirect mark for SAStruts. (NotNull)
+     * @return The returned URL for execute method of SAStruts. (NullAllowed)
+     */
+    protected HtmlResponse movedPermanently(HtmlResponse response) {
+        return responseManager.movedPermanently(response);
     }
 
     // -----------------------------------------------------
@@ -416,7 +463,7 @@ public abstract class LastaAction {
      * @param hashOnUrl The value of hash on URL. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */
-    public UrlChain hash(Object hashOnUrl) {
+    protected UrlChain hash(Object hashOnUrl) {
         assertArgumentNotNull("hashOnUrl", hashOnUrl);
         return newUrlChain().hash(hashOnUrl);
     }
@@ -425,105 +472,52 @@ public abstract class LastaAction {
         return new UrlChain(this);
     }
 
-    // -----------------------------------------------------
-    //                                     Adjustment Method
-    //                                     -----------------
-    /**
-     * Handle the redirect URL to be MOVED_PERMANENTLY (301 redirect). <br>
-     * Remove redirect mark and add header elements as 301 and return null.
-     * <pre>
-     * <span style="color: #3F7E5E">// e.g. /member/edit/</span>
-     * return <span style="color: #FD4747">movedPermanently</span>(redirect(MemberEditAction.class));
-     * </pre>
-     * @param response The redirect URL with redirect mark for SAStruts. (NotNull)
-     * @return The returned URL for execute method of SAStruts. (NullAllowed)
-     */
-    protected HtmlResponse movedPermanently(HtmlResponse response) {
-        return responseManager.movedPermanently(response);
-    }
-
     // ===================================================================================
-    //                                                                            Response
-    //                                                                            ========
-    protected HtmlResponse asHtml(ForwardNext path_) {
-        assertArgumentNotNull("path_ (as forwardNext)", path_);
-        return newHtmlResponseAsForward(path_);
-    }
-
-    protected HtmlResponse newHtmlResponseAsForward(ForwardNext forwardNext) {
-        assertArgumentNotNull("forwardNext", forwardNext);
-        return new HtmlResponse(forwardNext);
-    }
-
+    //                                                                             Advance
+    //                                                                             =======
     /**
-     * Return response as JSON.
+     * Execute asynchronous process by other thread. <br>
      * <pre>
-     * public void index() {
-     *     ...
-     *     return asJson(bean);
-     * }
+     * async(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
+     * });
      * </pre>
-     * @param bean The bean object converted to JSON string. (NotNull)
-     * @return The new-created bean for JSON response. (NotNull)
-     */
-    protected <BEAN> JsonResponse<BEAN> asJson(BEAN bean) {
-        assertArgumentNotNull("bean", bean);
-        return newJsonResponse(bean);
-    }
-
-    /**
-     * New-create JSON response object.
-     * @param bean The bean object converted to JSON string. (NotNull)
-     * @return The new-created bean for JSON response. (NotNull)
-     */
-    protected <BEAN> JsonResponse<BEAN> newJsonResponse(BEAN bean) {
-        assertArgumentNotNull("bean", bean);
-        return new JsonResponse<BEAN>(bean);
-    }
-
-    /**
-     * Return response as stream.
+     * You can inherit...
      * <pre>
-     * e.g. simple (content-type is octet-stream or found by extension mapping)
-     *  return asStream("classificationDefinitionMap.dfprop").stream(ins);
+     * o ThreadCacheContext (copied plainly)
+     * o AccessContext (copied as fixed value)
+     * o CallbackContext (optional)
      * 
-     * e.g. specify content-type
-     *  return asStream("jflute.jpg").contentTypeJpeg().stream(ins);
+     * *attention: possibility of multiply threads access
      * </pre>
-     * @param fileName The file name as data of the stream. (NotNull)
-     * @return The new-created bean for XML response. (NotNull)
+     * <p>Also you can change it from caller thread's one by interface default methods.</p>
+     * @param noArgLambda The callback for asynchronous process. (NotNull)
      */
-    protected StreamResponse asStream(String fileName) {
-        assertArgumentNotNull("fileName", fileName);
-        return newStreamResponse(fileName);
+    protected void async(ConcurrentAsyncCall noArgLambda) {
+        asycnManager.async(noArgLambda);
     }
 
     /**
-     * New-create stream response object.
-     * @param fileName The file name as data of the stream. (NotNull)
-     * @return The new-created bean for XML response. (NotNull)
+     * Perform the show in transaction (always new transaction), roll-backed if exception.
+     * <pre>
+     * <span style="color: #3F7E5E">// if no return</span> 
+     * requiresNew(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...); <span style="color: #3F7E5E">// already in transaction</span>
+     *     insert(...); <span style="color: #3F7E5E">// also here</span>
+     * });
+     * 
+     * <span style="color: #3F7E5E">// if returns anything to caller</span> 
+     * <span style="color: #994747">Member member</span> = (Member)requiresNew(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...);
+     *     Member member = select(...);
+     *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
+     * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
+     * </pre>
+     * @param txLambda The callback for your transaction show on the stage. (NotNull)
+     * @return The result of the transaction show. (NotNull, EmptyAllowed: when no result)
      */
-    protected StreamResponse newStreamResponse(String fileName) {
-        return new StreamResponse(fileName);
-    }
-
-    /**
-     * Return response as XML.
-     * @param xmlStr The string of XML. (NotNull)
-     * @return The new-created bean for XML response. (NotNull)
-     */
-    protected XmlResponse asXml(String xmlStr) {
-        assertArgumentNotNull("xmlStr", xmlStr);
-        return newXmlResponse(xmlStr);
-    }
-
-    /**
-     * New-create XML response object.
-     * @param xmlStr The string of XML. (NotNull)
-     * @return The new-created bean for XML response. (NotNull)
-     */
-    protected XmlResponse newXmlResponse(String xmlStr) {
-        return new XmlResponse(xmlStr);
+    protected <RESULT> OptionalThing<RESULT> requiresNew(TransactionShow<RESULT> txLambda) {
+        return transactionStage.requiresNew(txLambda);
     }
 
     // ===================================================================================

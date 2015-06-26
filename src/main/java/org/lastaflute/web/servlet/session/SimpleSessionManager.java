@@ -15,8 +15,11 @@
  */
 package org.lastaflute.web.servlet.session;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -81,6 +84,20 @@ public class SimpleSessionManager implements SessionManager {
             String msg = "Not found the session attribute by the string key: " + key;
             throw new SessionAttributeNotFoundException(msg);
         });
+    }
+
+    @Override
+    public List<String> getAttributeNameList() {
+        final HttpSession session = getSessionExisting();
+        if (session == null) {
+            return Collections.emptyList();
+        }
+        final Enumeration<String> attributeNames = session.getAttributeNames();
+        final List<String> nameList = new ArrayList<String>();
+        while (attributeNames.hasMoreElements()) {
+            nameList.add((String) attributeNames.nextElement());
+        }
+        return Collections.unmodifiableList(nameList);
     }
 
     @Override

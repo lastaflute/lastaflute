@@ -15,6 +15,11 @@
  */
 package org.lastaflute.web.exception;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.lastaflute.web.ruts.process.JsonDebugChallenge;
+
 /**
  * @author jflute
  */
@@ -22,11 +27,22 @@ public class RequestJsonParseFailureException extends ForcedRequest400BadRequest
 
     private static final long serialVersionUID = 1L;
 
+    protected List<JsonDebugChallenge> challengeList;
+
     public RequestJsonParseFailureException(String msg) {
         super(msg);
     }
 
     public RequestJsonParseFailureException(String msg, Throwable cause) {
         super(msg, cause);
+    }
+
+    public RequestJsonParseFailureException withChallengeList(List<JsonDebugChallenge> challengeList) {
+        this.challengeList = challengeList != null ? Collections.unmodifiableList(challengeList) : null;
+        return this;
+    }
+
+    public List<JsonDebugChallenge> getChallengeList() {
+        return challengeList != null ? challengeList : Collections.emptyList();
     }
 }

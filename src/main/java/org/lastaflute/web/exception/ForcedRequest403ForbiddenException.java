@@ -15,29 +15,25 @@
  */
 package org.lastaflute.web.exception;
 
-import org.lastaflute.di.exception.SRuntimeException;
+import javax.servlet.http.HttpServletResponse;
+
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 
 /**
- * @author modified by jflute (originated in Seasar)
+ * @author jflute
  */
-public class IllegalValidateMethodRuntimeException extends SRuntimeException {
+public class ForcedRequest403ForbiddenException extends RequestClientErrorException {
 
     private static final long serialVersionUID = 1L;
 
-    private Class<?> actionClass;
-    private String validateMethodName;
+    protected static final String TITLE = "403 Forbidden";
+    protected static final int STATUS = HttpServletResponse.SC_FORBIDDEN;
 
-    public IllegalValidateMethodRuntimeException(Class<?> actionClass, String validateMethodName) {
-        super("ESAS0006", new Object[] { actionClass.getName(), validateMethodName });
-        this.actionClass = actionClass;
-        this.validateMethodName = validateMethodName;
+    public ForcedRequest403ForbiddenException(String msg) {
+        super(msg, TITLE, STATUS);
     }
 
-    public Class<?> getActionClass() {
-        return actionClass;
-    }
-
-    public String getValidateMethodName() {
-        return validateMethodName;
+    public ForcedRequest403ForbiddenException(String msg, Throwable cause) {
+        super(msg, TITLE, STATUS, cause);
     }
 }

@@ -18,7 +18,7 @@ package org.lastaflute.web.exception;
 /**
  * @author jflute
  */
-public class RequestPropertyMappingFailureException extends ForcedRequest404NotFoundException {
+public class RequestPropertyMappingFailureException extends ForcedRequest400BadRequestException {
 
     private static final long serialVersionUID = 1L;
 

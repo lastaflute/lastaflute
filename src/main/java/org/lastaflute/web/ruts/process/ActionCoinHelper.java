@@ -31,6 +31,7 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.lastaflute.web.util.LaActionRuntimeUtil;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -75,8 +76,8 @@ public class ActionCoinHelper {
     //                                          Client Error
     //                                          ------------
     public void prepareRequestClientErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
-        if (runtime.isApiAction()) {
-            RequestLoggingFilter.setRequestClientHandlerOnThread((request, response, cause) -> {
+        if (runtime.isApiExecute()) {
+            RequestLoggingFilter.setClientErrorHandlerOnThread((request, response, cause) -> {
                 dispatchApiClientException(runtime, reflector, cause);
             }); // cleared at logging filter's finally
         }
@@ -95,8 +96,8 @@ public class ActionCoinHelper {
     //                                          Server Error
     //                                          ------------
     public void prepareRequestServerErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
-        if (runtime.isApiAction()) {
-            RequestLoggingFilter.setRequestServerErrorHandlerOnThread((request, response, cause) -> {
+        if (runtime.isApiExecute()) {
+            RequestLoggingFilter.setServerErrorHandlerOnThread((request, response, cause) -> {
                 dispatchApiServerException(runtime, reflector, cause);
             }); // cleared at logging filter's finally
         }
@@ -115,7 +116,7 @@ public class ActionCoinHelper {
     //                                          Assist Logic
     //                                          ------------
     protected boolean canHandleApiException(ActionRuntime runtime) {
-        return runtime.isApiAction() && !requestManager.getResponseManager().isCommitted();
+        return runtime.isApiExecute() && !requestManager.getResponseManager().isCommitted();
     }
 
     protected ApiFailureResource createApiFailureResource() {
@@ -124,6 +125,13 @@ public class ActionCoinHelper {
 
     protected ApiManager getApiManager() {
         return requestManager.getApiManager();
+    }
+
+    // ===================================================================================
+    //                                                                        Save Runtime
+    //                                                                        ============
+    public void saveRuntimeToRequest(ActionRuntime runtime) { // to get it from other area
+        LaActionRuntimeUtil.setActionRuntime(runtime);
     }
 
     // ===================================================================================
@@ -159,13 +167,6 @@ public class ActionCoinHelper {
         // you can customize the process e.g. accept cookie locale
         requestManager.resolveUserLocale(runtime);
         requestManager.resolveUserTimeZone(runtime);
-    }
-
-    // ===================================================================================
-    //                                                                        Save Runtime
-    //                                                                        ============
-    public void saveRuntimeToRequest(ActionRuntime runtime) { // to get it from other area
-        requestManager.setAttribute(LastaWebKey.ACTION_RUNTIME_KEY, runtime);
     }
 
     // ===================================================================================

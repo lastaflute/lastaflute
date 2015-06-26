@@ -15,29 +15,18 @@
  */
 package org.lastaflute.web.exception;
 
-import org.lastaflute.di.exception.SRuntimeException;
-
 /**
  * @author modified by jflute (originated in Seasar)
  */
-public class IllegalValidatorOfExecuteMethodRuntimeException extends SRuntimeException {
+public class ExecuteMethodIllegalDefinitionException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    private Class<?> actionClass;
-    private String executeMethodName;
-
-    public IllegalValidatorOfExecuteMethodRuntimeException(Class<?> actionClass, String executeMethodName) {
-        super("ESAS0005", new Object[] { actionClass.getName(), executeMethodName });
-        this.actionClass = actionClass;
-        this.executeMethodName = executeMethodName;
+    public ExecuteMethodIllegalDefinitionException(String msg) {
+        super(msg);
     }
 
-    public Class<?> getActionClass() {
-        return actionClass;
-    }
-
-    public String getExecuteMethodName() {
-        return executeMethodName;
+    public ExecuteMethodIllegalDefinitionException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

@@ -32,7 +32,6 @@ import org.lastaflute.di.util.LdiStringUtil;
 import org.lastaflute.web.UrlChain;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,9 +46,6 @@ public class ActionPathResolver {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger LOG = LoggerFactory.getLogger(ActionPathResolver.class);
-
-    /** The mark of redirect for SAStruts. */
-    public static final String REDIRECT = ActionMapping.REDIRECT;
 
     // ===================================================================================
     //                                                                           Attribute
@@ -220,9 +216,9 @@ public class ActionPathResolver {
     protected boolean doHandleActionPath(String requestPath, ActionFoundPathHandler handler, String actionName, String paramPath)
             throws Exception {
         final boolean emptyParam = paramPath == null || paramPath.isEmpty();
-        final ActionExecute configByParam = !emptyParam ? findExecuteConfig(actionName, paramPath).orElse(null) : null;
-        if (emptyParam || configByParam != null) { // certainly hit
-            return handler.handleActionPath(requestPath, actionName, paramPath, configByParam);
+        final ActionExecute execByParam = !emptyParam ? findExecuteConfig(actionName, paramPath).orElse(null) : null;
+        if (emptyParam || execByParam != null) { // certainly hit
+            return handler.handleActionPath(requestPath, actionName, paramPath, execByParam);
         }
         return false;
     }
@@ -250,7 +246,6 @@ public class ActionPathResolver {
         buildUrlParts(sb, chain);
         buildGetParam(sb, actionPath, getParamList);
         buildHashOnUrl(sb, chain);
-        buildRedirectMark(sb, redirect, getParamList);
         return sb.toString();
     }
 
@@ -267,12 +262,17 @@ public class ActionPathResolver {
 
     protected void buildUrlParts(StringBuilder sb, UrlChain chain) {
         final Object[] urlParts = chain != null ? chain.getUrlParts() : null;
+        boolean existsParts = false;
         if (urlParts != null) {
             for (Object param : urlParts) {
                 if (param != null) {
                     sb.append(param).append("/");
+                    existsParts = true;
                 }
             }
+        }
+        if (existsParts) {
+            sb.delete(sb.length() - 1, sb.length()); // e.g. member/edit/3/ to member/edit/3
         }
     }
 
@@ -300,13 +300,6 @@ public class ActionPathResolver {
         final Object hash = chain != null ? chain.getHashOnUrl() : null;
         if (hash != null) {
             sb.append("#").append(hash);
-        }
-    }
-
-    protected void buildRedirectMark(StringBuilder sb, boolean redirect, List<Object> getParamList) {
-        if (redirect) {
-            sb.append(!getParamList.isEmpty() ? "&" : "?");
-            sb.append(REDIRECT);
         }
     }
 
@@ -357,7 +350,7 @@ public class ActionPathResolver {
         if (firstHit != null) {
             return firstHit; // e.g. /member/list/ (from /member/member_list.jsp)
         }
-        final List<String> retryList = prepareJspRetryWordList(requestPath, wordList);
+        final List<String> retryList = prepareHtmlRetryWordList(requestPath, wordList);
         if (retryList != null && !retryList.isEmpty()) { // e.g. [member, list] (from sp_member_list.jsp)
             final String retryHit = resolveJspActionPath(requestPath, frontPathElement, pathBase, retryList);
             if (retryHit != null) {
@@ -390,56 +383,8 @@ public class ActionPathResolver {
         return null;
     }
 
-    protected List<String> prepareJspRetryWordList(String requestPath, List<String> wordList) {
+    protected List<String> prepareHtmlRetryWordList(String requestPath, List<String> wordList) {
         return actionAdjustmentProvider.prepareHtmlRetryWordList(requestPath, wordList);
-    }
-
-    // ===================================================================================
-    //                                                                 Redirect Adjustment
-    //                                                                 ===================
-    /**
-     * Convert the request path (or URL) to redirect path for SAStruts. e.g. /member/list/?redirect=true
-     * @param requestPath The path of request. e.g. /member/list/ (NotNull)
-     * @return The request path (or URL) with redirect mark. (NotNull)
-     */
-    public String toRedirectPath(String requestPath) {
-        final String delimiter = requestPath.contains("?") ? "&" : "?";
-        return requestPath + delimiter + REDIRECT;
-    }
-
-    /**
-     * Convert the request path (or URL) to SSL redirect path for SAStruts. <br>
-     * e.g. https://...com/member/list/?redirect=true
-     * @param requestPath The path (or URL) of request. e.g. http://...com/member/list/ (NotNull)
-     * @return The request path (or URL) with redirect mark. (NotNull)
-     */
-    public String toSslRedirectPath(String requestPath) {
-        return toRedirectPath(requestPath.replaceFirst("http:", "https:"));
-    }
-
-    /**
-     * Convert the request path (or URL) to non-SSL redirect path for SAStruts. <br>
-     * e.g. http://...com/member/list/?redirect=true
-     * @param requestPath The path (or URL) of request. e.g. https://...com/member/list/ (NotNull)
-     * @return The request path (or URL) with redirect mark. (NotNull)
-     */
-    public String toNonSslRedirectPath(String requestPath) {
-        return toRedirectPath(requestPath.replaceFirst("https:", "http:"));
-    }
-
-    /**
-     * Remove the redirect mark from redirect path for SAStruts. <br>
-     * e.g. /member/list/?redirect=true -&gt; /member/list/
-     * @param redirectPath The path to redirect for SAStruts. e.g. /member/list/?redirect=true (NotNull)
-     * @return The plain redirect path without redirect mark. (NotNull)
-     */
-    public String removeRedirectMark(String redirectPath) {
-        final String redirectMark = REDIRECT;
-        if (redirectPath.endsWith(redirectMark)) {
-            final String removed = substringLastFront(redirectPath, redirectMark);
-            return removed.substring(0, removed.length() - 1); // and remove delimiter
-        }
-        return redirectPath;
     }
 
     // ===================================================================================

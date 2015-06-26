@@ -32,6 +32,7 @@ public class ActionDefaultPointcut extends PublicBasisPointcut {
     //                                                                          Definition
     //                                                                          ==========
     private static final Set<Method> callbackMethodSet;
+
     static {
         final Set<Method> tmpSet = new HashSet<Method>();
         final Method[] methods = ActionHook.class.getMethods();

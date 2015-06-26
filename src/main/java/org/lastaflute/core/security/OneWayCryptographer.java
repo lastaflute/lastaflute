@@ -29,7 +29,8 @@ public class OneWayCryptographer {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    public static final String ALGORITHM_SHA1 = "SHA-1";
+    public static final String ALGORITHM_SHA256 = "SHA-256";
+    public static final String ALGORITHM_SHA512 = "SHA-512";
     public static final String ENCODING_UTF8 = "UTF-8";
 
     // ===================================================================================
@@ -46,8 +47,12 @@ public class OneWayCryptographer {
         this.encoding = encoding;
     }
 
-    public static OneWayCryptographer createSha1Cryptographer() {
-        return new OneWayCryptographer(ALGORITHM_SHA1, ENCODING_UTF8);
+    public static OneWayCryptographer createSha256Cryptographer() {
+        return new OneWayCryptographer(ALGORITHM_SHA256, ENCODING_UTF8);
+    }
+
+    public static OneWayCryptographer createSha512Cryptographer() {
+        return new OneWayCryptographer(ALGORITHM_SHA512, ENCODING_UTF8);
     }
 
     // ===================================================================================

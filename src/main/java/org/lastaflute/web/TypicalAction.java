@@ -15,16 +15,14 @@
  */
 package org.lastaflute.web;
 
-import java.lang.reflect.Method;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.function.Supplier;
 
 import javax.annotation.Resource;
 
-import org.dbflute.helper.beans.DfBeanDesc;
-import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
@@ -39,16 +37,19 @@ import org.lastaflute.web.callback.TypicalGodHandMonologue;
 import org.lastaflute.web.callback.TypicalGodHandPrologue;
 import org.lastaflute.web.callback.TypicalGodHandResource;
 import org.lastaflute.web.callback.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
+import org.lastaflute.web.docs.LaActionDocs;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
 import org.lastaflute.web.exception.ForcedIllegalTransitionApplicationException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.lastaflute.web.util.LaActionRuntimeUtil;
+import org.lastaflute.web.util.LaDBFluteUtil;
+import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +59,7 @@ import org.slf4j.LoggerFactory;
  * And you can add methods for all applications.
  * @author jflute
  */
-public abstract class TypicalAction extends LastaAction implements ActionHook {
+public abstract class TypicalAction extends LastaAction implements ActionHook, LaActionDocs {
 
     // ===================================================================================
     //                                                                          Definition
@@ -231,14 +232,12 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     //                                      Verify Parameter
     //                                      ----------------
     protected void verifyParameterExists(Object parameter) { // application may call
-        logger.debug("...Verifying the parameter exists: {}", parameter);
         if (parameter == null || (parameter instanceof String && ((String) parameter).isEmpty())) {
-            handleParameterFailure("Not found the parameter: parameter=" + parameter);
+            handleParameterFailure("Not found the parameter: " + parameter);
         }
     }
 
     protected void verifyParameterTrue(String msg, boolean expectedBool) { // application may call
-        logger.debug("...Verifying the parameter is true: {}", expectedBool);
         if (!expectedBool) {
             handleParameterFailure(msg);
         }
@@ -246,7 +245,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
 
     protected void handleParameterFailure(String msg) {
         // no server error because it can occur by user's trick easily e.g. changing GET parameter
-        lets404(msg);
+        throw404(msg);
     }
 
     // -----------------------------------------------------
@@ -259,9 +258,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      * @param expectedBool The expected determination for your business, true or false. (false: 404 not found)
      */
     protected void verifyTrueOr404NotFound(String msg, boolean expectedBool) { // application may call
-        logger.debug("...Verifying the condition is true or 404 not found: {}", expectedBool);
         if (!expectedBool) {
-            lets404(msg);
+            throw404(msg);
         }
     }
 
@@ -272,17 +270,16 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
      * @param expectedBool The expected determination for your business, true or false. (false: illegal transition)
      */
     protected void verifyTrueOrIllegalTransition(String msg, boolean expectedBool) { // application may call
-        logger.debug("...Verifying the condition is true or illegal transition: {}", expectedBool);
         if (!expectedBool) {
-            letsIllegalTransition(msg);
+            throwIllegalTransition(msg);
         }
     }
 
-    protected HtmlResponse lets404(String msg) { // e.g. used by error handling of validation for GET parameter
+    protected void throw404(String msg) { // e.g. used by error handling of validation for GET parameter
         throw new ForcedRequest404NotFoundException(msg);
     }
 
-    protected void letsIllegalTransition(String msg) {
+    protected void throwIllegalTransition(String msg) {
         final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
         throw new ForcedIllegalTransitionApplicationException(msg, transitionKey);
     }
@@ -290,6 +287,32 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
+    // -----------------------------------------------------
+    //                                          Current Date
+    //                                          ------------
+    /**
+     * Get the date that specifies current date for business. <br>
+     * The word 'current' means transaction beginning in transaction if default setting of Framework. <br>
+     * You can get the same date (but different instances) in the same transaction.
+     * @return The local date that has current date. (NotNull)
+     */
+    protected LocalDate currentDate() {
+        return timeManager.currentDate();
+    }
+
+    /**
+     * Get the date-time that specifies current time for business. <br>
+     * The word 'current' means transaction beginning in transaction if default setting of Framework. <br>
+     * You can get the same date (but different instances) in the same transaction.
+     * @return The local date-time that has current time. (NotNull)
+     */
+    protected LocalDateTime currentDateTime() {
+        return timeManager.currentDateTime();
+    }
+
+    // -----------------------------------------------------
+    //                                        Empty Handling
+    //                                        --------------
     protected boolean isEmpty(String str) {
         return Srl.is_Null_or_Empty(str);
     }
@@ -298,57 +321,38 @@ public abstract class TypicalAction extends LastaAction implements ActionHook {
         return Srl.is_NotNull_and_NotEmpty(str);
     }
 
-    protected <CLS extends Classification> CLS toCDef(Class<CLS> cdefType, Object code) {
+    // -----------------------------------------------------
+    //                                        Classification
+    //                                        --------------
+    protected boolean isCls(Class<? extends Classification> cdefType, Object code) {
         assertArgumentNotNull("cdefType", cdefType);
-        assertArgumentNotNull("code", code);
-        if (code instanceof String && ((String) code).isEmpty()) {
-            throw new IllegalArgumentException("The argument 'code' should not be empty: cdefType=" + cdefType);
-        }
-        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(cdefType);
-        final Method method = beanDesc.getMethod("codeOf", new Class<?>[] { Object.class });
-        @SuppressWarnings("unchecked")
-        final CLS cdef = (CLS) DfReflectionUtil.invoke(method, null, new Object[] { code });
-        if (cdef == null) {
-            String msg = "Unknow classification code for " + cdefType.getName() + ": " + code;
-            throw new ForcedRequest404NotFoundException(msg);
-        }
-        return cdef;
+        return LaDBFluteUtil.invokeClassificationCodeOf(cdefType, code) != null;
     }
 
-    // ===================================================================================
-    //                                                                            Document
-    //                                                                            ========
-    // TODO jflute lastaflute: [C] function: make document()
-    /**
-     * <pre>
-     * [AtMark]Execute
-     * public HtmlResponse index() {
-     *     ListResultBean&lt;Product&gt; memberList = productBhv.selectList(cb -> {
-     *         cb.query().addOrderBy_RegularPrice_Desc();
-     *         cb.fetchFirst(3);
-     *     });
-     *     List&lt;MypageProductBean&gt; beans = memberList.stream().map(member -> {
-     *         return new MypageProductBean(member);
-     *     }).collect(Collectors.toList());
-     *     return asHtml(path_Mypage_MypageJsp).renderWith(data -> {
-     *         data.register("beans", beans);
-     *     });
-     * }
-     * </pre>
-     */
-    protected void documentOfAll() {
-    }
-
-    /**
-     * <pre>
-     * o validate(form, error call): Hibernate Validator's Annotation only
-     * o validateMore(form, your validation call, error call): annotation + by-method validation
-     * 
-     * o asHtml(HTML template): return response as HTML by template e.g. JSP
-     * o asJson(JSON bean): return response as JSON from bean
-     * o asStream(input stream): return response as stream from input stream
-     * </pre>
-     */
-    protected void documentOfMethods() {
+    protected <CLS extends Classification> OptionalThing<CLS> toCls(Class<CLS> cdefType, Object code) {
+        assertArgumentNotNull("cdefType", cdefType);
+        if (code == null || (code instanceof String && isEmpty((String) code))) {
+            return OptionalThing.ofNullable(null, () -> {
+                throw new IllegalStateException("Not found the classification code for " + cdefType.getName() + ": " + code);
+            });
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            final CLS cls = (CLS) LaDBFluteUtil.toVerifiedClassification(cdefType, code);
+            return OptionalThing.of(cls);
+        } catch (ClassificationConvertFailureException e) {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("Cannot convert the code to the classification:");
+            sb.append("\n[Classification Convert Failure]");
+            try {
+                sb.append("\n").append(LaActionRuntimeUtil.getActionRuntime());
+            } catch (RuntimeException continued) { // just in case
+                logger.info("Not found the action runtime when toCls() called: " + cdefType.getName() + ", " + code, continued);
+            }
+            sb.append("\ncode=").append(code);
+            //sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
+            final String msg = sb.toString();
+            throw new ForcedRequest404NotFoundException(msg, e);
+        }
     }
 }

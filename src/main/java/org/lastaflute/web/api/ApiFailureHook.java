@@ -33,9 +33,10 @@ public interface ApiFailureHook {
      * The hookFinally() of action hook will be called after this.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
      * @param runtime The runtime meta of action execute for the current request. (NotNull)
+     * @param provider The provider of login redirect info, e.g. redirect path /signin/. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
-    ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime);
+    ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime, ApiLoginRedirectProvider provider);
 
     /**
      * Handle API failure when validation error. <br>

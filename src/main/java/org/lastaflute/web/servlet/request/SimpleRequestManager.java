@@ -17,6 +17,9 @@ package org.lastaflute.web.servlet.request;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -34,6 +37,7 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionRuntime;
@@ -78,6 +82,10 @@ public class SimpleRequestManager implements RequestManager {
     /** The manager of cookie. (NotNull: after initialization) */
     @Resource
     protected CookieManager cookieManager;
+
+    /** The manager of time. (NotNull: after initialization) */
+    @Resource
+    protected TimeManager timeManager;
 
     /** The manager of message. (NotNull: after initialization) */
     @Resource
@@ -227,6 +235,16 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
+    public List<String> getAttributeNameList() {
+        final Enumeration<String> attributeNames = getRequest().getAttributeNames();
+        final List<String> nameList = new ArrayList<String>();
+        while (attributeNames.hasMoreElements()) {
+            nameList.add((String) attributeNames.nextElement());
+        }
+        return Collections.unmodifiableList(nameList);
+    }
+
+    @Override
     public void setAttribute(Object value) {
         assertObjectNotNull("value", value);
         checkTypedAttributeSettingMistake(value);
@@ -345,6 +363,12 @@ public class SimpleRequestManager implements RequestManager {
         }); // empty check just in case
     }
 
+    @Override
+    public String toContextAbsolutePath(String contextRelativePath) {
+        final String ctx = getContextPath();
+        return (!ctx.isEmpty() && !ctx.equals("/") ? ctx : "") + contextRelativePath;
+    }
+
     // ===================================================================================
     //                                                                     Header Handling
     //                                                                     ===============
@@ -356,18 +380,23 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public OptionalThing<String> getHost() {
+    public OptionalThing<String> getHeaderHost() {
         return getHeader("Host");
     }
 
     @Override
-    public OptionalThing<String> getReferer() {
+    public OptionalThing<String> getHeaderReferer() {
         return getHeader("Referer");
     }
 
     @Override
-    public OptionalThing<String> getUserAgent() {
+    public OptionalThing<String> getHeaderUserAgent() {
         return getHeader("User-Agent");
+    }
+
+    @Override
+    public OptionalThing<String> getHeaderXForwardedFor() {
+        return getHeader("X-Forwarded-For");
     }
 
     // ===================================================================================
@@ -666,6 +695,11 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public CookieManager getCookieManager() {
         return cookieManager;
+    }
+
+    @Override
+    public TimeManager getTimeManager() {
+        return timeManager;
     }
 
     @Override
