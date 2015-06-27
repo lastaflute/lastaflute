@@ -16,18 +16,14 @@
 package org.lastaflute.core.mail;
 
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.mail.Address;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-
 import org.dbflute.mail.DeliveryCategory;
 import org.dbflute.mail.Postcard;
 import org.dbflute.mail.Postcard.BodyFileOption;
+import org.dbflute.mail.send.SMailAddress;
 import org.dbflute.util.DfTypeUtil;
 
 /**
@@ -185,30 +181,8 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // -----------------------------------------------------
     //                                        Address Assist
     //                                        --------------
-    protected Address createAddress(String address, String personal) {
-        final String encoding = getPersonalEncoding();
-        final InternetAddress internetAddress;
-        try {
-            internetAddress = newInternetAddress(address, isStrictAddress());
-        } catch (AddressException e) {
-            throw new IllegalStateException("Failed to create internet address: " + address, e);
-        }
-        if (personal != null) {
-            try {
-                internetAddress.setPersonal(personal, encoding);
-            } catch (UnsupportedEncodingException e) {
-                throw new IllegalStateException("Unknown encoding for personal: encoding=" + encoding + " personal=" + personal, e);
-            }
-        }
-        return internetAddress;
-    }
-
-    protected InternetAddress newInternetAddress(String address, boolean strict) throws AddressException {
-        return new InternetAddress(address, strict);
-    }
-
-    protected String getPersonalEncoding() {
-        return "UTF-8";
+    protected SMailAddress createAddress(String address, String personal) {
+        return new SMailAddress(address, personal);
     }
 
     // -----------------------------------------------------
