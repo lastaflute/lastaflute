@@ -1,5 +1,5 @@
 LastaFlute
-======================
+=======================
 Typesafe Web Framework for LeAn STArtup with DBFlute and Java8
 
 - for Lean Startup and Incremental Development
