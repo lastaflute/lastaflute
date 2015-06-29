@@ -15,6 +15,13 @@
  */
 package org.lastaflute.db.dbcp;
 
+import java.io.File;
+import java.io.IOException;
+
+import org.dbflute.util.DfResourceUtil;
+import org.dbflute.util.Srl;
+import org.dbflute.util.Srl.ScopeInfo;
+import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.jta.dbcp.SimpleXADataSource;
 
 /**
@@ -22,5 +29,31 @@ import org.lastaflute.jta.dbcp.SimpleXADataSource;
  */
 public class HookedXADataSource extends SimpleXADataSource {
 
-    // for future
+    protected static final String CLASSES_BEGIN_MARK = "$classes(";
+    protected static final String CLASSES_END_MARK = ".class)";
+
+    @Override
+    public void setURL(String url) {
+        super.setURL(resolveClassesUrl(url));
+    }
+
+    protected String resolveClassesUrl(String url) { // for e.g. H2 local file
+        final String beginMark = CLASSES_BEGIN_MARK;
+        final String endMark = CLASSES_END_MARK;
+        final ScopeInfo classesScope = Srl.extractScopeFirst(url, beginMark, endMark);
+        if (classesScope == null) {
+            return url;
+        }
+        final String className = classesScope.getContent().trim();
+        final String front = Srl.substringFirstFront(url, beginMark);
+        final String rear = Srl.substringFirstRear(url, endMark);
+        final Class<?> lardmarkType = LdiClassUtil.forName(className);
+        final File buildDir = DfResourceUtil.getBuildDir(lardmarkType);
+        try {
+            final String canonicalPath = buildDir.getCanonicalPath();
+            return front + canonicalPath.replace('\\', '/') + rear;
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to get canonical path: " + buildDir, e);
+        }
+    }
 }

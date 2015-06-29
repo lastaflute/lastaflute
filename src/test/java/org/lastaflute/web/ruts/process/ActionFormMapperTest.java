@@ -3,7 +3,6 @@ package org.lastaflute.web.ruts.process;
 import java.util.Map;
 
 import org.lastaflute.unit.UnitLastaFluteTestCase;
-import org.lastaflute.web.ruts.process.ActionFormMapper;
 
 /**
  * @author jflute

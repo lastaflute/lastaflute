@@ -16,7 +16,6 @@
 package org.lastaflute.core.security;
 
 import org.dbflute.utflute.core.PlainTestCase;
-import org.lastaflute.core.security.InvertibleCryptographer;
 
 /**
  * @author jflute
