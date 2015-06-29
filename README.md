@@ -80,7 +80,7 @@ public class HarborBoot {
 Apache License 2.0
 
 ## Official site
-(English pages have a low count but are increscent...)
+(English pages have a low count but are increscent...)  
 http://dbflute.seasar.org/lastaflute/
 
 # Thanks, Framewoks
