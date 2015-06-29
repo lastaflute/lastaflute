@@ -6,7 +6,7 @@ Typesafe Web Framework for LeAn STArtup with DBFlute and Java8
 - making the fullest possible use of Java8
 
 ## Rhythm & Speed Programming
-- HotDeploy
+- Hot Deploy
 - Lightening Boot
 
 ## Adaptable-to-Change Programming
@@ -15,7 +15,7 @@ Typesafe Web Framework for LeAn STArtup with DBFlute and Java8
 - Crazy Logging
 
 ## Naturally-be-so Programming
-- Convention URL Mapping
+- Convention Mapping
 - Less Choice
 - Default Libraries
 
@@ -80,8 +80,8 @@ public class HarborBoot {
 Apache License 2.0
 
 ## Official site
-sorry Japanese Site now (English comming soon...)
-http://dbflute.seasar.org/ja/lastaflute/
+(English pages have a low count but are increscent...)
+http://dbflute.seasar.org/lastaflute/
 
 # Thanks, Framewoks
 LastaFlute forks SAStruts, Struts and Commons utilities and (heavily) extends it.  
