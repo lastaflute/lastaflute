@@ -147,11 +147,8 @@ public class SimpleAsyncManager implements AsyncManager {
     //                            Rejected Execution Handler
     //                            --------------------------
     protected RejectedExecutionHandler createRejectedExecutionHandler() {
-        return new RejectedExecutionHandler() {
-            @Override
-            public void rejectedExecution(Runnable runnable, ThreadPoolExecutor executor) { // caller thread
-                handleRejectedExecution(runnable, executor);
-            }
+        return (runnable, executor) -> {
+            handleRejectedExecution(runnable, executor);
         };
     }
 
@@ -159,15 +156,12 @@ public class SimpleAsyncManager implements AsyncManager {
         if (LOG.isDebugEnabled()) {
             LOG.debug("#flow #async ...Registering the runnable to waiting queue as retry: " + runnable);
         }
-        getWaitingQueueExecutorService().execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    retryPuttingQueue(runnable, executor);
-                } catch (InterruptedException e) {
-                    final String torExp = buildExecutorHashExp(executor);
-                    LOG.warn("*Failed to put the runnable to the executor" + torExp + "'s queue: " + runnable, e);
-                }
+        getWaitingQueueExecutorService().execute(() -> {
+            try {
+                retryPuttingQueue(runnable, executor);
+            } catch (InterruptedException e) {
+                final String torExp = buildExecutorHashExp(executor);
+                LOG.warn("*Failed to put the runnable to the executor" + torExp + "'s queue: " + runnable, e);
             }
         });
     }
@@ -254,24 +248,22 @@ public class SimpleAsyncManager implements AsyncManager {
         final AccessContext accessContext = inheritAccessContext(call);
         final CallbackContext callbackContext = inheritCallbackContext(call);
         final Map<String, Object> variousContextMap = findCallerVariousContextMap();
-        return new Runnable() {
-            public void run() {
-                final long before = showRunning(keyword);
-                prepareThreadCacheContext(call, threadCacheMap);
-                prepareAccessContext(call, accessContext);
-                prepareCallbackContext(call, callbackContext);
-                final Object variousPreparedObj = prepareVariousContext(call, variousContextMap);
-                try {
-                    call.callback();
-                } catch (RuntimeException e) {
-                    handleAsyncCallbackException(call, before, e);
-                } finally {
-                    clearVariousContext(call, variousContextMap, variousPreparedObj);
-                    clearAccessContext(call);
-                    clearCallbackContext(call);
-                    clearThreadCacheContext(call);
-                    showFinishing(keyword, before);
-                }
+        return () -> {
+            final long before = showRunning(keyword);
+            prepareThreadCacheContext(call, threadCacheMap);
+            prepareAccessContext(call, accessContext);
+            prepareCallbackContext(call, callbackContext);
+            final Object variousPreparedObj = prepareVariousContext(call, variousContextMap);
+            try {
+                call.callback();
+            } catch (RuntimeException e) {
+                handleAsyncCallbackException(call, before, e);
+            } finally {
+                clearVariousContext(call, variousContextMap, variousPreparedObj);
+                clearAccessContext(call);
+                clearCallbackContext(call);
+                clearThreadCacheContext(call);
+                showFinishing(keyword, before);
             }
         };
     }
