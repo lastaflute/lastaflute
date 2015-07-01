@@ -22,12 +22,13 @@ public interface TypicalKey {
 
     String ERROR_MESSAGE_FORWARD_PATH = "/error/error_message.jsp";
     String ERRORS_LOGIN_FAILURE_KEY = "errors.login.failure";
-    String ERRORS_APP_ALREADY_DELETED = "errors.app.already.deleted";
-    String ERRORS_APP_ALREADY_UPDATED = "errors.app.already.updated";
-    String ERRORS_APP_ALREADY_EXISTS = "errors.app.already.exists";
     String ERRORS_APP_ILLEGAL_TRANSITION = "errors.app.illegal.transition";
+    String ERRORS_APP_DB_ALREADY_DELETED = "errors.app.db.already.deleted";
+    String ERRORS_APP_DB_ALREADY_UPDATED = "errors.app.db.already.updated";
+    String ERRORS_APP_DB_ALREADY_EXISTS = "errors.app.db.already.exists";
 
     public static class TypicalSimpleEmbeddedKeySupplier implements TypicalEmbeddedKeySupplier {
+
         public String getErrorMessageForwardPath() {
             return ERROR_MESSAGE_FORWARD_PATH;
         }
@@ -36,20 +37,20 @@ public interface TypicalKey {
             return ERRORS_LOGIN_FAILURE_KEY;
         }
 
-        public String getErrorsAppAlreadyDeletedKey() {
-            return ERRORS_APP_ALREADY_DELETED;
-        }
-
-        public String getErrorsAppAlreadyUpdatedKey() {
-            return ERRORS_APP_ALREADY_UPDATED;
-        }
-
-        public String getErrorsAppAlreadyExistsKey() {
-            return ERRORS_APP_ALREADY_EXISTS;
-        }
-
         public String getErrorsAppIllegalTransitionKey() {
             return ERRORS_APP_ILLEGAL_TRANSITION;
+        }
+
+        public String getErrorsAppDbAlreadyDeletedKey() {
+            return ERRORS_APP_DB_ALREADY_DELETED;
+        }
+
+        public String getErrorsAppDbAlreadyUpdatedKey() {
+            return ERRORS_APP_DB_ALREADY_UPDATED;
+        }
+
+        public String getErrorsAppDbAlreadyExistsKey() {
+            return ERRORS_APP_DB_ALREADY_EXISTS;
         }
     }
 }

@@ -254,54 +254,6 @@ public class TypicalGodHandMonologue {
     }
 
     // -----------------------------------------------------
-    //                             (DBFlute) Already Deleted
-    //                             -------------------------
-    protected ActionResponse handleEntityAlreadyDeletedException(EntityAlreadyDeletedException cause) {
-        saveErrors(getErrorsAppAlreadyDeletedKey());
-        return getErrorMessageAlreadyDeletedJsp();
-    }
-
-    protected String getErrorsAppAlreadyDeletedKey() {
-        return typicalKeySupplier.getErrorsAppAlreadyDeletedKey();
-    }
-
-    protected ActionResponse getErrorMessageAlreadyDeletedJsp() {
-        return getErrorMessageForward(); // as default
-    }
-
-    // -----------------------------------------------------
-    //                              (DBFlute) Already Update
-    //                              ------------------------
-    protected ActionResponse handleEntityAlreadyUpdatedException(EntityAlreadyUpdatedException cause) {
-        saveErrors(getErrorsAppAlreadyUpdatedKey());
-        return getErrorMessageAlreadyUpdatedJsp();
-    }
-
-    protected String getErrorsAppAlreadyUpdatedKey() {
-        return typicalKeySupplier.getErrorsAppAlreadyUpdatedKey();
-    }
-
-    protected ActionResponse getErrorMessageAlreadyUpdatedJsp() {
-        return getErrorMessageForward(); // as default
-    }
-
-    // -----------------------------------------------------
-    //                              (DBFlute) Already Exists
-    //                              ------------------------
-    protected ActionResponse handleEntityAlreadyExistsException(EntityAlreadyExistsException cause) {
-        saveErrors(getErrorsAppAlreadyExistsKey());
-        return getErrorMessageAlreadyExistsJsp();
-    }
-
-    protected String getErrorsAppAlreadyExistsKey() {
-        return TypicalKey.ERRORS_APP_ALREADY_EXISTS;
-    };
-
-    protected ActionResponse getErrorMessageAlreadyExistsJsp() {
-        return getErrorMessageForward(); // as default
-    }
-
-    // -----------------------------------------------------
     //                                         Login Failure
     //                                         -------------
     protected ActionResponse handleLoginFailureException(LoginFailureException appEx) {
@@ -355,6 +307,54 @@ public class TypicalGodHandMonologue {
             return ActionResponse.empty(); // because of non login exception, treat it as system exception
         }
         return redirectToLoginAction(); // basically no way, login action just in case
+    }
+
+    // -----------------------------------------------------
+    //                             (DBFlute) Already Deleted
+    //                             -------------------------
+    protected ActionResponse handleEntityAlreadyDeletedException(EntityAlreadyDeletedException cause) {
+        saveErrors(getErrorsAppAlreadyDeletedKey());
+        return getErrorMessageAlreadyDeletedJsp();
+    }
+
+    protected String getErrorsAppAlreadyDeletedKey() {
+        return typicalKeySupplier.getErrorsAppDbAlreadyDeletedKey();
+    }
+
+    protected ActionResponse getErrorMessageAlreadyDeletedJsp() {
+        return getErrorMessageForward(); // as default
+    }
+
+    // -----------------------------------------------------
+    //                              (DBFlute) Already Update
+    //                              ------------------------
+    protected ActionResponse handleEntityAlreadyUpdatedException(EntityAlreadyUpdatedException cause) {
+        saveErrors(getErrorsAppAlreadyUpdatedKey());
+        return getErrorMessageAlreadyUpdatedJsp();
+    }
+
+    protected String getErrorsAppAlreadyUpdatedKey() {
+        return typicalKeySupplier.getErrorsAppDbAlreadyUpdatedKey();
+    }
+
+    protected ActionResponse getErrorMessageAlreadyUpdatedJsp() {
+        return getErrorMessageForward(); // as default
+    }
+
+    // -----------------------------------------------------
+    //                              (DBFlute) Already Exists
+    //                              ------------------------
+    protected ActionResponse handleEntityAlreadyExistsException(EntityAlreadyExistsException cause) {
+        saveErrors(getErrorsAppAlreadyExistsKey());
+        return getErrorMessageAlreadyExistsJsp();
+    }
+
+    protected String getErrorsAppAlreadyExistsKey() {
+        return TypicalKey.ERRORS_APP_DB_ALREADY_EXISTS;
+    };
+
+    protected ActionResponse getErrorMessageAlreadyExistsJsp() {
+        return getErrorMessageForward(); // as default
     }
 
     // ===================================================================================
