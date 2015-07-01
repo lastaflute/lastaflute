@@ -135,15 +135,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(String email, String cipheredPassword);
 
     /**
-     * Encrypt the password of the login user.
-     * @param plainPassword The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return The encrypted string of the password. (NotNull)
-     */
-    protected String encryptPassword(String plainPassword) {
-        return primaryCipher.oneway(plainPassword);
-    }
-
-    /**
      * Find the login user in the database.
      * @param userId for the login user. (NotNull)
      * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
@@ -459,6 +450,12 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected void processOnSilentLogin(USER_ENTITY userEntity, USER_BEAN userBean, LoginSpecifiedOption option) {
         // do nothing as default
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String encryptPassword(String plainPassword) {
+        return primaryCipher.oneway(plainPassword);
     }
 
     // ===================================================================================

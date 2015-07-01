@@ -80,6 +80,13 @@ public interface LoginManager {
      */
     void reselectSessionUserBeanIfExists() throws LoginFailureException;
 
+    /**
+     * Encrypt the password of the login user.
+     * @param plainPassword The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @return The encrypted string of the password. (NotNull)
+     */
+    String encryptPassword(String plainPassword);
+
     // ===================================================================================
     //                                                                    RememberMe Login
     //                                                                    ================
