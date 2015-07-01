@@ -39,30 +39,13 @@ public class ValidationSuccess {
     //                                                                         Constructor
     //                                                                         ===========
     public ValidationSuccess(ActionMessages messages) {
+        assertArgumentNotNull("messages", messages);
         this.messages = messages;
     }
 
     // ===================================================================================
     //                                                                   Success Attribute
     //                                                                   =================
-    /**
-     * Get the attribute value of the validation success by the value's type. <br>
-     * Basically saved by ActionMessages#saveSuccessAttribute().
-     * @param <ATTRIBUTE> The type of attribute object.
-     * @param typeKey The type key of attribute saved in the scope. (NotNull)
-     * @return The optional attribute object for the type. (NotNull, EmptyAllowed: when not found)
-     */
-    public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey) {
-        assertArgumentNotNull("typeKey", typeKey);
-        final String key = typeKey.getName();
-        final ATTRIBUTE attribute = findSuccessAttribute(key);
-        return OptionalThing.ofNullable(attribute, () -> {
-            final Set<String> keySet = getSuccessAttributeMap().keySet();
-            final String msg = "Not found the validation success attribute by the typed key: " + key + " existing=" + keySet;
-            throw new ValidationSuccessAttributeNotFoundException(msg);
-        });
-    }
-
     // second argument 'attributeType' is to write like this:
     // getAttribute("sea", SeaBean.class).ifPresent(seaBean -> ...)
     /**
@@ -83,7 +66,7 @@ public class ValidationSuccess {
                 attribute = attributeType.cast(original);
             } catch (ClassCastException e) {
                 final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-                br.addNotice("Cannot cast the the validation success attribute");
+                br.addNotice("Cannot cast the validation success attribute");
                 br.addItem("Attribute Key");
                 br.addElement(key);
                 br.addItem("Specified Type");
@@ -114,6 +97,25 @@ public class ValidationSuccess {
     protected Map<String, Object> getSuccessAttributeMap() {
         return messages.getSuccessAttributeMap();
     }
+
+    // same reason as request/session attribute
+    ///**
+    // * Get the attribute value of the validation success by the value's type. <br>
+    // * Basically saved by ActionMessages#saveSuccessAttribute().
+    // * @param <ATTRIBUTE> The type of attribute object.
+    // * @param typeKey The type key of attribute saved in the scope. (NotNull)
+    // * @return The optional attribute object for the type. (NotNull, EmptyAllowed: when not found)
+    // */
+    //public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey) {
+    //    assertArgumentNotNull("typeKey", typeKey);
+    //    final String key = typeKey.getName();
+    //    final ATTRIBUTE attribute = findSuccessAttribute(key);
+    //    return OptionalThing.ofNullable(attribute, () -> {
+    //        final Set<String> keySet = getSuccessAttributeMap().keySet();
+    //        final String msg = "Not found the validation success attribute by the typed key: " + key + " existing=" + keySet;
+    //        throw new ValidationSuccessAttributeNotFoundException(msg);
+    //    });
+    //}
 
     // ===================================================================================
     //                                                                        Small Helper

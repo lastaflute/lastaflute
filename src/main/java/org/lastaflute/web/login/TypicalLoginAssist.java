@@ -31,6 +31,7 @@ import org.dbflute.util.DfCollectionUtil;
 import org.lastaflute.core.security.PrimaryCipher;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionStage;
+import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.login.exception.LoginFailureException;
 import org.lastaflute.web.login.exception.LoginTimeoutException;
@@ -61,6 +62,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(TypicalLoginAssist.class);
+
+    /** The session key of user bean. */
+    private static final String USER_BEAN_KEY = LastaWebKey.USER_BEAN_KEY;
 
     /** The delimiter of remember-me login value saved in cookie. */
     private static final String REMEMBER_ME_COOKIE_DELIMITER = ":>:<:";
@@ -277,7 +281,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         regenerateSessionId();
         logger.debug("...Saving login info to session");
         final USER_BEAN userBean = createUserBean(userEntity);
-        sessionManager.setAttribute(userBean);
+        sessionManager.setAttribute(USER_BEAN_KEY, userBean);
         return userBean;
     }
 
@@ -303,13 +307,14 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             inheritUserBeanAdditionalInfo(oldBean);
             final Long userId = oldBean.getUserId();
             logger.debug("...Re-selecting user bean in session: userId={}", userId);
-            sessionManager.setAttribute(createUserBean(findLoginUser(userId).orElseThrow(() -> { /* might be already left */
-                logout(); /* to clear old user info in session */
-                String msg = "Not found the user by the user ID: " + userId;
-                return handleLoginFailure(msg, userId, OptionalThing.ofNullable(null, () -> {
+            final USER_ENTITY userEntity = findLoginUser(userId).orElseThrow(() -> { // might be already left
+                logout(); // to clear old user info in session
+                final OptionalThing<LoginSpecifiedOption> emptyOption = OptionalThing.ofNullable(null, () -> {
                     throw new IllegalStateException("Not found the login option when reselect: userId=" + userId);
-                }));
-            })));
+                });
+                return handleLoginFailure("Not found the user by the user ID: " + userId, userId, emptyOption);
+            });
+            sessionManager.setAttribute(USER_BEAN_KEY, createUserBean(userEntity));
         });
     }
 
@@ -598,7 +603,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                                                              ======
     @Override
     public void logout() {
-        sessionManager.removeAttribute(getUserBeanType());
+        sessionManager.removeAttribute(USER_BEAN_KEY);
         cookieManager.removeCookie(getCookieAutoLoginKey());
     }
 
@@ -759,9 +764,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                      ----------------
     @Override
     public OptionalThing<USER_BEAN> getSessionUserBean() { // use covariant generic type
-        final Class<USER_BEAN> beanType = getUserBeanType();
-        return OptionalThing.ofNullable(sessionManager.getAttribute(beanType).orElse(null), () -> {
-            String msg = "Not found the user in session by the type:" + beanType;
+        final String key = USER_BEAN_KEY;
+        return OptionalThing.ofNullable(sessionManager.getAttribute(key, getUserBeanType()).orElse(null), () -> {
+            String msg = "Not found the user in session by the key:" + key;
             throw new LoginTimeoutException(msg); /* to login action */
         });
     }

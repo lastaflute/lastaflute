@@ -215,19 +215,6 @@ public class SimpleRequestManager implements RequestManager {
     //                                                 Basic
     //                                                 -----
     @Override
-    public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey) {
-        assertArgumentNotNull("typeKey", typeKey);
-        final String key = typeKey.getName();
-        @SuppressWarnings("unchecked")
-        final ATTRIBUTE attribute = (ATTRIBUTE) getRequest().getAttribute(key);
-        return OptionalThing.ofNullable(attribute, () -> {
-            final List<String> nameList = getAttributeNameList();
-            final String msg = "Not found the request attribute by the typed key: " + key + " existing=" + nameList;
-            throw new RequestAttributeNotFoundException(msg);
-        });
-    }
-
-    @Override
     public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> attributeType) {
         assertArgumentNotNull("key", key);
         final Object original = getRequest().getAttribute(key);
@@ -237,7 +224,7 @@ public class SimpleRequestManager implements RequestManager {
                 attribute = attributeType.cast(original);
             } catch (ClassCastException e) {
                 final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-                br.addNotice("Cannot cast the the request attribute");
+                br.addNotice("Cannot cast the request attribute");
                 br.addItem("Attribute Key");
                 br.addElement(key);
                 br.addItem("Specified Type");
@@ -271,36 +258,6 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public void setAttribute(Object value) {
-        assertArgumentNotNull("value", value);
-        checkTypedAttributeSettingMistake(value);
-        getRequest().setAttribute(value.getClass().getName(), value);
-    }
-
-    protected void checkTypedAttributeSettingMistake(Object value) {
-        if (value instanceof String) {
-            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-            br.addNotice("The value for typed attribute was simple string type.");
-            br.addItem("Advice");
-            br.addElement("The value should not be string.");
-            br.addElement("Do you forget value setting for the string key?");
-            br.addElement("The typed attribute setting cannot accept string");
-            br.addElement("to suppress setting mistake like this:");
-            br.addElement("  (x):");
-            br.addElement("    requestManager.setAttribute(\"foo.bar\")");
-            br.addElement("  (o):");
-            br.addElement("    requestManager.setAttribute(\"foo.bar\", value)");
-            br.addElement("  (o):");
-            br.addElement("    requestManager.setAttribute(bean)");
-            br.addItem("Specified Value");
-            br.addElement(value != null ? value.getClass().getName() : null);
-            br.addElement(value);
-            final String msg = br.buildExceptionMessage();
-            throw new IllegalArgumentException(msg);
-        }
-    }
-
-    @Override
     public void setAttribute(String key, Object value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
@@ -308,16 +265,57 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public void removeAttribute(Class<?> type) {
-        assertArgumentNotNull("type", type);
-        getRequest().removeAttribute(type.getName());
-    }
-
-    @Override
     public void removeAttribute(String key) {
         assertArgumentNotNull("key", key);
         getRequest().removeAttribute(key);
     }
+
+    // see interface ScopedAttributeHolder for the detail
+    //@Override
+    //public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey) {
+    //    assertArgumentNotNull("typeKey", typeKey);
+    //    final String key = typeKey.getName();
+    //    @SuppressWarnings("unchecked")
+    //    final ATTRIBUTE attribute = (ATTRIBUTE) getRequest().getAttribute(key);
+    //    return OptionalThing.ofNullable(attribute, () -> {
+    //        final List<String> nameList = getAttributeNameList();
+    //        final String msg = "Not found the request attribute by the typed key: " + key + " existing=" + nameList;
+    //        throw new RequestAttributeNotFoundException(msg);
+    //    });
+    //}
+    //@Override
+    //public void setAttribute(Object value) {
+    //    assertArgumentNotNull("value", value);
+    //    checkTypedAttributeSettingMistake(value);
+    //    getRequest().setAttribute(value.getClass().getName(), value);
+    //}
+    //protected void checkTypedAttributeSettingMistake(Object value) {
+    //    if (value instanceof String) {
+    //        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+    //        br.addNotice("The value for typed attribute was simple string type.");
+    //        br.addItem("Advice");
+    //        br.addElement("The value should not be string.");
+    //        br.addElement("Do you forget value setting for the string key?");
+    //        br.addElement("The typed attribute setting cannot accept string");
+    //        br.addElement("to suppress setting mistake like this:");
+    //        br.addElement("  (x):");
+    //        br.addElement("    requestManager.setAttribute(\"foo.bar\")");
+    //        br.addElement("  (o):");
+    //        br.addElement("    requestManager.setAttribute(\"foo.bar\", value)");
+    //        br.addElement("  (o):");
+    //        br.addElement("    requestManager.setAttribute(bean)");
+    //        br.addItem("Specified Value");
+    //        br.addElement(value != null ? value.getClass().getName() : null);
+    //        br.addElement(value);
+    //        final String msg = br.buildExceptionMessage();
+    //        throw new IllegalArgumentException(msg);
+    //    }
+    //}
+    //@Override
+    //public void removeAttribute(Class<?> type) {
+    //    assertArgumentNotNull("type", type);
+    //    getRequest().removeAttribute(type.getName());
+    //}
 
     // ===================================================================================
     //                                                                       Path Handling

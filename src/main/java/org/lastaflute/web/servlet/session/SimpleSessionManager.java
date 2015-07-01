@@ -65,20 +65,6 @@ public class SimpleSessionManager implements SessionManager {
     //                                                                  Attribute Handling
     //                                                                  ==================
     @Override
-    @SuppressWarnings("unchecked")
-    public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey) {
-        assertArgumentNotNull("type", typeKey);
-        final HttpSession session = getSessionExisting();
-        final String key = typeKey.getName();
-        final ATTRIBUTE attribute = session != null ? (ATTRIBUTE) session.getAttribute(key) : null;
-        return OptionalThing.ofNullable(attribute, () -> {
-            final List<String> nameList = getAttributeNameList();
-            final String msg = "Not found the session attribute by the typed key: " + key + " existing=" + nameList;
-            throw new SessionAttributeNotFoundException(msg);
-        });
-    }
-
-    @Override
     public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> attributeType) {
         assertArgumentNotNull("key", key);
         final HttpSession session = getSessionExisting();
@@ -89,7 +75,7 @@ public class SimpleSessionManager implements SessionManager {
                 attribute = attributeType.cast(original);
             } catch (ClassCastException e) {
                 final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-                br.addNotice("Cannot cast the the session attribute");
+                br.addNotice("Cannot cast the session attribute");
                 br.addItem("Attribute Key");
                 br.addElement(key);
                 br.addItem("Specified Type");
@@ -127,49 +113,10 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     @Override
-    public void setAttribute(Object value) {
-        assertArgumentNotNull("value", value);
-        checkTypedAttributeSettingMistake(value);
-        getSessionOrCreated().setAttribute(value.getClass().getName(), value);
-    }
-
-    protected void checkTypedAttributeSettingMistake(Object value) {
-        if (value instanceof String) {
-            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-            br.addNotice("The value for typed attribute was simple string type.");
-            br.addItem("Advice");
-            br.addElement("The value should not be string.");
-            br.addElement("Do you forget value setting for the string key?");
-            br.addElement("The typed attribute setting cannot accept string");
-            br.addElement("to suppress setting mistake like this:");
-            br.addElement("  (x):");
-            br.addElement("    sessionManager.setAttribute(\"foo.bar\")");
-            br.addElement("  (o):");
-            br.addElement("    sessionManager.setAttribute(\"foo.bar\", value)");
-            br.addElement("  (o):");
-            br.addElement("    sessionManager.setAttribute(bean)");
-            br.addItem("Specified Value");
-            br.addElement(value != null ? value.getClass().getName() : null);
-            br.addElement(value);
-            final String msg = br.buildExceptionMessage();
-            throw new IllegalArgumentException(msg);
-        }
-    }
-
-    @Override
     public void setAttribute(String key, Object value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
         getSessionOrCreated().setAttribute(key, value);
-    }
-
-    @Override
-    public void removeAttribute(Class<?> type) {
-        assertArgumentNotNull("type", type);
-        final HttpSession session = getSessionExisting();
-        if (session != null) {
-            session.removeAttribute(type.getName());
-        }
     }
 
     @Override
@@ -192,6 +139,57 @@ public class SimpleSessionManager implements SessionManager {
         }
         return savedSessionMap;
     }
+
+    // see interface ScopedAttributeHolder for the detail
+    //@Override
+    //@SuppressWarnings("unchecked")
+    //public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey) {
+    //    assertArgumentNotNull("type", typeKey);
+    //    final HttpSession session = getSessionExisting();
+    //    final String key = typeKey.getName();
+    //    final ATTRIBUTE attribute = session != null ? (ATTRIBUTE) session.getAttribute(key) : null;
+    //    return OptionalThing.ofNullable(attribute, () -> {
+    //        final List<String> nameList = getAttributeNameList();
+    //        final String msg = "Not found the session attribute by the typed key: " + key + " existing=" + nameList;
+    //        throw new SessionAttributeNotFoundException(msg);
+    //    });
+    //}
+    //@Override
+    //public void setAttribute(Object value) {
+    //    assertArgumentNotNull("value", value);
+    //    checkTypedAttributeSettingMistake(value);
+    //    getSessionOrCreated().setAttribute(value.getClass().getName(), value);
+    //}
+    //protected void checkTypedAttributeSettingMistake(Object value) {
+    //    if (value instanceof String) {
+    //        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+    //        br.addNotice("The value for typed attribute was simple string type.");
+    //        br.addItem("Advice");
+    //        br.addElement("The value should not be string.");
+    //        br.addElement("Do you forget value setting for the string key?");
+    //        br.addElement("The typed attribute setting cannot accept string");
+    //        br.addElement("to suppress setting mistake like this:");
+    //        br.addElement("  (x):");
+    //        br.addElement("    sessionManager.setAttribute(\"foo.bar\")");
+    //        br.addElement("  (o):");
+    //        br.addElement("    sessionManager.setAttribute(\"foo.bar\", value)");
+    //        br.addElement("  (o):");
+    //        br.addElement("    sessionManager.setAttribute(bean)");
+    //        br.addItem("Specified Value");
+    //        br.addElement(value != null ? value.getClass().getName() : null);
+    //        br.addElement(value);
+    //        final String msg = br.buildExceptionMessage();
+    //        throw new IllegalArgumentException(msg);
+    //    }
+    //}
+    //@Override
+    //public void removeAttribute(Class<?> type) {
+    //    assertArgumentNotNull("type", type);
+    //    final HttpSession session = getSessionExisting();
+    //    if (session != null) {
+    //        session.removeAttribute(type.getName());
+    //    }
+    //}
 
     // ===================================================================================
     //                                                                    Session Handling
