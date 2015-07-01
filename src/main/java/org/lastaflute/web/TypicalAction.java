@@ -275,13 +275,61 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
         }
     }
 
+    /**
+     * Throw 404 exception, and show 404 error page.
+     * <pre>
+     * if (...) {
+     *     <span style="color: #CC4747">throw404</span>("...");
+     * }
+     * </pre>
+     * @param msg The debug message for developer (not user message). (NotNull)
+     */
     protected void throw404(String msg) { // e.g. used by error handling of validation for GET parameter
-        throw new ForcedRequest404NotFoundException(msg);
+        throw of404(msg);
     }
 
+    /**
+     * Create exception of 404, for e.g. orElseThrow() of Optional.
+     * <pre>
+     * }).orElseThrow(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     return <span style="color: #CC4747">of404</span>("Not found the product: " + productId);
+     * });
+     * </pre>
+     * @param msg The debug message for developer (not user message). (NotNull)
+     * @return The new-created exception of 404. (NotNull)
+     */
+    protected ForcedRequest404NotFoundException of404(String msg) {
+        assertArgumentNotNull("msg for 404", msg);
+        return new ForcedRequest404NotFoundException(msg);
+    }
+
+    /**
+     * Throw illegal transition exception, as application exception.
+     * <pre>
+     * if (...) {
+     *     <span style="color: #CC4747">throwIllegalTransition</span>("...");
+     * }
+     * </pre>
+     * @param msg The debug message for developer (not user message). (NotNull)
+     */
     protected void throwIllegalTransition(String msg) {
+        throw ofIllegalTransition(msg);
+    }
+
+    /**
+     * Create exception of illegal transition as application exception, for e.g. orElseThrow() of Optional.
+     * <pre>
+     * }).orElseThrow(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     return <span style="color: #CC4747">ofIllegalTransition</span>("Not found the product: " + productId);
+     * });
+     * </pre>
+     * @param msg The debug message for developer (not user message). (NotNull)
+     * @return The new-created exception of 404. (NotNull)
+     */
+    protected ForcedIllegalTransitionApplicationException ofIllegalTransition(String msg) {
+        assertArgumentNotNull("msg for illegal transition", msg);
         final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
-        throw new ForcedIllegalTransitionApplicationException(msg, transitionKey);
+        return new ForcedIllegalTransitionApplicationException(msg, transitionKey);
     }
 
     // ===================================================================================
