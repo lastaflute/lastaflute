@@ -114,6 +114,27 @@ public abstract class LastaAction {
     // ===================================================================================
     //                                                                            Response
     //                                                                            ========
+    /**
+     * Return as HTML response by the template. <br>
+     * <pre>
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     ...
+     *     <span style="color: #70226C">return</span> <span style="color: #CC4747">asHtml</span>(<span style="color: #0000C0">path_Sea_SeaJsp</span>);
+     * }
+     * 
+     * <span style="color: #3F7E5E">// you can register the data used in HTML template</span> 
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     ...
+     *     <span style="color: #70226C">return</span> <span style="color: #CC4747">asHtml</span>(<span style="color: #0000C0">path_Sea_SeaJsp</span>).renderWith(data <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         data.<span style="color: #994747">register</span>("beans", beans);
+     *     });
+     * }
+     * </pre>
+     * @param path_ The path definition of forwarding next resource e.g. HTML template. (NotNull)
+     * @return this. (NotNull)
+     */
     protected HtmlResponse asHtml(ForwardNext path_) {
         assertArgumentNotNull("path_ (as forwardNext)", path_);
         return newHtmlResponseAsForward(path_);

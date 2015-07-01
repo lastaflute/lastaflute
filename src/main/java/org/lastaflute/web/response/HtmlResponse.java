@@ -107,6 +107,21 @@ public class HtmlResponse implements ActionResponse {
     // ===================================================================================
     //                                                                         Render Data
     //                                                                         ===========
+    /**
+     * Set up the HTML response rendering the HTML with registered data. <br>
+     * And you can use the registered data (variable) in your HTML template.
+     * <pre>
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     ...
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaJsp</span>).<span style="color: #CC4747">renderWith</span>(data <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         data.<span style="color: #994747">register</span>("beans", beans);
+     *     });
+     * }
+     * </pre>
+     * @param dataLambda The callback for data registration to HTML template. (NotNull)
+     * @return this. (NotNull)
+     */
     public HtmlResponse renderWith(RenderDataRegistration dataLambda) {
         assertArgumentNotNull("dataLambda", dataLambda);
         if (registrationList == null) {
@@ -119,6 +134,19 @@ public class HtmlResponse implements ActionResponse {
     // ===================================================================================
     //                                                                         Action Form
     //                                                                         ===========
+    /**
+     * Set up the HTML response as using action form without initial value. <br>
+     * And you can use the action form in your HTML template.
+     * <pre>
+     * <span style="color: #3F7E5E">// case of no initial value, empty display, but needs form</span>
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaJsp</span>).<span style="color: #CC4747">useForm</span>(SeaForm.<span style="color: #70226C">class</span>);
+     * }
+     * </pre>
+     * @param formType The type of action form. (NotNull)
+     * @return this. (NotNull)
+     */
     public HtmlResponse useForm(Class<?> formType) {
         assertArgumentNotNull("formType", formType);
         this.pushedFormType = formType;
