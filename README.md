@@ -53,7 +53,7 @@ and login by user 'Pixy' and password 'sea', and can see debug log at console.
 ```java
 // call manage.sh at lastaflute-example-harbor/dbflute_maihamadb
 // and select replace-schema in displayed menu
-...:dbflute_maihamadb ...$ sh manage.sh
+...$ sh manage.sh
 ```
 
 *main() method
