@@ -42,6 +42,7 @@ import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.exception.RequestAttributeCannotCastException;
 import org.lastaflute.web.exception.RequestAttributeNotFoundException;
 import org.lastaflute.web.exception.RequestInfoNotFoundException;
 import org.lastaflute.web.ruts.message.ActionMessage;
@@ -171,7 +172,7 @@ public class SimpleRequestManager implements RequestManager {
     //                                                                  ==================
     @Override
     public OptionalThing<String> getParameter(String key) {
-        assertObjectNotNull("key", key);
+        assertArgumentNotNull("key", key);
         return OptionalThing.ofNullable(getRequest().getParameter(key), () -> {
             throw new IllegalStateException("Not found the request parameter for the key: " + key);
         });
@@ -214,22 +215,47 @@ public class SimpleRequestManager implements RequestManager {
     //                                                 Basic
     //                                                 -----
     @Override
-    @SuppressWarnings("unchecked")
     public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey) {
-        assertObjectNotNull("typeKey", typeKey);
+        assertArgumentNotNull("typeKey", typeKey);
         final String key = typeKey.getName();
-        return OptionalThing.ofNullable((ATTRIBUTE) getRequest().getAttribute(key), () -> {
-            String msg = "Not found the request attribute by the typed key: " + key;
+        @SuppressWarnings("unchecked")
+        final ATTRIBUTE attribute = (ATTRIBUTE) getRequest().getAttribute(key);
+        return OptionalThing.ofNullable(attribute, () -> {
+            final List<String> nameList = getAttributeNameList();
+            final String msg = "Not found the request attribute by the typed key: " + key + " existing=" + nameList;
             throw new RequestAttributeNotFoundException(msg);
         });
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> genericType) {
-        assertObjectNotNull("key", key);
-        return OptionalThing.ofNullable((ATTRIBUTE) getRequest().getAttribute(key), () -> {
-            String msg = "Not found the request attribute by the string key: " + key;
+    public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> attributeType) {
+        assertArgumentNotNull("key", key);
+        final Object original = getRequest().getAttribute(key);
+        final ATTRIBUTE attribute;
+        if (original != null) {
+            try {
+                attribute = attributeType.cast(original);
+            } catch (ClassCastException e) {
+                final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+                br.addNotice("Cannot cast the the request attribute");
+                br.addItem("Attribute Key");
+                br.addElement(key);
+                br.addItem("Specified Type");
+                br.addElement(attributeType);
+                br.addItem("Existing Attribute");
+                br.addElement(original.getClass());
+                br.addElement(original);
+                br.addItem("Attribute List");
+                br.addElement(getAttributeNameList());
+                final String msg = br.buildExceptionMessage();
+                throw new RequestAttributeCannotCastException(msg);
+            }
+        } else {
+            attribute = null;
+        }
+        return OptionalThing.ofNullable(attribute, () -> {
+            final List<String> nameList = getAttributeNameList();
+            final String msg = "Not found the request attribute by the string key: " + key + " existing=" + nameList;
             throw new RequestAttributeNotFoundException(msg);
         });
     }
@@ -246,7 +272,7 @@ public class SimpleRequestManager implements RequestManager {
 
     @Override
     public void setAttribute(Object value) {
-        assertObjectNotNull("value", value);
+        assertArgumentNotNull("value", value);
         checkTypedAttributeSettingMistake(value);
         getRequest().setAttribute(value.getClass().getName(), value);
     }
@@ -276,20 +302,20 @@ public class SimpleRequestManager implements RequestManager {
 
     @Override
     public void setAttribute(String key, Object value) {
-        assertObjectNotNull("key", key);
-        assertObjectNotNull("value", value);
+        assertArgumentNotNull("key", key);
+        assertArgumentNotNull("value", value);
         getRequest().setAttribute(key, value);
     }
 
     @Override
     public void removeAttribute(Class<?> type) {
-        assertObjectNotNull("type", type);
+        assertArgumentNotNull("type", type);
         getRequest().removeAttribute(type.getName());
     }
 
     @Override
     public void removeAttribute(String key) {
-        assertObjectNotNull("key", key);
+        assertArgumentNotNull("key", key);
         getRequest().removeAttribute(key);
     }
 
@@ -718,9 +744,12 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
-    protected void assertObjectNotNull(String variableName, Object value) {
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
         if (value == null) {
             throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
         }

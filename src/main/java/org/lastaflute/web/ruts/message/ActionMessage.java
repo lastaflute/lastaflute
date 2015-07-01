@@ -81,8 +81,8 @@ public class ActionMessage implements Serializable {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
+    //                                                                        Small Helper
+    //                                                                        ============
     protected void assertArgumentNotNull(String variableName, Object value) {
         if (variableName == null) {
             throw new IllegalArgumentException("The variableName should not be null.");
@@ -97,7 +97,7 @@ public class ActionMessage implements Serializable {
     //                                                                      ==============
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         sb.append(key);
         sb.append("[");
         if (values != null) {

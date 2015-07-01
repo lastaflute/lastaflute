@@ -43,9 +43,10 @@ public interface LaValidatable<MESSAGES extends ActionMessages> {
      * @param form The form that has request parameters. (NotNull)
      * @param moreValidationLambda The callback for more validation, e.g. correlation rule. (NotNull)
      * @param validationErrorLambda The callback for response when validation error. (NotNull)
+     * @return The success information of validation, basically for success attribute. (NotNull)
      */
-    default void validate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
-        createValidator().validate(form, moreValidationLambda, validationErrorLambda);
+    default ValidationSuccess validate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
+        return createValidator().validate(form, moreValidationLambda, validationErrorLambda);
     }
 
     /**
@@ -64,9 +65,10 @@ public interface LaValidatable<MESSAGES extends ActionMessages> {
      * </pre>
      * @param form The form that has request parameters. (NotNull)
      * @param moreValidationLambda The callback for more validation, e.g. correlation rule, very complex rule. (NotNull)
+     * @return The success information of validation, basically for success attribute. (NotNull)
      */
-    default void validateApi(Object form, VaMore<MESSAGES> moreValidationLambda) {
-        createValidator().validateApi(form, moreValidationLambda);
+    default ValidationSuccess validateApi(Object form, VaMore<MESSAGES> moreValidationLambda) {
+        return createValidator().validateApi(form, moreValidationLambda);
     }
 
     default void throwValidationError(VaMessenger<MESSAGES> validationMessagesLambda, VaErrorHook validationErrorLambda) {

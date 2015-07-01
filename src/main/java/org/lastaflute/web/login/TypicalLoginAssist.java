@@ -758,7 +758,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                      Session UserBean
     //                                      ----------------
     @Override
-    public OptionalThing<USER_BEAN> getSessionUserBean() { // quit covariant return type for optional
+    public OptionalThing<USER_BEAN> getSessionUserBean() { // use covariant generic type
         final Class<USER_BEAN> beanType = getUserBeanType();
         return OptionalThing.ofNullable(sessionManager.getAttribute(beanType).orElse(null), () -> {
             String msg = "Not found the user in session by the type:" + beanType;

@@ -244,8 +244,8 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
+    //                                                                        Small Helper
+    //                                                                        ============
     protected void assertArgumentNotEmpty(String variableName, String value) {
         assertArgumentNotNull(variableName, value);
         if (value.isEmpty()) {

@@ -286,8 +286,8 @@ public class SimpleCookieManager implements CookieManager {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
+    //                                                                        Assist Logic
+    //                                                                        ============
     protected HttpServletRequest getRequest() {
         return LaRequestUtil.getRequest();
     }

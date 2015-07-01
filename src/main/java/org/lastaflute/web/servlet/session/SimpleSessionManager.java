@@ -30,6 +30,7 @@ import javax.servlet.http.HttpSession;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.exception.SessionAttributeCannotCastException;
 import org.lastaflute.web.exception.SessionAttributeNotFoundException;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.request.scoped.ScopedMessageHandler;
@@ -66,22 +67,47 @@ public class SimpleSessionManager implements SessionManager {
     @Override
     @SuppressWarnings("unchecked")
     public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey) {
-        assertObjectNotNull("type", typeKey);
+        assertArgumentNotNull("type", typeKey);
         final HttpSession session = getSessionExisting();
         final String key = typeKey.getName();
-        return OptionalThing.ofNullable(session != null ? (ATTRIBUTE) session.getAttribute(key) : null, () -> {
-            String msg = "Not found the session attribute by the typed key: " + key;
+        final ATTRIBUTE attribute = session != null ? (ATTRIBUTE) session.getAttribute(key) : null;
+        return OptionalThing.ofNullable(attribute, () -> {
+            final List<String> nameList = getAttributeNameList();
+            final String msg = "Not found the session attribute by the typed key: " + key + " existing=" + nameList;
             throw new SessionAttributeNotFoundException(msg);
         });
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> genericType) {
-        assertObjectNotNull("key", key);
+    public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> attributeType) {
+        assertArgumentNotNull("key", key);
         final HttpSession session = getSessionExisting();
-        return OptionalThing.ofNullable(session != null ? (ATTRIBUTE) session.getAttribute(key) : null, () -> {
-            String msg = "Not found the session attribute by the string key: " + key;
+        final Object original = session != null ? session.getAttribute(key) : null;
+        final ATTRIBUTE attribute;
+        if (original != null) {
+            try {
+                attribute = attributeType.cast(original);
+            } catch (ClassCastException e) {
+                final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+                br.addNotice("Cannot cast the the session attribute");
+                br.addItem("Attribute Key");
+                br.addElement(key);
+                br.addItem("Specified Type");
+                br.addElement(attributeType);
+                br.addItem("Existing Attribute");
+                br.addElement(original.getClass());
+                br.addElement(original);
+                br.addItem("Attribute List");
+                br.addElement(getAttributeNameList());
+                final String msg = br.buildExceptionMessage();
+                throw new SessionAttributeCannotCastException(msg);
+            }
+        } else {
+            attribute = null;
+        }
+        return OptionalThing.ofNullable(attribute, () -> {
+            final List<String> nameList = getAttributeNameList();
+            final String msg = "Not found the session attribute by the string key: " + key + " existing=" + nameList;
             throw new SessionAttributeNotFoundException(msg);
         });
     }
@@ -102,7 +128,7 @@ public class SimpleSessionManager implements SessionManager {
 
     @Override
     public void setAttribute(Object value) {
-        assertObjectNotNull("value", value);
+        assertArgumentNotNull("value", value);
         checkTypedAttributeSettingMistake(value);
         getSessionOrCreated().setAttribute(value.getClass().getName(), value);
     }
@@ -132,14 +158,14 @@ public class SimpleSessionManager implements SessionManager {
 
     @Override
     public void setAttribute(String key, Object value) {
-        assertObjectNotNull("key", key);
-        assertObjectNotNull("value", value);
+        assertArgumentNotNull("key", key);
+        assertArgumentNotNull("value", value);
         getSessionOrCreated().setAttribute(key, value);
     }
 
     @Override
     public void removeAttribute(Class<?> type) {
-        assertObjectNotNull("type", type);
+        assertArgumentNotNull("type", type);
         final HttpSession session = getSessionExisting();
         if (session != null) {
             session.removeAttribute(type.getName());
@@ -148,7 +174,7 @@ public class SimpleSessionManager implements SessionManager {
 
     @Override
     public void removeAttribute(String key) {
-        assertObjectNotNull("key", key);
+        assertArgumentNotNull("key", key);
         final HttpSession session = getSessionExisting();
         if (session != null) {
             session.removeAttribute(key);
@@ -236,8 +262,8 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
+    //                                                                        Assist Logic
+    //                                                                        ============
     protected HttpServletRequest getRequest() {
         return LaRequestUtil.getRequest();
     }
@@ -251,7 +277,13 @@ public class SimpleSessionManager implements SessionManager {
         return request != null ? request.getSession(false) : null;
     }
 
-    protected void assertObjectNotNull(String variableName, Object value) {
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
         if (value == null) {
             throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
         }

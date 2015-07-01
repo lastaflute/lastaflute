@@ -938,8 +938,8 @@ public class RequestLoggingFilter implements Filter {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
+    //                                                                        Assist Logic
+    //                                                                        ============
     protected SortedSet<?> toSortedSet(final Enumeration<?> enu) {
         final SortedSet<Object> set = new TreeSet<Object>();
         set.addAll(Collections.list(enu));
