@@ -37,7 +37,6 @@ import org.lastaflute.di.util.LdiInputStreamUtil;
 import org.lastaflute.di.util.LdiOutputStreamUtil;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionPathResolver;
-import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.util.LaRequestUtil;
 import org.lastaflute.web.util.LaResponseUtil;
 import org.slf4j.Logger;
@@ -112,40 +111,23 @@ public class SimpleResponseManager implements ResponseManager {
     //                                                                   Redirect Response
     //                                                                   =================
     @Override
-    public void forward(String forwardPath) throws ServletException, IOException {
-        assertArgumentNotNull("forwardPath", forwardPath);
-        final HttpServletRequest request = getRequestManager().getRequest();
-        final RequestDispatcher rd = request.getRequestDispatcher(forwardPath); // same context
-        if (rd == null) {
-            String msg = "Not found the request dispatcher for the URI: " + forwardPath;
-            throw new IllegalStateException(msg);
-        }
-        rd.forward(request, getResponse());
+    public void redirect(Redirectable redirectable) throws IOException {
+        assertArgumentNotNull("response", redirectable);
+        doRedirect(redirectable);
     }
 
-    @Override
-    public void redirect(String redirectPath) throws IOException {
-        assertArgumentNotNull("redirectPath", redirectPath);
-        doRedirect(redirectPath, false);
-    }
-
-    @Override
-    public void redirectAsIs(String redirectPath) throws IOException {
-        assertArgumentNotNull("redirectPath", redirectPath);
-        doRedirect(redirectPath, true);
-    }
-
-    protected void doRedirect(String redirectPath, boolean asIs) throws IOException {
+    protected void doRedirect(Redirectable redirectable) throws IOException {
         final HttpServletResponse response = getResponse();
-        response.sendRedirect(buildRedirectUrl(response, redirectPath, asIs));
+        response.sendRedirect(buildRedirectUrl(response, redirectable));
     }
 
-    protected String buildRedirectUrl(HttpServletResponse response, String redirectPath, boolean asIs) {
+    protected String buildRedirectUrl(HttpServletResponse response, Redirectable redirectable) {
+        final String routingPath = redirectable.getRoutingPath();
         final String redirectUrl;
-        if (needsContextPathForRedirectPath(redirectPath, asIs)) {
-            redirectUrl = getRequestManager().getContextPath() + redirectPath;
+        if (needsContextPathForRedirectPath(routingPath, redirectable.isAsIs())) {
+            redirectUrl = getRequestManager().getContextPath() + routingPath;
         } else {
-            redirectUrl = redirectPath;
+            redirectUrl = routingPath;
         }
         return response.encodeRedirectURL(redirectUrl);
     }
@@ -155,12 +137,21 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     @Override
-    public HtmlResponse movedPermanently(HtmlResponse response) {
-        if (!response.isRedirectTo()) {
-            throw new IllegalArgumentException("Not redirect response for permanently: " + response);
+    public void movedPermanently(Redirectable redirectable) {
+        setLocationPermanently(buildRedirectUrl(getResponse(), redirectable)); // set up headers for 301
+    }
+
+    @Override
+    public void forward(Forwardable forwardable) throws ServletException, IOException {
+        assertArgumentNotNull("forwardable", forwardable);
+        final String forwardPath = forwardable.getRoutingPath();
+        final HttpServletRequest request = getRequestManager().getRequest();
+        final RequestDispatcher rd = request.getRequestDispatcher(forwardPath); // same context
+        if (rd == null) {
+            String msg = "Not found the request dispatcher for the URI: " + forwardable;
+            throw new IllegalStateException(msg);
         }
-        setLocationPermanently(response.getRoutingPath()); // set up headers for 301
-        return HtmlResponse.empty(); // because of already done about response process
+        rd.forward(request, getResponse());
     }
 
     // ===================================================================================

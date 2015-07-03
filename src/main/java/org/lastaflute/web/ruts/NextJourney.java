@@ -17,10 +17,13 @@ package org.lastaflute.web.ruts;
 
 import java.io.Serializable;
 
+import org.lastaflute.web.servlet.request.Forwardable;
+import org.lastaflute.web.servlet.request.Redirectable;
+
 /**
  * @author modified by jflute (originated in Struts)
  */
-public class NextJourney implements Serializable {
+public class NextJourney implements Redirectable, Forwardable, Serializable {
 
     // ===================================================================================
     //                                                                          Definition

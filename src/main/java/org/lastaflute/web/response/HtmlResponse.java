@@ -29,11 +29,12 @@ import org.lastaflute.web.response.next.RedirectNext;
 import org.lastaflute.web.response.next.RedirectNext.RedirectPathStyle;
 import org.lastaflute.web.response.next.RoutingNext;
 import org.lastaflute.web.response.render.RenderDataRegistration;
+import org.lastaflute.web.servlet.request.Redirectable;
 
 /**
  * @author jflute
  */
-public class HtmlResponse implements ActionResponse {
+public class HtmlResponse implements ActionResponse, Redirectable {
 
     // ===================================================================================
     //                                                                          Definition

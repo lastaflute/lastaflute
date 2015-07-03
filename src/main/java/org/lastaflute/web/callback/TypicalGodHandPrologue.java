@@ -258,18 +258,18 @@ public class TypicalGodHandPrologue {
     /**
      * Handle the login required check for the requested action.
      * @param runtime The runtime meta of action execute to determine required action. (NotNull)
-     * @return The forward path, basically for login-redirect. (NullAllowed)
+     * @return The resopnse of action, basically for login-redirect. (NotNull, EmptyAllowed: login check passed)
      */
     protected ActionResponse handleLoginRequiredCheck(ActionRuntime runtime) {
         return loginManager.map(nager -> {
             final LoginHandlingResource resource = createLogingHandlingResource(runtime);
-            return nager.checkLoginRequired(resource).map(routingPath -> {
+            return nager.checkLoginRequired(resource).map(response -> {
                 if (runtime.isApiExecute()) {
-                    return dispatchApiLoginRequiredFailure(runtime, routingPath);
+                    return dispatchApiLoginRequiredFailure(runtime, response);
                 } else {
-                    return HtmlResponse.fromRedirectPath(routingPath);
+                    return response;
                 }
-            }).orElse(HtmlResponse.empty());
+            }).orElse(ActionResponse.empty());
         }).orElseGet(() -> {
             return ActionResponse.empty();
         });
@@ -279,9 +279,9 @@ public class TypicalGodHandPrologue {
         return new LoginHandlingResource(runtime);
     }
 
-    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime, String routingPath) {
+    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime, HtmlResponse response) {
         final ApiFailureResource resource = createLoginRequiredApiFailureResource();
-        final ApiLoginRedirectProvider provider = createApiLoginRedirectProvider(routingPath);
+        final ApiLoginRedirectProvider provider = createApiLoginRedirectProvider(response.getRoutingPath());
         return apiManager.handleLoginRequiredFailure(resource, runtime, provider);
     }
 

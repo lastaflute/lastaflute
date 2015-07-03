@@ -21,8 +21,6 @@ import java.io.InputStream;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 
-import org.lastaflute.web.response.HtmlResponse;
-
 /**
  * The manager of response. (response facade)
  * @author jflute
@@ -49,34 +47,25 @@ public interface ResponseManager {
     //                                                                    Routing Response
     //                                                                    ================
     /**
-     * Forward to the path.
-     * @param forwardPath The path of forward without context path, will be adjusted in this method. (NotNull)
-     * @throws ServletException When the servlet failed.
+     * Redirect to the path.
+     * @param redirectable The redirect-able object that can provides e.g. redirect path. (NotNull)
      * @throws IOException When the IO failed.
      */
-    void forward(String forwardPath) throws ServletException, IOException;
-
-    /**
-     * Redirect to the path. (adjusted for context path)
-     * @param redirectPath The path of redirect without context path, will be adjusted in this method. (NotNull)
-     * @throws IOException When the IO failed.
-     */
-    void redirect(String redirectPath) throws IOException;
-
-    /**
-     * Redirect to the path as-is. (no adjustment for context path)
-     * @param redirectPath The path of redirect without context path, plainly used in this method. (NotNull)
-     * @throws IOException When the IO failed.
-     */
-    void redirectAsIs(String redirectPath) throws IOException;
+    void redirect(Redirectable redirectable) throws IOException;
 
     /**
      * Set status as MOVED_PERMANENTLY and add the URL to location.
-     * @param response The HTML response for redirect. (NotNull)
-     * @param url The redirect URL for location of header. (NotNull)
-     * @return The result response, basically empty because of response already committed. (NotNull)
+     * @param redirectable The redirect-able object that can provides e.g. redirect path. (NotNull)
      */
-    HtmlResponse movedPermanently(HtmlResponse response);
+    void movedPermanently(Redirectable redirectable);
+
+    /**
+     * Forward to the path.
+     * @param forwardable The forward-able object that can provide e.g. forward path without context path. (NotNull)
+     * @throws ServletException When the servlet failed.
+     * @throws IOException When the IO failed.
+     */
+    void forward(Forwardable forwardable) throws ServletException, IOException;
 
     // ===================================================================================
     //                                                                      Write Response

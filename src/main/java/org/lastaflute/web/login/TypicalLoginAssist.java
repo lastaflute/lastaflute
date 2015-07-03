@@ -620,8 +620,8 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                         LoginRequired
     //                                         -------------
     @Override
-    public OptionalThing<String> checkLoginRequired(LoginHandlingResource resource) {
-        final OptionalThing<String> redirectTo;
+    public OptionalThing<HtmlResponse> checkLoginRequired(LoginHandlingResource resource) {
+        final OptionalThing<HtmlResponse> redirectTo;
         if (isLoginRequiredAction(resource)) {
             redirectTo = processLoginRequired(resource);
         } else {
@@ -633,15 +633,15 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     /**
      * Process for the login-required action.
      * @param resource The resource of login handling to determine. (NotNull)
-     * @return The optional forward path, basically for login redirect. (NotNull, EmptyAllowed: then login check passed)
+     * @return The optional HTML response, basically for login redirect. (NotNull, EmptyAllowed: login check passed)
      */
-    protected OptionalThing<String> processLoginRequired(LoginHandlingResource resource) {
+    protected OptionalThing<HtmlResponse> processLoginRequired(LoginHandlingResource resource) {
         logger.debug("...Checking login status for login required");
         if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
             return processAuthority(resource);
         }
         saveRequestedLoginRedirectInfo();
-        final OptionalThing<String> loginAction = redirectToRequiredCheckedLoginAction();
+        final OptionalThing<HtmlResponse> loginAction = redirectToRequiredCheckedLoginAction();
         loginAction.ifPresent(action -> logger.debug("...Redirecting to login action: {}", action));
         return loginAction;
     }
@@ -649,9 +649,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     /**
      * Redirect to action when required checked (basically login action). <br>
      * You can customize the redirection when not login but login required.
-     * @return The optional forward path, basically for login redirect. (NotNull, EmptyAllowed: then login check passed)
+     * @return The optional HTML response, basically for login redirect. (NotNull, NotEmpty)
      */
-    protected OptionalThing<String> redirectToRequiredCheckedLoginAction() {
+    protected OptionalThing<HtmlResponse> redirectToRequiredCheckedLoginAction() {
         return OptionalThing.of(redirectToLoginAction());
     }
 
@@ -777,9 +777,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     /**
      * Process for the authority of the login user. (called in login status)
      * @param resource The resource of login handling to determine. (NotNull)
-     * @return The forward path, basically for authority redirect. (NotNull, EmptyAllowed: then authority check passed)
+     * @return The optional HTML response, basically for authority redirect. (NotNull, EmptyAllowed: authority passed)
      */
-    protected OptionalThing<String> processAuthority(LoginHandlingResource resource) {
+    protected OptionalThing<HtmlResponse> processAuthority(LoginHandlingResource resource) {
         return OptionalObject.empty(); // no check as default, you can override
     }
 
@@ -789,9 +789,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     /**
      * Process for the NOT login-required action.
      * @param resource The resource of login handling to determine. (NotNull)
-     * @return The forward path, basically for login redirect. (NullAllowed)
+     * @return The optional HTML response, basically for login redirect. (NotNull, EmptyAllowed: login check passed)
      */
-    protected OptionalThing<String> processNotLoginRequired(LoginHandlingResource resource) {
+    protected OptionalThing<HtmlResponse> processNotLoginRequired(LoginHandlingResource resource) {
         if (isAutoLoginWhenNotLoginRequired(resource)) {
             logger.debug("...Checking login status for not-login required");
             if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
@@ -893,9 +893,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     }
 
     @Override
-    public String redirectToLoginAction() {
+    public HtmlResponse redirectToLoginAction() {
         final Class<?> redirectLoginActionType = getRedirectLoginActionType();
-        return actionPathResolver.toActionUrl(redirectLoginActionType, true, null);
+        final String actionUrl = actionPathResolver.toActionUrl(redirectLoginActionType, /*redirect*/true, null);
+        return HtmlResponse.fromRedirectPath(actionUrl);
     }
 
     @Override

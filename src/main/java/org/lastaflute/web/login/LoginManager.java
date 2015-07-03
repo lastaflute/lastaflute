@@ -111,9 +111,9 @@ public interface LoginManager {
     /**
      * Check login required for the requested action. (with remember-me, preparing login-redirect)
      * @param resource The resource of login handling to determine required or not. (NotNull)
-     * @return The optional routing path, basically for login redirect. (NotNull: means checked, EmptyAllowed: then login check passed)
+     * @return The optional HTML response, basically for login redirect. (NotNull, EmptyAllowed: login check passed)
      */
-    OptionalThing<String> checkLoginRequired(LoginHandlingResource resource);
+    OptionalThing<HtmlResponse> checkLoginRequired(LoginHandlingResource resource);
 
     /**
      * Is the action login-required?
@@ -126,7 +126,7 @@ public interface LoginManager {
      * Get the user bean in session. (you can determine login or not) <br>
      * Also you can use lookupSessionUserBean() from concrete type instance,
      * which provides user bean as generic type.
-     * @return The user bean in session. (NullAllowed: if null, means not-login)
+     * @return The user bean in session. (NotNull, EmptyAllowed: means not-login)
      */
     OptionalThing<? extends UserBean> getSessionUserBean(); // thanks, feedback of "? extends" way
 
@@ -154,9 +154,9 @@ public interface LoginManager {
 
     /**
      * Redirect to login action as login-redirect.
-     * @return The redirect path for login action. (NotNull)
+     * @return The response of HTML for login action. (NotNull)
      */
-    String redirectToLoginAction();
+    HtmlResponse redirectToLoginAction();
 
     /**
      * Get the bean of login redirect saved in session.

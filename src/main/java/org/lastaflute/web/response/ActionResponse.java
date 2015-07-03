@@ -17,12 +17,10 @@ package org.lastaflute.web.response;
 
 import java.util.Map;
 
-import org.lastaflute.web.aspect.RomanticActionCustomizer;
-
 /**
  * The response type of action return. <br>
  * You can define the type as execute method of action
- * if you set {@link RomanticActionCustomizer} in your customizer.dicon.
+ * if you set RomanticActionCustomizer in your customizer.dicon.
  * @author jflute
  */
 public interface ActionResponse {

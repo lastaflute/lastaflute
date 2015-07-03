@@ -366,7 +366,7 @@ public class TypicalGodHandMonologue {
 
     protected ActionResponse redirectToLoginAction() {
         return loginManager.map(nager -> {
-            return HtmlResponse.fromRedirectPath(nager.redirectToLoginAction());
+            return nager.redirectToLoginAction();
         }).orElseGet(() -> {
             return HtmlResponse.empty();
         });

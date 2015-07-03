@@ -336,11 +336,16 @@ public abstract class LastaAction {
      * <span style="color: #3F7E5E">// e.g. /member/edit/</span>
      * return <span style="color: #FD4747">movedPermanently</span>(redirect(MemberEditAction.class));
      * </pre>
-     * @param response The redirect URL with redirect mark for SAStruts. (NotNull)
-     * @return The returned URL for execute method of SAStruts. (NullAllowed)
+     * @param response The action response of HTML to redirect. (NotNull)
+     * @return The empty HTML response because of response already written. (NotNull)
      */
     protected HtmlResponse movedPermanently(HtmlResponse response) {
-        return responseManager.movedPermanently(response);
+        assertArgumentNotNull("response", response);
+        if (!response.isRedirectTo()) {
+            throw new IllegalStateException("Not redirect response: " + response);
+        }
+        responseManager.movedPermanently(response);
+        return HtmlResponse.empty(); // because of already done about response process
     }
 
     // -----------------------------------------------------
