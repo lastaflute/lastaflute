@@ -21,7 +21,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -301,12 +300,12 @@ public class SimpleResponseManager implements ResponseManager {
         }
         final String contentType = resource.getContentType();
         response.setContentType(contentType);
-        final Map<String, String> headerMap = resource.getHeaderMap();
-        for (Entry<String, String> entry : headerMap.entrySet()) {
-            final String name = entry.getKey();
-            final String value = entry.getValue();
-            response.setHeader(name, value);
-        }
+        final Map<String, String[]> headerMap = resource.getHeaderMap();
+        headerMap.forEach((key, values) -> {
+            for (String value : values) {
+                response.addHeader(key, value); // added as array if already exists
+            }
+        });
     }
 
     protected void doDownloadByteData(ResponseDownloadResource resource, HttpServletResponse response, byte[] byteData) {

@@ -27,15 +27,16 @@ public interface ActionResponse {
 
     /**
      * @param name The name of header. (NotNull)
-     * @param value The value of header. (NotNull)
+     * @param values The varying array for value of header. (NotNull)
      * @return this. (NotNull)
+     * @throws IllegalStateException When the header already exists.
      */
-    ActionResponse header(String name, String value);
+    ActionResponse header(String name, String... values);
 
     /**
      * @return The read-only map for headers, map:{header-name = header-value}. (NotNull)
      */
-    Map<String, String> getHeaderMap();
+    Map<String, String[]> getHeaderMap();
 
     /**
      * Is the response empty state? (do nothing)

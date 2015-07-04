@@ -32,11 +32,11 @@ public class EmptyResponse implements ActionResponse {
     protected EmptyResponse() {
     }
 
-    public EmptyResponse header(String name, String value) {
-        throw new IllegalStateException("Cannot use header() for empty response: " + name + ", " + value);
+    public EmptyResponse header(String name, String... values) {
+        throw new IllegalStateException("Cannot use header() for empty response: " + name + ", " + values);
     }
 
-    public Map<String, String> getHeaderMap() {
+    public Map<String, String[]> getHeaderMap() {
         return Collections.emptyMap();
     }
 

@@ -142,12 +142,13 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                           Action Form
     //                                           -----------
+    // public for pushed form
     /**
      * @param formType The type of action form. (NullAllowed: if null, no form for the method)
      * @param listFormParameter The parameter of list form. (NullAllowed: normally null, for e.g. JSON list)
      * @return The optional form meta to be prepared. (NotNull)
      */
-    protected OptionalThing<ActionFormMeta> prepareFormMeta(Class<?> formType, Parameter listFormParameter) {
+    public OptionalThing<ActionFormMeta> prepareFormMeta(Class<?> formType, Parameter listFormParameter) {
         final ActionFormMeta meta = formType != null ? createFormMeta(formType, listFormParameter) : null;
         return OptionalThing.ofNullable(meta, () -> {
             String msg = "Not found the form meta as parameter for the execute method: " + executeMethod;

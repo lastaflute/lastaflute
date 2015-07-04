@@ -46,7 +46,7 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     //                                                                           Attribute
     //                                                                           =========
     protected final RoutingNext nextRouting;
-    protected Map<String, String> headerMap; // lazy loaded (for when no use)
+    protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected boolean empty;
     protected boolean skip;
     protected List<RenderDataRegistration> registrationList; // lazy loaded
@@ -84,23 +84,26 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     // ===================================================================================
     //                                                                              Header
     //                                                                              ======
-    // TODO jflute lastaflute: [E] function: Response header multiple value
     @Override
-    public HtmlResponse header(String name, String value) {
+    public HtmlResponse header(String name, String... values) {
         assertArgumentNotNull("name", name);
-        assertArgumentNotNull("value", value);
-        prepareHeaderMap().put(name, value);
+        assertArgumentNotNull("value", values);
+        final Map<String, String[]> headerMap = prepareHeaderMap();
+        if (headerMap.containsKey(name)) {
+            throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
+        }
+        headerMap.put(name, values);
         return this;
     }
 
     @Override
-    public Map<String, String> getHeaderMap() {
+    public Map<String, String[]> getHeaderMap() {
         return headerMap != null ? Collections.unmodifiableMap(headerMap) : DfCollectionUtil.emptyMap();
     }
 
-    protected Map<String, String> prepareHeaderMap() {
+    protected Map<String, String[]> prepareHeaderMap() {
         if (headerMap == null) {
-            headerMap = new LinkedHashMap<String, String>(4);
+            headerMap = new LinkedHashMap<String, String[]>(4);
         }
         return headerMap;
     }

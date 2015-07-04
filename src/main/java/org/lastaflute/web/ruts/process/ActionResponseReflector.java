@@ -15,7 +15,6 @@
  */
 package org.lastaflute.web.ruts.process;
 
-import org.dbflute.optional.OptionalObject;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.callback.ActionRuntime;
@@ -27,8 +26,8 @@ import org.lastaflute.web.response.StreamResponse;
 import org.lastaflute.web.response.XmlResponse;
 import org.lastaflute.web.response.render.RenderData;
 import org.lastaflute.web.ruts.NextJourney;
+import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 
@@ -94,7 +93,11 @@ public class ActionResponseReflector {
     }
 
     protected void setupHtmlResponseHeader(HtmlResponse response) {
-        response.getHeaderMap().forEach((key, value) -> requestManager.getResponseManager().addHeader(key, value));
+        response.getHeaderMap().forEach((key, values) -> {
+            for (String value : values) {
+                requestManager.getResponseManager().addHeader(key, value);
+            }
+        });
     }
 
     protected void setupForwardRenderData(HtmlResponse htmlResponse) {
@@ -110,14 +113,13 @@ public class ActionResponseReflector {
     protected void setupPushedActionForm(HtmlResponse response) {
         response.getPushedFormType().ifPresent(formType -> {
             final String formKey = LastaWebKey.PUSHED_ACTION_FORM_KEY;
-            final ActionFormMeta formMeta = createPushedActionFormMeta(formType, formKey);
-            requestManager.setAttribute(formKey, formMeta.createActionForm());
+            final VirtualActionForm form = createPushedActionForm(formType, formKey);
+            requestManager.setAttribute(formKey, form);
         });
     }
 
-    protected ActionFormMeta createPushedActionFormMeta(Class<?> formType, String formKey) {
-        // TODO jflute lastaflute: [E] fitting: cache of action form meta for pushed and also argument
-        return new ActionFormMeta(formKey, formType, OptionalObject.empty());
+    protected VirtualActionForm createPushedActionForm(Class<?> formType, String formKey) {
+        return execute.prepareFormMeta(formType, null).get().createActionForm();
     }
 
     protected NextJourney createActionNext(HtmlResponse response) {
@@ -155,7 +157,11 @@ public class ActionResponseReflector {
     }
 
     protected void setupApiResponseHeader(ResponseManager responseManager, ApiResponse apiResponse) {
-        apiResponse.getHeaderMap().forEach((key, value) -> responseManager.addHeader(key, value));
+        apiResponse.getHeaderMap().forEach((key, values) -> {
+            for (String value : values) {
+                responseManager.addHeader(key, value); // added as array if already exists
+            }
+        });
     }
 
     protected void setupApiResponseHttpStatus(ResponseManager responseManager, ApiResponse apiResponse) {

@@ -42,7 +42,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     //                                                                           =========
     protected final BEAN jsonBean;
     protected String callback;
-    protected Map<String, String> headerMap; // lazy loaded (for when no use)
+    protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
 
     protected boolean forcedlyJavaScript;
@@ -65,9 +65,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
      * @param jsonObj The JSON object to send response. (NotNull)
      */
     public JsonResponse(BEAN jsonObj) {
-        if (jsonObj == null) {
-            throw new IllegalArgumentException("The argument 'jsonObj' should not be null.");
-        }
+        assertArgumentNotNull("jsonObj", jsonObj);
         this.jsonBean = jsonObj;
     }
 
@@ -75,25 +73,25 @@ public class JsonResponse<BEAN> implements ApiResponse {
     //                                                                              Header
     //                                                                              ======
     @Override
-    public JsonResponse<BEAN> header(String name, String value) {
-        if (name == null) {
-            throw new IllegalArgumentException("The argument 'name' should not be null.");
+    public JsonResponse<BEAN> header(String name, String... values) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("values", values);
+        final Map<String, String[]> headerMap = prepareHeaderMap();
+        if (headerMap.containsKey(name)) {
+            throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
         }
-        if (value == null) {
-            throw new IllegalArgumentException("The argument 'value' should not be null.");
-        }
-        prepareHeaderMap().put(name, value);
+        headerMap.put(name, values);
         return this;
     }
 
     @Override
-    public Map<String, String> getHeaderMap() {
+    public Map<String, String[]> getHeaderMap() {
         return headerMap != null ? Collections.unmodifiableMap(headerMap) : DfCollectionUtil.emptyMap();
     }
 
-    protected Map<String, String> prepareHeaderMap() {
+    protected Map<String, String[]> prepareHeaderMap() {
         if (headerMap == null) {
-            headerMap = new LinkedHashMap<String, String>(4);
+            headerMap = new LinkedHashMap<String, String[]>(4);
         }
         return headerMap;
     }
@@ -143,6 +141,15 @@ public class JsonResponse<BEAN> implements ApiResponse {
     protected JsonResponse<BEAN> asSkip() { // internal use
         skip = true;
         return this;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String title, Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + title + "' should not be null.");
+        }
     }
 
     // ===================================================================================

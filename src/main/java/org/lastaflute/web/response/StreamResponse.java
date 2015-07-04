@@ -49,7 +49,7 @@ public class StreamResponse implements ActionResponse {
     //                                                                           =========
     protected final String fileName;
     protected String contentType;
-    protected final Map<String, String> headerMap = createHeaderMap(); // no lazy because of frequently used
+    protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected Integer httpStatus;
 
     protected byte[] byteData;
@@ -58,17 +58,15 @@ public class StreamResponse implements ActionResponse {
     protected boolean emptyResponse;
     protected boolean skip;
 
-    protected Map<String, String> createHeaderMap() {
-        return new LinkedHashMap<String, String>();
+    protected Map<String, String[]> createHeaderMap() {
+        return new LinkedHashMap<String, String[]>();
     }
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public StreamResponse(String fileName) {
-        if (fileName == null) {
-            throw new IllegalArgumentException("The argument 'fileName' should not be null.");
-        }
+        assertArgumentNotNull("fileName", fileName);
         this.fileName = fileName;
     }
 
@@ -76,6 +74,7 @@ public class StreamResponse implements ActionResponse {
     //                                                                        Content Type
     //                                                                        ============
     public StreamResponse contentType(String contentType) {
+        assertArgumentNotNull("contentType", contentType);
         this.contentType = contentType;
         return this;
     }
@@ -98,24 +97,23 @@ public class StreamResponse implements ActionResponse {
     //                                                                              Header
     //                                                                              ======
     @Override
-    public StreamResponse header(String name, String value) {
-        if (name == null) {
-            throw new IllegalArgumentException("The argument 'name' should not be null.");
+    public StreamResponse header(String name, String... values) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("values", values);
+        if (headerMap.containsKey(name)) {
+            throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
         }
-        if (value == null) {
-            throw new IllegalArgumentException("The argument 'value' should not be null.");
-        }
-        headerMap.put(name, value);
+        headerMap.put(name, values);
         return this;
     }
 
     @Override
-    public Map<String, String> getHeaderMap() {
+    public Map<String, String[]> getHeaderMap() {
         return Collections.unmodifiableMap(headerMap);
     }
 
     public void headerContentDispositionAttachment() { // used as default
-        headerMap.put("Content-disposition", "attachment; filename=\"" + fileName + "\"");
+        headerMap.put("Content-disposition", new String[] { "attachment; filename=\"" + fileName + "\"" });
     }
 
     // ===================================================================================
@@ -134,9 +132,7 @@ public class StreamResponse implements ActionResponse {
     //                                                                       Download Data
     //                                                                       =============
     public StreamResponse data(byte[] data) {
-        if (data == null) {
-            throw new IllegalArgumentException("The argument 'data' should not be null.");
-        }
+        assertArgumentNotNull("data", data);
         if (inputStream != null) {
             throw new IllegalStateException("The input stream already exists.");
         }
@@ -145,9 +141,7 @@ public class StreamResponse implements ActionResponse {
     }
 
     public StreamResponse stream(InputStream stream) {
-        if (stream == null) {
-            throw new IllegalArgumentException("The argument 'stream' should not be null.");
-        }
+        assertArgumentNotNull("stream", stream);
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
         }
@@ -156,9 +150,8 @@ public class StreamResponse implements ActionResponse {
     }
 
     public StreamResponse stream(InputStream stream, Integer contentLength) {
-        if (stream == null) {
-            throw new IllegalArgumentException("The argument 'stream' should not be null.");
-        }
+        assertArgumentNotNull("stream", stream);
+        assertArgumentNotNull("contentLength", contentLength);
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
         }
@@ -206,7 +199,7 @@ public class StreamResponse implements ActionResponse {
     public ResponseDownloadResource toDownloadResource() {
         final ResponseDownloadResource resource = new ResponseDownloadResource(fileName);
         resource.contentType(contentType);
-        for (Entry<String, String> entry : headerMap.entrySet()) {
+        for (Entry<String, String[]> entry : headerMap.entrySet()) {
             resource.header(entry.getKey(), entry.getValue());
         }
         if (byteData != null) {
@@ -216,6 +209,15 @@ public class StreamResponse implements ActionResponse {
             resource.stream(inputStream, contentLength);
         }
         return resource;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String title, Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + title + "' should not be null.");
+        }
     }
 
     // ===================================================================================

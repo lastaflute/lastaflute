@@ -29,7 +29,7 @@ public class ResponseDownloadResource {
     //                                                                           =========
     protected final String fileName;
     protected String contentType;
-    protected final Map<String, String> headerMap = new LinkedHashMap<String, String>();
+    protected final Map<String, String[]> headerMap = new LinkedHashMap<String, String[]>(4);
     protected byte[] byteData;
     protected InputStream inputStream;
     protected Integer contentLength;
@@ -69,21 +69,17 @@ public class ResponseDownloadResource {
     // ===================================================================================
     //                                                                              Header
     //                                                                              ======
-    public void header(String name, String value) {
-        if (name == null) {
-            throw new IllegalArgumentException("The argument 'name' should not be null.");
-        }
-        if (value == null) {
-            throw new IllegalArgumentException("The argument 'value' should not be null.");
-        }
-        headerMap.put(name, value);
+    public void header(String name, String[] values) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("values", values);
+        headerMap.put(name, values);
     }
 
     public void headerContentDispositionAttachment() { // used as default
-        headerMap.put("Content-disposition", "attachment; filename=\"" + fileName + "\"");
+        headerMap.put("Content-disposition", new String[] { "attachment; filename=\"" + fileName + "\"" });
     }
 
-    public Map<String, String> getHeaderMap() {
+    public Map<String, String[]> getHeaderMap() {
         return headerMap;
     }
 
@@ -134,6 +130,15 @@ public class ResponseDownloadResource {
 
     public Integer getContentLength() {
         return contentLength;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String title, Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + title + "' should not be null.");
+        }
     }
 
     // ===================================================================================
