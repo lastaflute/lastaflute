@@ -31,7 +31,7 @@ public final class LaServletContextUtil {
         return (ServletContext) ContainerUtil.retrieveExternalContext().getApplication();
     }
 
-    public static String getViewPrefix() {
-        return "/WEB-INF/view"; // TODO jflute lastaflute: [E] refactor: view prefix can be overridden, approach after thymeleaf
+    public static String getJspViewPrefix() {
+        return "/WEB-INF/view"; // fixedly
     }
 }

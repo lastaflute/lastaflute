@@ -364,14 +364,11 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected String removeViewPrefixFromRequestPathIfNeeds(String path) { // from RequestUtil.getPath()
-        final String viewPrefix = LaServletContextUtil.getViewPrefix();
-        if (viewPrefix == null) {
+        if (!path.endsWith(".jsp")) {
             return path;
         }
-        if (path.startsWith(viewPrefix)) {
-            return path.substring(viewPrefix.length());
-        }
-        return path;
+        final String viewPrefix = LaServletContextUtil.getJspViewPrefix();
+        return path.startsWith(viewPrefix) ? path.substring(viewPrefix.length()) : path;
     }
 
     @Override

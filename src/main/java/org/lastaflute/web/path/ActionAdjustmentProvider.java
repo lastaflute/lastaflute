@@ -32,7 +32,9 @@ public interface ActionAdjustmentProvider {
      * You should return effective size against array injection problem.
      * @return The integer for the size. (MinusAllowed: if minus, no guard)
      */
-    int provideIndexedPropertySizeLimit();
+    default int provideIndexedPropertySizeLimit() {
+        return 256; // as default
+    }
 
     /**
      * Decode the escaped character for property value from URL parameter. <br>
@@ -47,9 +49,9 @@ public interface ActionAdjustmentProvider {
 
     /**
      * Filter the HTML path.
-     * @param path The path for JSP, that has view-prefix e.g. '/WEB-INF/view/'. (NotNull)
+     * @param path The path for HTML template, e.g. if JSP, it has view-prefix '/WEB-INF/view/'. (NotNull)
      * @param actionMapping The action mapping for current action. (NotNull)
-     * @return The filtered path for JSP. (NullAllowed: if null, no filter)
+     * @return The filtered path for HTML. (NullAllowed: if null, no filter)
      */
     String filterHtmlPath(String path, ActionMapping actionMapping);
 

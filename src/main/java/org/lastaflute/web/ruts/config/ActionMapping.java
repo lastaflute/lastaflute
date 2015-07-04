@@ -119,8 +119,8 @@ public class ActionMapping {
             if (!path.startsWith("/")) {
                 path = buildActionPath(getActionDef().getComponentName()) + path;
             }
-            if (!redirectTo && isJspForward(path)) {
-                path = filterJspPath(path);
+            if (!redirectTo && isHtmlForward(path)) {
+                path = filterHtmlPath(path);
             }
         }
         return newNextJourney(path, redirectTo, response.isAsIs());
@@ -146,17 +146,28 @@ public class ActionMapping {
         return "/" + filtered.replace('_', '/') + "/";
     }
 
-    protected boolean isJspForward(String path) {
-        return path.endsWith(".jsp"); // you can only forward to JSP
+    protected boolean isHtmlForward(String path) {
+        return isHtmlPath(path) || isJspPath(path);
     }
 
-    protected String filterJspPath(String path) {
-        final String viewPrefix = LaServletContextUtil.getViewPrefix();
-        if (viewPrefix != null) {
-            path = viewPrefix + path; // e.g. /WEB-INF/view/...
+    protected String filterHtmlPath(String path) {
+        String origin = path;
+        if (isJspPath(origin)) {
+            final String viewPrefix = LaServletContextUtil.getJspViewPrefix();
+            if (viewPrefix != null) {
+                origin = viewPrefix + origin; // e.g. /WEB-INF/view/...
+            }
         }
-        final String filtered = adjustmentProvider.filterHtmlPath(path, this);
-        return filtered != null ? filtered : path;
+        final String filtered = adjustmentProvider.filterHtmlPath(origin, this);
+        return filtered != null ? filtered : origin;
+    }
+
+    protected boolean isHtmlPath(String path) {
+        return path.endsWith(".html");
+    }
+
+    protected boolean isJspPath(String path) {
+        return path.endsWith(".jsp");
     }
 
     // ===================================================================================

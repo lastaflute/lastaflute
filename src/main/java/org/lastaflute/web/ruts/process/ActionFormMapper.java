@@ -782,7 +782,6 @@ public class ActionFormMapper {
         if (indexes.length == 0) {
             return;
         }
-        // TODO jflute lastaflute: [E] improvement: before checking index size, not to be out of memory
         final int indexedPropertySizeLimit = getIndexedPropertySizeLimit();
         for (int index : indexes) {
             if (index < 0) {
@@ -847,20 +846,19 @@ public class ActionFormMapper {
                 list = new ArrayList<Object>(Math.max(50, indexes[0]));
                 pd.setValue(bean, list);
             }
-            ParameterizedClassDesc pcd = pd.getParameterizedClassDesc();
+            ParameterizedClassDesc paramDesc = pd.getParameterizedClassDesc();
             for (int i = 0; i < indexes.length; i++) {
-                if (pcd == null || !pcd.isParameterizedClass() || !List.class.isAssignableFrom(pcd.getRawClass())) {
-                    StringBuilder sb = new StringBuilder();
+                if (paramDesc == null || !paramDesc.isParameterizedClass() || !List.class.isAssignableFrom(paramDesc.getRawClass())) {
+                    final StringBuilder sb = new StringBuilder();
                     for (int j = 0; j <= i; j++) {
                         sb.append("[").append(indexes[j]).append("]");
                     }
                     throwIndexedPropertyNonParameterizedListException(beanDesc, pd);
                 }
-                int size = list.size();
-                pcd = pcd.getArguments()[0];
-                for (int j = size; j <= indexes[i]; j++) {
+                paramDesc = paramDesc.getArguments()[0];
+                for (int j = list.size(); j <= indexes[i]; j++) {
                     if (i == indexes.length - 1) {
-                        list.add(LdiClassUtil.newInstance(convertClass(pcd.getRawClass())));
+                        list.add(LdiClassUtil.newInstance(convertClass(paramDesc.getRawClass())));
                     } else {
                         list.add(new ArrayList<Object>());
                     }
