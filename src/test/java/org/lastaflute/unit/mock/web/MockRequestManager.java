@@ -138,6 +138,31 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
+    public OptionalThing<String> getRemoteAddr() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteHost() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteIp() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<Integer> getRemotePort() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteUser() {
+        return null;
+    }
+
+    @Override
     public Locale getUserLocale() {
         return null;
     }

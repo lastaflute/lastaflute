@@ -182,6 +182,40 @@ public interface RequestManager extends ScopedAttributeHolder {
     OptionalThing<String> getHeaderXForwardedFor();
 
     // ===================================================================================
+    //                                                                     Remote Handling
+    //                                                                     ===============
+    /**
+     * Get the remote address by servlet method plainly called.
+     * @return The optional string as remote address. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getRemoteAddr();
+
+    /**
+     * Get the remote host by servlet method plainly called.
+     * @return The optional string as remote host. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getRemoteHost();
+
+    /**
+     * Get the remote IP address adjusted like this: <br>
+     * At first, find X-Forwarded-For or else getRemoteAddr().
+     * @return The optional string as remote IP address. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getRemoteIp();
+
+    /**
+     * Get the remote port by servlet method plainly called.
+     * @return The optional string as remote port. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<Integer> getRemotePort();
+
+    /**
+     * Get the remote user by servlet method plainly called.
+     * @return The optional string as remote user. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getRemoteUser();
+
+    // ===================================================================================
     //                                                                     Region Handling
     //                                                                     ===============
     // -----------------------------------------------------

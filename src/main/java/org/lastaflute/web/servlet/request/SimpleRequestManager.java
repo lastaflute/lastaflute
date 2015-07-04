@@ -424,6 +424,43 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     // ===================================================================================
+    //                                                                     Remote Handling
+    //                                                                     ===============
+    @Override
+    public OptionalThing<String> getRemoteAddr() {
+        return OptionalThing.ofNullable(getRequest().getRemoteAddr(), () -> {
+            throw new RequestInfoNotFoundException("Not found the remote address for the request: path=" + getRequestPath());
+        });
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteHost() {
+        return OptionalThing.ofNullable(getRequest().getRemoteHost(), () -> {
+            throw new RequestInfoNotFoundException("Not found the remote host for the request: path=" + getRequestPath());
+        });
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteIp() {
+        final OptionalThing<String> xfor = getHeaderXForwardedFor();
+        return xfor.isPresent() ? xfor : getRemoteAddr();
+    }
+
+    @Override
+    public OptionalThing<Integer> getRemotePort() {
+        return OptionalThing.ofNullable(getRequest().getRemotePort(), () -> {
+            throw new RequestInfoNotFoundException("Not found the remote port for the request: path=" + getRequestPath());
+        });
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteUser() {
+        return OptionalThing.ofNullable(getRequest().getRemoteUser(), () -> {
+            throw new RequestInfoNotFoundException("Not found the remote user for the request: path=" + getRequestPath());
+        });
+    }
+
+    // ===================================================================================
     //                                                                     Region Handling
     //                                                                     ===============
     // -----------------------------------------------------
