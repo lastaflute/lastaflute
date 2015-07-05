@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -353,17 +354,16 @@ public class RequestLoggingFilter implements Filter {
         sb.append(", REQUEST_URL=").append(request.getRequestURL());
         sb.append(LF).append(IND);
         sb.append(", QUERY_STRING=").append(request.getQueryString());
-        if (showResponse) {
-            sb.append(LF).append(IND);
-            buildResponseInfo(sb, request, response);
-        }
-
         sb.append(LF);
         buildRequestHeaders(sb, request);
         buildRequestParameters(sb, request);
         buildCookies(sb, request);
         buildRequestAttributes(sb, request);
         buildSessionAttributes(sb, request);
+        if (showResponse) {
+            sb.append(IND);
+            buildResponseInfo(sb, request, response);
+        }
     }
 
     // -----------------------------------------------------
@@ -373,9 +373,6 @@ public class RequestLoggingFilter implements Filter {
         final StringBuilder sb = new StringBuilder();
         sb.append(LF).append(IND);
         buildResponseInfo(sb, request, response);
-
-        // show only dynamic values in request
-        sb.append(LF);
         // hope response cookie (not request cookie)
         //buildCookies(sb, request);
         buildRequestAttributes(sb, request);
@@ -430,13 +427,23 @@ public class RequestLoggingFilter implements Filter {
 
     protected void buildRequestHeaders(StringBuilder sb, HttpServletRequest request) {
         for (Iterator<?> it = toSortedSet(request.getHeaderNames()).iterator(); it.hasNext();) {
-            String name = (String) it.next();
-            String value = request.getHeader(name);
-            sb.append(IND);
-            sb.append("[header] ").append(name);
-            sb.append("=").append(value);
-            sb.append(LF);
+            final String name = (String) it.next();
+            doBuildHeaderLine(sb, name, request.getHeader(name));
         }
+    }
+
+    protected void buildResponseHeaders(StringBuilder sb, HttpServletResponse response) {
+        for (Iterator<?> it = toSortedSet(response.getHeaderNames()).iterator(); it.hasNext();) {
+            final String name = (String) it.next();
+            doBuildHeaderLine(sb, name, response.getHeader(name));
+        }
+    }
+
+    protected void doBuildHeaderLine(StringBuilder sb, String name, String value) {
+        sb.append(IND);
+        sb.append("[header] ").append(name);
+        sb.append("=").append(value);
+        sb.append(LF);
     }
 
     protected void buildCookies(StringBuilder sb, HttpServletRequest request) {
@@ -525,23 +532,13 @@ public class RequestLoggingFilter implements Filter {
 
     protected void buildResponseInfo(StringBuilder sb, HttpServletRequest request, HttpServletResponse response) {
         sb.append("Response class=" + response.getClass().getName());
+        sb.append(", Status=").append(response.getStatus());
+        sb.append(LF).append(IND);
         sb.append(", ContentType=").append(response.getContentType());
+        sb.append(", Locale=").append(response.getLocale());
         sb.append(", Committed=").append(response.isCommitted());
-        String exp = response.toString().trim();
-        if (exp != null) {
-            exp = replaceString(exp, "\r\n", "\n");
-            exp = replaceString(exp, "\n", " ");
-            final int limitLength = 120;
-            if (exp.length() >= limitLength) {
-                // it is possible that Response toString() show all HTML strings
-                // so cut it to suppress too big logging here
-                exp = exp.substring(0, limitLength) + "...";
-            }
-            sb.append(LF).append(IND);
-            sb.append(", toString()=").append(exp);
-            // e.g. Jetty
-            // HTTP/1.1 200  Expires: Thu, 01-Jan-1970 00:00:00 GMT Set-Cookie: ...
-        }
+        sb.append(LF);
+        buildResponseHeaders(sb, response);
     }
 
     // ===================================================================================
@@ -940,10 +937,14 @@ public class RequestLoggingFilter implements Filter {
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
-    protected SortedSet<?> toSortedSet(final Enumeration<?> enu) {
+    protected SortedSet<?> toSortedSet(Enumeration<?> enu) {
         final SortedSet<Object> set = new TreeSet<Object>();
         set.addAll(Collections.list(enu));
         return set;
+    }
+
+    protected SortedSet<?> toSortedSet(Collection<?> enu) {
+        return new TreeSet<Object>(enu);
     }
 
     protected String replaceString(String str, String fromStr, String toStr) {
