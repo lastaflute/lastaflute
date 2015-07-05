@@ -56,10 +56,10 @@ public class ActionResponseReflector {
     //                                                                 Reflect to Response
     //                                                                 ===================
     public NextJourney reflect(ActionResponse response) {
-        if (response.isEmpty() || response.isSkip()) {
-            return emptyJourney();
+        if (response.isUndefined()) {
+            return undefinedJourney();
         }
-        return doReflect(response);
+        return doReflect(response); // normally here
     }
 
     protected NextJourney doReflect(ActionResponse response) {
@@ -86,6 +86,9 @@ public class ActionResponseReflector {
     //                                                                       =============
     protected NextJourney handleHtmlResponse(HtmlResponse response) {
         setupHtmlResponseHeader(response);
+        if (response.isReturnAsEmptyBody()) {
+            return undefinedJourney();
+        }
         setupForwardRenderData(response);
         setupPushedActionForm(response);
         setupSavingErrorsToSession(response);
@@ -94,8 +97,11 @@ public class ActionResponseReflector {
 
     protected void setupHtmlResponseHeader(HtmlResponse response) {
         response.getHeaderMap().forEach((key, values) -> {
-            for (String value : values) {
-                requestManager.getResponseManager().addHeader(key, value);
+            if (values.length > 0) {
+                final ResponseManager responseManager = requestManager.getResponseManager();
+                for (String value : values) {
+                    responseManager.addHeader(key, value);
+                }
             }
         });
     }
@@ -135,25 +141,28 @@ public class ActionResponseReflector {
     // ===================================================================================
     //                                                                       JSON Response
     //                                                                       =============
-    protected NextJourney handleJsonResponse(JsonResponse<?> jsonResponse) {
+    protected NextJourney handleJsonResponse(JsonResponse<?> response) {
         // this needs original action customizer in your customizer.dicon
-        final JsonManager jsonManager = requestManager.getJsonManager();
-        final String json = jsonManager.toJson(jsonResponse.getJsonBean());
         final ResponseManager responseManager = requestManager.getResponseManager();
-        setupApiResponseHeader(responseManager, jsonResponse);
-        setupApiResponseHttpStatus(responseManager, jsonResponse);
-        jsonResponse.getCallback().ifPresent(callback -> {
+        setupApiResponseHeader(responseManager, response);
+        setupApiResponseHttpStatus(responseManager, response);
+        if (response.isReturnAsEmptyBody()) {
+            return undefinedJourney();
+        }
+        final JsonManager jsonManager = requestManager.getJsonManager();
+        final String json = jsonManager.toJson(response.getJsonBean());
+        response.getCallback().ifPresent(callback -> {
             final String script = callback + "(" + json + ")";
             responseManager.writeAsJavaScript(script);
         }).orElse(() -> {
             /* responseManager might have debug logging so no logging here */
-            if (jsonResponse.isForcedlyJavaScript()) {
+            if (response.isForcedlyJavaScript()) {
                 responseManager.writeAsJavaScript(json);
             } else { /* as JSON (default) */
                 responseManager.writeAsJson(json);
             }
         });
-        return emptyJourney();
+        return undefinedJourney();
     }
 
     protected void setupApiResponseHeader(ResponseManager responseManager, ApiResponse apiResponse) {
@@ -174,22 +183,25 @@ public class ActionResponseReflector {
     // ===================================================================================
     //                                                                        XML Response
     //                                                                        ============
-    protected NextJourney handleXmlResponse(XmlResponse xmlResponse) {
+    protected NextJourney handleXmlResponse(XmlResponse response) {
         final ResponseManager responseManager = requestManager.getResponseManager();
-        setupApiResponseHeader(responseManager, xmlResponse);
-        setupApiResponseHttpStatus(responseManager, xmlResponse);
-        responseManager.writeAsXml(xmlResponse.getXmlStr(), xmlResponse.getEncoding());
-        return emptyJourney();
+        setupApiResponseHeader(responseManager, response);
+        setupApiResponseHttpStatus(responseManager, response);
+        if (response.isReturnAsEmptyBody()) {
+            return undefinedJourney();
+        }
+        responseManager.writeAsXml(response.getXmlStr(), response.getEncoding());
+        return undefinedJourney();
     }
 
     // ===================================================================================
     //                                                                     Stream Response
     //                                                                     ===============
-    protected NextJourney handleStreamResponse(StreamResponse streamResponse) {
+    protected NextJourney handleStreamResponse(StreamResponse response) {
         final ResponseManager responseManager = requestManager.getResponseManager();
-        setupStreamResponseHttpStatus(responseManager, streamResponse);
-        responseManager.download(streamResponse.toDownloadResource());
-        return emptyJourney();
+        setupStreamResponseHttpStatus(responseManager, response);
+        responseManager.download(response.toDownloadResource());
+        return undefinedJourney();
     }
 
     protected void setupStreamResponseHttpStatus(ResponseManager responseManager, StreamResponse streamResponse) {
@@ -200,9 +212,9 @@ public class ActionResponseReflector {
     }
 
     // ===================================================================================
-    //                                                                       Empty Journey
-    //                                                                       =============
-    protected NextJourney emptyJourney() {
-        return NextJourney.empty();
+    //                                                                   Undefined Journey
+    //                                                                   =================
+    protected NextJourney undefinedJourney() {
+        return NextJourney.undefined();
     }
 }

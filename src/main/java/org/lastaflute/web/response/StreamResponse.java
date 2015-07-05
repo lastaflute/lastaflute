@@ -41,8 +41,7 @@ public class StreamResponse implements ActionResponse {
     //                                                                          Definition
     //                                                                          ==========
     protected static final String DUMMY = "dummy";
-    protected static final StreamResponse INSTANCE_OF_EMPTY = new StreamResponse(DUMMY).asEmpty();
-    protected static final StreamResponse INSTANCE_OF_SKIP = new StreamResponse(DUMMY).asSkip();
+    protected static final StreamResponse INSTANCE_OF_UNDEFINED = new StreamResponse(DUMMY).ofUndefined();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -55,8 +54,8 @@ public class StreamResponse implements ActionResponse {
     protected byte[] byteData;
     protected InputStream inputStream;
     protected Integer contentLength;
-    protected boolean emptyResponse;
-    protected boolean skip;
+    protected boolean undefined;
+    protected boolean returnAsEmptyBody;
 
     protected Map<String, String[]> createHeaderMap() {
         return new LinkedHashMap<String, String[]>();
@@ -100,6 +99,7 @@ public class StreamResponse implements ActionResponse {
     public StreamResponse header(String name, String... values) {
         assertArgumentNotNull("name", name);
         assertArgumentNotNull("values", values);
+        assertDefinedState("header");
         if (headerMap.containsKey(name)) {
             throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
         }
@@ -120,6 +120,7 @@ public class StreamResponse implements ActionResponse {
     //                                                                         HTTP Status
     //                                                                         ===========
     public StreamResponse httpStatus(int httpStatus) {
+        assertDefinedState("httpStatus");
         this.httpStatus = httpStatus;
         return this;
     }
@@ -133,6 +134,7 @@ public class StreamResponse implements ActionResponse {
     //                                                                       =============
     public StreamResponse data(byte[] data) {
         assertArgumentNotNull("data", data);
+        assertDefinedState("data");
         if (inputStream != null) {
             throw new IllegalStateException("The input stream already exists.");
         }
@@ -142,6 +144,7 @@ public class StreamResponse implements ActionResponse {
 
     public StreamResponse stream(InputStream stream) {
         assertArgumentNotNull("stream", stream);
+        assertDefinedState("stream");
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
         }
@@ -152,6 +155,7 @@ public class StreamResponse implements ActionResponse {
     public StreamResponse stream(InputStream stream, Integer contentLength) {
         assertArgumentNotNull("stream", stream);
         assertArgumentNotNull("contentLength", contentLength);
+        assertDefinedState("stream");
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
         }
@@ -175,21 +179,27 @@ public class StreamResponse implements ActionResponse {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
-    public static StreamResponse empty() { // user interface
-        return INSTANCE_OF_EMPTY;
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
+    public static StreamResponse asEmptyBody() { // user interface
+        return new StreamResponse(DUMMY).ofEmptyBody();
     }
 
-    protected StreamResponse asEmpty() { // internal use
-        emptyResponse = true;
+    protected StreamResponse ofEmptyBody() { // internal use
+        returnAsEmptyBody = true;
         return this;
     }
 
-    public static StreamResponse skip() { // user interface
-        return INSTANCE_OF_SKIP;
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
+    public static StreamResponse undefined() { // user interface
+        return INSTANCE_OF_UNDEFINED;
     }
 
-    protected StreamResponse asSkip() { // internal use
-        skip = true;
+    protected StreamResponse ofUndefined() { // internal use
+        undefined = true;
         return this;
     }
 
@@ -197,7 +207,7 @@ public class StreamResponse implements ActionResponse {
     //                                                                 Convert to Resource
     //                                                                 ===================
     public ResponseDownloadResource toDownloadResource() {
-        final ResponseDownloadResource resource = new ResponseDownloadResource(fileName);
+        final ResponseDownloadResource resource = createResponseDownloadResource();
         resource.contentType(contentType);
         for (Entry<String, String[]> entry : headerMap.entrySet()) {
             resource.header(entry.getKey(), entry.getValue());
@@ -208,7 +218,14 @@ public class StreamResponse implements ActionResponse {
         if (inputStream != null) {
             resource.stream(inputStream, contentLength);
         }
+        if (returnAsEmptyBody) {
+            resource.asEmptyBody();
+        }
         return resource;
+    }
+
+    protected ResponseDownloadResource createResponseDownloadResource() {
+        return new ResponseDownloadResource(fileName);
     }
 
     // ===================================================================================
@@ -220,26 +237,33 @@ public class StreamResponse implements ActionResponse {
         }
     }
 
+    protected void assertDefinedState(String methodName) {
+        if (undefined) {
+            throw new IllegalStateException("undefined response: method=" + methodName + "() this=" + toString());
+        }
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        final String skipExp = skip ? ", skip" : "";
-        return classTitle + ":{" + fileName + ", " + contentType + ", " + headerMap + skipExp + "}";
+        final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
+        final String undefinedExp = undefined ? ", undefined" : "";
+        return classTitle + ":{" + fileName + ", " + contentType + ", " + headerMap + emptyExp + undefinedExp + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
     @Override
-    public boolean isEmpty() {
-        return false;
+    public boolean isReturnAsEmptyBody() {
+        return returnAsEmptyBody;
     }
 
     @Override
-    public boolean isSkip() {
-        return skip;
+    public boolean isUndefined() {
+        return undefined;
     }
 }

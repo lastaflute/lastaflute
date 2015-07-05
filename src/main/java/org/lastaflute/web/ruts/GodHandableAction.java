@@ -32,6 +32,7 @@ import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
 import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
 import org.lastaflute.web.exception.ExecuteMethodReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
+import org.lastaflute.web.exception.ExecuteMethodReturnUndefinedResponseException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.message.ActionMessages;
@@ -106,7 +107,7 @@ public class GodHandableAction implements VirtualAction {
         final ActionHook hook = prepareActionHook();
         try {
             final ActionResponse before = processHookBefore(hook);
-            if (before.isPresent()) { // e.g. login required
+            if (before.isDefined()) { // e.g. login required
                 return reflect(before);
             } else { // mainly here
                 return transactionalExecute(form, hook); // #to_action
@@ -125,15 +126,38 @@ public class GodHandableAction implements VirtualAction {
     protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
         return (NextJourney) stage.selectable(tx -> {
             final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
+            assertExecuteMethodResponseDefined(response);
             final NextJourney journey = reflect(response); /* also response handling in transaction */
             tx.returns(journey);
         } , getExecuteTransactionGenre()).get(); // because of not null
+    }
+
+    protected void assertExecuteMethodResponseDefined(ActionResponse response) {
+        if (response.isUndefined()) {
+            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("Cannot return undefined resopnse from the execute method");
+            br.addItem("Advice");
+            br.addElement("Not allowed to return undefined() in execute method.");
+            br.addElement("If you want to return response as empty body,");
+            br.addElement("use asEmptyBody() like this:");
+            br.addElement("  @Execute");
+            br.addElement("  public HtmlResponse index() {");
+            br.addElement("      return HtmlResponse.asEmptyBody();");
+            br.addElement("  }");
+            br.addItem("Action Execute");
+            br.addElement(execute);
+            final String msg = br.buildExceptionMessage();
+            throw new ExecuteMethodReturnUndefinedResponseException(msg);
+        }
     }
 
     protected TransactionGenre getExecuteTransactionGenre() {
         return execute.getTransactionGenre();
     }
 
+    // -----------------------------------------------------
+    //                                      Reflect Response
+    //                                      ----------------
     protected NextJourney reflect(ActionResponse response) {
         return reflector.reflect(response);
     }
@@ -146,14 +170,14 @@ public class GodHandableAction implements VirtualAction {
     //                                                ------
     protected ActionResponse processHookBefore(ActionHook hook) {
         if (hook == null) {
-            return ActionResponse.empty();
+            return ActionResponse.undefined();
         }
         showBefore(runtime);
         ActionResponse response = hook.godHandPrologue(runtime);
-        if (isEmpty(response)) {
+        if (isUndefined(response)) {
             response = hook.hookBefore(runtime);
         }
-        if (isPresent(response)) {
+        if (isDefined(response)) {
             runtime.setActionResponse(response);
         }
         return response;
@@ -174,7 +198,7 @@ public class GodHandableAction implements VirtualAction {
             throw e;
         }
         final ActionResponse response = hook.godHandMonologue(runtime);
-        if (isPresent(response)) {
+        if (isDefined(response)) {
             runtime.setActionResponse(response);
             return response;
         } else {
@@ -205,16 +229,16 @@ public class GodHandableAction implements VirtualAction {
     }
 
     // -----------------------------------------------------
-    //                                          Small Helper
-    //                                          ------------
-    protected boolean isEmpty(ActionResponse response) {
+    //                                    Undefined Response
+    //                                    ------------------
+    protected boolean isUndefined(ActionResponse response) {
         assertCallbackReturnNotNull(response);
-        return response.isEmpty();
+        return response.isUndefined();
     }
 
-    protected boolean isPresent(ActionResponse response) {
+    protected boolean isDefined(ActionResponse response) {
         assertCallbackReturnNotNull(response);
-        return response.isPresent();
+        return response.isDefined();
     }
 
     // ===================================================================================
@@ -320,7 +344,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                        Display Data
     //                                                                        ============
     protected void setupDisplayData(NextJourney journey) {
-        if (runtime.isForwardToHtml() && journey.isPresent()) {
+        if (runtime.isForwardToHtml() && journey.isDefined()) {
             runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
         }
     }
@@ -329,7 +353,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                             Logging
     //                                                                             =======
     protected void showTransition(NextJourney journey) {
-        if (logger.isDebugEnabled() && journey.isPresent()) {
+        if (logger.isDebugEnabled() && journey.isDefined()) {
             final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
             final String path = journey.getRoutingPath(); // not null
             final String tag = path.endsWith(".html") ? "#html " : (path.endsWith(".jsp") ? "#jsp " : "");

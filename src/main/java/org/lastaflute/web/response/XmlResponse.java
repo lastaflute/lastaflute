@@ -35,8 +35,7 @@ public class XmlResponse implements ApiResponse {
     protected static final String ENCODING_WINDOWS_31J = "Windows-31J";
     protected static final String DEFAULT_ENCODING = ENCODING_UTF8;
     protected static final String DUMMY = "dummy";
-    protected static final XmlResponse INSTANCE_OF_EMPTY = new XmlResponse(DUMMY).asEmpty();
-    protected static final XmlResponse INSTANCE_OF_SKIP = new XmlResponse(DUMMY).asSkip();
+    protected static final XmlResponse INSTANCE_OF_UNDEFINED = new XmlResponse(DUMMY).ofUndefined();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -45,8 +44,8 @@ public class XmlResponse implements ApiResponse {
     protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
     protected String encoding = DEFAULT_ENCODING;
-    protected boolean empty;
-    protected boolean skip;
+    protected boolean undefined;
+    protected boolean returnAsEmptyBody;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -75,6 +74,7 @@ public class XmlResponse implements ApiResponse {
     public XmlResponse header(String name, String... values) {
         assertArgumentNotNull("name", name);
         assertArgumentNotNull("values", values);
+        assertDefinedState("header");
         final Map<String, String[]> headerMap = prepareHeaderMap();
         if (headerMap.containsKey(name)) {
             throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
@@ -100,6 +100,7 @@ public class XmlResponse implements ApiResponse {
     //                                                                         ===========
     @Override
     public XmlResponse httpStatus(int httpStatus) {
+        assertDefinedState("httpStatus");
         this.httpStatus = httpStatus;
         return this;
     }
@@ -112,8 +113,11 @@ public class XmlResponse implements ApiResponse {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
+    // -----------------------------------------------------
+    //                                              Encoding
+    //                                              --------
     public XmlResponse encodeAsUTF8() {
-        encoding = DEFAULT_ENCODING;
+        encoding = ENCODING_UTF8;
         return this;
     }
 
@@ -122,21 +126,27 @@ public class XmlResponse implements ApiResponse {
         return this;
     }
 
-    public static XmlResponse empty() { // user interface
-        return INSTANCE_OF_EMPTY;
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
+    public static XmlResponse asEmptyBody() { // user interface
+        return new XmlResponse(DUMMY).ofEmptyBody();
     }
 
-    protected XmlResponse asEmpty() { // internal use
-        empty = true;
+    protected XmlResponse ofEmptyBody() { // internal use
+        returnAsEmptyBody = true;
         return this;
     }
 
-    public static XmlResponse skip() { // user interface
-        return INSTANCE_OF_SKIP;
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
+    public static XmlResponse undefined() { // user interface
+        return INSTANCE_OF_UNDEFINED;
     }
 
-    protected XmlResponse asSkip() { // internal use
-        skip = true;
+    protected XmlResponse ofUndefined() { // internal use
+        undefined = true;
         return this;
     }
 
@@ -149,15 +159,21 @@ public class XmlResponse implements ApiResponse {
         }
     }
 
+    protected void assertDefinedState(String methodName) {
+        if (undefined) {
+            throw new IllegalStateException("undefined response: method=" + methodName + "() this=" + toString());
+        }
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        final String emptyExp = empty ? ", empty" : "";
-        final String skipExp = skip ? ", skip" : "";
-        return classTitle + ":{" + encoding + emptyExp + skipExp + "}";
+        final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
+        final String undefinedExp = undefined ? ", undefined" : "";
+        return classTitle + ":{" + encoding + emptyExp + undefinedExp + "}";
     }
 
     // ===================================================================================
@@ -172,12 +188,12 @@ public class XmlResponse implements ApiResponse {
     }
 
     @Override
-    public boolean isEmpty() {
-        return empty;
+    public boolean isReturnAsEmptyBody() {
+        return returnAsEmptyBody;
     }
 
     @Override
-    public boolean isSkip() {
-        return skip;
+    public boolean isUndefined() {
+        return undefined;
     }
 }

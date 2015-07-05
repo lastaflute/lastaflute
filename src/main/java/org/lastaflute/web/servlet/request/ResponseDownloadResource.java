@@ -33,6 +33,7 @@ public class ResponseDownloadResource {
     protected byte[] byteData;
     protected InputStream inputStream;
     protected Integer contentLength;
+    protected boolean returnAsEmptyBody;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -130,6 +131,17 @@ public class ResponseDownloadResource {
 
     public Integer getContentLength() {
         return contentLength;
+    }
+
+    // ===================================================================================
+    //                                                                          Empty Body
+    //                                                                          ==========
+    public void asEmptyBody() {
+        returnAsEmptyBody = true;
+    }
+
+    public boolean isReturnAsEmptyBody() {
+        return returnAsEmptyBody;
     }
 
     // ===================================================================================

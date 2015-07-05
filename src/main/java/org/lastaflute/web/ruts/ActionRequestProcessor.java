@@ -196,7 +196,7 @@ public class ActionRequestProcessor {
     //                                                                             to Next
     //                                                                             =======
     protected void toNext(ActionRuntime runtime, NextJourney journey) throws IOException, ServletException {
-        if (journey.isEmpty()) { // e.g. JSON handling
+        if (journey.isUndefined()) { // e.g. JSON handling
             return;
         }
         if (journey.isRedirectTo()) {

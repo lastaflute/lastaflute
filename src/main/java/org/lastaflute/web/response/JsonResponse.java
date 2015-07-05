@@ -34,8 +34,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     //                                                                          Definition
     //                                                                          ==========
     protected static final Object DUMMY = new Object();
-    protected static final JsonResponse<?> INSTANCE_OF_EMPTY = new JsonResponse<Object>(DUMMY).asEmpty();
-    protected static final JsonResponse<?> INSTANCE_OF_SKIP = new JsonResponse<Object>(DUMMY).asSkip();
+    protected static final JsonResponse<?> INSTANCE_OF_UNDEFINED = new JsonResponse<Object>(DUMMY).ofUndefined();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -46,8 +45,8 @@ public class JsonResponse<BEAN> implements ApiResponse {
     protected Integer httpStatus;
 
     protected boolean forcedlyJavaScript;
-    protected boolean empty;
-    protected boolean skip;
+    protected boolean undefined;
+    protected boolean returnAsEmptyBody;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -76,6 +75,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     public JsonResponse<BEAN> header(String name, String... values) {
         assertArgumentNotNull("name", name);
         assertArgumentNotNull("values", values);
+        assertDefinedState("header");
         final Map<String, String[]> headerMap = prepareHeaderMap();
         if (headerMap.containsKey(name)) {
             throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
@@ -101,6 +101,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     //                                                                         ===========
     @Override
     public JsonResponse<BEAN> httpStatus(int httpStatus) {
+        assertDefinedState("httpStatus");
         this.httpStatus = httpStatus;
         return this;
     }
@@ -113,33 +114,45 @@ public class JsonResponse<BEAN> implements ApiResponse {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
+    // -----------------------------------------------------
+    //                                                 JSON
+    //                                                ------
     public JsonResponse<BEAN> asJsonp(String callback) {
+        assertArgumentNotNull("callback", callback);
+        assertDefinedState("asJsonp");
         this.callback = callback;
         return this;
     }
 
     public JsonResponse<BEAN> forcedlyJavaScript() {
         forcedlyJavaScript = true;
+        assertDefinedState("forcedlyJavaScript");
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
     @SuppressWarnings("unchecked")
-    public static <OBJ> JsonResponse<OBJ> empty() { // user interface
-        return (JsonResponse<OBJ>) INSTANCE_OF_EMPTY;
+    public static <OBJ> JsonResponse<OBJ> asEmptyBody() { // user interface
+        return (JsonResponse<OBJ>) new JsonResponse<Object>(DUMMY).ofEmptyBody();
     }
 
-    protected JsonResponse<BEAN> asEmpty() { // internal use
-        empty = true;
+    protected JsonResponse<BEAN> ofEmptyBody() { // internal use
+        returnAsEmptyBody = true;
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
     @SuppressWarnings("unchecked")
-    public static <OBJ> JsonResponse<OBJ> skip() { // user interface
-        return (JsonResponse<OBJ>) INSTANCE_OF_SKIP;
+    public static <OBJ> JsonResponse<OBJ> undefined() { // user interface
+        return (JsonResponse<OBJ>) INSTANCE_OF_UNDEFINED;
     }
 
-    protected JsonResponse<BEAN> asSkip() { // internal use
-        skip = true;
+    protected JsonResponse<BEAN> ofUndefined() { // internal use
+        undefined = true;
         return this;
     }
 
@@ -152,6 +165,12 @@ public class JsonResponse<BEAN> implements ApiResponse {
         }
     }
 
+    protected void assertDefinedState(String methodName) {
+        if (undefined) {
+            throw new IllegalStateException("undefined response: method=" + methodName + "() this=" + toString());
+        }
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -161,9 +180,9 @@ public class JsonResponse<BEAN> implements ApiResponse {
         final String jsonExp = jsonBean != null ? DfTypeUtil.toClassTitle(jsonBean) : null;
         final String callbackExp = callback != null ? ", callback=" + callback : "";
         final String forcedlyJSExp = forcedlyJavaScript ? ", JavaScript" : "";
-        final String emptyExp = empty ? ", empty" : "";
-        final String skipExp = skip ? ", skip" : "";
-        return classTitle + ":{" + jsonExp + callbackExp + forcedlyJSExp + emptyExp + skipExp + "}";
+        final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
+        final String undefinedExp = undefined ? ", undefined" : "";
+        return classTitle + ":{" + jsonExp + callbackExp + forcedlyJSExp + emptyExp + undefinedExp + "}";
     }
 
     // ===================================================================================
@@ -185,12 +204,12 @@ public class JsonResponse<BEAN> implements ApiResponse {
     }
 
     @Override
-    public boolean isEmpty() {
-        return empty;
+    public boolean isReturnAsEmptyBody() {
+        return returnAsEmptyBody;
     }
 
     @Override
-    public boolean isSkip() {
-        return skip;
+    public boolean isUndefined() {
+        return undefined;
     }
 }

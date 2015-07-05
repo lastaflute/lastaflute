@@ -31,6 +31,7 @@ import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionHook;
 import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.callback.CrossOriginResourceSharing;
 import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
 import org.lastaflute.web.callback.TypicalGodHandActionEpilogue;
 import org.lastaflute.web.callback.TypicalGodHandMonologue;
@@ -109,8 +110,13 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
 
     protected TypicalGodHandPrologue createTypicalGodHandPrologue() {
         final TypicalGodHandResource resource = createTypicalGodHandResource();
+        final OptionalThing<CrossOriginResourceSharing> sharing = createCrossOriginResourceSharing();
         final AccessContextArranger arranger = newAccessContextArranger();
-        return newTypicalGodHandPrologue(resource, arranger, () -> getUserBean(), () -> myAppType());
+        return newTypicalGodHandPrologue(resource, sharing, arranger, () -> getUserBean(), () -> myAppType());
+    }
+
+    protected OptionalThing<CrossOriginResourceSharing> createCrossOriginResourceSharing() { // application may override
+        return OptionalThing.empty(); // you can share by overriding
     }
 
     /**
@@ -119,14 +125,15 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      */
     protected abstract AccessContextArranger newAccessContextArranger();
 
-    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger arranger,
+    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource,
+            OptionalThing<CrossOriginResourceSharing> sharing, AccessContextArranger arranger,
             Supplier<OptionalThing<? extends UserBean>> userBeanSupplier, Supplier<String> appTypeSupplier) {
-        return new TypicalGodHandPrologue(resource, arranger, userBeanSupplier, appTypeSupplier);
+        return new TypicalGodHandPrologue(resource, sharing, arranger, userBeanSupplier, appTypeSupplier);
     }
 
     @Override
     public ActionResponse hookBefore(ActionRuntime runtimeMeta) { // application may override
-        return ActionResponse.empty();
+        return ActionResponse.undefined();
     }
 
     // -----------------------------------------------------
@@ -162,7 +169,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * @return The response for the exception. (NullAllowed: if null, to next handling step)
      */
     protected ActionResponse handleApplicationException(LaApplicationException appEx) { // application may override
-        return ActionResponse.empty();
+        return ActionResponse.undefined();
     }
 
     protected TypicalGodHandMonologue newTypicalGodHandMonologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier supplier,

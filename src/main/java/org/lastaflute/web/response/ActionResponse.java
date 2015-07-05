@@ -34,35 +34,35 @@ public interface ActionResponse {
     ActionResponse header(String name, String... values);
 
     /**
-     * @return The read-only map for headers, map:{header-name = header-value}. (NotNull)
+     * @return The read-only map for headers, map:{header-name = header-value}. (NotNull, NotNullValue)
      */
     Map<String, String[]> getHeaderMap();
 
     /**
-     * Is the response empty state? (do nothing)
-     * @return The determination, true or false.
-     */
-    boolean isEmpty();
-
-    /**
-     * Is the response present state? (handled as valid response)
-     * @return The determination, true or false.
-     */
-    default boolean isPresent() {
-        return !isEmpty();
-    }
-
-    /**
-     * Does it skip the response process? <br>
+     * Does it return the response as empty body? <br>
      * e.g. for when response already committed by other ways.
      * @return The determination, true or false.
      */
-    boolean isSkip();
+    boolean isReturnAsEmptyBody();
+
+    /**
+     * Is the response defined state? (handled as valid response)
+     * @return The determination, true or false.
+     */
+    default boolean isDefined() {
+        return !isUndefined();
+    }
+
+    /**
+     * Is the response undefined state? (do nothing, to next step)
+     * @return The determination, true or false.
+     */
+    boolean isUndefined();
 
     // ===================================================================================
-    //                                                                      Empty Instance
-    //                                                                      ==============
-    public static ActionResponse empty() {
-        return EmptyResponse.instance();
+    //                                                                  Undefined Instance
+    //                                                                  ==================
+    public static ActionResponse undefined() {
+        return UndefinedResponse.instance();
     }
 }

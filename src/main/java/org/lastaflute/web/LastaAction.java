@@ -345,7 +345,7 @@ public abstract class LastaAction {
             throw new IllegalStateException("Not redirect response: " + response);
         }
         responseManager.movedPermanently(response);
-        return HtmlResponse.empty(); // because of already done about response process
+        return HtmlResponse.undefined(); // because of already done about response process
     }
 
     // -----------------------------------------------------

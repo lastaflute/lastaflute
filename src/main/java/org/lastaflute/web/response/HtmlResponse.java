@@ -40,15 +40,15 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     //                                                                          Definition
     //                                                                          ==========
     protected static final ForwardNext DUMMY = new ForwardNext("dummy");
-    protected static final HtmlResponse INSTANCE_OF_EMPTY = new HtmlResponse(DUMMY).asEmptyResponse();
+    protected static final HtmlResponse INSTANCE_OF_UNDEFINED = new HtmlResponse(DUMMY).ofUndefined();
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     protected final RoutingNext nextRouting;
     protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
-    protected boolean empty;
-    protected boolean skip;
+    protected boolean undefined;
+    protected boolean returnAsEmptyBody;
     protected List<RenderDataRegistration> registrationList; // lazy loaded
     protected Class<?> pushedFormType; // null allowed
     protected boolean errorsToSession;
@@ -88,6 +88,7 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     public HtmlResponse header(String name, String... values) {
         assertArgumentNotNull("name", name);
         assertArgumentNotNull("value", values);
+        assertDefinedState("header");
         final Map<String, String[]> headerMap = prepareHeaderMap();
         if (headerMap.containsKey(name)) {
             throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
@@ -128,6 +129,7 @@ public class HtmlResponse implements ActionResponse, Redirectable {
      */
     public HtmlResponse renderWith(RenderDataRegistration dataLambda) {
         assertArgumentNotNull("dataLambda", dataLambda);
+        assertDefinedState("renderWith");
         if (registrationList == null) {
             registrationList = new ArrayList<RenderDataRegistration>(4);
         }
@@ -160,20 +162,38 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
-    public static HtmlResponse empty() { // user interface
-        return INSTANCE_OF_EMPTY;
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
+    public static HtmlResponse asEmptyBody() { // user interface
+        return new HtmlResponse(DUMMY).ofEmptyBody();
     }
 
-    protected HtmlResponse asEmptyResponse() { // internal use
-        empty = true;
+    protected HtmlResponse ofEmptyBody() { // internal use
+        returnAsEmptyBody = true;
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
+    public static HtmlResponse undefined() { // user interface
+        return INSTANCE_OF_UNDEFINED;
+    }
+
+    protected HtmlResponse ofUndefined() { // internal use
+        undefined = true;
+        return this;
+    }
+
+    // -----------------------------------------------------
+    //                                     Errors to Session
+    //                                     -----------------
     /**
      * Save errors in request to session scope. (redirect only use) <br>
      * You can use the errors in next action after redirection.
      */
-    protected void saveErrorsToSession() {
+    public void saveErrorsToSession() {
         if (!isRedirectTo()) {
             String msg = "Not allowed operation when forward: saveErrorsToSession(): " + toString();
             throw new IllegalStateException(msg);
@@ -190,15 +210,21 @@ public class HtmlResponse implements ActionResponse, Redirectable {
         }
     }
 
+    protected void assertDefinedState(String methodName) {
+        if (undefined) {
+            throw new IllegalStateException("undefined response: method=" + methodName + "() this=" + toString());
+        }
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        final String emptyExp = empty ? ", empty" : "";
-        final String skipExp = skip ? ", skip" : "";
-        return classTitle + ":{" + nextRouting + emptyExp + skipExp + "}";
+        final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
+        final String undefinedExp = undefined ? ", undefined" : "";
+        return classTitle + ":{" + nextRouting + emptyExp + undefinedExp + "}";
     }
 
     // ===================================================================================
@@ -221,13 +247,13 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     }
 
     @Override
-    public boolean isEmpty() {
-        return empty;
+    public boolean isReturnAsEmptyBody() {
+        return returnAsEmptyBody;
     }
 
     @Override
-    public boolean isSkip() {
-        return skip;
+    public boolean isUndefined() {
+        return undefined;
     }
 
     public List<RenderDataRegistration> getRegistrationList() {

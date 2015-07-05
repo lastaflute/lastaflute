@@ -29,7 +29,7 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     //                                                                          Definition
     //                                                                          ==========
     private static final long serialVersionUID = 1L;
-    protected static final NextJourney EMPTY_INSTANCE = new NextJourney();
+    protected static final NextJourney UNDEFINED_INSTANCE = new NextJourney();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -37,7 +37,7 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     protected final String routingPath;
     protected final boolean redirectTo;
     protected final boolean asIs; // when redirect
-    protected final boolean empty;
+    protected final boolean undefined;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -46,18 +46,18 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
         this.routingPath = routingPath;
         this.redirectTo = redirectTo;
         this.asIs = asIs;
-        this.empty = false;
+        this.undefined = false;
     }
 
     protected NextJourney() {
-        this.routingPath = "empty";
+        this.routingPath = "undefined";
         this.redirectTo = false;
         this.asIs = false;
-        this.empty = true;
+        this.undefined = true;
     }
 
-    public static NextJourney empty() {
-        return EMPTY_INSTANCE;
+    public static NextJourney undefined() {
+        return UNDEFINED_INSTANCE;
     }
 
     // ===================================================================================
@@ -70,6 +70,7 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
         sb.append("path=").append(routingPath);
         sb.append(redirectTo ? ", redirect" : ", forward");
         sb.append(asIs ? ", asIs" : "");
+        sb.append(undefined ? ", undefined" : "");
         sb.append("}");
         return sb.toString();
     }
@@ -78,11 +79,15 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     //                                                                            Accessor
     //                                                                            ========
     public String getRoutingPath() {
-        if (isEmpty()) {
-            String msg = "The action transition is empty so you should not call getRoutingPath().";
+        assertRoutingPathCalled();
+        return routingPath;
+    }
+
+    protected void assertRoutingPathCalled() {
+        if (isUndefined()) {
+            String msg = "The action transition is undefined so cannot call getRoutingPath(): " + routingPath;
             throw new IllegalStateException(msg);
         }
-        return routingPath;
     }
 
     public boolean isRedirectTo() {
@@ -93,11 +98,11 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
         return asIs;
     }
 
-    public boolean isEmpty() {
-        return empty;
+    public boolean isDefined() {
+        return !isUndefined();
     }
 
-    public boolean isPresent() {
-        return !isEmpty();
+    public boolean isUndefined() {
+        return undefined;
     }
 }

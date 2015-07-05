@@ -86,13 +86,13 @@ public class TypicalGodHandMonologue {
         }
         final RuntimeException handlingEx = translated != null ? translated : cause;
         final ActionResponse response = handleApplicationException(runtimeMeta, handlingEx);
-        if (response.isPresent()) {
+        if (response.isDefined()) {
             return response;
         }
         if (translated != null) {
             throw translated;
         }
-        return ActionResponse.empty();
+        return ActionResponse.undefined();
     }
 
     protected void translateException(RuntimeException cause) {
@@ -109,7 +109,7 @@ public class TypicalGodHandMonologue {
      * This is called by callback process so you should NOT call this directly in your action.
      * @param executeMeta The meta of action execute. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
-     * @return The forward path. (NullAllowed: if not null, it goes to the path)
+     * @return The action response for application exception. (NotNull: and if defined, go to the path, UndefinedAllowed: unhandled as application exception)
      */
     protected ActionResponse handleApplicationException(ActionRuntime executeMeta, RuntimeException cause) { // called by callback
         final ActionResponse forwardTo = doHandleApplicationException(executeMeta, cause);
@@ -124,11 +124,11 @@ public class TypicalGodHandMonologue {
     //                                     Actually Handling
     //                                     -----------------
     protected ActionResponse doHandleApplicationException(ActionRuntime executeMeta, RuntimeException cause) {
-        ActionResponse forwardTo = ActionResponse.empty();
+        ActionResponse forwardTo = ActionResponse.undefined();
         if (cause instanceof LaApplicationException) {
             final LaApplicationException appEx = (LaApplicationException) cause;
             forwardTo = doHandleSpecifiedApplicationException(appEx);
-            if (forwardTo.isEmpty()) {
+            if (forwardTo.isUndefined()) {
                 forwardTo = doHandleEmbeddedApplicationException(appEx);
             }
             reflectEmbeddedApplicationMessagesIfExists(appEx); // override existing messages if exists
@@ -143,7 +143,7 @@ public class TypicalGodHandMonologue {
     }
 
     protected ActionResponse doHandleEmbeddedApplicationException(LaApplicationException appEx) {
-        ActionResponse forwardTo = ActionResponse.empty();
+        ActionResponse forwardTo = ActionResponse.undefined();
         if (appEx instanceof LoginFailureException) {
             forwardTo = handleLoginFailureException((LoginFailureException) appEx);
         } else if (appEx instanceof LoginTimeoutException) {
@@ -151,7 +151,7 @@ public class TypicalGodHandMonologue {
         } else if (appEx instanceof MessageKeyApplicationException) {
             forwardTo = handleMessageKeyApplicationException((MessageKeyApplicationException) appEx);
         }
-        if (forwardTo.isEmpty()) {
+        if (forwardTo.isUndefined()) {
             forwardTo = handleUnknownApplicationException(appEx);
         }
         return forwardTo;
@@ -166,7 +166,7 @@ public class TypicalGodHandMonologue {
     }
 
     protected ActionResponse doHandleDBFluteApplicationException(RuntimeException cause) {
-        ActionResponse forwardTo = ActionResponse.empty();
+        ActionResponse forwardTo = ActionResponse.undefined();
         if (cause instanceof EntityAlreadyDeletedException) {
             forwardTo = handleEntityAlreadyDeletedException((EntityAlreadyDeletedException) cause);
         } else if (cause instanceof EntityAlreadyUpdatedException) {
@@ -181,7 +181,7 @@ public class TypicalGodHandMonologue {
     //                                         Show Handling
     //                                         -------------
     protected void showApplicationExceptionHandlingIfNeeds(RuntimeException cause, ActionResponse response) {
-        if (response.isEmpty()) {
+        if (response.isUndefined()) {
             return;
         }
         showAppEx(cause, () -> {
@@ -241,7 +241,7 @@ public class TypicalGodHandMonologue {
     }
 
     protected boolean needsApplicationExceptionApiDispatch(ActionRuntime executeMeta, ActionResponse forwardTo) {
-        return forwardTo.isPresent() && executeMeta.isApiExecute();
+        return forwardTo.isDefined() && executeMeta.isApiExecute();
     }
 
     protected ActionResponse dispatchApiApplicationException(ActionRuntime executeMeta, RuntimeException cause) {
@@ -304,7 +304,7 @@ public class TypicalGodHandMonologue {
 
     protected ActionResponse redirectToUnknownAppcalitionExceptionAction() {
         if (loginManager == null) { // if no-use-login system
-            return ActionResponse.empty(); // because of non login exception, treat it as system exception
+            return ActionResponse.undefined(); // because of non login exception, treat it as system exception
         }
         return redirectToLoginAction(); // basically no way, login action just in case
     }
@@ -368,7 +368,7 @@ public class TypicalGodHandMonologue {
         return loginManager.map(nager -> {
             return nager.redirectToLoginAction();
         }).orElseGet(() -> {
-            return HtmlResponse.empty();
+            return HtmlResponse.undefined();
         });
     }
 }

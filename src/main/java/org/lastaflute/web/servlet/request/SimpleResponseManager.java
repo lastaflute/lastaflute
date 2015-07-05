@@ -302,6 +302,9 @@ public class SimpleResponseManager implements ResponseManager {
     protected void doDownload(ResponseDownloadResource resource) {
         final HttpServletResponse response = getResponse();
         prepareDownloadResponse(resource, response);
+        if (resource.isReturnAsEmptyBody()) {
+            return;
+        }
         final byte[] byteData = resource.getByteData();
         if (byteData != null) {
             doDownloadByteData(resource, response, byteData);

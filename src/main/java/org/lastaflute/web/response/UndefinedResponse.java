@@ -21,18 +21,18 @@ import java.util.Map;
 /**
  * @author jflute
  */
-public class EmptyResponse implements ActionResponse {
+public class UndefinedResponse implements ActionResponse {
 
-    protected static final EmptyResponse INSTANCE_OF_EMPTY = new EmptyResponse();
+    protected static final UndefinedResponse INSTANCE_OF_UNDEFINED = new UndefinedResponse();
 
-    public static EmptyResponse instance() {
-        return INSTANCE_OF_EMPTY;
+    public static UndefinedResponse instance() {
+        return INSTANCE_OF_UNDEFINED;
     }
 
-    protected EmptyResponse() {
+    protected UndefinedResponse() {
     }
 
-    public EmptyResponse header(String name, String... values) {
+    public UndefinedResponse header(String name, String... values) {
         throw new IllegalStateException("Cannot use header() for empty response: " + name + ", " + values);
     }
 
@@ -40,15 +40,15 @@ public class EmptyResponse implements ActionResponse {
         return Collections.emptyMap();
     }
 
-    public boolean isEmpty() {
+    public boolean isUndefined() {
         return true;
     }
 
-    public boolean isPresent() {
+    public boolean isDefined() {
         return false;
     }
 
-    public boolean isSkip() {
+    public boolean isReturnAsEmptyBody() {
         return false;
     }
 }
