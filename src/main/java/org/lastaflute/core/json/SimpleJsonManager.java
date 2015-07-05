@@ -51,6 +51,9 @@ public class SimpleJsonManager implements JsonManager {
     /** Is null property suppressed (not displayed) in output JSON string? */
     protected boolean nullsSuppressed;
 
+    /** Is pretty print suppressed (not line separating) in output JSON string? */
+    protected boolean prettyPrintSuppressed;
+
     /** The real parser of JSON. (NotNull: after initialization) */
     protected RealJsonParser realJsonParser;
 
@@ -67,6 +70,7 @@ public class SimpleJsonManager implements JsonManager {
         developmentHere = direction.isDevelopmentHere();
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
         nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
+        prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
         final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
         showBootLogging();
@@ -91,16 +95,18 @@ public class SimpleJsonManager implements JsonManager {
     //                                                                               GSON
     //                                                                              ======
     protected RealJsonParser createGsonJsonParser() {
-        return newGsonJsonParser(developmentHere, nullsSuppressed);
+        final boolean serializeNulls = !nullsSuppressed;
+        final boolean prettyPrinting = !prettyPrintSuppressed && developmentHere;
+        return newGsonJsonParser(serializeNulls, prettyPrinting);
     }
 
-    protected GsonJsonParser newGsonJsonParser(boolean developmentHere, boolean nullsSuppressed) {
+    protected GsonJsonParser newGsonJsonParser(boolean serializeNulls, boolean prettyPrinting) {
         return new GsonJsonParser(builder -> {
-            if (developmentHere) {
-                builder.setPrettyPrinting();
-            }
-            if (!nullsSuppressed) {
+            if (serializeNulls) {
                 builder.serializeNulls();
+            }
+            if (prettyPrinting) {
+                builder.setPrettyPrinting();
             }
         });
     }
