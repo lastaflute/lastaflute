@@ -65,6 +65,9 @@ public class SimpleTimeManager implements TimeManager {
     /** Is it absolute time mode when using {@link adjustTimeMillis}? (not used if development) */
     protected boolean adjustAbsoluteMode;
 
+    /** The provider of current time as real time. (NullAllowed: option, so normally null) */
+    protected CurrentTimeProvider realCurrentTimeProvider;
+
     // ===================================================================================
     //                                                                          Initialize
     //                                                                          ==========
@@ -88,6 +91,7 @@ public class SimpleTimeManager implements TimeManager {
             adjustTimeMillis = provider.provideAdjustTimeMillis();
             adjustAbsoluteMode = provider.isAdjustAbsoluteMode();
         }
+        realCurrentTimeProvider = provider.provideRealCurrentTimeProvider(); // null allowed
         showBootLogging();
     }
 
@@ -105,6 +109,9 @@ public class SimpleTimeManager implements TimeManager {
                 LOG.info(" currentIgnoreTransaction: " + currentIgnoreTransaction);
                 LOG.info(" adjustTimeMillis: " + adjustTimeMillis);
                 LOG.info(" adjustAbsoluteMode: " + adjustAbsoluteMode);
+            }
+            if (realCurrentTimeProvider != null) {
+                LOG.info(" realCurrentTimeProvider: " + realCurrentTimeProvider);
             }
         }
     }
@@ -174,7 +181,15 @@ public class SimpleTimeManager implements TimeManager {
         if (absolute) {
             return adjust;
         } else {
-            return System.currentTimeMillis() + adjust;
+            return realCurrentTimeMillis() + adjust;
+        }
+    }
+
+    protected long realCurrentTimeMillis() {
+        if (realCurrentTimeProvider != null) {
+            return realCurrentTimeProvider.currentTimeMillis();
+        } else {
+            return System.currentTimeMillis();
         }
     }
 
