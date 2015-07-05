@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -175,15 +176,15 @@ public class SimpleResponseManager implements ResponseManager {
     public void writeAsJson(String json) {
         assertArgumentNotNull("json", json);
         final String contentType = "application/json";
-        logger.debug("#flow ...Writing response as {}: \n{}", contentType, json);
-        write(json, contentType);
+        showWritingResponse(json, contentType);
+        write(contentType, json);
     }
 
     @Override
     public void writeAsJavaScript(String script) {
         assertArgumentNotNull("script", script);
         final String contentType = "application/javascript";
-        logger.debug("#flow ...Writing response as {}: \n{}", contentType, script);
+        showWritingResponse(contentType, script);
         write(script, contentType);
     }
 
@@ -192,8 +193,24 @@ public class SimpleResponseManager implements ResponseManager {
         assertArgumentNotNull("xmlStr", xmlStr);
         assertArgumentNotNull("encoding", encoding);
         final String contentType = "text/xml";
-        logger.debug("#flow ...Writing response as {}: \n", contentType, xmlStr);
+        showWritingResponse(contentType, xmlStr);
         write(xmlStr, contentType, encoding);
+    }
+
+    protected void showWritingResponse(String contentType, String value) {
+        if (logger.isDebugEnabled()) {
+            String filtered = Srl.replace(value, "\r\n", "\n");
+            final int lineLimit = getJsonDebugLineLimit();
+            if (Srl.count(filtered, "\n") > lineLimit) {
+                final List<String> splitList = Srl.splitList(filtered, "\n").subList(0, lineLimit + 1);
+                filtered = splitList.stream().reduce((result, element) -> result + "\n" + element).get();
+            }
+            logger.debug("#flow ...Writing response as {}: \n{}", contentType, filtered);
+        }
+    }
+
+    protected int getJsonDebugLineLimit() {
+        return 30;
     }
 
     // -----------------------------------------------------
