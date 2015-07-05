@@ -127,8 +127,8 @@ public abstract class LastaAction {
      * &#064;Execute
      * <span style="color: #70226C">public</span> HtmlResponse index() {
      *     ...
-     *     <span style="color: #70226C">return</span> <span style="color: #CC4747">asHtml</span>(<span style="color: #0000C0">path_Sea_SeaJsp</span>).renderWith(data <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
-     *         data.<span style="color: #994747">register</span>("beans", beans);
+     *     <span style="color: #70226C">return</span> <span style="color: #CC4747">asHtml</span>(<span style="color: #0000C0">path_Sea_SeaJsp</span>).renderWith(<span style="color: #553000">data</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #553000">data</span>.<span style="color: #994747">register</span>(<span style="color: #2A00FF">"beans"</span>, <span style="color: #553000">beans</span>);
      *     });
      * }
      * </pre>
@@ -148,9 +148,9 @@ public abstract class LastaAction {
     /**
      * Return response as JSON.
      * <pre>
-     * public void index() {
+     * <span style="color: #70226C">public void</span> index() {
      *     ...
-     *     return asJson(bean);
+     *     <span style="color: #70226C">return</span> asJson(<span style="color: #553000">bean</span>);
      * }
      * </pre>
      * @param bean The bean object converted to JSON string. (NotNull)
