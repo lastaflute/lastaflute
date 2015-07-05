@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * @param <USER_ENTITY> The type of user entity or model.
  * @author jflute
  */
-public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY> implements LoginManager {
+public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY> implements LoginAssistable {
 
     // ===================================================================================
     //                                                                          Definition
@@ -97,7 +97,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     private ActionPathResolver actionPathResolver;
 
     @Resource
-    private TransactionStage transactionStage;;
+    private TransactionStage transactionStage;
 
     // ===================================================================================
     //                                                                           Find User
@@ -108,6 +108,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
      * @return true if the user is login-able.
      */
+    @Override
     public boolean checkUserLoginable(String email, String password) {
         return doCheckUserLoginable(email, encryptPassword(password));
     }
@@ -126,6 +127,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
      * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
      */
+    @Override
     public OptionalEntity<USER_ENTITY> findLoginUser(String email, String password) {
         return doFindLoginUser(email, encryptPassword(password));
     }
@@ -143,6 +145,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param userId for the login user. (NotNull)
      * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
      */
+    @Override
     public OptionalEntity<USER_ENTITY> findLoginUser(Long userId) {
         return doFindLoginUser(userId);
     }
@@ -281,7 +284,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         regenerateSessionId();
         logger.debug("...Saving login info to session");
         final USER_BEAN userBean = createUserBean(userEntity);
-        sessionManager.setAttribute(USER_BEAN_KEY, userBean);
+        sessionManager.setAttribute(getUserBeanKey(), userBean);
         return userBean;
     }
 
@@ -301,6 +304,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected abstract USER_BEAN createUserBean(USER_ENTITY userEntity);
 
+    protected String getUserBeanKey() {
+        return USER_BEAN_KEY;
+    }
+
     @Override
     public void reselectSessionUserBeanIfExists() throws LoginFailureException {
         getSessionUserBean().ifPresent(oldBean -> {
@@ -314,7 +321,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
                 });
                 return handleLoginFailure("Not found the user by the user ID: " + userId, userId, emptyOption);
             });
-            sessionManager.setAttribute(USER_BEAN_KEY, createUserBean(userEntity));
+            sessionManager.setAttribute(getUserBeanKey(), createUserBean(userEntity));
         });
     }
 
@@ -603,7 +610,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                                                              ======
     @Override
     public void logout() {
-        sessionManager.removeAttribute(USER_BEAN_KEY);
+        sessionManager.removeAttribute(getUserBeanKey());
         cookieManager.removeCookie(getCookieAutoLoginKey());
     }
 
@@ -764,7 +771,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                      ----------------
     @Override
     public OptionalThing<USER_BEAN> getSessionUserBean() { // use covariant generic type
-        final String key = USER_BEAN_KEY;
+        final String key = getUserBeanKey();
         return OptionalThing.ofNullable(sessionManager.getAttribute(key, getUserBeanType()).orElse(null), () -> {
             String msg = "Not found the user in session by the key:" + key;
             throw new LoginTimeoutException(msg); /* to login action */
