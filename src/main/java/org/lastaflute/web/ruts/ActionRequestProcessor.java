@@ -29,6 +29,7 @@ import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.exception.RequestForwardFailureException;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
@@ -134,7 +135,8 @@ public class ActionRequestProcessor {
     //                                                                               Ready
     //                                                                               =====
     protected ActionResponseReflector createResponseReflector(ActionRuntime runtime) {
-        return new ActionResponseReflector(runtime, getRequestManager());
+        final ActionAdjustmentProvider adjustmentProvider = getAssistantDirector().assistWebDirection().assistActionAdjustmentProvider();
+        return new ActionResponseReflector(runtime, getRequestManager(), adjustmentProvider);
     }
 
     protected void ready(ActionRuntime runtime, ActionResponseReflector reflector) {
