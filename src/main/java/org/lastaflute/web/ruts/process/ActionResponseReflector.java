@@ -18,6 +18,7 @@ package org.lastaflute.web.ruts.process;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
@@ -42,14 +43,16 @@ public class ActionResponseReflector {
     protected final ActionExecute execute;
     protected final ActionRuntime runtime;
     protected final RequestManager requestManager;
+    protected final ActionAdjustmentProvider adjustmentProvider;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionResponseReflector(ActionRuntime runtime, RequestManager requestManager) {
+    public ActionResponseReflector(ActionRuntime runtime, RequestManager requestManager, ActionAdjustmentProvider adjustmentProvider) {
         this.execute = runtime.getActionExecute();
         this.runtime = runtime;
         this.requestManager = requestManager;
+        this.adjustmentProvider = adjustmentProvider;
     }
 
     // ===================================================================================
@@ -59,7 +62,12 @@ public class ActionResponseReflector {
         if (response.isUndefined()) {
             return undefinedJourney();
         }
+        adjustActionResponseJustBefore(response);
         return doReflect(response); // normally here
+    }
+
+    protected void adjustActionResponseJustBefore(ActionResponse response) {
+        adjustmentProvider.adjustActionResponseJustBefore(response);
     }
 
     protected NextJourney doReflect(ActionResponse response) {
@@ -74,11 +82,6 @@ public class ActionResponseReflector {
         } else {
             return handleUnknownResponse(response);
         }
-    }
-
-    protected NextJourney handleUnknownResponse(ActionResponse response) {
-        String msg = "Unknown action response type: " + response.getClass() + ", " + response;
-        throw new IllegalStateException(msg);
     }
 
     // ===================================================================================
@@ -209,6 +212,14 @@ public class ActionResponseReflector {
         if (httpStatus != null) {
             responseManager.setResponseStatus(httpStatus);
         }
+    }
+
+    // ===================================================================================
+    //                                                                    Unknown Response
+    //                                                                    ================
+    protected NextJourney handleUnknownResponse(ActionResponse response) {
+        String msg = "Unknown action response type: " + response.getClass() + ", " + response;
+        throw new IllegalStateException(msg);
     }
 
     // ===================================================================================
