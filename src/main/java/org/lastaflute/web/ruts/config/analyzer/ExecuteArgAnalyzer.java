@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfReflectionUtil;
+import org.dbflute.util.Srl;
 import org.lastaflute.web.exception.ActionFormNotLastParameterException;
 import org.lastaflute.web.exception.ExecuteMethodOptionalParameterGenericNotFoundException;
 import org.lastaflute.web.exception.ExecuteMethodOptionalParameterGenericNotScalarException;
@@ -40,7 +41,8 @@ public class ExecuteArgAnalyzer {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    public static final String FORM_SUFFIX = "Form";
+    public static final String FORM_SUFFIX = "Form"; // for form parameters
+    public static final String BODY_SUFFIX = "Body"; // for JSON body
 
     // ===================================================================================
     //                                                                             Analyze
@@ -89,11 +91,15 @@ public class ExecuteArgAnalyzer {
 
     protected boolean isBeanActionFormType(Type parameterType) {
         final String typeName = parameterType.getTypeName();
-        return !typeName.startsWith("java.") && typeName.endsWith(getFormSuffix());
+        return !typeName.startsWith("java.") && Srl.endsWith(typeName, getFormSuffix(), getBodySuffix());
     }
 
     protected String getFormSuffix() {
-        return FORM_SUFFIX;
+        return FORM_SUFFIX; // for form parameters
+    }
+
+    protected String getBodySuffix() {
+        return BODY_SUFFIX; // for JSON body
     }
 
     // -----------------------------------------------------

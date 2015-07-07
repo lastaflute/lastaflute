@@ -52,7 +52,6 @@ import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.di.util.LdiArrayUtil;
 import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.di.util.LdiModifierUtil;
-import org.lastaflute.web.api.JsonBody;
 import org.lastaflute.web.api.JsonParameter;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
@@ -66,6 +65,7 @@ import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
+import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.multipart.ActionMultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
@@ -223,7 +223,9 @@ public class ActionFormMapper {
     }
 
     protected boolean isJsonBodyForm(Class<? extends Object> formType) {
-        return formType.getAnnotation(JsonBody.class) != null;
+        // TODO jflute JsonBody (2015/07/08)
+        return formType.getName().endsWith(ExecuteArgAnalyzer.BODY_SUFFIX);
+        //return formType.getAnnotation(JsonBody.class) != null;
     }
 
     protected boolean isListJsonBodyForm(VirtualActionForm virtualActionForm) {

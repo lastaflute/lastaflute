@@ -22,7 +22,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * @author jflute
+ * @author @jflute
+ * @deprecated removed later
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE })
