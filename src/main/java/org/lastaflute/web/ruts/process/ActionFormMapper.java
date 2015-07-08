@@ -223,9 +223,7 @@ public class ActionFormMapper {
     }
 
     protected boolean isJsonBodyForm(Class<? extends Object> formType) {
-        // TODO jflute JsonBody (2015/07/08)
         return formType.getName().endsWith(ExecuteArgAnalyzer.BODY_SUFFIX);
-        //return formType.getAnnotation(JsonBody.class) != null;
     }
 
     protected boolean isListJsonBodyForm(VirtualActionForm virtualActionForm) {
