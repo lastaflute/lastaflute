@@ -28,6 +28,7 @@ import org.dbflute.optional.OptionalEntity;
 import org.dbflute.optional.OptionalObject;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
+import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.security.PrimaryCipher;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionStage;
@@ -85,6 +86,12 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     private TimeManager timeManager;
 
     @Resource
+    private AsyncManager asyncManager;
+
+    @Resource
+    private TransactionStage transactionStage;
+
+    @Resource
     private RequestManager requestManager;
 
     @Resource
@@ -95,9 +102,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     @Resource
     private ActionPathResolver actionPathResolver;
-
-    @Resource
-    private TransactionStage transactionStage;
 
     // ===================================================================================
     //                                                                           Find User
@@ -257,7 +261,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             saveAutoLoginKeyToCookie(userEntity, userBean);
         }
         if (!option.isSilentLogin()) { // mainly here
-            transactionCallSaveLoginHistory(userEntity, userBean, option);
+            asyncSaveLoginHistory(userEntity, userBean, option);
             processOnBrightLogin(userEntity, userBean, option);
         } else {
             processOnSilentLogin(userEntity, userBean, option);
@@ -403,38 +407,25 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                      History Handling
     //                                      ----------------
     /**
-     * Call the process, saving login history, in new transaction for e.g. remember-me in callback. <br>
-     * Update statement needs transaction (access-context) so needed. <br>
-     * Meanwhile, the transaction inherits already-begun transaction for e.g. normal login process.
+     * Call the process, saving login history, in asynchronous process for e.g. remember-me in callback. <br>
+     * Transaction is begun in the process because update statement needs transaction (access-context).
      * @param userEntity The entity of the found login user. (NotNull)
      * @param userBean The bean of the user saved in session. (NotNull)
      * @param option The option of login specified by caller. (NotNull)
      */
-    protected void transactionCallSaveLoginHistory(USER_ENTITY userEntity, USER_BEAN userBean, LoginSpecifiedOption option) {
-        try {
-            // inherit when e.g. called by action, begin new when e.g. remember-me
+    protected void asyncSaveLoginHistory(USER_ENTITY userEntity, USER_BEAN userBean, LoginSpecifiedOption option) {
+        asyncManager.async(() -> {
             transactionStage.requiresNew(tx -> {
                 saveLoginHistory(userEntity, userBean, option);
             });
-        } catch (Throwable e) {
-            handleSavingLoginHistoryTransactionFailure(userBean, e);
-        }
-    }
-
-    /**
-     * Handle the exception of transaction failure for saving login history.
-     * @param userBean The bean of the user saved in session. (NotNull)
-     * @param cause The cause exception of transaction failure. (NotNull)
-     */
-    protected void handleSavingLoginHistoryTransactionFailure(USER_BEAN userBean, Throwable cause) {
-        // continue the request because of history, latter process throws the exception if fatal error
-        logger.warn("Failed to save login history: {}", userBean.getUserId(), cause);
+        });
     }
 
     /**
      * Save the history of the success login. (already saved in session at this point) <br>
      * For example, you can save the login user's info to database. <br>
-     * This is NOT called when silent login.
+     * In asynchronous process, and transaction here. <br>
+     * And this is NOT called when silent login.
      * @param userEntity The entity of the login user. (NotNull)
      * @param userBean The user bean of the login user, already saved in session. (NotNull)
      * @param option The option of login specified by caller. (NotNull)
