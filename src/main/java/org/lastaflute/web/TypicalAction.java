@@ -27,6 +27,8 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.time.TimeManager;
+import org.lastaflute.core.util.LaDBFluteUtil;
+import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionHook;
@@ -49,8 +51,6 @@ import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
-import org.lastaflute.web.util.LaDBFluteUtil;
-import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -395,7 +395,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
             @SuppressWarnings("unchecked")
             final CLS cls = (CLS) LaDBFluteUtil.toVerifiedClassification(cdefType, code);
             return OptionalThing.of(cls);
-        } catch (ClassificationConvertFailureException e) {
+        } catch (ClassificationUnknownCodeException e) {
             final StringBuilder sb = new StringBuilder();
             sb.append("Cannot convert the code to the classification:");
             sb.append("\n[Classification Convert Failure]");

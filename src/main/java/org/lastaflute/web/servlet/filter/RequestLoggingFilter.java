@@ -601,7 +601,15 @@ public class RequestLoggingFilter implements Filter {
             sb.append(LF);
             buildRequestHeaders(sb, request);
             buildSessionAttributes(sb, request);
-            sb.append(" Message: ").append(cause.getMessage());
+            sb.append(" Message: ");
+            final String causeMsg = cause.getMessage();
+            if (causeMsg != null && causeMsg.contains(LF)) {
+                sb.append(LF).append("/- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
+                sb.append(LF).append(causeMsg);
+                sb.append(LF).append("- - - - - - - - - -/");
+            } else {
+                sb.append(causeMsg);
+            }
             sb.append(LF).append(" Stack Traces:");
             buildClientErrorStackTrace(cause, sb, 0);
             sb.append(LF);

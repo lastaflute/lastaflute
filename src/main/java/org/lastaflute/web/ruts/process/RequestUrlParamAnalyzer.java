@@ -34,14 +34,14 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.util.LaDBFluteUtil;
+import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.exception.UrlParamArgsDifferentCountException;
 import org.lastaflute.web.exception.UrlParamOptionalParameterEmptyAccessException;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
-import org.lastaflute.web.util.LaDBFluteUtil;
-import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
 
 /**
  * @author jflute
@@ -249,7 +249,7 @@ public class RequestUrlParamAnalyzer {
     protected Object toVerifiedClassification(ActionExecute execute, Class<?> paramType, Object filtered) {
         try {
             return LaDBFluteUtil.toVerifiedClassification(paramType, filtered);
-        } catch (ClassificationConvertFailureException e) {
+        } catch (ClassificationUnknownCodeException e) {
             final StringBuilder sb = new StringBuilder();
             sb.append("Cannot convert the code of the URL parameter to the classification:");
             sb.append("\n[Classification Convert Failure]");

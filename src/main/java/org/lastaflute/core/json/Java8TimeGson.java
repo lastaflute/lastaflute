@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -28,6 +29,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
 /**
@@ -46,6 +48,9 @@ public interface Java8TimeGson {
     Type localTimeType = new TypeToken<LocalTime>() {
     }.getType();
 
+    // ===================================================================================
+    //                                                                      In/Out Handler
+    //                                                                      ==============
     public class LocalDatelizer implements JsonSerializer<LocalDate>, JsonDeserializer<LocalDate> {
 
         public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -57,7 +62,11 @@ public interface Java8TimeGson {
 
         @Override
         public LocalDate deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            return formatter.parse(json.getAsString(), date -> LocalDate.from(date));
+            try {
+                return formatter.parse(json.getAsString(), date -> LocalDate.from(date));
+            } catch (DateTimeParseException e) {
+                throw new JsonSyntaxException("Failed to parse the value as local time: " + json, e);
+            }
         }
     }
 
@@ -72,7 +81,11 @@ public interface Java8TimeGson {
 
         @Override
         public LocalDateTime deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            return formatter.parse(json.getAsString(), date -> LocalDateTime.from(date));
+            try {
+                return formatter.parse(json.getAsString(), date -> LocalDateTime.from(date));
+            } catch (DateTimeParseException e) {
+                throw new JsonSyntaxException("Failed to parse the value as local time: " + json, e);
+            }
         }
     }
 
@@ -87,7 +100,26 @@ public interface Java8TimeGson {
 
         @Override
         public LocalTime deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            return formatter.parse(json.getAsString(), date -> LocalTime.from(date));
+            try {
+                return formatter.parse(json.getAsString(), date -> LocalTime.from(date));
+            } catch (DateTimeParseException e) {
+                throw new JsonSyntaxException("Failed to parse the value as local time: " + json, e);
+            }
         }
+    }
+
+    // ===================================================================================
+    //                                                                             Creator
+    //                                                                             =======
+    default LocalDatelizer createLocalDatelizer() {
+        return new LocalDatelizer();
+    }
+
+    default LocalDateTimelizer createLocalDateTimelizer() {
+        return new LocalDateTimelizer();
+    }
+
+    default LocalTimelizer createLocalTimelizer() {
+        return new LocalTimelizer();
     }
 }

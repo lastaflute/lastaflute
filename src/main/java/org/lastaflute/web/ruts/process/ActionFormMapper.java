@@ -43,6 +43,8 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.core.util.GenericTypeRef;
+import org.lastaflute.core.util.LaDBFluteUtil;
+import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
 import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
@@ -72,8 +74,6 @@ import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
-import org.lastaflute.web.util.LaDBFluteUtil;
-import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -252,8 +252,8 @@ public class ActionFormMapper {
     protected void throwJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
             RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Cannot parse json of the request body:");
-        sb.append(LF).append("[JsonBody Parse Failure]");
+        sb.append("Cannot parse json on the request body.");
+        sb.append(LF).append(LF).append("[JsonBody Parse Failure]");
         sb.append(LF).append(runtime);
         sb.append(LF).append(virtualActionForm);
         sb.append(LF).append(json);
@@ -303,8 +303,8 @@ public class ActionFormMapper {
     protected void throwListJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
             RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Cannot parse list json of the request body.");
-        sb.append("\n[List JsonBody Parse Failure]");
+        sb.append("Cannot parse list json on the request body.");
+        sb.append(LF).append(LF).append("[List JsonBody Parse Failure]");
         sb.append(LF).append(runtime);
         sb.append(LF).append(virtualActionForm);
         sb.append(LF).append(json);
@@ -724,9 +724,9 @@ public class ActionFormMapper {
         final Class<?> propertyType = pd.getPropertyType();
         try {
             return LaDBFluteUtil.toVerifiedClassification(propertyType, code);
-        } catch (ClassificationConvertFailureException e) {
+        } catch (ClassificationUnknownCodeException e) {
             final StringBuilder sb = new StringBuilder();
-            sb.append("Cannot convert the code of the request parameter to the classification:");
+            sb.append("Cannot convert the code of the request parameter to the classification.");
             buildClientErrorHeader(sb, "Classification Convert Failure", bean, name, code, propertyType, null);
             throwRequestClassifiationConvertFailureException(sb.toString(), e);
             return null; // unreachable

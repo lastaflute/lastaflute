@@ -13,11 +13,12 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.util;
+package org.lastaflute.core.util;
 
 import java.lang.reflect.Method;
 
 import org.dbflute.helper.beans.DfBeanDesc;
+import org.dbflute.helper.beans.exception.DfBeanMethodNotFoundException;
 import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.util.DfReflectionUtil;
@@ -31,23 +32,23 @@ public class LaDBFluteUtil {
         return Classification.class.isAssignableFrom(tp);
     }
 
-    public static Classification toVerifiedClassification(Class<?> cdefType, Object code) throws ClassificationConvertFailureException {
+    public static Classification toVerifiedClassification(Class<?> cdefType, Object code) throws ClassificationUnknownCodeException {
         if (code == null || (code instanceof String && ((String) code).isEmpty())) {
             return null;
         }
         final Classification cls = invokeClassificationCodeOf(cdefType, code);
         if (cls == null) {
             final String msg = "Unknow the classification code for " + cdefType.getName() + ": code=" + code;
-            throw new ClassificationConvertFailureException(msg);
+            throw new ClassificationUnknownCodeException(msg);
         }
         return cls;
     }
 
-    public static class ClassificationConvertFailureException extends Exception {
+    public static class ClassificationUnknownCodeException extends Exception { // checked
 
         private static final long serialVersionUID = 1L;
 
-        public ClassificationConvertFailureException(String msg) {
+        public ClassificationUnknownCodeException(String msg) {
             super(msg);
         }
     }
@@ -59,8 +60,24 @@ public class LaDBFluteUtil {
             return null;
         }
         final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(cdefType);
-        final Method method = beanDesc.getMethod("codeOf", new Class<?>[] { Object.class });
-        return (Classification) DfReflectionUtil.invoke(method, null, new Object[] { code });
+        final String methodName = "codeOf";
+        final Method method;
+        try {
+            method = beanDesc.getMethod(methodName, new Class<?>[] { Object.class });
+        } catch (DfBeanMethodNotFoundException e) {
+            String msg = "Failed to get the method " + methodName + "() of the classification type: " + cdefType;
+            throw new ClassificationCodeOfMethodNotFoundException(msg, e);
+        }
+        return (Classification) DfReflectionUtil.invokeStatic(method, new Object[] { code });
+    }
+
+    public static class ClassificationCodeOfMethodNotFoundException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public ClassificationCodeOfMethodNotFoundException(String msg, DfBeanMethodNotFoundException e) {
+            super(msg, e);
+        }
     }
 
     protected static void assertArgumentNotNull(String variableName, Object value) {

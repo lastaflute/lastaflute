@@ -29,7 +29,7 @@ import com.google.gson.GsonBuilder;
 /**
  * @author jflute
  */
-public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
+public class GsonJsonParser implements RealJsonParser, Java8TimeGson, DBFluteGson {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -54,6 +54,7 @@ public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
     protected void setupDefaultSettings(final GsonBuilder builder) {
         registerUtilDateFormat(builder);
         registerJava8TimeAdapter(builder);
+        registerDBFluteAdapter(builder);
     }
 
     protected void registerUtilDateFormat(GsonBuilder builder) {
@@ -61,9 +62,13 @@ public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
     }
 
     protected void registerJava8TimeAdapter(GsonBuilder builder) { // until supported by Gson
-        builder.registerTypeAdapter(localDateType, newLocalDatelizer());
-        builder.registerTypeAdapter(localDateTimeType, newLocalDateTimelizer());
-        builder.registerTypeAdapter(localTimeType, newLocalTimelizer());
+        builder.registerTypeAdapter(localDateType, createLocalDatelizer());
+        builder.registerTypeAdapter(localDateTimeType, createLocalDateTimelizer());
+        builder.registerTypeAdapter(localTimeType, createLocalTimelizer());
+    }
+
+    protected void registerDBFluteAdapter(GsonBuilder builder) {
+        builder.registerTypeAdapterFactory(createClassifictory());
     }
 
     protected void setupYourSettings(GsonBuilder builder) { // you can override
@@ -71,18 +76,6 @@ public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
 
     protected void acceptGsonSettings(Consumer<GsonBuilder> settings, GsonBuilder builder) {
         settings.accept(builder);
-    }
-
-    protected LocalDatelizer newLocalDatelizer() {
-        return new LocalDatelizer();
-    }
-
-    protected LocalDateTimelizer newLocalDateTimelizer() {
-        return new LocalDateTimelizer();
-    }
-
-    protected LocalTimelizer newLocalTimelizer() {
-        return new LocalTimelizer();
     }
 
     // ===================================================================================
