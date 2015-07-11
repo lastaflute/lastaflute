@@ -113,7 +113,8 @@ public class GodHandableAction implements VirtualAction {
                 return transactionalExecute(form, hook); // #to_action
             }
         } catch (RuntimeException e) {
-            return reflect(tellExceptionMonologue(hook, e));
+            final ActionResponse monologue = tellExceptionMonologue(hook, e);
+            return reflect(monologue);
         } finally {
             processHookFinally(hook);
         }
