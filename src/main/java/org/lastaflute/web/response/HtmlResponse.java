@@ -52,6 +52,7 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     protected List<RenderDataRegistration> registrationList; // lazy loaded
     protected Class<?> pushedFormType; // null allowed
     protected boolean errorsToSession;
+    protected ResponseHook afterTxCommitHook;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -201,6 +202,16 @@ public class HtmlResponse implements ActionResponse, Redirectable {
         errorsToSession = true;
     }
 
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    @Override
+    public HtmlResponse afterTxCommit(ResponseHook noArgLambda) {
+        assertArgumentNotNull("noArgLambda", noArgLambda);
+        afterTxCommitHook = noArgLambda;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -268,5 +279,15 @@ public class HtmlResponse implements ActionResponse, Redirectable {
 
     public boolean isErrorsToSession() {
         return errorsToSession;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public OptionalThing<ResponseHook> getAfterTxCommitHook() {
+        return OptionalThing.ofNullable(afterTxCommitHook, () -> {
+            String msg = "Not found the response hook: " + HtmlResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 }

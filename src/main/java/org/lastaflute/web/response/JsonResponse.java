@@ -43,10 +43,10 @@ public class JsonResponse<BEAN> implements ApiResponse {
     protected String callback;
     protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
-
     protected boolean forcedlyJavaScript;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
+    protected ResponseHook afterTxCommitHook;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -56,10 +56,10 @@ public class JsonResponse<BEAN> implements ApiResponse {
      * This needs {@link RomanticActionCustomizer} in your customizer.dicon.
      * <pre>
      * <span style="color: #3F7E5E">// e.g. normal JSON response</span>
-     * return new JsonResponse(bean);
+     * <span style="color: #70226C">return new</span> JsonResponse(bean);
      * 
      * <span style="color: #3F7E5E">// e.g. JSONP response</span>
-     * return new JsonResponse(bean).asJsonp("callback");
+     * <span style="color: #70226C">return new</span> JsonResponse(bean).asJsonp("callback");
      * </pre>
      * @param jsonObj The JSON object to send response. (NotNull)
      */
@@ -156,6 +156,15 @@ public class JsonResponse<BEAN> implements ApiResponse {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public JsonResponse<BEAN> afterTxCommit(ResponseHook noArgLambda) {
+        assertArgumentNotNull("noArgLambda", noArgLambda);
+        afterTxCommitHook = noArgLambda;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -211,5 +220,15 @@ public class JsonResponse<BEAN> implements ApiResponse {
     @Override
     public boolean isUndefined() {
         return undefined;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public OptionalThing<ResponseHook> getAfterTxCommitHook() {
+        return OptionalThing.ofNullable(afterTxCommitHook, () -> {
+            String msg = "Not found the response hook: " + JsonResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 }

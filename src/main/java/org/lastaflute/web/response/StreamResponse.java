@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
 
@@ -28,10 +29,10 @@ import org.lastaflute.web.servlet.request.ResponseDownloadResource;
  * The response of stream for action.
  * <pre>
  * e.g. simple (content-type is octet-stream or found by extension mapping)
- *  return new StreamResponse("classificationDefinitionMap.dfprop").stream(ins);
+ *  <span style="color: #70226C">return new</span> StreamResponse("classificationDefinitionMap.dfprop").stream(ins);
  * 
  * e.g. specify content-type
- *  return new StreamResponse("jflute.jpg").contentTypeJpeg().stream(ins);
+ *  <span style="color: #70226C">return new</span> StreamResponse("jflute.jpg").contentTypeJpeg().stream(ins);
  * </pre>
  * @author jflute
  */
@@ -50,12 +51,12 @@ public class StreamResponse implements ActionResponse {
     protected String contentType;
     protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected Integer httpStatus;
-
     protected byte[] byteData;
     protected InputStream inputStream;
     protected Integer contentLength;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
+    protected ResponseHook afterTxCommitHook;
 
     protected Map<String, String[]> createHeaderMap() {
         return new LinkedHashMap<String, String[]>();
@@ -203,6 +204,15 @@ public class StreamResponse implements ActionResponse {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public StreamResponse afterTxCommit(ResponseHook noArgLambda) {
+        assertArgumentNotNull("noArgLambda", noArgLambda);
+        afterTxCommitHook = noArgLambda;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                 Convert to Resource
     //                                                                 ===================
@@ -265,5 +275,15 @@ public class StreamResponse implements ActionResponse {
     @Override
     public boolean isUndefined() {
         return undefined;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public OptionalThing<ResponseHook> getAfterTxCommitHook() {
+        return OptionalThing.ofNullable(afterTxCommitHook, () -> {
+            String msg = "Not found the response hook: " + StreamResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 }

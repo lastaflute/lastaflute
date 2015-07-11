@@ -17,6 +17,8 @@ package org.lastaflute.web.response;
 
 import java.util.Map;
 
+import org.dbflute.optional.OptionalThing;
+
 /**
  * The response type of action return. <br>
  * You can define the type as execute method of action
@@ -25,6 +27,9 @@ import java.util.Map;
  */
 public interface ActionResponse {
 
+    // ===================================================================================
+    //                                                                              Header
+    //                                                                              ======
     /**
      * @param name The name of header. (NotNull)
      * @param values The varying array for value of header. (NotNull)
@@ -38,6 +43,9 @@ public interface ActionResponse {
      */
     Map<String, String[]> getHeaderMap();
 
+    // ===================================================================================
+    //                                                                       Determination
+    //                                                                       =============
     /**
      * Does it return the response as empty body? <br>
      * e.g. for when response already committed by other ways.
@@ -58,6 +66,32 @@ public interface ActionResponse {
      * @return The determination, true or false.
      */
     boolean isUndefined();
+
+    // ===================================================================================
+    //                                                                       Response Hook
+    //                                                                       =============
+    /**
+     * Hook after action transaction is committed. (not called when roll-back) <br>
+     * For when e.g. the callback process depends on current transaction result.
+     * <pre>
+     * <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_...</span>).<span style="color: #994747">afterTxCommit</span>(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> { <span style="color: #3F7E5E">// in same thread</span>
+     *     ... <span style="color: #3F7E5E">// executed after transaction committed</span>
+     * });
+     * 
+     * <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_...</span>).<span style="color: #994747">afterTxCommit</span>(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> { <span style="color: #3F7E5E">// as asynchronous</span>
+     *     <span style="color: #994747">async</span>(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         ... <span style="color: #3F7E5E">// executed as asynchronous process after transaction committed</span>
+     *     });
+     * });
+     * </pre>
+     * <p>Can use only when action execute method,
+     * for example, cannot when hookBefore() of action hook.</p>
+     * @param noArgLambda The callback for your process after transaction commit. (NotNull)
+     * @return this. (NotNull)
+     */
+    ActionResponse afterTxCommit(ResponseHook noArgLambda);
+
+    OptionalThing<ResponseHook> getAfterTxCommitHook();
 
     // ===================================================================================
     //                                                                  Undefined Instance

@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.aspect.RomanticActionCustomizer;
@@ -46,6 +47,7 @@ public class XmlResponse implements ApiResponse {
     protected String encoding = DEFAULT_ENCODING;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
+    protected ResponseHook afterTxCommitHook;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -150,6 +152,15 @@ public class XmlResponse implements ApiResponse {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public XmlResponse afterTxCommit(ResponseHook noArgLambda) {
+        assertArgumentNotNull("noArgLambda", noArgLambda);
+        afterTxCommitHook = noArgLambda;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -195,5 +206,15 @@ public class XmlResponse implements ApiResponse {
     @Override
     public boolean isUndefined() {
         return undefined;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public OptionalThing<ResponseHook> getAfterTxCommitHook() {
+        return OptionalThing.ofNullable(afterTxCommitHook, () -> {
+            String msg = "Not found the response hook: " + XmlResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 }

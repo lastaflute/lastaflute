@@ -56,7 +56,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(GodHandableAction.class);
-    private static final Object[] EMPTY_ARRAY = new Object[] {};
+    private static final Object[] EMPTY_ARRAY = new Object[0];
 
     // ===================================================================================
     //                                                                           Attribute
@@ -124,12 +124,33 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
-        return (NextJourney) stage.selectable(tx -> {
+        final ExecuteTransactionResult result = (ExecuteTransactionResult) stage.selectable(tx -> {
             final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
             assertExecuteMethodResponseDefined(response);
             final NextJourney journey = reflect(response); /* also response handling in transaction */
-            tx.returns(journey);
+            tx.returns(new ExecuteTransactionResult(response, journey));
         } , getExecuteTransactionGenre()).get(); // because of not null
+        hookAfterTxCommitIfExists(result);
+        return result.getJourney();
+    }
+
+    protected static class ExecuteTransactionResult {
+
+        protected final ActionResponse response;
+        protected final NextJourney journey;
+
+        public ExecuteTransactionResult(ActionResponse response, NextJourney journey) {
+            this.response = response;
+            this.journey = journey;
+        }
+
+        public ActionResponse getResponse() {
+            return response;
+        }
+
+        public NextJourney getJourney() {
+            return journey;
+        }
     }
 
     protected void assertExecuteMethodResponseDefined(ActionResponse response) {
@@ -153,6 +174,12 @@ public class GodHandableAction implements VirtualAction {
 
     protected TransactionGenre getExecuteTransactionGenre() {
         return execute.getTransactionGenre();
+    }
+
+    protected void hookAfterTxCommitIfExists(final ExecuteTransactionResult result) {
+        result.getResponse().getAfterTxCommitHook().ifPresent(afterTx -> {
+            afterTx.hook();
+        });
     }
 
     // -----------------------------------------------------
@@ -180,6 +207,7 @@ public class GodHandableAction implements VirtualAction {
         if (isDefined(response)) {
             runtime.setActionResponse(response);
         }
+        assertAfterTxCommitHookNotSpecified("before", response);
         return response;
     }
 
@@ -200,6 +228,7 @@ public class GodHandableAction implements VirtualAction {
         final ActionResponse response = hook.godHandMonologue(runtime);
         if (isDefined(response)) {
             runtime.setActionResponse(response);
+            assertAfterTxCommitHookNotSpecified("monologue", response);
             return response;
         } else {
             throw e;
@@ -239,6 +268,29 @@ public class GodHandableAction implements VirtualAction {
     protected boolean isDefined(ActionResponse response) {
         assertCallbackReturnNotNull(response);
         return response.isDefined();
+    }
+
+    // -----------------------------------------------------
+    //                                          Assist Logic
+    //                                          ------------
+    protected void assertAfterTxCommitHookNotSpecified(String actionHookTitle, ActionResponse response) {
+        response.getAfterTxCommitHook().ifPresent(hook -> {
+            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("The afterTxCommit() cannot be used in action hook.");
+            br.addItem("Advice");
+            br.addElement("The method only can be in action execute.");
+            br.addElement("Make sure your action hook response.");
+            br.addItem("Specified ActionResponse");
+            br.addElement(response);
+            br.addItem("Specified ResponseHook");
+            br.addElement(hook);
+            br.addItem("Action Execute");
+            br.addElement(execute);
+            br.addItem("ActionHook Type");
+            br.addElement(actionHookTitle);
+            final String msg = br.buildExceptionMessage();
+            throw new IllegalStateException(msg);
+        });
     }
 
     // ===================================================================================

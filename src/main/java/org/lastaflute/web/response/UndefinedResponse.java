@@ -18,6 +18,8 @@ package org.lastaflute.web.response;
 import java.util.Collections;
 import java.util.Map;
 
+import org.dbflute.optional.OptionalThing;
+
 /**
  * @author jflute
  */
@@ -33,7 +35,7 @@ public class UndefinedResponse implements ActionResponse {
     }
 
     public UndefinedResponse header(String name, String... values) {
-        throw new IllegalStateException("Cannot use header() for empty response: " + name + ", " + values);
+        throw new IllegalStateException("Cannot use header() for undefined response: " + name + ", " + values);
     }
 
     public Map<String, String[]> getHeaderMap() {
@@ -50,5 +52,15 @@ public class UndefinedResponse implements ActionResponse {
 
     public boolean isReturnAsEmptyBody() {
         return false;
+    }
+
+    @Override
+    public UndefinedResponse afterTxCommit(ResponseHook noArgLambda) {
+        throw new IllegalStateException("Cannot use afterTxCommit() for undefined response: " + noArgLambda);
+    }
+
+    @Override
+    public OptionalThing<ResponseHook> getAfterTxCommitHook() {
+        return OptionalThing.empty();
     }
 }
