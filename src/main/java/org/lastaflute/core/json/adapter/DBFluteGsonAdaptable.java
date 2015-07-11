@@ -13,10 +13,9 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.json;
+package org.lastaflute.core.json.adapter;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
@@ -37,25 +36,19 @@ import com.google.gson.stream.JsonWriter;
 /**
  * @author jflute
  */
-public interface DBFluteGson {
-
-    // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    Type classificationType = new TypeToken<Classification>() {
-    }.getType();
+public interface DBFluteGsonAdaptable {
 
     // ===================================================================================
     //                                                                        Type Adapter
     //                                                                        ============
-    class DfClassifictory implements TypeAdapterFactory {
+    class TypeAdapterClassifictory implements TypeAdapterFactory {
 
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final Class<? super T> rawType = type.getRawType();
             if (rawType != null && LaDBFluteUtil.isClassificationType(rawType)) {
                 @SuppressWarnings("unchecked")
-                final TypeAdapter<T> pter = (TypeAdapter<T>) new DfClassifipter(rawType);
+                final TypeAdapter<T> pter = (TypeAdapter<T>) new TypeAdapterClassification(rawType);
                 return pter;
             } else {
                 return null;
@@ -63,11 +56,11 @@ public interface DBFluteGson {
         }
     }
 
-    class DfClassifipter extends TypeAdapter<Classification> {
+    class TypeAdapterClassification extends TypeAdapter<Classification> {
 
         protected final Class<?> rawType;
 
-        public DfClassifipter(Class<?> rawType) {
+        public TypeAdapterClassification(Class<?> rawType) {
             this.rawType = rawType;
         }
 
@@ -139,7 +132,7 @@ public interface DBFluteGson {
     // ===================================================================================
     //                                                                             Creator
     //                                                                             =======
-    default DfClassifictory createClassifictory() {
-        return new DfClassifictory();
+    default TypeAdapterClassifictory createClassifictory() {
+        return new TypeAdapterClassifictory();
     }
 }
