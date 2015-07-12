@@ -576,7 +576,7 @@ public class RequestLoggingFilter implements Filter {
         final String title;
         if (response.isCommitted()) {
             title = response.getStatus() + " (thrown as " + cause.getTitle() + ")";
-            if (beforeHandlingCommitted) {
+            if (beforeHandlingCommitted) { // basically no way but just in case
                 showCliEx(cause, () -> {
                     final StringBuilder sb = new StringBuilder();
                     sb.append("*Cannot send error as '").append(title).append("' because of already committed:");
@@ -617,7 +617,9 @@ public class RequestLoggingFilter implements Filter {
             return sb.toString();
         });
         try {
-            response.sendError(cause.getErrorStatus());
+            if (!response.isCommitted()) { // because may be committed in callback process
+                response.sendError(cause.getErrorStatus());
+            }
             return title;
         } catch (IOException sendEx) {
             final String msg = "Failed to send error as '" + title + "': " + sendEx.getMessage();
