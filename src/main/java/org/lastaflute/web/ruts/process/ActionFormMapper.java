@@ -68,9 +68,9 @@ import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
-import org.lastaflute.web.ruts.multipart.ActionMultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
+import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -156,7 +156,15 @@ public class ActionFormMapper {
     }
 
     protected MultipartRequestHandler createMultipartRequestHandler() {
-        return new ActionMultipartRequestHandler();
+        final MultipartResourceProvider provider = assistantDirector.assistWebDirection().assistMultipartResourceProvider();
+        if (provider == null) {
+            throw new IllegalStateException("No provider for multipart request in assistant director.");
+        }
+        final MultipartRequestHandler handler = provider.createHandler();
+        if (handler == null) {
+            throw new IllegalStateException("provideHandler() returned null: " + provider);
+        }
+        return handler;
     }
 
     protected Map<String, Object> getAllParameters(MultipartRequestHandler multipartHandler) {

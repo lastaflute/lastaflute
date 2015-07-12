@@ -13,29 +13,12 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.multipart.exception;
+package org.lastaflute.web.ruts.multipart;
 
 /**
  * @author jflute
  */
-public class MultipartExceededException extends RuntimeException {
+public interface MultipartResourceProvider {
 
-    private static final long serialVersionUID = 1L;
-
-    protected final long actual;
-    protected final long permitted;
-
-    public MultipartExceededException(String msg, long actual, long permitted, Exception cause) {
-        super(msg, cause);
-        this.actual = actual;
-        this.permitted = permitted;
-    }
-
-    public long getActual() {
-        return actual;
-    }
-
-    public long getPermitted() {
-        return permitted;
-    }
+    MultipartRequestHandler createHandler();
 }
