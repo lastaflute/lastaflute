@@ -18,7 +18,7 @@ package org.lastaflute.core.json.exception;
 /**
  * @author jflute
  */
-public class JsonPropertyParseFailureException extends RuntimeException {
+public abstract class JsonPropertyParseFailureException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
