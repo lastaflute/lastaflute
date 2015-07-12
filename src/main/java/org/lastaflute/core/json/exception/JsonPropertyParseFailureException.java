@@ -18,15 +18,30 @@ package org.lastaflute.core.json.exception;
 /**
  * @author jflute
  */
-public class JsonPropertyDateTimeParseFailureException extends JsonPropertyParseFailureException {
+public class JsonPropertyParseFailureException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    public JsonPropertyDateTimeParseFailureException(String msg, Class<?> propertyType, String propertyPath) {
-        super(msg, propertyType, propertyPath);
+    protected final Class<?> propertyType;
+    protected final String propertyPath;
+
+    public JsonPropertyParseFailureException(String msg, Class<?> propertyType, String propertyPath) {
+        super(msg);
+        this.propertyType = propertyType;
+        this.propertyPath = propertyPath;
     }
 
-    public JsonPropertyDateTimeParseFailureException(String msg, Class<?> propertyType, String propertyPath, Throwable e) {
-        super(msg, propertyType, propertyPath, e);
+    public JsonPropertyParseFailureException(String msg, Class<?> propertyType, String propertyPath, Throwable e) {
+        super(msg, e);
+        this.propertyType = propertyType;
+        this.propertyPath = propertyPath;
+    }
+
+    public Class<?> getPropertyType() {
+        return propertyType;
+    }
+
+    public String getPropertyPath() {
+        return propertyPath;
     }
 }

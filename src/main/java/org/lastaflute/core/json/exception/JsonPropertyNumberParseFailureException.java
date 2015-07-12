@@ -18,15 +18,15 @@ package org.lastaflute.core.json.exception;
 /**
  * @author jflute
  */
-public class JsonPropertyNumberParseFailureException extends RuntimeException {
+public class JsonPropertyNumberParseFailureException extends JsonPropertyParseFailureException {
 
     private static final long serialVersionUID = 1L;
 
-    public JsonPropertyNumberParseFailureException(String msg) {
-        super(msg);
+    public JsonPropertyNumberParseFailureException(String msg, Class<?> propertyType, String propertyPath) {
+        super(msg, propertyType, propertyPath);
     }
 
-    public JsonPropertyNumberParseFailureException(String msg, Throwable e) {
-        super(msg, e);
+    public JsonPropertyNumberParseFailureException(String msg, Class<?> propertyType, String propertyPath, Throwable e) {
+        super(msg, propertyType, propertyPath, e);
     }
 }

@@ -93,7 +93,7 @@ public interface Java8TimeGsonAdaptable {
             try {
                 return formatter.parse(code, temporal -> fromTemporal(temporal));
             } catch (DateTimeParseException e) {
-                throwJsonPropertyDateTimeParseFailureException(formatter, getRawType(), code, in, e);
+                throwJsonPropertyDateTimeParseFailureException(formatter, code, in, e);
                 return null; // unreachable
             }
         }
@@ -107,10 +107,10 @@ public interface Java8TimeGsonAdaptable {
 
         protected abstract DATE fromTemporal(TemporalAccessor temporal);
 
-        protected abstract Class<?> getRawType();
-
-        protected void throwJsonPropertyDateTimeParseFailureException(DateTimeFormatter formatter, Class<?> rawType, String exp,
-                JsonReader in, DateTimeParseException e) {
+        protected void throwJsonPropertyDateTimeParseFailureException(DateTimeFormatter formatter, String exp, JsonReader in,
+                DateTimeParseException e) {
+            final Class<?> dateType = getDateType();
+            final String properthPath = in.getPath();
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
             br.addNotice("Failed to parse date-time for the JSON property.");
             br.addItem("Advice");
@@ -118,14 +118,16 @@ public interface Java8TimeGsonAdaptable {
             br.addItem("Formatter");
             br.addElement(formatter);
             br.addItem("DateTime Type");
-            br.addElement(rawType);
+            br.addElement(dateType);
             br.addItem("Specified Expression");
             br.addElement(exp);
             br.addItem("JSON Property");
-            br.addElement(in.getPath());
+            br.addElement(properthPath);
             final String msg = br.buildExceptionMessage();
-            throw new JsonPropertyDateTimeParseFailureException(msg, e);
+            throw new JsonPropertyDateTimeParseFailureException(msg, dateType, properthPath, e);
         }
+
+        protected abstract Class<?> getDateType();
     }
 
     class TypeAdapterLocalDate extends AbstractTypeDateTimeAdapter<LocalDate> {
@@ -143,7 +145,7 @@ public interface Java8TimeGsonAdaptable {
         }
 
         @Override
-        protected Class<?> getRawType() {
+        protected Class<?> getDateType() {
             return LocalDate.class;
         }
     }
@@ -163,7 +165,7 @@ public interface Java8TimeGsonAdaptable {
         }
 
         @Override
-        protected Class<?> getRawType() {
+        protected Class<?> getDateType() {
             return LocalDateTime.class;
         }
     }
@@ -183,7 +185,7 @@ public interface Java8TimeGsonAdaptable {
         }
 
         @Override
-        protected Class<?> getRawType() {
+        protected Class<?> getDateType() {
             return LocalTime.class;
         }
     }

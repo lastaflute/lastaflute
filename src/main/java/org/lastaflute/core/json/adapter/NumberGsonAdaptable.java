@@ -75,21 +75,23 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
             getRealAdapter().write(out, value);
         }
 
+        protected abstract TypeAdapter<NUM> getRealAdapter();
+
         protected void throwJsonPropertyNumberParseFailureException(JsonReader in, RuntimeException e) {
+            final Class<?> numberType = getNumberType();
+            final String properthPath = in.getPath();
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
             br.addNotice("Failed to parse number for the JSON property.");
             br.addItem("Advice");
             br.addElement("Confirm the next exception message.");
             br.addElement("And make sure your specified value for the JSON property.");
             br.addItem("Number Type");
-            br.addElement(getNumberType().getName());
+            br.addElement(numberType.getName());
             br.addItem("JSON Property");
-            br.addElement(in.getPath());
+            br.addElement(properthPath);
             final String msg = br.buildExceptionMessage();
-            throw new JsonPropertyNumberParseFailureException(msg, e);
+            throw new JsonPropertyNumberParseFailureException(msg, numberType, properthPath, e);
         }
-
-        protected abstract TypeAdapter<NUM> getRealAdapter();
 
         protected abstract Class<?> getNumberType();
     }

@@ -20,7 +20,7 @@ import java.io.IOException;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeOfMethodNotFoundException;
-import org.lastaflute.core.json.exception.JsonPropertyUnknownClassificationCodeException;
+import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeUnknownException;
 import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
@@ -58,10 +58,10 @@ public interface DBFluteGsonAdaptable {
 
     class TypeAdapterClassification extends TypeAdapter<Classification> {
 
-        protected final Class<?> rawType;
+        protected final Class<?> clsType;
 
-        public TypeAdapterClassification(Class<?> rawType) {
-            this.rawType = rawType;
+        public TypeAdapterClassification(Class<?> clsType) {
+            this.clsType = clsType;
         }
 
         @Override
@@ -72,17 +72,17 @@ public interface DBFluteGsonAdaptable {
             }
             final String code = in.nextString();
             try {
-                return LaDBFluteUtil.toVerifiedClassification(rawType, code);
+                return LaDBFluteUtil.toVerifiedClassification(clsType, code);
             } catch (ClassificationCodeOfMethodNotFoundException e) {
-                throwJsonPropertyClassificationCodeOfMethodNotFoundException(rawType, code, in, e);
+                throwJsonPropertyClassificationCodeOfMethodNotFoundException(code, in, e);
                 return null; // unreachable
             } catch (ClassificationUnknownCodeException e) {
-                throwJsonPropertyUnknownClassificationCodeException(rawType, code, in, e);
+                throwJsonPropertyUnknownClassificationCodeException(code, in, e);
                 return null; // unreachable
             }
         }
 
-        protected void throwJsonPropertyClassificationCodeOfMethodNotFoundException(Class<?> rawType, String code, JsonReader in,
+        protected void throwJsonPropertyClassificationCodeOfMethodNotFoundException(String code, JsonReader in,
                 ClassificationCodeOfMethodNotFoundException e) {
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
             br.addNotice("Not found the codeOf() in the classification type for the JSON property.");
@@ -97,7 +97,7 @@ public interface DBFluteGsonAdaptable {
             br.addElement("    public String memberName;");
             br.addElement("    public CDef.MemberStatus memberStatus; // OK");
             br.addItem("Classification");
-            br.addElement(rawType);
+            br.addElement(clsType);
             br.addItem("Specified Code");
             br.addElement(code);
             br.addItem("JSON Property");
@@ -106,21 +106,22 @@ public interface DBFluteGsonAdaptable {
             throw new JsonPropertyClassificationCodeOfMethodNotFoundException(msg, e);
         }
 
-        protected void throwJsonPropertyUnknownClassificationCodeException(Class<?> rawType, String code, JsonReader in,
+        protected void throwJsonPropertyUnknownClassificationCodeException(String code, JsonReader in,
                 ClassificationUnknownCodeException e) {
+            final String propertyPath = in.getPath();
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
             br.addNotice("Unknown classification code for the JSON property.");
             br.addItem("Advice");
             br.addElement("Make sure your classification code in requested JSON.");
             br.addElement("And confirm the classification elements.");
             br.addItem("Classification");
-            br.addElement(rawType);
+            br.addElement(clsType);
             br.addItem("Unknown Code");
             br.addElement(code);
             br.addItem("JSON Property");
-            br.addElement(in.getPath());
+            br.addElement(propertyPath);
             final String msg = br.buildExceptionMessage();
-            throw new JsonPropertyUnknownClassificationCodeException(msg, e);
+            throw new JsonPropertyClassificationCodeUnknownException(msg, clsType, propertyPath, e);
         }
 
         @Override

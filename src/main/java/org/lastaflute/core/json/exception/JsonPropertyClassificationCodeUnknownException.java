@@ -18,15 +18,15 @@ package org.lastaflute.core.json.exception;
 /**
  * @author jflute
  */
-public class JsonPropertyUnknownClassificationCodeException extends RuntimeException {
+public class JsonPropertyClassificationCodeUnknownException extends JsonPropertyParseFailureException {
 
     private static final long serialVersionUID = 1L;
 
-    public JsonPropertyUnknownClassificationCodeException(String msg) {
-        super(msg);
+    public JsonPropertyClassificationCodeUnknownException(String msg, Class<?> propertyType, String propertyPath) {
+        super(msg, propertyType, propertyPath);
     }
 
-    public JsonPropertyUnknownClassificationCodeException(String msg, Throwable e) {
-        super(msg, e);
+    public JsonPropertyClassificationCodeUnknownException(String msg, Class<?> propertyType, String propertyPath, Throwable e) {
+        super(msg, propertyType, propertyPath, e);
     }
 }
