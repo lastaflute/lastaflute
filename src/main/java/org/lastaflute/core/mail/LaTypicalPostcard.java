@@ -16,6 +16,7 @@
 package org.lastaflute.core.mail;
 
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -24,6 +25,8 @@ import org.dbflute.mail.DeliveryCategory;
 import org.dbflute.mail.Postcard;
 import org.dbflute.mail.Postcard.BodyFileOption;
 import org.dbflute.mail.send.SMailAddress;
+import org.dbflute.mail.send.supplement.SMailPostingDiscloser;
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 
 /**
@@ -205,6 +208,10 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // ===================================================================================
     //                                                                       Postie Option
     //                                                                       =============
+    /**
+     * Set up as asynchronous execution. <br>
+     * Logging and sending are executed in asynchronous process.
+     */
     public void async() {
         postcard.async();
     }
@@ -238,9 +245,22 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
+    /**
+     * Suppress strict check of address format.
+     * @return this. (NotNull)
+     */
     public LaTypicalPostcard suppressStrictAddress() {
         strictAddress = false;
         return this;
+    }
+
+    /**
+     * Set up as dry-run. <br>
+     * Not send it actually, only preparation, e.g. for preview. <br>
+     * You can get complete plain or HTML text from postcard.
+     */
+    public void dryrun() {
+        postcard.dryrun();
     }
 
     // ===================================================================================
@@ -278,8 +298,18 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
         return postcard;
     }
 
+    /**
+     * @return The discloser of posting state. (NotNull, EmptyAllowed: before postie process)
+     */
+    public OptionalThing<SMailPostingDiscloser> getPostingDiscloser() { // e.g. for preview
+        return postcard.getOfficePostingDiscloser(); // always exists after postie process
+    }
+
+    /**
+     * @return The read-only map of variable for template. (NotNull)
+     */
     public Map<String, Object> getVariableMap() {
-        return variableMap;
+        return Collections.unmodifiableMap(variableMap);
     }
 
     public boolean isStrictAddress() {
