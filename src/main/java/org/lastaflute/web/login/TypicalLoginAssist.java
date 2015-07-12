@@ -261,7 +261,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             saveAutoLoginKeyToCookie(userEntity, userBean);
         }
         if (!option.isSilentLogin()) { // mainly here
-            asyncSaveLoginHistory(userEntity, userBean, option);
+            transactionalSaveLoginHistory(userEntity, userBean, option);
             processOnBrightLogin(userEntity, userBean, option);
         } else {
             processOnSilentLogin(userEntity, userBean, option);
@@ -407,25 +407,51 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                      History Handling
     //                                      ----------------
     /**
-     * Call the process, saving login history, in asynchronous process for e.g. remember-me in callback. <br>
-     * Transaction is begun in the process because update statement needs transaction (access-context).
+     * Call the process, saving login history, in new transaction for e.g. remember-me in callback. <br>
+     * Update statement needs transaction (access-context) so needed. <br>
+     * Meanwhile, the transaction inherits already-begun transaction for e.g. normal login process.
      * @param userEntity The entity of the found login user. (NotNull)
      * @param userBean The bean of the user saved in session. (NotNull)
      * @param option The option of login specified by caller. (NotNull)
      */
-    protected void asyncSaveLoginHistory(USER_ENTITY userEntity, USER_BEAN userBean, LoginSpecifiedOption option) {
-        asyncManager.async(() -> {
-            transactionStage.requiresNew(tx -> {
+    protected void transactionalSaveLoginHistory(USER_ENTITY userEntity, USER_BEAN userBean, LoginSpecifiedOption option) {
+        try {
+            // inherit when e.g. called by action, begin new when e.g. remember-me
+            transactionStage.required(tx -> {
                 saveLoginHistory(userEntity, userBean, option);
             });
-        });
+        } catch (Throwable e) {
+            handleSavingLoginHistoryTransactionFailure(userBean, e);
+        }
     }
 
     /**
-     * Save the history of the success login. (already saved in session at this point) <br>
+     * Handle the exception of transaction failure for saving login history.
+     * @param userBean The bean of the user saved in session. (NotNull)
+     * @param cause The cause exception of transaction failure. (NotNull)
+     */
+    protected void handleSavingLoginHistoryTransactionFailure(USER_BEAN userBean, Throwable cause) {
+        // continue the request because of history, latter process throws the exception if fatal error
+        logger.warn("Failed to save login history: {}", userBean.getUserId(), cause);
+    }
+
+    /**
+     * Save the history of the success login. (except silent login) <br>
      * For example, you can save the login user's info to database. <br>
-     * In asynchronous process, and transaction here. <br>
-     * And this is NOT called when silent login.
+     * You should use other transaction because this process is not related to main business.
+     * <pre>
+     * <span style="color: #3F7E5E">// use other transaction</span>
+     * <span style="color: #0000C0">transactionStage</span>.requiresNew(tx <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     ...
+     * });
+     * 
+     * <span style="color: #3F7E5E">// and also asynchronous (then exception is handled by the other thread)</span>
+     * <span style="color: #0000C0">asyncManager</span>.async(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #0000C0">transactionStage</span>.requiresNew(tx <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         ...
+     *     });
+     * });
+     * </pre>
      * @param userEntity The entity of the login user. (NotNull)
      * @param userBean The user bean of the login user, already saved in session. (NotNull)
      * @param option The option of login specified by caller. (NotNull)
