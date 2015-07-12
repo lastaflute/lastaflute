@@ -16,21 +16,30 @@
 package org.lastaflute.web.ruts.config;
 
 import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.time.temporal.TemporalAccessor;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.NotNull;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.hibernate.validator.constraints.NotBlank;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.exception.ActionFormNotFoundException;
 import org.lastaflute.web.exception.ActionUrlParameterDifferentArgsException;
+import org.lastaflute.web.exception.ExecuteMethodFormPropertyConflictException;
+import org.lastaflute.web.exception.ExecuteMethodFormPropertyValidationMismatchException;
 import org.lastaflute.web.exception.ExecuteMethodOptionalNotContinuedException;
 import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
 import org.lastaflute.web.exception.UrlParamArgsNotFoundException;
@@ -301,9 +310,13 @@ public class ActionExecute implements Serializable {
     protected void checkExecuteMethod(ExecuteArgAnalyzer executeArgAnalyzer) {
         checkReturnTypeNotAllowed();
         checkFormPropertyConflict();
+        checkFormPropertyValidationMismatch();
         checkOptionalNotContinued(executeArgAnalyzer);
     }
 
+    // -----------------------------------------------------
+    //                                     Check Return Type
+    //                                     -----------------
     protected void checkReturnTypeNotAllowed() {
         if (!isAllowedReturnType()) {
             throwExecuteMethodReturnTypeNotResponseException();
@@ -333,6 +346,9 @@ public class ActionExecute implements Serializable {
         throw new ExecuteMethodReturnTypeNotResponseException(msg);
     }
 
+    // -----------------------------------------------------
+    //                                   Check Form Property
+    //                                   -------------------
     protected void checkFormPropertyConflict() {
         formMeta.ifPresent(meta -> {
             final String methodName = executeMethod.getName();
@@ -369,9 +385,93 @@ public class ActionExecute implements Serializable {
         br.addItem("Confliected Property");
         br.addElement(property);
         final String msg = br.buildExceptionMessage();
-        throw new ExecuteMethodReturnTypeNotResponseException(msg);
+        throw new ExecuteMethodFormPropertyConflictException(msg);
     }
 
+    protected void checkFormPropertyValidationMismatch() {
+        formMeta.ifPresent(meta -> {
+            for (ActionFormProperty property : meta.properties()) {
+                final Field field = property.getPropertyDesc().getField();
+                if (field != null) { // check only field
+                    final Class<?> fieldType = field.getType();
+                    if (isFormPropertyCannotNotNullType(fieldType)) {
+                        final Class<NotNull> notNullType = NotNull.class;
+                        if (field.getAnnotation(notNullType) != null) {
+                            throwExecuteMethodFormPropertyValidationMismatchException(property, notNullType);
+                        }
+                    } else if (isFormPropertyCannotNotEmptyBlankType(fieldType)) {
+                        final Class<NotEmpty> notEmptyType = NotEmpty.class;
+                        if (field.getAnnotation(notEmptyType) != null) {
+                            throwExecuteMethodFormPropertyValidationMismatchException(property, notEmptyType);
+                        }
+                        final Class<NotBlank> notBlankType = NotBlank.class;
+                        if (field.getAnnotation(notBlankType) != null) {
+                            throwExecuteMethodFormPropertyValidationMismatchException(property, notBlankType);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    protected boolean isFormPropertyCannotNotNullType(Class<?> fieldType) {
+        return String.class.isAssignableFrom(fieldType) // everybody knows
+                || Collection.class.isAssignableFrom(fieldType) // List, Set, ...
+                || Map.class.isAssignableFrom(fieldType); // mainly used in JSON
+    }
+
+    protected boolean isFormPropertyCannotNotEmptyBlankType(Class<?> fieldType) {
+        return Number.class.isAssignableFrom(fieldType) // Integer, Long, ...
+                || TemporalAccessor.class.isAssignableFrom(fieldType) // LocalDate, ...
+                || java.util.Date.class.isAssignableFrom(fieldType); // old date
+    }
+
+    protected void throwExecuteMethodFormPropertyValidationMismatchException(ActionFormProperty property,
+            Class<? extends Annotation> annotation) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Mismatch validation annotation of form property.");
+        br.addItem("Advice");
+        br.addElement("The annotation setting has logical error like this:");
+        br.addElement("  v @NotNull to String, Collection => use @NotEmpty or @NotBlank");
+        br.addElement("  v @NotEmpty to Number types, Date types, CDef => use @NotNull");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    @NotNull");
+        br.addElement("    public String memberName; // *NG: use @NotEmpty or @NotBlank");
+        br.addElement("    @NotNull");
+        br.addElement("    public List<SeaBean> seaList; // *NG: use @NotEmpty");
+        br.addElement("    @NotEmpty");
+        br.addElement("    public Integer memberAge; // *NG: use @NotNull");
+        br.addElement("    @NotBlank");
+        br.addElement("    public LocalDate birthdate; // *NG: use @NotNull");
+        br.addElement("    @NotEmpty");
+        br.addElement("    public CDef.MemberStatus statusList; // *NG: use @NotNull");
+        br.addElement("  (o):");
+        br.addElement("    @NotBlank");
+        br.addElement("    public String memberName;");
+        br.addElement("    @NotEmpty");
+        br.addElement("    public List<SeaBean> seaList;");
+        br.addElement("    @NotNull");
+        br.addElement("    public Integer memberAge;");
+        br.addElement("    @NotNull");
+        br.addElement("    public LocalDate birthdate;");
+        br.addElement("    @NotNull");
+        br.addElement("    public CDef.MemberStatus statusList;");
+        br.addItem("Execute Method");
+        br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
+        br.addItem("Action Form");
+        br.addElement(formMeta);
+        br.addItem("Target Property");
+        br.addElement(property);
+        br.addItem("Mismatch Annotation");
+        br.addElement(annotation);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodFormPropertyValidationMismatchException(msg);
+    }
+
+    // -----------------------------------------------------
+    //                                        Check Optional
+    //                                        --------------
     public void checkOptionalNotContinued(ExecuteArgAnalyzer executeArgAnalyzer) {
         boolean opt = false;
         int index = 0;
