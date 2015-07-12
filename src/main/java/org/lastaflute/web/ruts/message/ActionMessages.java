@@ -35,7 +35,8 @@ public class ActionMessages implements Serializable {
     //                                                                          ==========
     private static final long serialVersionUID = 1L;
 
-    public static final String GLOBAL_PROPERTY_KEY = "lastaflute.message.GLOBAL_PROPERTY";
+    /** The property key for global property (non-specific property) for protocol with HTML, JavaScipt. */
+    public static final String GLOBAL_PROPERTY_KEY = "GLOBAL_PROPERTY";
 
     protected static final Comparator<ActionMessageItem> actionItemComparator = (item1, item2) -> {
         return item1.getOrder() - item2.getOrder();
