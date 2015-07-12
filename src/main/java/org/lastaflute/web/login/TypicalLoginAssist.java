@@ -919,7 +919,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     @Override
     public HtmlResponse redirectToLoginAction() {
         final Class<?> redirectLoginActionType = getRedirectLoginActionType();
-        final String actionUrl = actionPathResolver.toActionUrl(redirectLoginActionType, /*redirect*/true, null);
+        final String actionUrl = actionPathResolver.toActionUrl(redirectLoginActionType);
         return HtmlResponse.fromRedirectPath(actionUrl);
     }
 

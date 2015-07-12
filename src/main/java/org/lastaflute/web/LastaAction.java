@@ -322,7 +322,7 @@ public abstract class LastaAction {
     protected HtmlResponse doRedirect(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsRediect(actionPathResolver.toActionUrl(actionType, true, chain));
+        return newHtmlResponseAsRediect(toActionUrl(actionType, chain));
     }
 
     protected HtmlResponse newHtmlResponseAsRediect(String redirectPath) {
@@ -451,7 +451,7 @@ public abstract class LastaAction {
     protected HtmlResponse doForward(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsForward(actionPathResolver.toActionUrl(actionType, false, chain));
+        return newHtmlResponseAsForward(toActionUrl(actionType, chain));
     }
 
     protected HtmlResponse newHtmlResponseAsForward(String redirectPath) {
@@ -496,6 +496,39 @@ public abstract class LastaAction {
 
     protected UrlChain newUrlChain() {
         return new UrlChain(this);
+    }
+
+    // -----------------------------------------------------
+    //                                            Action URL
+    //                                            ----------
+    /**
+     * Convert to URL string to move the action.
+     * <pre>
+     * <span style="color: #3F7E5E">// /product/list/</span>
+     * String url = toActionUrl(ProductListAction.<span style="color: #70226C">class</span>);
+     * </pre>
+     * @param actionType The class type of action that it redirects to. (NotNull)
+     * @return The URL string to move to the action. (NotNull)
+     */
+    protected String toActionUrl(Class<?> actionType) {
+        assertArgumentNotNull("actionType", actionType);
+        return actionPathResolver.toActionUrl(actionType);
+    }
+
+    /**
+     * Convert to URL string to move the action.
+     * <pre>
+     * <span style="color: #3F7E5E">// /product/list/3</span>
+     * String url = toActionUrl(ProductListAction.<span style="color: #70226C">class</span>, moreUrl(3));
+     * </pre>
+     * @param actionType The class type of action that it redirects to. (NotNull)
+     * @param chain The chain of URL to build additional info on URL. (NotNull)
+     * @return The URL string to move to the action. (NotNull)
+     */
+    protected String toActionUrl(Class<?> actionType, UrlChain chain) {
+        assertArgumentNotNull("actionType", actionType);
+        assertArgumentNotNull("chain", chain);
+        return actionPathResolver.toActionUrl(actionType, chain);
     }
 
     // ===================================================================================

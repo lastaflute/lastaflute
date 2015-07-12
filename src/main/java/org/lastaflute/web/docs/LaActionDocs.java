@@ -93,6 +93,8 @@ public interface LaActionDocs {
      * o forwardByParam(actionType, params) <span style="color: #3F7E5E">// by the GET parameter, /product/list?sea=mystic</span>
      * o forwardWith(actionType, moreUrl_or_params) <span style="color: #3F7E5E">// with various parameters</span>
      * 
+     * o toActionUrl(actionType [with chain]) <span style="color: #3F7E5E">// build action URL by action type e.g. /product/list</span>
+     * 
      * <span style="font-size: 130%; color: #553000">[Advance]</span>
      * o async(noArgLambda) <span style="color: #3F7E5E">// execute asynchronous process</span>
      * o requiresNew(txLambda) <span style="color: #3F7E5E">// execute new transaction process</span>
