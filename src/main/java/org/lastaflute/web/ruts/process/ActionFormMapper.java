@@ -126,7 +126,7 @@ public class ActionFormMapper {
         if (isMultipartRequest()) {
             final MultipartRequestWrapper wrapper = newMultipartRequestWrapper(requestManager.getRequest());
             ContainerUtil.overrideExternalRequest(wrapper);
-            multipartHandler = newActionMultipartRequestHandler();
+            multipartHandler = createMultipartRequestHandler();
             multipartHandler.handleRequest(wrapper);
             if (MultipartRequestHandler.findExceededException(wrapper) != null) {
                 return; // you can confirm exceeded by the static find method
@@ -155,7 +155,7 @@ public class ActionFormMapper {
         return new MultipartRequestWrapper(request);
     }
 
-    protected ActionMultipartRequestHandler newActionMultipartRequestHandler() {
+    protected MultipartRequestHandler createMultipartRequestHandler() {
         return new ActionMultipartRequestHandler();
     }
 

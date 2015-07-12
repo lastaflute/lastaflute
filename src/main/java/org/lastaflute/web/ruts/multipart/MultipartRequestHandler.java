@@ -29,7 +29,7 @@ public interface MultipartRequestHandler {
 
     String MAX_LENGTH_EXCEEDED_KEY = "lastaflute.multipart.SizeLimitExceededException";
 
-    public static MultipartExceededException findExceededException(HttpServletRequest request) {
+    static MultipartExceededException findExceededException(HttpServletRequest request) {
         return (MultipartExceededException) request.getAttribute(MAX_LENGTH_EXCEEDED_KEY);
     }
 

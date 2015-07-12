@@ -238,6 +238,9 @@ public class ActionMultipartRequestHandler implements MultipartRequestHandler {
         }
     }
 
+    // ===================================================================================
+    //                                                                            Add Text
+    //                                                                            ========
     protected void addTextParameter(HttpServletRequest request, FileItem item) {
         final String name = item.getFieldName();
         final String encoding = request.getCharacterEncoding();
