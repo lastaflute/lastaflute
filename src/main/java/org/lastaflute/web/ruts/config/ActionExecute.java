@@ -449,7 +449,7 @@ public class ActionExecute implements Serializable {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Mismatch validation annotation of form property.");
         br.addItem("Advice");
-        br.addElement("The annotation setting has logical error like this:");
+        br.addElement("The annotation setting has mismatch like this:");
         // *depends on JSON rule so difficult
         //br.addElement("  - String type cannot use @NotNull => use @NotEmpty or @NotBlank");
         br.addElement("  - Number types cannot use @NotEmpty, @NotBlank => use @NotNull");
