@@ -28,10 +28,8 @@ import org.dbflute.optional.OptionalEntity;
 import org.dbflute.optional.OptionalObject;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
-import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.security.PrimaryCipher;
 import org.lastaflute.core.time.TimeManager;
-import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.login.exception.LoginFailureException;
@@ -84,12 +82,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     @Resource
     private TimeManager timeManager;
-
-    @Resource
-    private AsyncManager asyncManager;
-
-    @Resource
-    private TransactionStage transactionStage;
 
     @Resource
     private RequestManager requestManager;
