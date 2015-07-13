@@ -27,9 +27,9 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.NotNull;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.hibernate.validator.constraints.NotBlank;
@@ -394,16 +394,20 @@ public class ActionExecute implements Serializable {
                 final Field field = property.getPropertyDesc().getField();
                 if (field != null) { // check only field
                     final Class<?> fieldType = field.getType();
-                    if (isFormPropertyCannotNotNullType(fieldType)) {
-                        final Class<NotNull> notNullType = NotNull.class;
-                        if (field.getAnnotation(notNullType) != null) {
-                            throwExecuteMethodFormPropertyValidationMismatchException(property, notNullType);
-                        }
-                    } else if (isFormPropertyCannotNotEmptyBlankType(fieldType)) {
+                    // *depends on JSON rule so difficult, check only physical mismatch here
+                    //if (isFormPropertyCannotNotNullType(fieldType)) {
+                    //    final Class<NotNull> notNullType = NotNull.class;
+                    //    if (field.getAnnotation(notNullType) != null) {
+                    //        throwExecuteMethodFormPropertyValidationMismatchException(property, notNullType);
+                    //    }
+                    //}
+                    if (isFormPropertyCannotNotEmptyType(fieldType)) {
                         final Class<NotEmpty> notEmptyType = NotEmpty.class;
                         if (field.getAnnotation(notEmptyType) != null) {
                             throwExecuteMethodFormPropertyValidationMismatchException(property, notEmptyType);
                         }
+                    }
+                    if (isFormPropertyCannotNotBlankType(fieldType)) {
                         final Class<NotBlank> notBlankType = NotBlank.class;
                         if (field.getAnnotation(notBlankType) != null) {
                             throwExecuteMethodFormPropertyValidationMismatchException(property, notBlankType);
@@ -414,16 +418,30 @@ public class ActionExecute implements Serializable {
         });
     }
 
-    protected boolean isFormPropertyCannotNotNullType(Class<?> fieldType) {
-        return String.class.isAssignableFrom(fieldType) // everybody knows
-                || Collection.class.isAssignableFrom(fieldType) // List, Set, ...
-                || Map.class.isAssignableFrom(fieldType); // mainly used in JSON
+    // *depends on JSON rule so difficult
+    //protected boolean isFormPropertyCannotNotNullType(Class<?> fieldType) {
+    //    return String.class.isAssignableFrom(fieldType) // everybody knows
+    //            || isFormPropertyCollectionFamilyType(fieldType); // List, Set, Map, Array, ...
+    //}
+
+    protected boolean isFormPropertyCannotNotEmptyType(Class<?> fieldType) {
+        return Number.class.isAssignableFrom(fieldType) // Integer, Long, ...
+                || int.class.equals(fieldType) || long.class.equals(fieldType) // primitive numbers
+                || TemporalAccessor.class.isAssignableFrom(fieldType) // LocalDate, ...
+                || java.util.Date.class.isAssignableFrom(fieldType) // old date
+                || Boolean.class.isAssignableFrom(fieldType) || boolean.class.equals(fieldType) // boolean
+                || Classification.class.isAssignableFrom(fieldType); // CDef
     }
 
-    protected boolean isFormPropertyCannotNotEmptyBlankType(Class<?> fieldType) {
-        return Number.class.isAssignableFrom(fieldType) // Integer, Long, ...
-                || TemporalAccessor.class.isAssignableFrom(fieldType) // LocalDate, ...
-                || java.util.Date.class.isAssignableFrom(fieldType); // old date
+    protected boolean isFormPropertyCannotNotBlankType(Class<?> fieldType) {
+        return isFormPropertyCannotNotEmptyType(fieldType) // cannot-NotEmpty types are also
+                || isFormPropertyCollectionFamilyType(fieldType); // List, Set, Map, Array, ...
+    }
+
+    protected boolean isFormPropertyCollectionFamilyType(Class<?> fieldType) {
+        return Collection.class.isAssignableFrom(fieldType) // List, Set, ...
+                || Map.class.isAssignableFrom(fieldType) // mainly used in JSON
+                || Object[].class.isAssignableFrom(fieldType); // also all arrays
     }
 
     protected void throwExecuteMethodFormPropertyValidationMismatchException(ActionFormProperty property,
@@ -432,8 +450,15 @@ public class ActionExecute implements Serializable {
         br.addNotice("Mismatch validation annotation of form property.");
         br.addItem("Advice");
         br.addElement("The annotation setting has logical error like this:");
-        br.addElement("  v @NotNull to String, Collection => use @NotEmpty or @NotBlank");
-        br.addElement("  v @NotEmpty to Number types, Date types, CDef => use @NotNull");
+        // *depends on JSON rule so difficult
+        //br.addElement("  - String type cannot use @NotNull => use @NotEmpty or @NotBlank");
+        br.addElement("  - Number types cannot use @NotEmpty, @NotBlank => use @NotNull");
+        br.addElement("  - Date types cannot use @NotEmpty, @NotBlank => use @NotNull");
+        br.addElement("  - Boolean types cannot use @NotEmpty, @NotBlank => use @NotNull");
+        br.addElement("  - CDef types cannot use @NotEmpty, @NotBlank => use @NotNull");
+        br.addElement("  - List/Map/... types cannot use @NotBlank => use @NotEmpty");
+        // *no touch to @NotNull same reason as String
+        //br.addElement("  - List/Map/... types cannot use @NotNull, @NotBlank => use @NotEmpty");
         br.addElement("For example:");
         br.addElement("  (x):");
         br.addElement("    @NotNull");
