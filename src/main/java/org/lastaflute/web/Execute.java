@@ -39,13 +39,13 @@ public @interface Execute {
     boolean suppressTransaction() default false;
 
     /**
-     * The limit of SQL count (executions) in one request. <br>
+     * The limit of SQL execution count in one request. <br>
      * If it's over, show warning log (so also in production) <br>
      * For example: (43 executions / limit 30)
      * <pre>
      * *Too many SQL executions: 43/30 in ProductListAction@index()
      * </pre>
-     * @return The integer for limit of SQL count (executions) in one request. (MinusAllowed: use default limit)
+     * @return The integer for limit of SQL execution count in one request. (MinusAllowed: use default limit)
      */
-    int sqlCountLimit() default -1;
+    int sqlExecutionCountLimit() default -1;
 }

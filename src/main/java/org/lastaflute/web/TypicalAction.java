@@ -199,11 +199,11 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     protected TooManySqlOption createTooManySqlOption(ActionRuntime runtime) {
-        return new TooManySqlOption(countSqlCountLimit(runtime));
+        return new TooManySqlOption(calculateSqlExecutionCountLimit(runtime));
     }
 
-    protected int countSqlCountLimit(ActionRuntime runtime) {
-        return runtime.getActionExecute().getSqlCountLimit().orElse(30);
+    protected int calculateSqlExecutionCountLimit(ActionRuntime runtime) {
+        return runtime.getActionExecute().getSqlExecutionCountLimit().orElse(30);
     }
 
     // -----------------------------------------------------

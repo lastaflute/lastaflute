@@ -70,7 +70,7 @@ public class ActionExecute implements Serializable {
     protected final Method executeMethod; // not null
     protected final TransactionGenre transactionGenre; // not null
     protected final boolean indexMethod;
-    protected final OptionalThing<Integer> sqlCountLimit;
+    protected final OptionalThing<Integer> sqlExecutionCountLimit;
 
     // -----------------------------------------------------
     //                                     Defined Parameter
@@ -99,7 +99,7 @@ public class ActionExecute implements Serializable {
         this.executeMethod = executeMethod;
         this.transactionGenre = chooseTransactionGenre(executeOption);
         this.indexMethod = executeMethod.getName().equals("index");
-        this.sqlCountLimit = createOptionalSqlCountLimit(executeOption);
+        this.sqlExecutionCountLimit = createOptionalSqlExecutionCountLimit(executeOption);
 
         // defined parameter (needed in URL pattern analyzing)
         final ExecuteArgAnalyzer executeArgAnalyzer = newExecuteArgAnalyzer();
@@ -140,10 +140,10 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                       SQL Count Limit
     //                                       ---------------
-    protected OptionalThing<Integer> createOptionalSqlCountLimit(ExecuteOption executeOption) {
-        final int specifiedSqlCountLimit = executeOption.getSqlCountLimit();
-        return OptionalThing.ofNullable(specifiedSqlCountLimit >= 0 ? specifiedSqlCountLimit : null, () -> {
-            throw new IllegalStateException("Not found the specified SQL count limit: " + toSimpleMethodExp());
+    protected OptionalThing<Integer> createOptionalSqlExecutionCountLimit(ExecuteOption executeOption) {
+        final int specifiedLimit = executeOption.getSqlExecutionCountLimit();
+        return OptionalThing.ofNullable(specifiedLimit >= 0 ? specifiedLimit : null, () -> {
+            throw new IllegalStateException("Not found the specified SQL execution count limit: " + toSimpleMethodExp());
         });
     }
 
@@ -669,8 +669,8 @@ public class ActionExecute implements Serializable {
         return indexMethod;
     }
 
-    public OptionalThing<Integer> getSqlCountLimit() {
-        return sqlCountLimit;
+    public OptionalThing<Integer> getSqlExecutionCountLimit() {
+        return sqlExecutionCountLimit;
     }
 
     // -----------------------------------------------------

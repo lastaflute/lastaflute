@@ -23,19 +23,19 @@ public class TooManySqlOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final int limitCount;
+    protected final int sqlExecutionCountLimit;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TooManySqlOption(int limitCount) {
-        this.limitCount = limitCount;
+    public TooManySqlOption(int sqlExecutionCountLimit) {
+        this.sqlExecutionCountLimit = sqlExecutionCountLimit;
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public int getLimitCount() {
-        return limitCount;
+    public int getSqlExecutionCountLimit() {
+        return sqlExecutionCountLimit;
     }
 }
