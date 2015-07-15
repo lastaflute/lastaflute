@@ -201,8 +201,9 @@ public class TypicalGodHandMonologue {
     }
 
     protected void showAppEx(RuntimeException cause, Supplier<String> msgSupplier) {
-        // basically trace in production just in case
-        // if it's noisy and unneeded, override this method
+        // to trace it in production just in case
+        // several exception is depend on circumstances
+        // whether application exception or not 
         if (logger.isInfoEnabled()) {
             logger.info(msgSupplier.get());
         }

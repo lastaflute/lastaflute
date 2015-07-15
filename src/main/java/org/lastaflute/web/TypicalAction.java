@@ -34,6 +34,7 @@ import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionHook;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.callback.CrossOriginResourceSharing;
+import org.lastaflute.web.callback.TooManySqlOption;
 import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
 import org.lastaflute.web.callback.TypicalGodHandActionEpilogue;
 import org.lastaflute.web.callback.TypicalGodHandMonologue;
@@ -104,18 +105,18 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                                Before
     //                                                ------
     @Override
-    public ActionResponse godHandPrologue(ActionRuntime runtimeMeta) { // fixed process
-        return createTypicalGodHandPrologue().performPrologue(runtimeMeta);
+    public ActionResponse godHandPrologue(ActionRuntime runtime) { // fixed process
+        return createTypicalGodHandPrologue(runtime).performPrologue(runtime);
     }
 
-    protected TypicalGodHandPrologue createTypicalGodHandPrologue() {
-        final TypicalGodHandResource resource = createTypicalGodHandResource();
-        final OptionalThing<CrossOriginResourceSharing> sharing = createCrossOriginResourceSharing();
+    protected TypicalGodHandPrologue createTypicalGodHandPrologue(ActionRuntime runtime) {
+        final TypicalGodHandResource resource = createTypicalGodHandResource(runtime);
+        final OptionalThing<CrossOriginResourceSharing> sharing = createCrossOriginResourceSharing(runtime);
         final AccessContextArranger arranger = newAccessContextArranger();
         return newTypicalGodHandPrologue(resource, sharing, arranger, () -> getUserBean(), () -> myAppType());
     }
 
-    protected OptionalThing<CrossOriginResourceSharing> createCrossOriginResourceSharing() { // application may override
+    protected OptionalThing<CrossOriginResourceSharing> createCrossOriginResourceSharing(ActionRuntime runtime) { // application may override
         return OptionalThing.empty(); // you can share by overriding
     }
 
@@ -140,12 +141,12 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                            on Failure
     //                                            ----------
     @Override
-    public ActionResponse godHandMonologue(ActionRuntime runtimeMeta) { // fixed process
-        return createTypicalGodHandMonologue().performMonologue(runtimeMeta);
+    public ActionResponse godHandMonologue(ActionRuntime runtime) { // fixed process
+        return createTypicalGodHandMonologue(runtime).performMonologue(runtime);
     }
 
-    protected TypicalGodHandMonologue createTypicalGodHandMonologue() {
-        final TypicalGodHandResource resource = createTypicalGodHandResource();
+    protected TypicalGodHandMonologue createTypicalGodHandMonologue(ActionRuntime runtime) {
+        final TypicalGodHandResource resource = createTypicalGodHandResource(runtime);
         final TypicalEmbeddedKeySupplier supplier = newTypicalEmbeddedKeySupplier();
         final ActionApplicationExceptionHandler handler = newActionApplicationExceptionHandler();
         return newTypicalGodHandMonologue(resource, supplier, handler);
@@ -181,26 +182,34 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                               Finally
     //                                               -------
     @Override
-    public void hookFinally(ActionRuntime runtimeMeta) { // application may override
+    public void hookFinally(ActionRuntime runtime) { // application may override
     }
 
     @Override
-    public void godHandEpilogue(ActionRuntime runtimeMeta) { // fixed process
-        createTypicalGodHandEpilogue().performEpilogue(runtimeMeta);
+    public void godHandEpilogue(ActionRuntime runtime) { // fixed process
+        createTypicalGodHandEpilogue(runtime).performEpilogue(runtime);
     }
 
-    protected TypicalGodHandActionEpilogue createTypicalGodHandEpilogue() {
-        return newTypicalGodHandEpilogue(createTypicalGodHandResource());
+    protected TypicalGodHandActionEpilogue createTypicalGodHandEpilogue(ActionRuntime runtime) {
+        return newTypicalGodHandEpilogue(createTypicalGodHandResource(runtime), createTooManySqlOption(runtime));
     }
 
-    protected TypicalGodHandActionEpilogue newTypicalGodHandEpilogue(TypicalGodHandResource resource) {
-        return new TypicalGodHandActionEpilogue(resource);
+    protected TypicalGodHandActionEpilogue newTypicalGodHandEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
+        return new TypicalGodHandActionEpilogue(resource, tooManySqlOption);
+    }
+
+    protected TooManySqlOption createTooManySqlOption(ActionRuntime runtime) {
+        return new TooManySqlOption(countSqlCountLimit(runtime));
+    }
+
+    protected int countSqlCountLimit(ActionRuntime runtime) {
+        return runtime.getActionExecute().getSqlCountLimit().orElse(30);
     }
 
     // -----------------------------------------------------
     //                                      Resource Factory
     //                                      ----------------
-    protected TypicalGodHandResource createTypicalGodHandResource() {
+    protected TypicalGodHandResource createTypicalGodHandResource(ActionRuntime runtime) {
         final OptionalThing<LoginManager> loginManager = myLoginManager();
         return new TypicalGodHandResource(requestManager, responseManager, sessionManager, loginManager, apiManager, exceptionTranslator);
     }

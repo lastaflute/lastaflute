@@ -70,6 +70,7 @@ public class ActionExecute implements Serializable {
     protected final Method executeMethod; // not null
     protected final TransactionGenre transactionGenre; // not null
     protected final boolean indexMethod;
+    protected final OptionalThing<Integer> sqlCountLimit;
 
     // -----------------------------------------------------
     //                                     Defined Parameter
@@ -98,6 +99,7 @@ public class ActionExecute implements Serializable {
         this.executeMethod = executeMethod;
         this.transactionGenre = chooseTransactionGenre(executeOption);
         this.indexMethod = executeMethod.getName().equals("index");
+        this.sqlCountLimit = createOptionalSqlCountLimit(executeOption);
 
         // defined parameter (needed in URL pattern analyzing)
         final ExecuteArgAnalyzer executeArgAnalyzer = newExecuteArgAnalyzer();
@@ -124,6 +126,9 @@ public class ActionExecute implements Serializable {
         checkExecuteMethod(executeArgAnalyzer);
     }
 
+    // -----------------------------------------------------
+    //                                           Transaction
+    //                                           -----------
     protected TransactionGenre chooseTransactionGenre(ExecuteOption executeOption) {
         return executeOption.isSuppressTransaction() ? TransactionGenre.NONE : getDefaultTransactionGenre();
     }
@@ -132,6 +137,19 @@ public class ActionExecute implements Serializable {
         return TransactionGenre.REQUIRES_NEW;
     }
 
+    // -----------------------------------------------------
+    //                                       SQL Count Limit
+    //                                       ---------------
+    protected OptionalThing<Integer> createOptionalSqlCountLimit(ExecuteOption executeOption) {
+        final int specifiedSqlCountLimit = executeOption.getSqlCountLimit();
+        return OptionalThing.ofNullable(specifiedSqlCountLimit >= 0 ? specifiedSqlCountLimit : null, () -> {
+            throw new IllegalStateException("Not found the specified SQL count limit: " + toSimpleMethodExp());
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                              Analyzer
+    //                                              --------
     protected ExecuteArgAnalyzer newExecuteArgAnalyzer() {
         return new ExecuteArgAnalyzer();
     }
@@ -649,6 +667,10 @@ public class ActionExecute implements Serializable {
 
     public boolean isIndexMethod() {
         return indexMethod;
+    }
+
+    public OptionalThing<Integer> getSqlCountLimit() {
+        return sqlCountLimit;
     }
 
     // -----------------------------------------------------

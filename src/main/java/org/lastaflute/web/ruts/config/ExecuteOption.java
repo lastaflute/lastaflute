@@ -22,14 +22,17 @@ public class ExecuteOption {
 
     protected final String specifiedUrlPattern;
     protected final boolean suppressTransaction;
+    protected final int sqlCountLimit;
 
     /**
      * @param specifiedUrlPattern The URL pattern specified by action. (NullAllowed)
      * @param suppressTransaction Does it suppress transaction for action?
+     * @param sqlCountLimit The integer for limit of SQL count (executions) in one request. (MinusAllowed: use default limit)
      */
-    public ExecuteOption(String specifiedUrlPattern, boolean suppressTransaction) {
+    public ExecuteOption(String specifiedUrlPattern, boolean suppressTransaction, int sqlCountLimit) {
         this.specifiedUrlPattern = specifiedUrlPattern;
         this.suppressTransaction = suppressTransaction;
+        this.sqlCountLimit = sqlCountLimit;
     }
 
     public String getSpecifiedUrlPattern() {
@@ -38,5 +41,9 @@ public class ExecuteOption {
 
     public boolean isSuppressTransaction() {
         return suppressTransaction;
+    }
+
+    public int getSqlCountLimit() {
+        return sqlCountLimit;
     }
 }
