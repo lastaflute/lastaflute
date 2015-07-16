@@ -601,7 +601,8 @@ public class RequestLoggingFilter implements Filter {
             sb.append(LF);
             buildRequestHeaders(sb, request);
             buildSessionAttributes(sb, request);
-            sb.append(" Message: ");
+            sb.append(" Exception: ").append(cause.getClass().getName());
+            sb.append(LF).append(" Message: ");
             final String causeMsg = cause.getMessage();
             if (causeMsg != null && causeMsg.contains(LF)) {
                 sb.append(LF).append("/- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
