@@ -19,6 +19,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
@@ -35,6 +36,7 @@ import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
 import org.lastaflute.web.exception.ExecuteMethodReturnUndefinedResponseException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
+import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
@@ -56,7 +58,8 @@ public class GodHandableAction implements VirtualAction {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(GodHandableAction.class);
-    private static final Object[] EMPTY_ARRAY = new Object[0];
+    protected static final Object[] EMPTY_ARRAY = new Object[0];
+    protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -381,12 +384,23 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected ActionResponse handleValidationErrorException(ValidationErrorException cause) {
-        // API dispatch is not here, needs to call it in error handler by developer
-        // e.g. validate(form, () -> dispatchApiValidationError())
         final ActionMessages errors = cause.getMessages();
+        if (logger.isDebugEnabled()) {
+            final StringBuilder sb = new StringBuilder();
+            sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
+            sb.append(LF).append("[Validation Error]");
+            for (String property : errors.toPropertySet()) {
+                sb.append(LF).append(property);
+                for (Iterator<ActionMessage> ite = errors.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    sb.append(LF).append("  ").append(ite.next());
+                }
+            }
+            sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/");
+            logger.debug(sb.toString());
+        }
         requestManager.errors().save(errors); // also API can use it
         final VaErrorHook errorHandler = cause.getErrorHandler();
-        final ActionResponse response = errorHandler.hook();
+        final ActionResponse response = errorHandler.hook(); // failure hook here if API
         if (response == null) {
             throw new IllegalStateException("The handler for validation error cannot return null: " + errorHandler, cause);
         }

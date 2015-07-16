@@ -103,8 +103,7 @@ public class ActionMessage implements Serializable {
         if (values != null) {
             for (int i = 0; i < values.length; i++) {
                 sb.append(values[i]);
-                // don't append comma to last entry
-                if (i < values.length - 1) {
+                if (i < values.length - 1) { // don't append comma to last entry
                     sb.append(", ");
                 }
             }

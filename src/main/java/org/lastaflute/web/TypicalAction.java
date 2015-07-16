@@ -48,6 +48,7 @@ import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.response.ActionResponse;
+import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
@@ -67,6 +68,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(TypicalAction.class);
+    protected static final String GLOBAL = ActionMessages.GLOBAL_PROPERTY_KEY;
 
     // ===================================================================================
     //                                                                           Attribute

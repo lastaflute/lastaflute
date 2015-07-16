@@ -36,7 +36,7 @@ public class ActionMessages implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** The property key for global property (non-specific property) for protocol with HTML, JavaScipt. */
-    public static final String GLOBAL_PROPERTY_KEY = "GLOBAL_PROPERTY";
+    public static final String GLOBAL_PROPERTY_KEY = "_global";
 
     protected static final Comparator<ActionMessageItem> actionItemComparator = (item1, item2) -> {
         return item1.getOrder() - item2.getOrder();
@@ -96,6 +96,10 @@ public class ActionMessages implements Serializable {
         if (messageMap.isEmpty()) {
             return Collections.emptyIterator();
         }
+        return doAccessByFlatIterator();
+    }
+
+    protected Iterator<ActionMessage> doAccessByFlatIterator() {
         final List<ActionMessage> msgList = new ArrayList<ActionMessage>();
         final List<ActionMessageItem> itemList = new ArrayList<ActionMessageItem>(messageMap.size());
         for (Iterator<ActionMessageItem> ite = messageMap.values().iterator(); ite.hasNext();) {
@@ -112,6 +116,14 @@ public class ActionMessages implements Serializable {
 
     public Iterator<ActionMessage> accessByIteratorOf(String property) {
         accessed = true;
+        return doAccessByIteratorOf(property);
+    }
+
+    public Iterator<ActionMessage> nonAccessByIteratorOf(String property) { // e.g. for logging
+        return doAccessByIteratorOf(property);
+    }
+
+    protected Iterator<ActionMessage> doAccessByIteratorOf(String property) {
         final ActionMessageItem item = messageMap.get(property);
         return item != null ? item.getList().iterator() : Collections.emptyIterator();
     }
