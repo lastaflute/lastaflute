@@ -22,6 +22,7 @@ package org.lastaflute.db.jta.stage;
 public class BegunTx<RESULT> {
 
     protected RESULT result;
+    protected boolean rollbackOnly;
 
     public RESULT getResult() {
         return result;
@@ -29,5 +30,13 @@ public class BegunTx<RESULT> {
 
     public void returns(RESULT result) {
         this.result = result;
+    }
+
+    public boolean isRollbackOnly() {
+        return rollbackOnly;
+    }
+
+    public void rollbackOnly() {
+        rollbackOnly = true;
     }
 }

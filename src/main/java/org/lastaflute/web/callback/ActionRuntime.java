@@ -148,7 +148,7 @@ public class ActionRuntime {
     //                                         Failure/Error
     //                                         -------------
     /**
-     * Does it have exception as failure cause?
+     * Does it have exception as failure cause? (also contains validation error)
      * @return The determination, true or false.
      */
     public boolean hasFailureCause() {

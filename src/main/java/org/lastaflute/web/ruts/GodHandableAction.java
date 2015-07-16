@@ -132,9 +132,16 @@ public class GodHandableAction implements VirtualAction {
             final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
             assertExecuteMethodResponseDefined(response);
             final NextJourney journey = reflect(response); /* also response handling in transaction */
-            tx.returns(new ExecuteTransactionResult(response, journey));
+            boolean rollbackOnly = false;
+            if (runtime.hasValidationError()) {
+                tx.rollbackOnly();
+                rollbackOnly = true;
+            }
+            tx.returns(new ExecuteTransactionResult(response, journey, rollbackOnly));
         } , getExecuteTransactionGenre()).get(); // because of not null
-        hookAfterTxCommitIfExists(result);
+        if (!result.isRollbackOnly()) {
+            hookAfterTxCommitIfExists(result);
+        }
         return result.getJourney();
     }
 
@@ -142,10 +149,12 @@ public class GodHandableAction implements VirtualAction {
 
         protected final ActionResponse response;
         protected final NextJourney journey;
+        protected final boolean rollbackOnly;
 
-        public ExecuteTransactionResult(ActionResponse response, NextJourney journey) {
+        public ExecuteTransactionResult(ActionResponse response, NextJourney journey, boolean rollbackOnly) {
             this.response = response;
             this.journey = journey;
+            this.rollbackOnly = rollbackOnly;
         }
 
         public ActionResponse getResponse() {
@@ -154,6 +163,10 @@ public class GodHandableAction implements VirtualAction {
 
         public NextJourney getJourney() {
             return journey;
+        }
+
+        public boolean isRollbackOnly() {
+            return rollbackOnly;
         }
     }
 
@@ -399,11 +412,16 @@ public class GodHandableAction implements VirtualAction {
             logger.debug(sb.toString());
         }
         requestManager.errors().save(errors); // also API can use it
+        runtime.setValidationErrors(errors); // reflect to runtime
+        runtime.setFailureCause(cause); // also cause
         final VaErrorHook errorHandler = cause.getErrorHandler();
         final ActionResponse response = errorHandler.hook(); // failure hook here if API
         if (response == null) {
             throw new IllegalStateException("The handler for validation error cannot return null: " + errorHandler, cause);
         }
+        response.getAfterTxCommitHook().ifPresent(hook -> {
+            throw new IllegalStateException("Validation error always rollbacks transaction but tx-commit hook specified:" + hook);
+        });
         return response;
     }
 

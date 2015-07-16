@@ -40,7 +40,8 @@ public interface ApiFailureHook {
 
     /**
      * Handle API failure when validation error. <br>
-     * The hookFinally() of action hook will be called after this.
+     * The hookFinally() of action hook will be called after this. <br>
+     * This method is called in action transaction (always rolled-back).
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
      * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
