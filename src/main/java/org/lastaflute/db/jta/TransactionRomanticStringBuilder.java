@@ -37,7 +37,7 @@ public class TransactionRomanticStringBuilder {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(TransactionRomanticStringBuilder.class);
+    private static final Logger logger = LoggerFactory.getLogger(TransactionRomanticStringBuilder.class);
 
     // ===================================================================================
     //                                                                            Romantic
@@ -103,7 +103,7 @@ public class TransactionRomanticStringBuilder {
         try {
             return digUpDbmsNativeProcessIdOf(physicalConn);
         } catch (RuntimeException continued) {
-            LOG.debug("Failed to get the DBMS native process ID: " + physicalConn, continued);
+            logger.debug("Failed to get the DBMS native process ID: " + physicalConn, continued);
         }
         return null;
     }

@@ -45,7 +45,7 @@ public class ActionPathResolver {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(ActionPathResolver.class);
+    private static final Logger logger = LoggerFactory.getLogger(ActionPathResolver.class);
 
     private static final UrlChain EMPTY_URL_CHAIN = new UrlChain(null);
 
@@ -86,9 +86,9 @@ public class ActionPathResolver {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Action Resolver]");
-            LOG.info(" actionAdjustmentProvider: " + actionAdjustmentProvider);
+        if (logger.isInfoEnabled()) {
+            logger.info("[Action Resolver]");
+            logger.info(" actionAdjustmentProvider: " + actionAdjustmentProvider);
         }
     }
 

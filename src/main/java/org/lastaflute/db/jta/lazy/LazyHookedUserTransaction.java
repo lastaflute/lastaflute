@@ -48,7 +48,7 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(LazyHookedUserTransaction.class);
+    private static final Logger logger = LoggerFactory.getLogger(LazyHookedUserTransaction.class);
 
     // ===================================================================================
     //                                                                         Constructor
@@ -80,13 +80,13 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     }
 
     protected void toBeLazyTransaction() {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("#lazyTx ...Being lazyBegun");
+        if (logger.isDebugEnabled()) {
+            logger.debug("#lazyTx ...Being lazyBegun");
         }
         markLazyTransactionLazyBegun();
         arrangeLazyProcessIfAllowed(() -> {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("#lazyTx ...Being realBegun");
+            if (logger.isDebugEnabled()) {
+                logger.debug("#lazyTx ...Being realBegun");
             }
             superDoBegin();
         });
@@ -113,8 +113,8 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
         if (canTerminateTransactionReally()) {
             superDoCommit();
         } else {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("#lazyTx *No commit because of non-begun transaction");
+            if (logger.isDebugEnabled()) {
+                logger.debug("#lazyTx *No commit because of non-begun transaction");
             }
         }
         if (canLazyTransaction()) {
@@ -154,8 +154,8 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
         if (canTerminateTransactionReally()) {
             superDoRollback();
         } else {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("#lazyTx *No rollback because of non-begun transaction");
+            if (logger.isDebugEnabled()) {
+                logger.debug("#lazyTx *No rollback because of non-begun transaction");
             }
         }
         if (canLazyTransaction()) {
@@ -272,8 +272,8 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     public void setRollbackOnly() throws IllegalStateException, SystemException {
         if (isJustLazyNow()) {
             arrangeLazyProcessIfAllowed(() -> {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("#lazyTx ...Setting transaction roll-back only");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("#lazyTx ...Setting transaction roll-back only");
                 }
                 doSuperSetRollbackOnly();
             });
@@ -298,8 +298,8 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     public void setTransactionTimeout(int timeout) throws SystemException {
         if (isJustLazyNow()) {
             arrangeLazyProcessIfAllowed(() -> {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("#lazyTx ...Setting transaction timeout: {}", timeout);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("#lazyTx ...Setting transaction timeout: {}", timeout);
                 }
                 doSuperSetTransactionTimeout(timeout);
             });
@@ -331,8 +331,8 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     //                                            Controller
     //                                            ----------
     public static void readyLazyTransaction() {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("#lazyTx ...Being readyLazy");
+        if (logger.isDebugEnabled()) {
+            logger.debug("#lazyTx ...Being readyLazy");
         }
         markLazyTransactionReadyLazy();
     }
@@ -350,8 +350,8 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     }
 
     public static void closeLazyTransaction() {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("#lazyTx ...Being over");
+        if (logger.isDebugEnabled()) {
+            logger.debug("#lazyTx ...Being over");
         }
         ThreadCacheContext.removeObject(generateReadyLazyKey());
         ThreadCacheContext.removeObject(generateLazyBegunKey());

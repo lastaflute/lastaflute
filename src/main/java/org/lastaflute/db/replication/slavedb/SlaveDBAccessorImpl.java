@@ -32,8 +32,7 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    /** Log instance for sub class. */
-    private static final Logger LOG = LoggerFactory.getLogger(SlaveDBAccessorImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(SlaveDBAccessorImpl.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -58,8 +57,8 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
         final String currentKey = selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
         try {
             final String slaveDB = SLAVE_DB;
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(buildSlaveDBAccessDebugMessage(slaveDB));
+            if (logger.isDebugEnabled()) {
+                logger.debug(buildSlaveDBAccessDebugMessage(slaveDB));
             }
             setupForcedMasterCallback();
             selectableDataSourceHolder.switchSelectableDataSourceKey(slaveDB);
@@ -113,8 +112,8 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
         assertCallbackNotNull(noArgLambda);
         final String currentKey = selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
         final String masterDB = MASTER_DB;
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(buildMasterAccessFixedlyDebugMessage(masterDB));
+        if (logger.isDebugEnabled()) {
+            logger.debug(buildMasterAccessFixedlyDebugMessage(masterDB));
         }
         selectableDataSourceHolder.switchSelectableDataSourceKey(masterDB);
         try {
@@ -146,8 +145,8 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
                     final String masterDB = MASTER_DB;
                     currentKey = selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
                     if (!masterDB.equals(currentKey)) {
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug(buildForcedMasterHookDebugMessage(masterDB));
+                        if (logger.isDebugEnabled()) {
+                            logger.debug(buildForcedMasterHookDebugMessage(masterDB));
                         }
                         selectableDataSourceHolder.switchSelectableDataSourceKey(masterDB);
                         forcedSet = true;

@@ -41,7 +41,7 @@ public class SimpleTimeManager implements TimeManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleTimeManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleTimeManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -100,18 +100,18 @@ public class SimpleTimeManager implements TimeManager {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Time Manager]");
-            LOG.info(" businessTimeHandler: " + businessTimeHandler);
+        if (logger.isInfoEnabled()) {
+            logger.info("[Time Manager]");
+            logger.info(" businessTimeHandler: " + businessTimeHandler);
             if (developmentProvider != null) { // in development
-                LOG.info(" developmentProvider: " + developmentProvider);
+                logger.info(" developmentProvider: " + developmentProvider);
             } else {
-                LOG.info(" currentIgnoreTransaction: " + currentIgnoreTransaction);
-                LOG.info(" adjustTimeMillis: " + adjustTimeMillis);
-                LOG.info(" adjustAbsoluteMode: " + adjustAbsoluteMode);
+                logger.info(" currentIgnoreTransaction: " + currentIgnoreTransaction);
+                logger.info(" adjustTimeMillis: " + adjustTimeMillis);
+                logger.info(" adjustAbsoluteMode: " + adjustAbsoluteMode);
             }
             if (realCurrentTimeProvider != null) {
-                LOG.info(" realCurrentTimeProvider: " + realCurrentTimeProvider);
+                logger.info(" realCurrentTimeProvider: " + realCurrentTimeProvider);
             }
         }
     }

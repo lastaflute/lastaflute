@@ -37,7 +37,7 @@ public class SimpleApiManager implements ApiManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleApiManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleApiManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -76,9 +76,9 @@ public class SimpleApiManager implements ApiManager {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[API Manager]");
-            LOG.info(" apiFailureHook: " + DfTypeUtil.toClassTitle(apiFailureHook));
+        if (logger.isInfoEnabled()) {
+            logger.info("[API Manager]");
+            logger.info(" apiFailureHook: " + DfTypeUtil.toClassTitle(apiFailureHook));
         }
     }
 

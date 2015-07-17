@@ -37,7 +37,7 @@ public class ExceptionTranslator {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(ExceptionTranslator.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExceptionTranslator.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -64,9 +64,9 @@ public class ExceptionTranslator {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Exception Translator]");
-            LOG.info(" exceptionTranslationProvider: " + exceptionTranslationProvider);
+        if (logger.isInfoEnabled()) {
+            logger.info("[Exception Translator]");
+            logger.info(" exceptionTranslationProvider: " + exceptionTranslationProvider);
         }
     }
 
@@ -116,9 +116,9 @@ public class ExceptionTranslator {
         }
         try {
             final String msg = buildSQLFailureState(cause);
-            LOG.warn(msg); // only warning here, the cause will be caught by logging filter
+            logger.warn(msg); // only warning here, the cause will be caught by logging filter
         } catch (RuntimeException continued) {
-            LOG.info("Failed to show warning of SQL failure state: " + Integer.toHexString(cause.hashCode()), continued);
+            logger.info("Failed to show warning of SQL failure state: " + Integer.toHexString(cause.hashCode()), continued);
         }
     }
 

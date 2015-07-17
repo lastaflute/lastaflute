@@ -32,7 +32,7 @@ public class TypicalGodHandActionEpilogue {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(TypicalGodHandActionEpilogue.class);
+    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandActionEpilogue.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -102,7 +102,7 @@ public class TypicalGodHandActionEpilogue {
     protected void handleTooManySqlExecution(ActionRuntime runtime, ExecutedSqlCounter sqlCounter, int sqlExecutionCountLimit) {
         final int totalCountOfSql = sqlCounter.getTotalCountOfSql();
         final String actionDisp = buildActionDisp(runtime);
-        LOG.warn("*Too many SQL executions: {}/{} in {}", totalCountOfSql, sqlExecutionCountLimit, actionDisp);
+        logger.warn("*Too many SQL executions: {}/{} in {}", totalCountOfSql, sqlExecutionCountLimit, actionDisp);
     }
 
     protected String buildActionDisp(ActionRuntime runtime) {
