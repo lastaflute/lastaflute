@@ -32,14 +32,12 @@ import org.lastaflute.db.dbflute.accesscontext.AccessContextResource;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
-import org.lastaflute.web.api.ApiFailureResource;
-import org.lastaflute.web.api.ApiLoginRedirectProvider;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginHandlingResource;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
+import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.slf4j.Logger;
@@ -94,12 +92,7 @@ public class TypicalGodHandPrologue {
         }
         arrangePreparedAccessContext(runtime);
         arrangeCallbackContext(runtime); // should be after access-context (using access context's info)
-
-        // should be after access-context (may have update)
-        final ActionResponse redirectTo = handleLoginRequiredCheck(runtime);
-        if (redirectTo.isDefined()) {
-            return redirectTo;
-        }
+        checkLoginRequired(runtime); // should be after access-context (may have update)
         arrangeThreadCacheContextLoginItem(runtime);
         return ActionResponse.undefined();
     }
@@ -267,41 +260,17 @@ public class TypicalGodHandPrologue {
     //                                                                      Login Handling
     //                                                                      ==============
     /**
-     * Handle the login required check for the requested action.
+     * Check the login required for the requested action.
      * @param runtime The runtime meta of action execute to determine required action. (NotNull)
-     * @return The resopnse of action, basically for login-redirect. (NotNull, EmptyAllowed: login check passed)
+     * @throws LoginRequiredException When it fails to access the action for non-login.
      */
-    protected ActionResponse handleLoginRequiredCheck(ActionRuntime runtime) {
-        return loginManager.map(nager -> {
-            final LoginHandlingResource resource = createLogingHandlingResource(runtime);
-            return nager.checkLoginRequired(resource).map(response -> {
-                if (runtime.isApiExecute()) {
-                    return dispatchApiLoginRequiredFailure(runtime, response);
-                } else {
-                    return response;
-                }
-            }).orElse(ActionResponse.undefined());
-        }).orElseGet(() -> {
-            return ActionResponse.undefined();
+    protected void checkLoginRequired(ActionRuntime runtime) throws LoginRequiredException {
+        loginManager.ifPresent(nager -> {
+            nager.checkLoginRequired(createLogingHandlingResource(runtime));
         });
     }
 
     protected LoginHandlingResource createLogingHandlingResource(ActionRuntime runtime) {
         return new LoginHandlingResource(runtime);
-    }
-
-    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime, HtmlResponse response) {
-        final ApiFailureResource resource = createLoginRequiredApiFailureResource();
-        final ApiLoginRedirectProvider provider = createApiLoginRedirectProvider(response.getRoutingPath());
-        return apiManager.handleLoginRequiredFailure(resource, runtime, provider);
-    }
-
-    protected ApiFailureResource createLoginRequiredApiFailureResource() {
-        return new ApiFailureResource(sessionManager.errors().get(), requestManager);
-    }
-
-    protected ApiLoginRedirectProvider createApiLoginRedirectProvider(String routingPath) {
-        final String contextAbsolutePath = requestManager.toContextAbsolutePath(routingPath);
-        return new ApiLoginRedirectProvider(contextAbsolutePath, routingPath);
     }
 }

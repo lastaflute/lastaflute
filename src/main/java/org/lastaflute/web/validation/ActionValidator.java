@@ -131,12 +131,12 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     }
 
     protected ApiResponse hookApiValidationError() { // for API
-        final ApiFailureResource resource = newApiFailureResource(requestManager.errors().get(), requestManager);
-        return requestManager.getApiManager().handleValidationError(resource, getActionRuntime());
+        final ApiFailureResource resource = createApiFailureResource(requestManager.errors().get(), requestManager);
+        return requestManager.getApiManager().handleValidationError(resource);
     }
 
-    protected ApiFailureResource newApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
-        return new ApiFailureResource(errors, requestManager);
+    protected ApiFailureResource createApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
+        return new ApiFailureResource(getActionRuntime(), errors, requestManager);
     }
 
     protected ActionRuntime getActionRuntime() {

@@ -15,20 +15,18 @@
  */
 package org.lastaflute.web.login.exception;
 
-import org.lastaflute.core.exception.LaApplicationException;
-
 /**
  * @author jflute
  */
-public class LoginTimeoutException extends LaApplicationException implements UnauthorizedState {
+public class LoginRequiredException extends LoginUnauthorizedException {
 
     private static final long serialVersionUID = 1L;
 
-    public LoginTimeoutException(String msg) {
+    public LoginRequiredException(String msg) {
         super(msg);
     }
 
-    public LoginTimeoutException(String msg, Throwable cause) {
+    public LoginRequiredException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

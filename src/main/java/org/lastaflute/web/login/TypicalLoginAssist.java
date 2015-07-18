@@ -25,15 +25,13 @@ import javax.annotation.Resource;
 import org.dbflute.Entity;
 import org.dbflute.helper.HandyDate;
 import org.dbflute.optional.OptionalEntity;
-import org.dbflute.optional.OptionalObject;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.lastaflute.core.security.PrimaryCipher;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.LastaWebKey;
-import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.login.exception.LoginFailureException;
-import org.lastaflute.web.login.exception.LoginTimeoutException;
+import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.login.option.LoginOpCall;
 import org.lastaflute.web.login.option.LoginOption;
 import org.lastaflute.web.login.option.LoginSpecifiedOption;
@@ -161,29 +159,25 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                       ---------------
     @Override
     public void login(String account, String password, LoginOpCall opLambda) throws LoginFailureException {
-        final LoginOption option = createLoginOption(opLambda);
-        doLogin(account, password, option);
+        doLogin(account, password, createLoginOption(opLambda));
     }
 
     @Override
     public HtmlResponse loginRedirect(String account, String password, LoginOpCall opLambda, LoginRedirectSuccessCall oneArgLambda)
             throws LoginFailureException {
-        final LoginOption option = createLoginOption(opLambda);
-        doLogin(account, password, option); // exception if login failure
+        doLogin(account, password, createLoginOption(opLambda)); // exception if login failure
         return switchToRequestedActionIfExists(oneArgLambda.success()); // so success only here
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public void givenLogin(Entity givenEntity, LoginOpCall opLambda) throws LoginFailureException {
-        final LoginOption option = createLoginOption(opLambda);
-        doLoginByGivenEntity((USER_ENTITY) givenEntity, option);
+        doLoginByGivenEntity((USER_ENTITY) givenEntity, createLoginOption(opLambda));
     }
 
     @Override
     public void identityLogin(Long userId, LoginOpCall opLambda) throws LoginFailureException {
-        final LoginOption op = createLoginOption(opLambda);
-        doLoginByIdentity(userId, op);
+        doLoginByIdentity(userId, createLoginOption(opLambda));
     }
 
     protected LoginOption createLoginOption(LoginOpCall opLambda) {
@@ -216,9 +210,8 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * Do actually login for the user by given entity. (no silent)
      * @param givenEntity The given entity for user. (NotNull)
      * @param option The option of login specified by caller. (NotNull)
-     * @throws LoginFailureException When it fails to do login by the user info.
      */
-    protected void doLoginByGivenEntity(USER_ENTITY givenEntity, LoginSpecifiedOption option) throws LoginFailureException {
+    protected void doLoginByGivenEntity(USER_ENTITY givenEntity, LoginSpecifiedOption option) {
         assertGivenEntityRequired(givenEntity);
         handleLoginSuccess(givenEntity, option);
     }
@@ -604,45 +597,47 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                         LoginRequired
     //                                         -------------
     @Override
-    public OptionalThing<HtmlResponse> checkLoginRequired(LoginHandlingResource resource) {
-        final OptionalThing<HtmlResponse> redirectTo;
+    public void checkLoginRequired(LoginHandlingResource resource) throws LoginRequiredException {
         if (isLoginRequiredAction(resource)) {
-            redirectTo = processLoginRequired(resource);
+            asLoginRequired(resource);
         } else {
-            redirectTo = processNotLoginRequired(resource);
+            asNonLoginRequired(resource);
         }
-        return redirectTo;
     }
 
     /**
-     * Process for the login-required action.
+     * Check as the login-required action.
      * @param resource The resource of login handling to determine. (NotNull)
-     * @return The optional HTML response, basically for login redirect. (NotNull, EmptyAllowed: login check passed)
+     * @throws LoginRequiredException When it fails to access the action for non-login.
      */
-    protected OptionalThing<HtmlResponse> processLoginRequired(LoginHandlingResource resource) {
+    protected void asLoginRequired(LoginHandlingResource resource) throws LoginRequiredException {
         logger.debug("...Checking login status for login required");
-        if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
-            return processAuthority(resource);
+        if (tryAlreadyLoginOrRememberMe(resource)) {
+            checkPermission(resource); // throws if denied
+            return; // OK
         }
-        saveRequestedLoginRedirectInfo();
-        final OptionalThing<HtmlResponse> loginAction = redirectToRequiredCheckedLoginAction();
-        loginAction.ifPresent(action -> logger.debug("...Redirecting to login action: {}", action));
-        return loginAction;
+        if (needsSavingRequestedLoginRedirect(resource)) {
+            saveRequestedLoginRedirectInfo();
+        }
+        throwLoginRequiredException("Cannot access the action: " + resource);
     }
 
-    /**
-     * Redirect to action when required checked (basically login action). <br>
-     * You can customize the redirection when not login but login required.
-     * @return The optional HTML response, basically for login redirect. (NotNull, NotEmpty)
-     */
-    protected OptionalThing<HtmlResponse> redirectToRequiredCheckedLoginAction() {
-        return OptionalThing.of(redirectToLoginAction());
+    protected boolean needsSavingRequestedLoginRedirect(LoginHandlingResource resource) {
+        return !resource.isApiExecute(); // unneeded when API
+    }
+
+    protected void throwLoginRequiredException(String msg) {
+        throw new LoginRequiredException(msg);
     }
 
     // -----------------------------------------------------
-    //                                         Already Login
-    //                                         -------------
-    protected boolean processAlreadyLogin(LoginHandlingResource resource) {
+    //                          Already Login or Remember Me
+    //                          ----------------------------
+    protected boolean tryAlreadyLoginOrRememberMe(LoginHandlingResource resource) {
+        return doTryAlreadyLogin(resource) || doTryRememberMe(resource);
+    }
+
+    protected boolean doTryAlreadyLogin(LoginHandlingResource resource) {
         return getSessionUserBean().map(userBean -> {
             if (!syncCheckLoginSessionIfNeeds(userBean)) {
                 return false;
@@ -651,6 +646,25 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             logger.debug("...Passing login check as already-login");
             return true;
         }).orElse(false);
+    }
+
+    protected boolean doTryRememberMe(LoginHandlingResource resource) {
+        final boolean updateToken = isUpdateTokenWhenAutoLogin(resource);
+        final boolean silently = isSilentlyWhenAutoLogin(resource);
+        final boolean success = rememberMe(op -> op.updateToken(updateToken).silentLogin(silently));
+        return success && getSessionUserBean().map(userBean -> {
+            clearLoginRedirectBean();
+            logger.debug("...Passing login check as remember-me");
+            return true;
+        }).orElse(false);
+    }
+
+    protected boolean isUpdateTokenWhenAutoLogin(LoginHandlingResource resource) {
+        return false; // as default
+    }
+
+    protected boolean isSilentlyWhenAutoLogin(LoginHandlingResource resource) {
+        return false; // as default
     }
 
     // -----------------------------------------------------
@@ -675,10 +689,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         return findLoginSessionSyncCheckUser(userBean).map(loginUser -> {
             handleLoginSessionSyncCheckSuccess(userBean, loginUser);
             return true;
-        }).orElseGet(() -> { /* the user might be assigned here */
+        }).orElseGet(() -> { // the user might be assigned here
             logger.debug("*The user already cannot login: {}", userBean);
-            logout(); /* remove user info from session */
-            return false; /* means check NG */
+            logout(); // remove user info from session
+            return false; // means check NG
         });
     }
 
@@ -699,28 +713,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     protected void handleLoginSessionSyncCheckSuccess(USER_BEAN userBean, USER_ENTITY loginUser) {
         // do nothing as default (you can add original process by override)
-    }
-
-    // -----------------------------------------------------
-    //                                            Auto Login
-    //                                            ----------
-    protected boolean processAutoLogin(LoginHandlingResource resource) {
-        final boolean updateToken = isUpdateTokenWhenAutoLogin(resource);
-        final boolean silently = isSilentlyWhenAutoLogin(resource);
-        final boolean success = rememberMe(op -> op.updateToken(updateToken).silentLogin(silently));
-        return success && getSessionUserBean().map(userBean -> {
-            clearLoginRedirectBean();
-            logger.debug("...Passing login check as remember-me");
-            return true;
-        }).orElse(false);
-    }
-
-    protected boolean isUpdateTokenWhenAutoLogin(LoginHandlingResource resource) {
-        return false; // as default
-    }
-
-    protected boolean isSilentlyWhenAutoLogin(LoginHandlingResource resource) {
-        return false; // as default
     }
 
     // -----------------------------------------------------
@@ -750,36 +742,24 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     public OptionalThing<USER_BEAN> getSessionUserBean() { // use covariant generic type
         final String key = getUserBeanKey();
         return OptionalThing.ofNullable(sessionManager.getAttribute(key, getUserBeanType()).orElse(null), () -> {
-            String msg = "Not found the user in session by the key:" + key;
-            throw new LoginTimeoutException(msg); /* to login action */
+            throwLoginRequiredException("Not found the user in session by the key:" + key); /* to login action */
         });
     }
 
     // -----------------------------------------------------
-    //                                             Authority
-    //                                             ---------
-    /**
-     * Process for the authority of the login user. (called in login status)
-     * @param resource The resource of login handling to determine. (NotNull)
-     * @return The optional HTML response, basically for authority redirect. (NotNull, EmptyAllowed: authority passed)
-     */
-    protected OptionalThing<HtmlResponse> processAuthority(LoginHandlingResource resource) {
-        return OptionalObject.empty(); // no check as default, you can override
-    }
-
-    // -----------------------------------------------------
-    //                                     Not LoginRequired
+    //                                     Non LoginRequired
     //                                     -----------------
     /**
-     * Process for the NOT login-required action.
+     * Check as the non login-required action.
      * @param resource The resource of login handling to determine. (NotNull)
-     * @return The optional HTML response, basically for login redirect. (NotNull, EmptyAllowed: login check passed)
+     * @throws LoginRequiredException When it fails to access the action for login authority.
      */
-    protected OptionalThing<HtmlResponse> processNotLoginRequired(LoginHandlingResource resource) {
-        if (isAutoLoginWhenNotLoginRequired(resource)) {
-            logger.debug("...Checking login status for not-login required");
-            if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
-                return processAuthority(resource);
+    protected void asNonLoginRequired(LoginHandlingResource resource) throws LoginRequiredException {
+        if (!isSuppressRememberMeOfNonLoginRequired(resource)) { // option just in case
+            logger.debug("...Checking login status for non login-required");
+            if (tryAlreadyLoginOrRememberMe(resource)) {
+                checkPermission(resource); // throws if denied
+                return; // OK
             }
         }
         if (isLoginRedirectBeanKeptAction(resource)) {
@@ -787,9 +767,17 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             logger.debug("...Passing login check as login action (or redirect-kept action)");
         } else {
             clearLoginRedirectBean();
-            logger.debug("...Passing login check as not required");
+            logger.debug("...Passing login check as non login-required");
         }
-        return OptionalObject.empty(); // no redirect
+    }
+
+    /**
+     * Does it suppress remember-me when non login-required?
+     * @param resource The resource of login handling to determine. (NotNull)
+     * @return The determination, true or false.
+     */
+    protected boolean isSuppressRememberMeOfNonLoginRequired(LoginHandlingResource resource) {
+        return false; // as default
     }
 
     /**
@@ -802,15 +790,17 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         return isLoginActionOrRedirectLoginAction(resource);
     }
 
+    // -----------------------------------------------------
+    //                                            Permission
+    //                                            ----------
     /**
-     * Does it remember-me when not-login required? <br>
-     * If not-login-required action also should accept remember-me, <br>
-     * e.g. switch display by login or not, override this and return true.
+     * Check the permission of the login user. (called in login status) <br>
+     * If the request cannot access the action for permission denied, throw LoginRequiredException.
      * @param resource The resource of login handling to determine. (NotNull)
-     * @return The determination, true or false.
+     * @throws LoginRequiredException When it fails to access the action for permission denied.
      */
-    protected boolean isAutoLoginWhenNotLoginRequired(LoginHandlingResource resource) {
-        return false; // as default
+    protected void checkPermission(LoginHandlingResource resource) throws LoginRequiredException {
+        // no check as default, you can override
     }
 
     // -----------------------------------------------------
@@ -818,9 +808,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                           -----------
     @Override
     public boolean isLoginAction(LoginHandlingResource resource) {
-        final Class<?> actionClass = resource.getActionClass();
-        final Class<?> loginActionType = getLoginActionType();
-        return loginActionType.isAssignableFrom(actionClass);
+        return getLoginActionType().isAssignableFrom(resource.getActionClass());
     }
 
     /**
@@ -836,9 +824,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @return The determination, true or false.
      */
     protected boolean isRedirectLoginAction(LoginHandlingResource resource) {
-        final Class<?> actionClass = resource.getActionClass();
-        final Class<?> loginActionType = getRedirectLoginActionType();
-        return loginActionType.isAssignableFrom(actionClass);
+        return getRedirectLoginActionType().isAssignableFrom(resource.getActionClass());
     }
 
     /**
@@ -848,12 +834,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected Class<?> getRedirectLoginActionType() {
         return getLoginActionType(); // same pure login type as default
-    }
-
-    @Override
-    public boolean isApiAction(LoginHandlingResource resource) {
-        final Class<?> actionClass = resource.getActionClass();
-        return ApiAction.class.isAssignableFrom(actionClass);
     }
 
     protected boolean isLoginActionOrRedirectLoginAction(LoginHandlingResource resource) {
@@ -903,15 +883,12 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     @Override
     public HtmlResponse switchToRequestedActionIfExists(HtmlResponse response) {
-        final OptionalThing<LoginRedirectBean> opt = getLoginRedirectBean();
-        if (opt.isPresent() && opt.get().hasRedirectPath()) {
+        return getLoginRedirectBean().filter(bean -> bean.hasRedirectPath()).map(bean -> {
             clearLoginRedirectBean();
-            final String redirectPath = opt.get().getRedirectPath();
+            final String redirectPath = bean.getRedirectPath();
             logger.debug("...Switching redirection to requested {}", redirectPath);
             return HtmlResponse.fromRedirectPath(redirectPath);
-        } else {
-            return response;
-        }
+        }).orElse(response);
     }
 
     // ===================================================================================

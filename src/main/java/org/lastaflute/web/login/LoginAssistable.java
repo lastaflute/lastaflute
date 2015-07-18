@@ -19,6 +19,7 @@ import org.dbflute.Entity;
 import org.dbflute.optional.OptionalEntity;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.login.exception.LoginFailureException;
+import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.login.option.LoginOpCall;
 import org.lastaflute.web.login.option.RememberMeLoginOpCall;
 import org.lastaflute.web.login.redirect.LoginRedirectBean;
@@ -87,9 +88,8 @@ public interface LoginAssistable {
      * No authentication here so the email and password is basically for remember-me key. 
      * @param givenEntity The given entity for user. (NullAllowed: if null, find user by email and password)
      * @param opLambda The callback for option of login. e.g. useAutoLogin (NotNull)
-     * @throws LoginFailureException When it fails to do login by the user info.
      */
-    void givenLogin(Entity givenEntity, LoginOpCall opLambda) throws LoginFailureException;
+    void givenLogin(Entity givenEntity, LoginOpCall opLambda);
 
     /**
      * Do login for the user by user ID (means identity login). (for remember-me or partner login)
@@ -138,9 +138,9 @@ public interface LoginAssistable {
     /**
      * Check login required for the requested action. (with remember-me, preparing login-redirect)
      * @param resource The resource of login handling to determine required or not. (NotNull)
-     * @return The optional HTML response, basically for login redirect. (NotNull, EmptyAllowed: login check passed)
+     * @throws LoginRequiredException When it fails to access the action for non-login.
      */
-    OptionalThing<HtmlResponse> checkLoginRequired(LoginHandlingResource resource);
+    void checkLoginRequired(LoginHandlingResource resource) throws LoginRequiredException;
 
     /**
      * Is the action login-required?
@@ -163,13 +163,6 @@ public interface LoginAssistable {
      * @return The determination, true or false.
      */
     boolean isLoginAction(LoginHandlingResource resource);
-
-    /**
-     * Is the action API-action?
-     * @param resource The resource of login handling to determine required or not. (NotNull)
-     * @return The determination, true or false.
-     */
-    boolean isApiAction(LoginHandlingResource resource);
 
     // ===================================================================================
     //                                                                      Login Redirect

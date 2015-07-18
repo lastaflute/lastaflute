@@ -28,13 +28,13 @@ public class LoginHandlingResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionRuntime runtimeMeta;
+    protected final ActionRuntime runtime;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LoginHandlingResource(ActionRuntime runtimeMeta) {
-        this.runtimeMeta = runtimeMeta;
+    public LoginHandlingResource(ActionRuntime runtime) {
+        this.runtime = runtime;
     }
 
     // ===================================================================================
@@ -45,7 +45,7 @@ public class LoginHandlingResource {
      * @return The determination, true or false.
      */
     public boolean hasFailureCause() {
-        return runtimeMeta.hasFailureCause();
+        return runtime.hasFailureCause();
     }
 
     /**
@@ -53,7 +53,15 @@ public class LoginHandlingResource {
      * @return The determination, true or false.
      */
     public boolean hasValidationError() {
-        return runtimeMeta.hasValidationError();
+        return runtime.hasValidationError();
+    }
+
+    // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        return "resource:{" + runtime + "}";
     }
 
     // ===================================================================================
@@ -61,10 +69,10 @@ public class LoginHandlingResource {
     //                                                                            ========
     /**
      * Get the runtime meta of action execute.
-     * @return The runtime meta of action execute. (NotNull)
+     * @return The instance of runtime meta. (NotNull)
      */
-    public ActionRuntime getRuntimeMeta() {
-        return runtimeMeta;
+    public ActionRuntime getActionRuntime() {
+        return runtime;
     }
 
     /**
@@ -72,7 +80,7 @@ public class LoginHandlingResource {
      * @return The type object of action, not enhanced. (NotNull)
      */
     public Class<?> getActionClass() {
-        return runtimeMeta.getExecuteMethod().getDeclaringClass();
+        return runtime.getExecuteMethod().getDeclaringClass();
     }
 
     /**
@@ -80,7 +88,15 @@ public class LoginHandlingResource {
      * @return The method object of action. (NotNull)
      */
     public Method getExecuteMethod() {
-        return runtimeMeta.getExecuteMethod();
+        return runtime.getExecuteMethod();
+    }
+
+    /**
+     * Is the action execute for API request? (contains e.g. JSON response return type)
+     * @return The determination, true or false.
+     */
+    public boolean isApiExecute() {
+        return runtime.isApiExecute();
     }
 
     /**
@@ -88,7 +104,7 @@ public class LoginHandlingResource {
      * @return The exception as failure cause. (NullAllowed: when before execute or on success)
      */
     public RuntimeException getFailureCause() {
-        return runtimeMeta.getFailureCause();
+        return runtime.getFailureCause();
     }
 
     /**
@@ -96,6 +112,6 @@ public class LoginHandlingResource {
      * @return The messages as validation error. (NullAllowed: when no validation error)
      */
     public ActionMessages getValidationErrors() {
-        return runtimeMeta.getValidationErrors();
+        return runtime.getValidationErrors();
     }
 }

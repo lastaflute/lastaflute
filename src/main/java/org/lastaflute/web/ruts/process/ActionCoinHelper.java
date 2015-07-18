@@ -85,7 +85,7 @@ public class ActionCoinHelper {
 
     protected void dispatchApiClientException(ActionRuntime runtime, ActionResponseReflector reflector, RuntimeException cause) {
         if (canHandleApiException(runtime)) { // check API action just in case
-            getApiManager().handleClientException(createApiFailureResource(), runtime, cause).ifPresent(apiRes -> {
+            getApiManager().handleClientException(createApiFailureResource(runtime), cause).ifPresent(apiRes -> {
                 reflector.reflect(apiRes); /* empty journey so ignore return */
             });
             runtime.clearDisplayData(); /* remove (possible) large data just in case */
@@ -105,7 +105,7 @@ public class ActionCoinHelper {
 
     protected void dispatchApiServerException(ActionRuntime runtime, ActionResponseReflector reflector, Throwable cause) {
         if (canHandleApiException(runtime)) { // check API action just in case
-            getApiManager().handleServerException(createApiFailureResource(), runtime, cause).ifPresent(apiRes -> {
+            getApiManager().handleServerException(createApiFailureResource(runtime), cause).ifPresent(apiRes -> {
                 reflector.reflect(apiRes); /* empty journey so ignore return */
             });
             runtime.clearDisplayData(); /* remove (possible) large data just in case */
@@ -119,8 +119,8 @@ public class ActionCoinHelper {
         return runtime.isApiExecute() && !requestManager.getResponseManager().isCommitted();
     }
 
-    protected ApiFailureResource createApiFailureResource() {
-        return new ApiFailureResource(OptionalThing.empty(), requestManager);
+    protected ApiFailureResource createApiFailureResource(ActionRuntime runtime) {
+        return new ApiFailureResource(runtime, OptionalThing.empty(), requestManager);
     }
 
     protected ApiManager getApiManager() {

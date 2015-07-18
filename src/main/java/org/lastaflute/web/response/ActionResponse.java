@@ -20,9 +20,7 @@ import java.util.Map;
 import org.dbflute.optional.OptionalThing;
 
 /**
- * The response type of action return. <br>
- * You can define the type as execute method of action
- * if you set RomanticActionCustomizer in your customizer.dicon.
+ * The response type of action return.
  * @author jflute
  */
 public interface ActionResponse {
