@@ -45,7 +45,7 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     //                                                                          Definition
     //                                                                          ==========
     private static final long serialVersionUID = 1L;
-    private static final Logger LOG = LoggerFactory.getLogger(ObjectiveConfig.class);
+    private static final Logger logger = LoggerFactory.getLogger(ObjectiveConfig.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -153,12 +153,12 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Objective Config]");
-            LOG.info(" " + appResource + " extends " + extendsResourceList);
+        if (logger.isInfoEnabled()) {
+            logger.info("[Objective Config]");
+            logger.info(" " + appResource + " extends " + extendsResourceList);
             final boolean checkImplicitOverride = prop.isCheckImplicitOverride();
             final int count = prop.getJavaPropertiesResult().getPropertyList().size();
-            LOG.info(" checkImplicitOverride=" + checkImplicitOverride + ", propertyCount=" + count);
+            logger.info(" checkImplicitOverride=" + checkImplicitOverride + ", propertyCount=" + count);
             // *no logging of all property values because it might contain security info
         }
     }

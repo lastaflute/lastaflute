@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
 
@@ -28,10 +29,10 @@ import org.lastaflute.web.servlet.request.ResponseDownloadResource;
  * The response of stream for action.
  * <pre>
  * e.g. simple (content-type is octet-stream or found by extension mapping)
- *  return new StreamResponse("classificationDefinitionMap.dfprop").stream(ins);
+ *  <span style="color: #70226C">return new</span> StreamResponse("classificationDefinitionMap.dfprop").stream(ins);
  * 
  * e.g. specify content-type
- *  return new StreamResponse("jflute.jpg").contentTypeJpeg().stream(ins);
+ *  <span style="color: #70226C">return new</span> StreamResponse("jflute.jpg").contentTypeJpeg().stream(ins);
  * </pre>
  * @author jflute
  */
@@ -41,34 +42,31 @@ public class StreamResponse implements ActionResponse {
     //                                                                          Definition
     //                                                                          ==========
     protected static final String DUMMY = "dummy";
-    protected static final StreamResponse INSTANCE_OF_EMPTY = new StreamResponse(DUMMY).asEmpty();
-    protected static final StreamResponse INSTANCE_OF_SKIP = new StreamResponse(DUMMY).asSkip();
+    protected static final StreamResponse INSTANCE_OF_UNDEFINED = new StreamResponse(DUMMY).ofUndefined();
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     protected final String fileName;
     protected String contentType;
-    protected final Map<String, String> headerMap = createHeaderMap(); // no lazy because of frequently used
+    protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected Integer httpStatus;
-
     protected byte[] byteData;
     protected InputStream inputStream;
     protected Integer contentLength;
-    protected boolean emptyResponse;
-    protected boolean skip;
+    protected boolean undefined;
+    protected boolean returnAsEmptyBody;
+    protected ResponseHook afterTxCommitHook;
 
-    protected Map<String, String> createHeaderMap() {
-        return new LinkedHashMap<String, String>();
+    protected Map<String, String[]> createHeaderMap() {
+        return new LinkedHashMap<String, String[]>();
     }
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public StreamResponse(String fileName) {
-        if (fileName == null) {
-            throw new IllegalArgumentException("The argument 'fileName' should not be null.");
-        }
+        assertArgumentNotNull("fileName", fileName);
         this.fileName = fileName;
     }
 
@@ -76,6 +74,7 @@ public class StreamResponse implements ActionResponse {
     //                                                                        Content Type
     //                                                                        ============
     public StreamResponse contentType(String contentType) {
+        assertArgumentNotNull("contentType", contentType);
         this.contentType = contentType;
         return this;
     }
@@ -98,30 +97,31 @@ public class StreamResponse implements ActionResponse {
     //                                                                              Header
     //                                                                              ======
     @Override
-    public StreamResponse header(String name, String value) {
-        if (name == null) {
-            throw new IllegalArgumentException("The argument 'name' should not be null.");
+    public StreamResponse header(String name, String... values) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("values", values);
+        assertDefinedState("header");
+        if (headerMap.containsKey(name)) {
+            throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
         }
-        if (value == null) {
-            throw new IllegalArgumentException("The argument 'value' should not be null.");
-        }
-        headerMap.put(name, value);
+        headerMap.put(name, values);
         return this;
     }
 
     @Override
-    public Map<String, String> getHeaderMap() {
+    public Map<String, String[]> getHeaderMap() {
         return Collections.unmodifiableMap(headerMap);
     }
 
     public void headerContentDispositionAttachment() { // used as default
-        headerMap.put("Content-disposition", "attachment; filename=\"" + fileName + "\"");
+        headerMap.put("Content-disposition", new String[] { "attachment; filename=\"" + fileName + "\"" });
     }
 
     // ===================================================================================
     //                                                                         HTTP Status
     //                                                                         ===========
     public StreamResponse httpStatus(int httpStatus) {
+        assertDefinedState("httpStatus");
         this.httpStatus = httpStatus;
         return this;
     }
@@ -134,9 +134,8 @@ public class StreamResponse implements ActionResponse {
     //                                                                       Download Data
     //                                                                       =============
     public StreamResponse data(byte[] data) {
-        if (data == null) {
-            throw new IllegalArgumentException("The argument 'data' should not be null.");
-        }
+        assertArgumentNotNull("data", data);
+        assertDefinedState("data");
         if (inputStream != null) {
             throw new IllegalStateException("The input stream already exists.");
         }
@@ -145,9 +144,8 @@ public class StreamResponse implements ActionResponse {
     }
 
     public StreamResponse stream(InputStream stream) {
-        if (stream == null) {
-            throw new IllegalArgumentException("The argument 'stream' should not be null.");
-        }
+        assertArgumentNotNull("stream", stream);
+        assertDefinedState("stream");
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
         }
@@ -156,9 +154,9 @@ public class StreamResponse implements ActionResponse {
     }
 
     public StreamResponse stream(InputStream stream, Integer contentLength) {
-        if (stream == null) {
-            throw new IllegalArgumentException("The argument 'stream' should not be null.");
-        }
+        assertArgumentNotNull("stream", stream);
+        assertArgumentNotNull("contentLength", contentLength);
+        assertDefinedState("stream");
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
         }
@@ -182,21 +180,36 @@ public class StreamResponse implements ActionResponse {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
-    public static StreamResponse empty() { // user interface
-        return INSTANCE_OF_EMPTY;
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
+    public static StreamResponse asEmptyBody() { // user interface
+        return new StreamResponse(DUMMY).ofEmptyBody();
     }
 
-    protected StreamResponse asEmpty() { // internal use
-        emptyResponse = true;
+    protected StreamResponse ofEmptyBody() { // internal use
+        returnAsEmptyBody = true;
         return this;
     }
 
-    public static StreamResponse skip() { // user interface
-        return INSTANCE_OF_SKIP;
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
+    public static StreamResponse undefined() { // user interface
+        return INSTANCE_OF_UNDEFINED;
     }
 
-    protected StreamResponse asSkip() { // internal use
-        skip = true;
+    protected StreamResponse ofUndefined() { // internal use
+        undefined = true;
+        return this;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public StreamResponse afterTxCommit(ResponseHook noArgLambda) {
+        assertArgumentNotNull("noArgLambda", noArgLambda);
+        afterTxCommitHook = noArgLambda;
         return this;
     }
 
@@ -204,9 +217,9 @@ public class StreamResponse implements ActionResponse {
     //                                                                 Convert to Resource
     //                                                                 ===================
     public ResponseDownloadResource toDownloadResource() {
-        final ResponseDownloadResource resource = new ResponseDownloadResource(fileName);
+        final ResponseDownloadResource resource = createResponseDownloadResource();
         resource.contentType(contentType);
-        for (Entry<String, String> entry : headerMap.entrySet()) {
+        for (Entry<String, String[]> entry : headerMap.entrySet()) {
             resource.header(entry.getKey(), entry.getValue());
         }
         if (byteData != null) {
@@ -215,7 +228,29 @@ public class StreamResponse implements ActionResponse {
         if (inputStream != null) {
             resource.stream(inputStream, contentLength);
         }
+        if (returnAsEmptyBody) {
+            resource.asEmptyBody();
+        }
         return resource;
+    }
+
+    protected ResponseDownloadResource createResponseDownloadResource() {
+        return new ResponseDownloadResource(fileName);
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String title, Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + title + "' should not be null.");
+        }
+    }
+
+    protected void assertDefinedState(String methodName) {
+        if (undefined) {
+            throw new IllegalStateException("undefined response: method=" + methodName + "() this=" + toString());
+        }
     }
 
     // ===================================================================================
@@ -224,20 +259,31 @@ public class StreamResponse implements ActionResponse {
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        final String skipExp = skip ? ", skip" : "";
-        return classTitle + ":{" + fileName + ", " + contentType + ", " + headerMap + skipExp + "}";
+        final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
+        final String undefinedExp = undefined ? ", undefined" : "";
+        return classTitle + ":{" + fileName + ", " + contentType + ", " + headerMap + emptyExp + undefinedExp + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
     @Override
-    public boolean isEmpty() {
-        return false;
+    public boolean isReturnAsEmptyBody() {
+        return returnAsEmptyBody;
     }
 
     @Override
-    public boolean isSkip() {
-        return skip;
+    public boolean isUndefined() {
+        return undefined;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public OptionalThing<ResponseHook> getAfterTxCommitHook() {
+        return OptionalThing.ofNullable(afterTxCommitHook, () -> {
+            String msg = "Not found the response hook: " + StreamResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 }

@@ -15,8 +15,6 @@
  */
 package org.lastaflute.web.ruts.multipart.exception;
 
-import org.apache.commons.fileupload.FileUploadBase.SizeLimitExceededException;
-
 /**
  * @author jflute
  */
@@ -24,10 +22,10 @@ public class MultipartExceededException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    private final long actual;
-    private final long permitted;
+    protected final long actual;
+    protected final long permitted;
 
-    public MultipartExceededException(String msg, SizeLimitExceededException cause, long actual, long permitted) {
+    public MultipartExceededException(String msg, long actual, long permitted, Exception cause) {
         super(msg, cause);
         this.actual = actual;
         this.permitted = permitted;

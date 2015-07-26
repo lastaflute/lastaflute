@@ -43,6 +43,8 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.core.util.GenericTypeRef;
+import org.lastaflute.core.util.LaDBFluteUtil;
+import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
 import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
@@ -52,7 +54,6 @@ import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.di.util.LdiArrayUtil;
 import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.di.util.LdiModifierUtil;
-import org.lastaflute.web.api.JsonBody;
 import org.lastaflute.web.api.JsonParameter;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
@@ -66,14 +67,13 @@ import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
-import org.lastaflute.web.ruts.multipart.ActionMultipartRequestHandler;
+import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
+import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
-import org.lastaflute.web.util.LaDBFluteUtil;
-import org.lastaflute.web.util.LaDBFluteUtil.ClassificationConvertFailureException;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -126,7 +126,7 @@ public class ActionFormMapper {
         if (isMultipartRequest()) {
             final MultipartRequestWrapper wrapper = newMultipartRequestWrapper(requestManager.getRequest());
             ContainerUtil.overrideExternalRequest(wrapper);
-            multipartHandler = newActionMultipartRequestHandler();
+            multipartHandler = createMultipartRequestHandler();
             multipartHandler.handleRequest(wrapper);
             if (MultipartRequestHandler.findExceededException(wrapper) != null) {
                 return; // you can confirm exceeded by the static find method
@@ -155,8 +155,16 @@ public class ActionFormMapper {
         return new MultipartRequestWrapper(request);
     }
 
-    protected ActionMultipartRequestHandler newActionMultipartRequestHandler() {
-        return new ActionMultipartRequestHandler();
+    protected MultipartRequestHandler createMultipartRequestHandler() {
+        final MultipartResourceProvider provider = assistantDirector.assistWebDirection().assistMultipartResourceProvider();
+        if (provider == null) {
+            throw new IllegalStateException("No provider for multipart request in assistant director.");
+        }
+        final MultipartRequestHandler handler = provider.createHandler();
+        if (handler == null) {
+            throw new IllegalStateException("provideHandler() returned null: " + provider);
+        }
+        return handler;
     }
 
     protected Map<String, Object> getAllParameters(MultipartRequestHandler multipartHandler) {
@@ -223,7 +231,7 @@ public class ActionFormMapper {
     }
 
     protected boolean isJsonBodyForm(Class<? extends Object> formType) {
-        return formType.getAnnotation(JsonBody.class) != null;
+        return formType.getName().endsWith(ExecuteArgAnalyzer.BODY_SUFFIX);
     }
 
     protected boolean isListJsonBodyForm(VirtualActionForm virtualActionForm) {
@@ -252,8 +260,8 @@ public class ActionFormMapper {
     protected void throwJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
             RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Cannot parse json of the request body:");
-        sb.append(LF).append("[JsonBody Parse Failure]");
+        sb.append("Cannot parse json on the request body.");
+        sb.append(LF).append(LF).append("[JsonBody Parse Failure]");
         sb.append(LF).append(runtime);
         sb.append(LF).append(virtualActionForm);
         sb.append(LF).append(json);
@@ -303,8 +311,8 @@ public class ActionFormMapper {
     protected void throwListJsonBodyParseFailureException(ActionRuntime runtime, VirtualActionForm virtualActionForm, String json,
             RuntimeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Cannot parse list json of the request body.");
-        sb.append("\n[List JsonBody Parse Failure]");
+        sb.append("Cannot parse list json on the request body.");
+        sb.append(LF).append(LF).append("[List JsonBody Parse Failure]");
         sb.append(LF).append(runtime);
         sb.append(LF).append(virtualActionForm);
         sb.append(LF).append(json);
@@ -724,9 +732,9 @@ public class ActionFormMapper {
         final Class<?> propertyType = pd.getPropertyType();
         try {
             return LaDBFluteUtil.toVerifiedClassification(propertyType, code);
-        } catch (ClassificationConvertFailureException e) {
+        } catch (ClassificationUnknownCodeException e) {
             final StringBuilder sb = new StringBuilder();
-            sb.append("Cannot convert the code of the request parameter to the classification:");
+            sb.append("Cannot convert the code of the request parameter to the classification.");
             buildClientErrorHeader(sb, "Classification Convert Failure", bean, name, code, propertyType, null);
             throwRequestClassifiationConvertFailureException(sb.toString(), e);
             return null; // unreachable
@@ -782,7 +790,6 @@ public class ActionFormMapper {
         if (indexes.length == 0) {
             return;
         }
-        // TODO jflute lastaflute: [E] improvement: before checking index size, not to be out of memory
         final int indexedPropertySizeLimit = getIndexedPropertySizeLimit();
         for (int index : indexes) {
             if (index < 0) {
@@ -847,20 +854,19 @@ public class ActionFormMapper {
                 list = new ArrayList<Object>(Math.max(50, indexes[0]));
                 pd.setValue(bean, list);
             }
-            ParameterizedClassDesc pcd = pd.getParameterizedClassDesc();
+            ParameterizedClassDesc paramDesc = pd.getParameterizedClassDesc();
             for (int i = 0; i < indexes.length; i++) {
-                if (pcd == null || !pcd.isParameterizedClass() || !List.class.isAssignableFrom(pcd.getRawClass())) {
-                    StringBuilder sb = new StringBuilder();
+                if (paramDesc == null || !paramDesc.isParameterizedClass() || !List.class.isAssignableFrom(paramDesc.getRawClass())) {
+                    final StringBuilder sb = new StringBuilder();
                     for (int j = 0; j <= i; j++) {
                         sb.append("[").append(indexes[j]).append("]");
                     }
                     throwIndexedPropertyNonParameterizedListException(beanDesc, pd);
                 }
-                int size = list.size();
-                pcd = pcd.getArguments()[0];
-                for (int j = size; j <= indexes[i]; j++) {
+                paramDesc = paramDesc.getArguments()[0];
+                for (int j = list.size(); j <= indexes[i]; j++) {
                     if (i == indexes.length - 1) {
-                        list.add(LdiClassUtil.newInstance(convertClass(pcd.getRawClass())));
+                        list.add(LdiClassUtil.newInstance(convertClass(paramDesc.getRawClass())));
                     } else {
                         list.add(new ArrayList<Object>());
                     }

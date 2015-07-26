@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
 import org.lastaflute.web.servlet.filter.FilterListener;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
@@ -79,6 +80,11 @@ public class FwWebDirection {
     //                                                 Token
     //                                                 -----
     protected CsrfResourceProvider csrfResourceProvider;
+
+    // -----------------------------------------------------
+    //                                             Multipart
+    //                                             ---------
+    protected MultipartResourceProvider multipartResourceProvider;
 
     // ===================================================================================
     //                                                                     Direct Property
@@ -172,6 +178,13 @@ public class FwWebDirection {
         this.csrfResourceProvider = csrfResourceProvider;
     }
 
+    // -----------------------------------------------------
+    //                                             Multipart
+    //                                             ---------
+    public void directMultipart(MultipartResourceProvider multipartResourceProvider) {
+        this.multipartResourceProvider = multipartResourceProvider;
+    }
+
     // ===================================================================================
     //                                                                              Assist
     //                                                                              ======
@@ -244,6 +257,13 @@ public class FwWebDirection {
     //                                                 -----
     public CsrfResourceProvider assistCsrfResourceProvider() {
         return csrfResourceProvider; // not required, it's optional assist
+    }
+
+    // -----------------------------------------------------
+    //                                             Multipart
+    //                                             ---------
+    public MultipartResourceProvider assistMultipartResourceProvider() {
+        return multipartResourceProvider; // not required, it's optional assist
     }
 
     // ===================================================================================

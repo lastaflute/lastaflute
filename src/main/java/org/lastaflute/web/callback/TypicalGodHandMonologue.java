@@ -29,8 +29,9 @@ import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
 import org.lastaflute.web.exception.MessageKeyApplicationException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.exception.LoginFailureException;
-import org.lastaflute.web.login.exception.LoginTimeoutException;
+import org.lastaflute.web.login.exception.LoginUnauthorizedException;
 import org.lastaflute.web.response.ActionResponse;
+import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
@@ -76,8 +77,8 @@ public class TypicalGodHandMonologue {
     // ===================================================================================
     //                                                                           Monologue
     //                                                                           =========
-    public ActionResponse performMonologue(ActionRuntime runtimeMeta) {
-        final RuntimeException cause = runtimeMeta.getFailureCause();
+    public ActionResponse performMonologue(ActionRuntime runtime) {
+        final RuntimeException cause = runtime.getFailureCause();
         RuntimeException translated = null;
         try {
             translateException(cause);
@@ -85,14 +86,14 @@ public class TypicalGodHandMonologue {
             translated = e;
         }
         final RuntimeException handlingEx = translated != null ? translated : cause;
-        final ActionResponse response = handleApplicationException(runtimeMeta, handlingEx);
-        if (response.isPresent()) {
+        final ActionResponse response = handleApplicationException(runtime, handlingEx);
+        if (response.isDefined()) {
             return response;
         }
         if (translated != null) {
             throw translated;
         }
-        return ActionResponse.empty();
+        return ActionResponse.undefined();
     }
 
     protected void translateException(RuntimeException cause) {
@@ -104,57 +105,47 @@ public class TypicalGodHandMonologue {
     //                                                               =====================
     /**
      * Handle the application exception thrown by (basically) action execute. <br>
-     * Though this is same as global-exceptions settings of Struts,
+     * Though this is same as global-exceptions settings of Struts, <br>
      * There is more flexibility than the function so you can set it here. <br>
      * This is called by callback process so you should NOT call this directly in your action.
-     * @param executeMeta The meta of action execute. (NotNull)
+     * @param runtime The runtime meta of action execute. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
-     * @return The forward path. (NullAllowed: if not null, it goes to the path)
+     * @return The action response for application exception. (NotNull: and if defined, go to the path, UndefinedAllowed: unhandled as application exception)
      */
-    protected ActionResponse handleApplicationException(ActionRuntime executeMeta, RuntimeException cause) { // called by callback
-        final ActionResponse forwardTo = doHandleApplicationException(executeMeta, cause);
-        showApplicationExceptionHandlingIfNeeds(cause, forwardTo);
-        if (needsApplicationExceptionApiDispatch(executeMeta, forwardTo)) {
-            return dispatchApiApplicationException(executeMeta, cause);
-        }
-        return forwardTo;
-    }
-
-    // -----------------------------------------------------
-    //                                     Actually Handling
-    //                                     -----------------
-    protected ActionResponse doHandleApplicationException(ActionRuntime executeMeta, RuntimeException cause) {
-        ActionResponse forwardTo = ActionResponse.empty();
+    protected ActionResponse handleApplicationException(ActionRuntime runtime, RuntimeException cause) {
+        final ActionResponse response;
         if (cause instanceof LaApplicationException) {
             final LaApplicationException appEx = (LaApplicationException) cause;
-            forwardTo = doHandleSpecifiedApplicationException(appEx);
-            if (forwardTo.isEmpty()) {
-                forwardTo = doHandleEmbeddedApplicationException(appEx);
-            }
+            final ActionResponse specified = asSpecifiedApplicationException(appEx);
+            response = specified.isDefined() ? specified : asEmbeddedApplicationException(appEx);
             reflectEmbeddedApplicationMessagesIfExists(appEx); // override existing messages if exists
         } else { // e.g. framework exception
-            forwardTo = doHandleDBFluteApplicationException(cause);
+            response = asDBFluteApplicationException(cause);
         }
-        return forwardTo;
+        if (response.isDefined()) {
+            showApplicationExceptionHandling(cause, response);
+            if (needsApplicationExceptionApiDispatch(runtime, cause, response)) {
+                return dispatchApiApplicationException(runtime, cause, response);
+            }
+        }
+        return response;
     }
 
-    protected ActionResponse doHandleSpecifiedApplicationException(LaApplicationException appEx) {
+    protected ActionResponse asSpecifiedApplicationException(LaApplicationException appEx) {
         return applicationExceptionHandler.handle(appEx);
     }
 
-    protected ActionResponse doHandleEmbeddedApplicationException(LaApplicationException appEx) {
-        ActionResponse forwardTo = ActionResponse.empty();
-        if (appEx instanceof LoginFailureException) {
-            forwardTo = handleLoginFailureException((LoginFailureException) appEx);
-        } else if (appEx instanceof LoginTimeoutException) {
-            forwardTo = handleLoginTimeoutException((LoginTimeoutException) appEx);
+    protected ActionResponse asEmbeddedApplicationException(LaApplicationException appEx) {
+        ActionResponse response = ActionResponse.undefined();
+        if (appEx instanceof LoginUnauthorizedException) {
+            response = handleLoginUnauthorizedException((LoginUnauthorizedException) appEx);
         } else if (appEx instanceof MessageKeyApplicationException) {
-            forwardTo = handleMessageKeyApplicationException((MessageKeyApplicationException) appEx);
+            response = handleMessageKeyApplicationException((MessageKeyApplicationException) appEx);
         }
-        if (forwardTo.isEmpty()) {
-            forwardTo = handleUnknownApplicationException(appEx);
+        if (response.isUndefined()) {
+            response = handleUnknownApplicationException(appEx);
         }
-        return forwardTo;
+        return response;
     }
 
     protected void reflectEmbeddedApplicationMessagesIfExists(LaApplicationException appEx) {
@@ -165,27 +156,24 @@ public class TypicalGodHandMonologue {
         }
     }
 
-    protected ActionResponse doHandleDBFluteApplicationException(RuntimeException cause) {
-        ActionResponse forwardTo = ActionResponse.empty();
+    protected ActionResponse asDBFluteApplicationException(RuntimeException cause) {
+        ActionResponse response = ActionResponse.undefined();
         if (cause instanceof EntityAlreadyDeletedException) {
-            forwardTo = handleEntityAlreadyDeletedException((EntityAlreadyDeletedException) cause);
+            response = handleEntityAlreadyDeletedException((EntityAlreadyDeletedException) cause);
         } else if (cause instanceof EntityAlreadyUpdatedException) {
-            forwardTo = handleEntityAlreadyUpdatedException((EntityAlreadyUpdatedException) cause);
+            response = handleEntityAlreadyUpdatedException((EntityAlreadyUpdatedException) cause);
         } else if (cause instanceof EntityAlreadyExistsException) {
-            forwardTo = handleEntityAlreadyExistsException((EntityAlreadyExistsException) cause);
+            response = handleEntityAlreadyExistsException((EntityAlreadyExistsException) cause);
         }
-        return forwardTo;
+        return response;
     }
 
     // -----------------------------------------------------
     //                                         Show Handling
     //                                         -------------
-    protected void showApplicationExceptionHandlingIfNeeds(RuntimeException cause, ActionResponse response) {
-        if (response.isEmpty()) {
-            return;
-        }
+    protected void showApplicationExceptionHandling(RuntimeException cause, ActionResponse response) {
         showAppEx(cause, () -> {
-            /* not show forwardTo because of forwarding log later */
+            // not show forwardTo because of forwarding log later
             final StringBuilder sb = new StringBuilder();
             sb.append("...Handling application exception:");
             sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
@@ -201,8 +189,9 @@ public class TypicalGodHandMonologue {
     }
 
     protected void showAppEx(RuntimeException cause, Supplier<String> msgSupplier) {
-        // basically trace in production just in case
-        // if it's noisy and unneeded, override this method
+        // to trace it in production just in case
+        // several exception is depend on circumstances
+        // whether application exception or not 
         if (logger.isInfoEnabled()) {
             logger.info(msgSupplier.get());
         }
@@ -240,17 +229,75 @@ public class TypicalGodHandMonologue {
         }
     }
 
-    protected boolean needsApplicationExceptionApiDispatch(ActionRuntime executeMeta, ActionResponse forwardTo) {
-        return forwardTo.isPresent() && executeMeta.isApiExecute();
+    // -----------------------------------------------------
+    //                                          API Dispatch
+    //                                          ------------
+    protected boolean needsApplicationExceptionApiDispatch(ActionRuntime runtime, RuntimeException cause, ActionResponse response) {
+        return runtime.isApiExecute();
     }
 
-    protected ActionResponse dispatchApiApplicationException(ActionRuntime executeMeta, RuntimeException cause) {
-        final ApiFailureResource resource = createApiApplicationExceptionResource();
-        return apiManager.handleApplicationException(resource, executeMeta, cause);
+    protected ApiResponse dispatchApiApplicationException(ActionRuntime runtime, RuntimeException cause, ActionResponse response) {
+        final ApiResponse handled = apiManager.handleApplicationException(createApiFailureResource(runtime), cause);
+        clearUnneededSessionErrorsForApi(handled);
+        return handled;
     }
 
-    protected ApiFailureResource createApiApplicationExceptionResource() {
-        return new ApiFailureResource(sessionManager.errors().get(), requestManager);
+    protected ApiFailureResource createApiFailureResource(ActionRuntime runtime) { // pick up errors from session here
+        return new ApiFailureResource(runtime, sessionManager.errors().get(), requestManager);
+    }
+
+    protected void clearUnneededSessionErrorsForApi(ApiResponse handled) { // clear errors from session here
+        if (handled.isDefined()) { // basically true, should be handled in hook
+            sessionManager.errors().clear(); // already unneeded
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                    Login Unauthorized
+    //                                    ------------------
+    protected ActionResponse handleLoginUnauthorizedException(LoginUnauthorizedException appEx) {
+        assertLoginManagerPresent();
+        if (appEx instanceof LoginFailureException) {
+            saveErrors(getErrorsLoginFailureKey()); // needs to show message for user
+        }
+        final HtmlResponse response = redirectToLoginAction();
+        appEx.mappingRedirectable(response);
+        return response;
+    }
+
+    protected void assertLoginManagerPresent() {
+        loginManager.orElseThrow(() -> {
+            return new IllegalStateException("Not found the login manager, the application exception is mistake?");
+        });
+    }
+
+    protected String getErrorsLoginFailureKey() {
+        return typicalKeySupplier.getErrorsLoginFailureKey();
+    }
+
+    // -----------------------------------------------------
+    //                                           Message Key
+    //                                           -----------
+    protected ActionResponse handleMessageKeyApplicationException(MessageKeyApplicationException appEx) {
+        // no save here because of saved as embedded message later
+        //saveErrors(appEx.getErrors());
+        return getErrorMessageForward();
+    }
+
+    protected HtmlResponse getErrorMessageForward() {
+        return HtmlResponse.fromForwardPath(typicalKeySupplier.getErrorMessageForwardPath());
+    }
+
+    // -----------------------------------------------------
+    //                                               Unknown
+    //                                               -------
+    protected ActionResponse handleUnknownApplicationException(LaApplicationException appEx) {
+        logger.warn("*Unknown application exception: {}", appEx.getClass(), appEx);
+        return redirectToUnknownAppcalitionExceptionAction(); // basically no way
+    }
+
+    protected ActionResponse redirectToUnknownAppcalitionExceptionAction() {
+        return redirectToLoginAction(); // cannot help it
     }
 
     // -----------------------------------------------------
@@ -262,7 +309,7 @@ public class TypicalGodHandMonologue {
     }
 
     protected String getErrorsAppAlreadyDeletedKey() {
-        return typicalKeySupplier.getErrorsAppAlreadyDeletedKey();
+        return typicalKeySupplier.getErrorsAppDbAlreadyDeletedKey();
     }
 
     protected ActionResponse getErrorMessageAlreadyDeletedJsp() {
@@ -278,7 +325,7 @@ public class TypicalGodHandMonologue {
     }
 
     protected String getErrorsAppAlreadyUpdatedKey() {
-        return typicalKeySupplier.getErrorsAppAlreadyUpdatedKey();
+        return typicalKeySupplier.getErrorsAppDbAlreadyUpdatedKey();
     }
 
     protected ActionResponse getErrorMessageAlreadyUpdatedJsp() {
@@ -294,81 +341,25 @@ public class TypicalGodHandMonologue {
     }
 
     protected String getErrorsAppAlreadyExistsKey() {
-        return TypicalKey.ERRORS_APP_ALREADY_EXISTS;
+        return TypicalKey.ERRORS_APP_DB_ALREADY_EXISTS;
     };
 
     protected ActionResponse getErrorMessageAlreadyExistsJsp() {
         return getErrorMessageForward(); // as default
     }
 
-    // -----------------------------------------------------
-    //                                         Login Failure
-    //                                         -------------
-    protected ActionResponse handleLoginFailureException(LoginFailureException appEx) {
-        assertLoginManagerExists(appEx);
-        saveErrors(getErrorsLoginFailureKey());
-        return redirectToLoginAction();
-    }
-
-    protected String getErrorsLoginFailureKey() {
-        return typicalKeySupplier.getErrorsLoginFailureKey();
-    }
-
-    // -----------------------------------------------------
-    //                                         Login Timeout
-    //                                         -------------
-    protected ActionResponse handleLoginTimeoutException(LoginTimeoutException appEx) {
-        assertLoginManagerExists(appEx);
-        return redirectToLoginAction(); // no message because of rare case
-    }
-
-    protected void assertLoginManagerExists(RuntimeException appEx) {
-        if (!loginManager.isPresent()) {
-            String msg = "Not found the login manager, this application exception is mistake?";
-            throw new IllegalStateException(msg, appEx);
-        }
-    }
-
-    // -----------------------------------------------------
-    //                                           Message Key
-    //                                           -----------
-    protected ActionResponse handleMessageKeyApplicationException(MessageKeyApplicationException appEx) {
-        // no save here because of saved later
-        //saveErrors(appEx.getErrors());
-        return getErrorMessageForward();
-    }
-
-    protected HtmlResponse getErrorMessageForward() {
-        return HtmlResponse.fromForwardPath(typicalKeySupplier.getErrorMessageForwardPath());
-    }
-
-    // -----------------------------------------------------
-    //                                               Unknown
-    //                                               -------
-    protected ActionResponse handleUnknownApplicationException(LaApplicationException appEx) {
-        logger.info("*Unknown application exception: {}", appEx.getClass(), appEx);
-        return redirectToUnknownAppcalitionExceptionAction(); // basically no way
-    }
-
-    protected ActionResponse redirectToUnknownAppcalitionExceptionAction() {
-        if (loginManager == null) { // if no-use-login system
-            return ActionResponse.empty(); // because of non login exception, treat it as system exception
-        }
-        return redirectToLoginAction(); // basically no way, login action just in case
-    }
-
     // ===================================================================================
-    //                                                                        Small Helper
+    //                                                                        Assist Logic
     //                                                                        ============
     protected void saveErrors(String messageKey) {
-        sessionManager.errors().save(messageKey);
+        sessionManager.errors().save(messageKey); // cleared later if API
     }
 
-    protected ActionResponse redirectToLoginAction() {
+    protected HtmlResponse redirectToLoginAction() {
         return loginManager.map(nager -> {
-            return HtmlResponse.fromRedirectPath(nager.redirectToLoginAction());
+            return nager.redirectToLoginAction();
         }).orElseGet(() -> {
-            return HtmlResponse.empty();
+            return HtmlResponse.undefined();
         });
     }
 }

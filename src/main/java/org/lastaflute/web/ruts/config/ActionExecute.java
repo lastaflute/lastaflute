@@ -16,8 +16,12 @@
 package org.lastaflute.web.ruts.config;
 
 import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.time.temporal.TemporalAccessor;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -25,12 +29,17 @@ import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.hibernate.validator.constraints.NotBlank;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.exception.ActionFormNotFoundException;
 import org.lastaflute.web.exception.ActionUrlParameterDifferentArgsException;
+import org.lastaflute.web.exception.ExecuteMethodFormPropertyConflictException;
+import org.lastaflute.web.exception.ExecuteMethodFormPropertyValidationMismatchException;
 import org.lastaflute.web.exception.ExecuteMethodOptionalNotContinuedException;
 import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
 import org.lastaflute.web.exception.UrlParamArgsNotFoundException;
@@ -61,6 +70,7 @@ public class ActionExecute implements Serializable {
     protected final Method executeMethod; // not null
     protected final TransactionGenre transactionGenre; // not null
     protected final boolean indexMethod;
+    protected final OptionalThing<Integer> sqlExecutionCountLimit;
 
     // -----------------------------------------------------
     //                                     Defined Parameter
@@ -89,6 +99,7 @@ public class ActionExecute implements Serializable {
         this.executeMethod = executeMethod;
         this.transactionGenre = chooseTransactionGenre(executeOption);
         this.indexMethod = executeMethod.getName().equals("index");
+        this.sqlExecutionCountLimit = createOptionalSqlExecutionCountLimit(executeOption);
 
         // defined parameter (needed in URL pattern analyzing)
         final ExecuteArgAnalyzer executeArgAnalyzer = newExecuteArgAnalyzer();
@@ -115,6 +126,9 @@ public class ActionExecute implements Serializable {
         checkExecuteMethod(executeArgAnalyzer);
     }
 
+    // -----------------------------------------------------
+    //                                           Transaction
+    //                                           -----------
     protected TransactionGenre chooseTransactionGenre(ExecuteOption executeOption) {
         return executeOption.isSuppressTransaction() ? TransactionGenre.NONE : getDefaultTransactionGenre();
     }
@@ -123,6 +137,19 @@ public class ActionExecute implements Serializable {
         return TransactionGenre.REQUIRES_NEW;
     }
 
+    // -----------------------------------------------------
+    //                                       SQL Count Limit
+    //                                       ---------------
+    protected OptionalThing<Integer> createOptionalSqlExecutionCountLimit(ExecuteOption executeOption) {
+        final int specifiedLimit = executeOption.getSqlExecutionCountLimit();
+        return OptionalThing.ofNullable(specifiedLimit >= 0 ? specifiedLimit : null, () -> {
+            throw new IllegalStateException("Not found the specified SQL execution count limit: " + toSimpleMethodExp());
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                              Analyzer
+    //                                              --------
     protected ExecuteArgAnalyzer newExecuteArgAnalyzer() {
         return new ExecuteArgAnalyzer();
     }
@@ -142,12 +169,13 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                           Action Form
     //                                           -----------
+    // public for pushed form
     /**
      * @param formType The type of action form. (NullAllowed: if null, no form for the method)
      * @param listFormParameter The parameter of list form. (NullAllowed: normally null, for e.g. JSON list)
      * @return The optional form meta to be prepared. (NotNull)
      */
-    protected OptionalThing<ActionFormMeta> prepareFormMeta(Class<?> formType, Parameter listFormParameter) {
+    public OptionalThing<ActionFormMeta> prepareFormMeta(Class<?> formType, Parameter listFormParameter) {
         final ActionFormMeta meta = formType != null ? createFormMeta(formType, listFormParameter) : null;
         return OptionalThing.ofNullable(meta, () -> {
             String msg = "Not found the form meta as parameter for the execute method: " + executeMethod;
@@ -300,9 +328,13 @@ public class ActionExecute implements Serializable {
     protected void checkExecuteMethod(ExecuteArgAnalyzer executeArgAnalyzer) {
         checkReturnTypeNotAllowed();
         checkFormPropertyConflict();
+        checkFormPropertyValidationMismatch();
         checkOptionalNotContinued(executeArgAnalyzer);
     }
 
+    // -----------------------------------------------------
+    //                                     Check Return Type
+    //                                     -----------------
     protected void checkReturnTypeNotAllowed() {
         if (!isAllowedReturnType()) {
             throwExecuteMethodReturnTypeNotResponseException();
@@ -332,6 +364,9 @@ public class ActionExecute implements Serializable {
         throw new ExecuteMethodReturnTypeNotResponseException(msg);
     }
 
+    // -----------------------------------------------------
+    //                                   Check Form Property
+    //                                   -------------------
     protected void checkFormPropertyConflict() {
         formMeta.ifPresent(meta -> {
             final String methodName = executeMethod.getName();
@@ -368,9 +403,118 @@ public class ActionExecute implements Serializable {
         br.addItem("Confliected Property");
         br.addElement(property);
         final String msg = br.buildExceptionMessage();
-        throw new ExecuteMethodReturnTypeNotResponseException(msg);
+        throw new ExecuteMethodFormPropertyConflictException(msg);
     }
 
+    protected void checkFormPropertyValidationMismatch() {
+        formMeta.ifPresent(meta -> {
+            for (ActionFormProperty property : meta.properties()) {
+                final Field field = property.getPropertyDesc().getField();
+                if (field != null) { // check only field
+                    final Class<?> fieldType = field.getType();
+                    // *depends on JSON rule so difficult, check only physical mismatch here
+                    //if (isFormPropertyCannotNotNullType(fieldType)) {
+                    //    final Class<NotNull> notNullType = NotNull.class;
+                    //    if (field.getAnnotation(notNullType) != null) {
+                    //        throwExecuteMethodFormPropertyValidationMismatchException(property, notNullType);
+                    //    }
+                    //}
+                    if (isFormPropertyCannotNotEmptyType(fieldType)) {
+                        final Class<NotEmpty> notEmptyType = NotEmpty.class;
+                        if (field.getAnnotation(notEmptyType) != null) {
+                            throwExecuteMethodFormPropertyValidationMismatchException(property, notEmptyType);
+                        }
+                    }
+                    if (isFormPropertyCannotNotBlankType(fieldType)) {
+                        final Class<NotBlank> notBlankType = NotBlank.class;
+                        if (field.getAnnotation(notBlankType) != null) {
+                            throwExecuteMethodFormPropertyValidationMismatchException(property, notBlankType);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // *depends on JSON rule so difficult
+    //protected boolean isFormPropertyCannotNotNullType(Class<?> fieldType) {
+    //    return String.class.isAssignableFrom(fieldType) // everybody knows
+    //            || isFormPropertyCollectionFamilyType(fieldType); // List, Set, Map, Array, ...
+    //}
+
+    protected boolean isFormPropertyCannotNotEmptyType(Class<?> fieldType) {
+        return Number.class.isAssignableFrom(fieldType) // Integer, Long, ...
+                || int.class.equals(fieldType) || long.class.equals(fieldType) // primitive numbers
+                || TemporalAccessor.class.isAssignableFrom(fieldType) // LocalDate, ...
+                || java.util.Date.class.isAssignableFrom(fieldType) // old date
+                || Boolean.class.isAssignableFrom(fieldType) || boolean.class.equals(fieldType) // boolean
+                || Classification.class.isAssignableFrom(fieldType); // CDef
+    }
+
+    protected boolean isFormPropertyCannotNotBlankType(Class<?> fieldType) {
+        return isFormPropertyCannotNotEmptyType(fieldType) // cannot-NotEmpty types are also
+                || isFormPropertyCollectionFamilyType(fieldType); // List, Set, Map, Array, ...
+    }
+
+    protected boolean isFormPropertyCollectionFamilyType(Class<?> fieldType) {
+        return Collection.class.isAssignableFrom(fieldType) // List, Set, ...
+                || Map.class.isAssignableFrom(fieldType) // mainly used in JSON
+                || Object[].class.isAssignableFrom(fieldType); // also all arrays
+    }
+
+    protected void throwExecuteMethodFormPropertyValidationMismatchException(ActionFormProperty property,
+            Class<? extends Annotation> annotation) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Mismatch validation annotation of form property.");
+        br.addItem("Advice");
+        br.addElement("The annotation setting has mismatch like this:");
+        // *depends on JSON rule so difficult
+        //br.addElement("  - String type cannot use @NotNull => use @NotEmpty or @NotBlank");
+        br.addElement("  - Number types cannot use @NotEmpty, @NotBlank => use @NotNull");
+        br.addElement("  - Date types cannot use @NotEmpty, @NotBlank => use @NotNull");
+        br.addElement("  - Boolean types cannot use @NotEmpty, @NotBlank => use @NotNull");
+        br.addElement("  - CDef types cannot use @NotEmpty, @NotBlank => use @NotNull");
+        br.addElement("  - List/Map/... types cannot use @NotBlank => use @NotEmpty");
+        // *no touch to @NotNull same reason as String
+        //br.addElement("  - List/Map/... types cannot use @NotNull, @NotBlank => use @NotEmpty");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    @NotNull");
+        br.addElement("    public String memberName; // *NG: use @NotEmpty or @NotBlank");
+        br.addElement("    @NotNull");
+        br.addElement("    public List<SeaBean> seaList; // *NG: use @NotEmpty");
+        br.addElement("    @NotEmpty");
+        br.addElement("    public Integer memberAge; // *NG: use @NotNull");
+        br.addElement("    @NotBlank");
+        br.addElement("    public LocalDate birthdate; // *NG: use @NotNull");
+        br.addElement("    @NotEmpty");
+        br.addElement("    public CDef.MemberStatus statusList; // *NG: use @NotNull");
+        br.addElement("  (o):");
+        br.addElement("    @NotBlank");
+        br.addElement("    public String memberName;");
+        br.addElement("    @NotEmpty");
+        br.addElement("    public List<SeaBean> seaList;");
+        br.addElement("    @NotNull");
+        br.addElement("    public Integer memberAge;");
+        br.addElement("    @NotNull");
+        br.addElement("    public LocalDate birthdate;");
+        br.addElement("    @NotNull");
+        br.addElement("    public CDef.MemberStatus statusList;");
+        br.addItem("Execute Method");
+        br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
+        br.addItem("Action Form");
+        br.addElement(formMeta);
+        br.addItem("Target Property");
+        br.addElement(property);
+        br.addItem("Mismatch Annotation");
+        br.addElement(annotation);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodFormPropertyValidationMismatchException(msg);
+    }
+
+    // -----------------------------------------------------
+    //                                        Check Optional
+    //                                        --------------
     public void checkOptionalNotContinued(ExecuteArgAnalyzer executeArgAnalyzer) {
         boolean opt = false;
         int index = 0;
@@ -523,6 +667,10 @@ public class ActionExecute implements Serializable {
 
     public boolean isIndexMethod() {
         return indexMethod;
+    }
+
+    public OptionalThing<Integer> getSqlExecutionCountLimit() {
+        return sqlExecutionCountLimit;
     }
 
     // -----------------------------------------------------

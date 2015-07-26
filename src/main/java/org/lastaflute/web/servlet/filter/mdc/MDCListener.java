@@ -77,7 +77,6 @@ public class MDCListener implements FilterListener {
     // ===================================================================================
     //                                                                              Listen
     //                                                                              ======
-    // TODO jflute lastaflute: [F] test: UnitTest of MDCFilterListener
     @Override
     public void listen(FilterListenerChain chain) throws IOException, ServletException {
         final Map<String, String> originallyMap = prepareOriginallyMap();

@@ -114,6 +114,27 @@ public abstract class LastaAction {
     // ===================================================================================
     //                                                                            Response
     //                                                                            ========
+    /**
+     * Return as HTML response by the template. <br>
+     * <pre>
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     ...
+     *     <span style="color: #70226C">return</span> <span style="color: #CC4747">asHtml</span>(<span style="color: #0000C0">path_Sea_SeaJsp</span>);
+     * }
+     * 
+     * <span style="color: #3F7E5E">// you can register the data used in HTML template</span> 
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     ...
+     *     <span style="color: #70226C">return</span> <span style="color: #CC4747">asHtml</span>(<span style="color: #0000C0">path_Sea_SeaJsp</span>).renderWith(<span style="color: #553000">data</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #553000">data</span>.<span style="color: #994747">register</span>(<span style="color: #2A00FF">"beans"</span>, <span style="color: #553000">beans</span>);
+     *     });
+     * }
+     * </pre>
+     * @param path_ The path definition of forwarding next resource e.g. HTML template. (NotNull)
+     * @return this. (NotNull)
+     */
     protected HtmlResponse asHtml(ForwardNext path_) {
         assertArgumentNotNull("path_ (as forwardNext)", path_);
         return newHtmlResponseAsForward(path_);
@@ -127,9 +148,9 @@ public abstract class LastaAction {
     /**
      * Return response as JSON.
      * <pre>
-     * public void index() {
+     * <span style="color: #70226C">public void</span> index() {
      *     ...
-     *     return asJson(bean);
+     *     <span style="color: #70226C">return</span> asJson(<span style="color: #553000">bean</span>);
      * }
      * </pre>
      * @param bean The bean object converted to JSON string. (NotNull)
@@ -301,7 +322,7 @@ public abstract class LastaAction {
     protected HtmlResponse doRedirect(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsRediect(actionPathResolver.toActionUrl(actionType, true, chain));
+        return newHtmlResponseAsRediect(toActionUrl(actionType, chain));
     }
 
     protected HtmlResponse newHtmlResponseAsRediect(String redirectPath) {
@@ -315,11 +336,16 @@ public abstract class LastaAction {
      * <span style="color: #3F7E5E">// e.g. /member/edit/</span>
      * return <span style="color: #FD4747">movedPermanently</span>(redirect(MemberEditAction.class));
      * </pre>
-     * @param response The redirect URL with redirect mark for SAStruts. (NotNull)
-     * @return The returned URL for execute method of SAStruts. (NullAllowed)
+     * @param response The action response of HTML to redirect. (NotNull)
+     * @return The empty HTML response because of response already written. (NotNull)
      */
     protected HtmlResponse movedPermanently(HtmlResponse response) {
-        return responseManager.movedPermanently(response);
+        assertArgumentNotNull("response", response);
+        if (!response.isRedirectTo()) {
+            throw new IllegalStateException("Not redirect response: " + response);
+        }
+        responseManager.movedPermanently(response);
+        return HtmlResponse.undefined(); // because of already done about response process
     }
 
     // -----------------------------------------------------
@@ -425,7 +451,7 @@ public abstract class LastaAction {
     protected HtmlResponse doForward(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsForward(actionPathResolver.toActionUrl(actionType, false, chain));
+        return newHtmlResponseAsForward(toActionUrl(actionType, chain));
     }
 
     protected HtmlResponse newHtmlResponseAsForward(String redirectPath) {
@@ -470,6 +496,39 @@ public abstract class LastaAction {
 
     protected UrlChain newUrlChain() {
         return new UrlChain(this);
+    }
+
+    // -----------------------------------------------------
+    //                                            Action URL
+    //                                            ----------
+    /**
+     * Convert to URL string to move the action.
+     * <pre>
+     * <span style="color: #3F7E5E">// /product/list/</span>
+     * String url = toActionUrl(ProductListAction.<span style="color: #70226C">class</span>);
+     * </pre>
+     * @param actionType The class type of action that it redirects to. (NotNull)
+     * @return The URL string to move to the action. (NotNull)
+     */
+    protected String toActionUrl(Class<?> actionType) {
+        assertArgumentNotNull("actionType", actionType);
+        return actionPathResolver.toActionUrl(actionType);
+    }
+
+    /**
+     * Convert to URL string to move the action.
+     * <pre>
+     * <span style="color: #3F7E5E">// /product/list/3</span>
+     * String url = toActionUrl(ProductListAction.<span style="color: #70226C">class</span>, moreUrl(3));
+     * </pre>
+     * @param actionType The class type of action that it redirects to. (NotNull)
+     * @param chain The chain of URL to build additional info on URL. (NotNull)
+     * @return The URL string to move to the action. (NotNull)
+     */
+    protected String toActionUrl(Class<?> actionType, UrlChain chain) {
+        assertArgumentNotNull("actionType", actionType);
+        assertArgumentNotNull("chain", chain);
+        return actionPathResolver.toActionUrl(actionType, chain);
     }
 
     // ===================================================================================

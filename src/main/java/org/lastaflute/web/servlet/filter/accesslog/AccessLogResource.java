@@ -26,7 +26,7 @@ public class AccessLogResource {
 
     protected final HttpServletRequest request;
     protected final HttpServletResponse response;
-    protected final Throwable cause;
+    protected final Throwable cause; // null allowed
     protected final long before;
 
     public AccessLogResource(HttpServletRequest request, HttpServletResponse response, Throwable cause, long before) {
@@ -44,10 +44,18 @@ public class AccessLogResource {
         return response;
     }
 
+    /**
+     * Get the cause exception of the request.
+     * @return The thrown exception in the request. (NullAllowed: when no failure)
+     */
     public Throwable getCause() {
         return cause;
     }
 
+    /**
+     * Get the time millisecond before the request.
+     * @return The value as millisecond.
+     */
     public long getBefore() {
         return before;
     }

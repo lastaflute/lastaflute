@@ -22,7 +22,6 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.servlet.request.ResponseManager;
@@ -37,7 +36,7 @@ public class SimpleApiManager implements ApiManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleApiManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleApiManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -76,9 +75,9 @@ public class SimpleApiManager implements ApiManager {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[API Manager]");
-            LOG.info(" apiFailureHook: " + DfTypeUtil.toClassTitle(apiFailureHook));
+        if (logger.isInfoEnabled()) {
+            logger.info("[API Manager]");
+            logger.info(" apiFailureHook: " + DfTypeUtil.toClassTitle(apiFailureHook));
         }
     }
 
@@ -86,30 +85,25 @@ public class SimpleApiManager implements ApiManager {
     //                                                                    Business Failure
     //                                                                    ================
     @Override
-    public ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime, ApiLoginRedirectProvider provider) {
-        return apiFailureHook.handleLoginRequiredFailure(resource, runtime, provider);
+    public ApiResponse handleValidationError(ApiFailureResource resource) {
+        return apiFailureHook.handleValidationError(resource);
     }
 
     @Override
-    public ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntime runtime) {
-        return apiFailureHook.handleValidationError(resource, runtime);
-    }
-
-    @Override
-    public ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause) {
-        return apiFailureHook.handleApplicationException(resource, runtime, cause);
+    public ApiResponse handleApplicationException(ApiFailureResource resource, RuntimeException cause) {
+        return apiFailureHook.handleApplicationException(resource, cause);
     }
 
     // ===================================================================================
     //                                                                      System Failure
     //                                                                      ==============
     @Override
-    public OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause) {
-        return apiFailureHook.handleClientException(resource, runtime, cause);
+    public OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, RuntimeException cause) {
+        return apiFailureHook.handleClientException(resource, cause);
     }
 
     @Override
-    public OptionalThing<ApiResponse> handleServerException(ApiFailureResource resource, ActionRuntime runtime, Throwable cause) {
-        return apiFailureHook.handleServerException(resource, runtime, cause);
+    public OptionalThing<ApiResponse> handleServerException(ApiFailureResource resource, Throwable cause) {
+        return apiFailureHook.handleServerException(resource, cause);
     }
 }

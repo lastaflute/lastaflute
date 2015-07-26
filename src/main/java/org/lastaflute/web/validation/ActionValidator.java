@@ -89,11 +89,11 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // -----------------------------------------------------
     //                                               General
     //                                               -------
-    public void validate(Object form, VaMore<MESSAGES> doValidateLambda, VaErrorHook validationErrorLambda) {
-        doValidate(form, doValidateLambda, validationErrorLambda);
+    public ValidationSuccess validate(Object form, VaMore<MESSAGES> doValidateLambda, VaErrorHook validationErrorLambda) {
+        return doValidate(form, doValidateLambda, validationErrorLambda);
     }
 
-    protected void doValidate(Object form, VaMore<MESSAGES> doValidateLambda, VaErrorHook validationErrorLambda) {
+    protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> doValidateLambda, VaErrorHook validationErrorLambda) {
         assertArgumentNotNull("form", form);
         assertArgumentNotNull("doValidateLambda", doValidateLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
@@ -104,6 +104,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         if (!messages.isEmpty()) {
             throwValidationErrorException(messages, validationErrorLambda);
         }
+        return createValidationSuccess(messages);
     }
 
     public void throwValidationError(MessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
@@ -114,11 +115,15 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         throw new ValidationErrorException(messages, validationErrorLambda);
     }
 
+    protected ValidationSuccess createValidationSuccess(MESSAGES messages) {
+        return new ValidationSuccess(messages);
+    }
+
     // -----------------------------------------------------
     //                                               for API
     //                                               -------
-    public void validateApi(Object form, VaMore<MESSAGES> doValidateLambda) {
-        doValidate(form, doValidateLambda, () -> hookApiValidationError());
+    public ValidationSuccess validateApi(Object form, VaMore<MESSAGES> doValidateLambda) {
+        return doValidate(form, doValidateLambda, () -> hookApiValidationError());
     }
 
     public void throwValidationErrorApi(MessagesCreator<MESSAGES> noArgInLambda) {
@@ -126,12 +131,12 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     }
 
     protected ApiResponse hookApiValidationError() { // for API
-        final ApiFailureResource resource = newApiFailureResource(requestManager.errors().get(), requestManager);
-        return requestManager.getApiManager().handleValidationError(resource, getActionRuntime());
+        final ApiFailureResource resource = createApiFailureResource(requestManager.errors().get(), requestManager);
+        return requestManager.getApiManager().handleValidationError(resource);
     }
 
-    protected ApiFailureResource newApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
-        return new ApiFailureResource(errors, requestManager);
+    protected ApiFailureResource createApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
+        return new ApiFailureResource(getActionRuntime(), errors, requestManager);
     }
 
     protected ActionRuntime getActionRuntime() {

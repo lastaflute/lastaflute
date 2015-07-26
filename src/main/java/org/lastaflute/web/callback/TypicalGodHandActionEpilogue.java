@@ -29,20 +29,25 @@ import org.slf4j.LoggerFactory;
  */
 public class TypicalGodHandActionEpilogue {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TypicalGodHandActionEpilogue.class);
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandActionEpilogue.class);
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     protected final RequestManager requestManager;
     protected final ResponseManager responseManager;
+    protected final TooManySqlOption tooManySqlOption;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandActionEpilogue(TypicalGodHandResource resource) {
+    public TypicalGodHandActionEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
         this.requestManager = resource.getRequestManager();
         this.responseManager = resource.getResponseManager();
+        this.tooManySqlOption = tooManySqlOption;
     }
 
     // ===================================================================================
@@ -68,7 +73,7 @@ public class TypicalGodHandActionEpilogue {
      * Handle count of SQL execution in the request.
      * @param runtime The runtime meta of action execute. (NotNull)
      */
-    protected void handleSqlCount(final ActionRuntime runtime) {
+    protected void handleSqlCount(ActionRuntime runtime) {
         final CallbackContext context = CallbackContext.getCallbackContextOnThread();
         if (context == null) {
             return;
@@ -78,9 +83,11 @@ public class TypicalGodHandActionEpilogue {
             return;
         }
         final ExecutedSqlCounter counter = ((ExecutedSqlCounter) filter);
-        final int limitCountOfSql = getLimitCountOfSql(runtime);
-        if (limitCountOfSql >= 0 && counter.getTotalCountOfSql() > limitCountOfSql) {
-            handleTooManySqlExecution(runtime, counter);
+        final int sqlExecutionCountLimit = getSqlExecutionCountLimit(runtime);
+        if (sqlExecutionCountLimit >= 0 && counter.getTotalCountOfSql() > sqlExecutionCountLimit) {
+            // minus means no check here, by-annotation cannot specify it, can only as default limit
+            // if it needs to specify it by-annotation, enough to set large size
+            handleTooManySqlExecution(runtime, counter, sqlExecutionCountLimit);
         }
         final String exp = counter.toLineDisp();
         requestManager.setAttribute(RequestManager.DBFLUTE_SQL_COUNT_KEY, exp); // logged by logging filter
@@ -90,24 +97,26 @@ public class TypicalGodHandActionEpilogue {
      * Handle too many SQL executions.
      * @param runtime The runtime meta of action execute. (NotNull)
      * @param sqlCounter The counter object for SQL executions. (NotNull)
+     * @param sqlExecutionCountLimit The limit of SQL execution count for the action execute. (NotMinus: already checked here)
      */
-    protected void handleTooManySqlExecution(ActionRuntime runtime, final ExecutedSqlCounter sqlCounter) {
+    protected void handleTooManySqlExecution(ActionRuntime runtime, ExecutedSqlCounter sqlCounter, int sqlExecutionCountLimit) {
+        final int totalCountOfSql = sqlCounter.getTotalCountOfSql();
         final String actionDisp = buildActionDisp(runtime);
-        LOG.warn("*Too many SQL executions: " + sqlCounter.getTotalCountOfSql() + " in " + actionDisp);
+        logger.warn("*Too many SQL executions: {}/{} in {}", totalCountOfSql, sqlExecutionCountLimit, actionDisp);
     }
 
     protected String buildActionDisp(ActionRuntime runtime) {
-        return runtime.getActionType().getSimpleName() + "." + runtime.getExecuteMethod().getName() + "()";
+        return runtime.getActionType().getSimpleName() + "@" + runtime.getExecuteMethod().getName() + "()";
     }
 
     /**
-     * Get the limit count of SQL execution. <br>
+     * Get the limit of SQL execution. <br>
      * You can override if you need.
      * @param runtime The runtime meta of action execute. (NotNull)
-     * @return The max count allowed for SQL executions. (MinusAllowed: if minus, no check)
+     * @return The limit of SQL execution count. (MinusAllowed: if minus, no check)
      */
-    protected int getLimitCountOfSql(ActionRuntime runtime) {
-        return 30; // as default
+    protected int getSqlExecutionCountLimit(ActionRuntime runtime) {
+        return tooManySqlOption.getSqlExecutionCountLimit();
     }
 
     /**

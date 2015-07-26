@@ -40,11 +40,6 @@ import org.lastaflute.web.servlet.session.SessionManager;
 public class MockRequestManager implements RequestManager {
 
     @Override
-    public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey) {
-        return null;
-    }
-
-    @Override
     public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> genericType) {
         return null;
     }
@@ -55,15 +50,7 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
-    public void setAttribute(Object value) {
-    }
-
-    @Override
     public void setAttribute(String key, Object value) {
-    }
-
-    @Override
-    public void removeAttribute(Class<?> type) {
     }
 
     @Override
@@ -147,6 +134,31 @@ public class MockRequestManager implements RequestManager {
 
     @Override
     public OptionalThing<String> getHeaderXForwardedFor() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteAddr() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteHost() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteIp() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<Integer> getRemotePort() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<String> getRemoteUser() {
         return null;
     }
 

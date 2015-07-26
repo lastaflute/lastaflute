@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ComponentDef;
@@ -65,8 +66,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     protected ActionAdjustmentProvider comeOnAdjustmentProvider() {
         final FwAssistantDirector director = ContainerUtil.getComponent(FwAssistantDirector.class);
         final FwWebDirection direction = director.assistWebDirection();
-        final ActionAdjustmentProvider adjustmentProvider = direction.assistActionAdjustmentProvider();
-        return adjustmentProvider;
+        return direction.assistActionAdjustmentProvider();
     }
 
     protected ActionMapping newActionMapping(ComponentDef actionDef, String actionName, ActionAdjustmentProvider adjustmentProvider) {
@@ -88,8 +88,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
             }
             final ActionExecute existing = actionMapping.getActionExecute(declaredMethod);
             if (existing != null) {
-                String msg = "Cannot define overload method of action execute: " + existing;
-                throw new ExecuteMethodIllegalDefinitionException(msg);
+                throwOverloadMethodCannotDefinedException(actionType);
             }
             actionMapping.registerExecute(createActionExecute(actionMapping, declaredMethod));
         }
@@ -98,15 +97,60 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         verifyExecuteMethodDefinedInConcreteClassOnly(actionMapping, actionType);
     }
 
+    protected void throwOverloadMethodCannotDefinedException(final Class<?> actionType) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Cannot define overload method of action execute.");
+        br.addItem("Advice");
+        br.addElement("Same-name different-parameter method");
+        br.addElement("cannot be defined as execute method.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index() {");
+        br.addElement("    }");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index(String sea) {");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index() {");
+        br.addElement("    }");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse land(String sea) {");
+        br.addElement("    }");
+        br.addElement("Action");
+        br.addElement(actionType);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
     // -----------------------------------------------------
     //                                     Verify Definition
     //                                     -----------------
-    // TODO jflute lastaflute: [E] fitting: exception message
     protected void verifyExecuteMethodSize(ActionMapping actionMapping, Class<?> actionType) {
-        if (actionMapping.getExecuteMap().size() == 0) {
-            String msg = "Not found execute method in the action class (needs at least one method): " + actionType;
-            throw new ExecuteMethodIllegalDefinitionException(msg);
+        if (actionMapping.getExecuteMap().isEmpty()) {
+            throwExecuteMethodNotFoundInActionException(actionType);
         }
+    }
+
+    protected void throwExecuteMethodNotFoundInActionException(Class<?> actionType) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found execute method in the action class.");
+        br.addItem("Advice");
+        br.addElement("Action class needs at least one method.");
+        br.addElement("Confirm the @Execute annotation of your execute method.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public HtmlResponse index() {");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index() {");
+        br.addElement("    }");
+        br.addElement("Action");
+        br.addElement(actionType);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
     }
 
     protected void verifyExecuteMethodEitherIndexAndNamedUsingUrlParameter(ActionMapping actionMapping, Class<?> actionType) {
@@ -116,11 +160,45 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
             for (Entry<String, ActionExecute> entry : executeMap.entrySet()) {
                 final ActionExecute execute = entry.getValue();
                 if (!execute.isIndexMethod() && execute.getUrlParamArgs().isPresent()) {
-                    String msg = "Cannot use URL parameter both index() and named execute: named=" + execute;
-                    throw new ExecuteMethodIllegalDefinitionException(msg);
+                    throwUrlParameterCannotUseBothIndexNamedException(index, execute);
                 }
             }
         }
+    }
+
+    protected void throwUrlParameterCannotUseBothIndexNamedException(final ActionExecute index, final ActionExecute execute) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Cannot use URL parameter both index() and named execute.");
+        br.addItem("Advice");
+        br.addElement("URL parameter can be used either index() or named execute method.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index(Integer pageNumber) {");
+        br.addElement("    }");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse sea(String land) {");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index() {");
+        br.addElement("    }");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse sea(String land) {");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index(String land) {");
+        br.addElement("    }");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse sea() {");
+        br.addElement("    }");
+        br.addElement("Index Execute");
+        br.addElement(index);
+        br.addElement("Named Execute");
+        br.addElement(execute);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
     }
 
     protected void verifyExecuteMethodDefinedInConcreteClassOnly(ActionMapping actionMapping, Class<?> actionType) {
@@ -130,11 +208,36 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
             }
             for (Method declaredMethod : clazz.getDeclaredMethods()) {
                 if (isExecuteMethod(declaredMethod)) {
-                    String msg = "Cannot define execute method at super class: " + declaredMethod;
-                    throw new ExecuteMethodIllegalDefinitionException(msg);
+                    throwExecuteMethodAtSuperClassCannotBeDefinedException(clazz, declaredMethod);
                 }
             }
         }
+    }
+
+    protected void throwExecuteMethodAtSuperClassCannotBeDefinedException(Class<?> clazz, Method declaredMethod) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Cannot define execute method at super class.");
+        br.addItem("Advice");
+        br.addElement("Execute method should be defined at concrete class.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public abstract class SeaBaseAction ... {");
+        br.addElement("        @Execute");
+        br.addElement("        public HtmlResponse index() {");
+        br.addElement("        }");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public class SeaAction ... {");
+        br.addElement("        @Execute");
+        br.addElement("        public HtmlResponse index() {");
+        br.addElement("        }");
+        br.addElement("    }");
+        br.addElement("Super Class");
+        br.addElement(clazz);
+        br.addElement("Illegal Execute");
+        br.addElement(declaredMethod);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
     }
 
     // ===================================================================================
@@ -151,7 +254,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     }
 
     protected ExecuteOption createExecuteOption(Execute anno) {
-        return new ExecuteOption(anno.urlPattern(), anno.suppressTransaction());
+        return new ExecuteOption(anno.urlPattern(), anno.suppressTransaction(), anno.sqlExecutionCountLimit());
     }
 
     protected ActionExecute newActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {

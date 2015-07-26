@@ -22,6 +22,9 @@ import java.util.function.Consumer;
 
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
+import org.lastaflute.core.json.adapter.DBFluteGsonAdaptable;
+import org.lastaflute.core.json.adapter.Java8TimeGsonAdaptable;
+import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -29,7 +32,8 @@ import com.google.gson.GsonBuilder;
 /**
  * @author jflute
  */
-public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
+public class GsonJsonParser implements RealJsonParser // adapters here
+        , DBFluteGsonAdaptable, Java8TimeGsonAdaptable, NumberGsonAdaptable {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -52,18 +56,26 @@ public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
     }
 
     protected void setupDefaultSettings(final GsonBuilder builder) {
-        registerUtilDateFormat(builder);
+        registerDBFluteAdapter(builder);
         registerJava8TimeAdapter(builder);
+        registerNumberAdapter(builder);
+        registerUtilDateFormat(builder);
+    }
+
+    protected void registerDBFluteAdapter(GsonBuilder builder) {
+        builder.registerTypeAdapterFactory(createClassifictory());
+    }
+
+    protected void registerJava8TimeAdapter(GsonBuilder builder) { // until supported by Gson
+        builder.registerTypeAdapterFactory(createDateTimctory());
+    }
+
+    protected void registerNumberAdapter(GsonBuilder builder) { // to show property path in exception message
+        FACTORIES.forEach(factory -> builder.registerTypeAdapterFactory(factory));
     }
 
     protected void registerUtilDateFormat(GsonBuilder builder) {
         builder.setDateFormat("yyyy-MM-dd'T'HH:mm:ss"); // same as local date-time
-    }
-
-    protected void registerJava8TimeAdapter(GsonBuilder builder) { // until supported by Gson
-        builder.registerTypeAdapter(localDateType, newLocalDatelizer());
-        builder.registerTypeAdapter(localDateTimeType, newLocalDateTimelizer());
-        builder.registerTypeAdapter(localTimeType, newLocalTimelizer());
     }
 
     protected void setupYourSettings(GsonBuilder builder) { // you can override
@@ -71,18 +83,6 @@ public class GsonJsonParser implements RealJsonParser, Java8TimeGson {
 
     protected void acceptGsonSettings(Consumer<GsonBuilder> settings, GsonBuilder builder) {
         settings.accept(builder);
-    }
-
-    protected LocalDatelizer newLocalDatelizer() {
-        return new LocalDatelizer();
-    }
-
-    protected LocalDateTimelizer newLocalDateTimelizer() {
-        return new LocalDateTimelizer();
-    }
-
-    protected LocalTimelizer newLocalTimelizer() {
-        return new LocalTimelizer();
     }
 
     // ===================================================================================

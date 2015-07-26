@@ -15,7 +15,7 @@
  */
 package org.lastaflute.web.ruts.multipart;
 
-import java.util.Hashtable;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -27,21 +27,30 @@ import org.lastaflute.web.ruts.multipart.exception.MultipartExceededException;
  */
 public interface MultipartRequestHandler {
 
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
     String MAX_LENGTH_EXCEEDED_KEY = "lastaflute.multipart.SizeLimitExceededException";
 
-    public static MultipartExceededException findExceededException(HttpServletRequest request) {
+    static MultipartExceededException findExceededException(HttpServletRequest request) {
         return (MultipartExceededException) request.getAttribute(MAX_LENGTH_EXCEEDED_KEY);
     }
 
+    // ===================================================================================
+    //                                                                            Handling
+    //                                                                            ========
     void handleRequest(HttpServletRequest request) throws ServletException;
 
     void rollback();
 
     void finish();
 
-    Hashtable<String, Object> getAllElements();
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    Map<String, Object> getAllElements();
 
-    Hashtable<String, MultipartFormFile> getFileElements();
+    Map<String, MultipartFormFile> getFileElements();
 
-    Hashtable<String, String[]> getTextElements();
+    Map<String, String[]> getTextElements();
 }

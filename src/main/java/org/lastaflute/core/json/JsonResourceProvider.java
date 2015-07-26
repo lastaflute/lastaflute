@@ -34,4 +34,12 @@ public interface JsonResourceProvider {
     default boolean isNullsSuppressed() {
         return false; // display nulls as default
     }
+
+    /**
+     * Is pretty print property suppressed (not line separating) in output JSON string?
+     * @return The determination, true or false.
+     */
+    default boolean isPrettyPrintSuppressed() {
+        return false; // line separating if development.here as default
+    }
 }

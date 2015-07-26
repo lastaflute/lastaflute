@@ -15,12 +15,10 @@
  */
 package org.lastaflute.web.login.exception;
 
-import org.lastaflute.core.exception.LaApplicationException;
-
 /**
  * @author jflute
  */
-public class LoginFailureException extends LaApplicationException {
+public class LoginFailureException extends LoginUnauthorizedException {
 
     private static final long serialVersionUID = 1L;
 

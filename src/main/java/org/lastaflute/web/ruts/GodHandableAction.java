@@ -19,6 +19,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
@@ -32,8 +33,10 @@ import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
 import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
 import org.lastaflute.web.exception.ExecuteMethodReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
+import org.lastaflute.web.exception.ExecuteMethodReturnUndefinedResponseException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
+import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
@@ -55,7 +58,8 @@ public class GodHandableAction implements VirtualAction {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(GodHandableAction.class);
-    private static final Object[] EMPTY_ARRAY = new Object[] {};
+    protected static final Object[] EMPTY_ARRAY = new Object[0];
+    protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -106,13 +110,14 @@ public class GodHandableAction implements VirtualAction {
         final ActionHook hook = prepareActionHook();
         try {
             final ActionResponse before = processHookBefore(hook);
-            if (before.isPresent()) { // e.g. login required
+            if (before.isDefined()) { // e.g. login required
                 return reflect(before);
             } else { // mainly here
                 return transactionalExecute(form, hook); // #to_action
             }
         } catch (RuntimeException e) {
-            return reflect(tellExceptionMonologue(hook, e));
+            final ActionResponse monologue = tellExceptionMonologue(hook, e);
+            return reflect(monologue);
         } finally {
             processHookFinally(hook);
         }
@@ -123,17 +128,80 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
-        return (NextJourney) stage.selectable(tx -> {
+        final ExecuteTransactionResult result = (ExecuteTransactionResult) stage.selectable(tx -> {
             final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
+            assertExecuteMethodResponseDefined(response);
             final NextJourney journey = reflect(response); /* also response handling in transaction */
-            tx.returns(journey);
+            boolean rollbackOnly = false;
+            if (runtime.hasValidationError()) {
+                tx.rollbackOnly();
+                rollbackOnly = true;
+            }
+            tx.returns(new ExecuteTransactionResult(response, journey, rollbackOnly));
         } , getExecuteTransactionGenre()).get(); // because of not null
+        if (!result.isRollbackOnly()) {
+            hookAfterTxCommitIfExists(result);
+        }
+        return result.getJourney();
+    }
+
+    protected static class ExecuteTransactionResult {
+
+        protected final ActionResponse response;
+        protected final NextJourney journey;
+        protected final boolean rollbackOnly;
+
+        public ExecuteTransactionResult(ActionResponse response, NextJourney journey, boolean rollbackOnly) {
+            this.response = response;
+            this.journey = journey;
+            this.rollbackOnly = rollbackOnly;
+        }
+
+        public ActionResponse getResponse() {
+            return response;
+        }
+
+        public NextJourney getJourney() {
+            return journey;
+        }
+
+        public boolean isRollbackOnly() {
+            return rollbackOnly;
+        }
+    }
+
+    protected void assertExecuteMethodResponseDefined(ActionResponse response) {
+        if (response.isUndefined()) {
+            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("Cannot return undefined resopnse from the execute method");
+            br.addItem("Advice");
+            br.addElement("Not allowed to return undefined() in execute method.");
+            br.addElement("If you want to return response as empty body,");
+            br.addElement("use asEmptyBody() like this:");
+            br.addElement("  @Execute");
+            br.addElement("  public HtmlResponse index() {");
+            br.addElement("      return HtmlResponse.asEmptyBody();");
+            br.addElement("  }");
+            br.addItem("Action Execute");
+            br.addElement(execute);
+            final String msg = br.buildExceptionMessage();
+            throw new ExecuteMethodReturnUndefinedResponseException(msg);
+        }
     }
 
     protected TransactionGenre getExecuteTransactionGenre() {
         return execute.getTransactionGenre();
     }
 
+    protected void hookAfterTxCommitIfExists(final ExecuteTransactionResult result) {
+        result.getResponse().getAfterTxCommitHook().ifPresent(afterTx -> {
+            afterTx.hook();
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                      Reflect Response
+    //                                      ----------------
     protected NextJourney reflect(ActionResponse response) {
         return reflector.reflect(response);
     }
@@ -146,16 +214,17 @@ public class GodHandableAction implements VirtualAction {
     //                                                ------
     protected ActionResponse processHookBefore(ActionHook hook) {
         if (hook == null) {
-            return ActionResponse.empty();
+            return ActionResponse.undefined();
         }
         showBefore(runtime);
         ActionResponse response = hook.godHandPrologue(runtime);
-        if (isEmpty(response)) {
+        if (isUndefined(response)) {
             response = hook.hookBefore(runtime);
         }
-        if (isPresent(response)) {
+        if (isDefined(response)) {
             runtime.setActionResponse(response);
         }
+        assertAfterTxCommitHookNotSpecified("before", response);
         return response;
     }
 
@@ -174,8 +243,9 @@ public class GodHandableAction implements VirtualAction {
             throw e;
         }
         final ActionResponse response = hook.godHandMonologue(runtime);
-        if (isPresent(response)) {
+        if (isDefined(response)) {
             runtime.setActionResponse(response);
+            assertAfterTxCommitHookNotSpecified("monologue", response);
             return response;
         } else {
             throw e;
@@ -205,16 +275,39 @@ public class GodHandableAction implements VirtualAction {
     }
 
     // -----------------------------------------------------
-    //                                          Small Helper
-    //                                          ------------
-    protected boolean isEmpty(ActionResponse response) {
+    //                                    Undefined Response
+    //                                    ------------------
+    protected boolean isUndefined(ActionResponse response) {
         assertCallbackReturnNotNull(response);
-        return response.isEmpty();
+        return response.isUndefined();
     }
 
-    protected boolean isPresent(ActionResponse response) {
+    protected boolean isDefined(ActionResponse response) {
         assertCallbackReturnNotNull(response);
-        return response.isPresent();
+        return response.isDefined();
+    }
+
+    // -----------------------------------------------------
+    //                                          Assist Logic
+    //                                          ------------
+    protected void assertAfterTxCommitHookNotSpecified(String actionHookTitle, ActionResponse response) {
+        response.getAfterTxCommitHook().ifPresent(hook -> {
+            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("The afterTxCommit() cannot be used in action hook.");
+            br.addItem("Advice");
+            br.addElement("The method only can be in action execute.");
+            br.addElement("Make sure your action hook response.");
+            br.addItem("Specified ActionResponse");
+            br.addElement(response);
+            br.addItem("Specified ResponseHook");
+            br.addElement(hook);
+            br.addItem("Action Execute");
+            br.addElement(execute);
+            br.addItem("ActionHook Type");
+            br.addElement(actionHookTitle);
+            final String msg = br.buildExceptionMessage();
+            throw new IllegalStateException(msg);
+        });
     }
 
     // ===================================================================================
@@ -304,15 +397,31 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected ActionResponse handleValidationErrorException(ValidationErrorException cause) {
-        // API dispatch is not here, needs to call it in error handler by developer
-        // e.g. validate(form, () -> dispatchApiValidationError())
         final ActionMessages errors = cause.getMessages();
+        if (logger.isDebugEnabled()) {
+            final StringBuilder sb = new StringBuilder();
+            sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
+            sb.append(LF).append("[Validation Error]");
+            for (String property : errors.toPropertySet()) {
+                sb.append(LF).append(property);
+                for (Iterator<ActionMessage> ite = errors.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    sb.append(LF).append("  ").append(ite.next());
+                }
+            }
+            sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/");
+            logger.debug(sb.toString());
+        }
         requestManager.errors().save(errors); // also API can use it
+        runtime.setValidationErrors(errors); // reflect to runtime
+        runtime.setFailureCause(cause); // also cause
         final VaErrorHook errorHandler = cause.getErrorHandler();
-        final ActionResponse response = errorHandler.hook();
+        final ActionResponse response = errorHandler.hook(); // failure hook here if API
         if (response == null) {
             throw new IllegalStateException("The handler for validation error cannot return null: " + errorHandler, cause);
         }
+        response.getAfterTxCommitHook().ifPresent(hook -> {
+            throw new IllegalStateException("Validation error always rollbacks transaction but tx-commit hook specified:" + hook);
+        });
         return response;
     }
 
@@ -320,7 +429,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                        Display Data
     //                                                                        ============
     protected void setupDisplayData(NextJourney journey) {
-        if (runtime.isForwardToHtml() && journey.isPresent()) {
+        if (runtime.isForwardToHtml() && journey.isDefined()) {
             runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
         }
     }
@@ -329,7 +438,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                             Logging
     //                                                                             =======
     protected void showTransition(NextJourney journey) {
-        if (logger.isDebugEnabled() && journey.isPresent()) {
+        if (logger.isDebugEnabled() && journey.isDefined()) {
             final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
             final String path = journey.getRoutingPath(); // not null
             final String tag = path.endsWith(".html") ? "#html " : (path.endsWith(".jsp") ? "#jsp " : "");

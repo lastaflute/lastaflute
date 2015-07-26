@@ -45,7 +45,9 @@ public class ActionPathResolver {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(ActionPathResolver.class);
+    private static final Logger logger = LoggerFactory.getLogger(ActionPathResolver.class);
+
+    private static final UrlChain EMPTY_URL_CHAIN = new UrlChain(null);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -84,9 +86,9 @@ public class ActionPathResolver {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Action Resolver]");
-            LOG.info(" actionAdjustmentProvider: " + actionAdjustmentProvider);
+        if (logger.isInfoEnabled()) {
+            logger.info("[Action Resolver]");
+            logger.info(" actionAdjustmentProvider: " + actionAdjustmentProvider);
         }
     }
 
@@ -232,13 +234,27 @@ public class ActionPathResolver {
     //                                                                  ==================
     /**
      * Convert to URL string to move the action. <br>
-     * This method is to build URL string by manually so normally you don't use directly from your action.
+     * e.g. ProductListAction to /product/list/ <br>
+     * And not contain context path.
      * @param actionType The class type of action that it redirects to. (NotNull)
-     * @param redirect Do you redirect to the action?
-     * @param chain The chain of URL to build additional info on URL. (NullAllowed)
      * @return The URL string to move to the action. (NotNull)
      */
-    public String toActionUrl(Class<?> actionType, boolean redirect, UrlChain chain) {
+    public String toActionUrl(Class<?> actionType) {
+        assertArgumentNotNull("actionType", actionType);
+        return toActionUrl(actionType, EMPTY_URL_CHAIN);
+    }
+
+    /**
+     * Convert to URL string to move the action. <br>
+     * e.g. ProductListAction with moreUrl(3) to /product/list/3 <br>
+     * And not contain context path.
+     * @param actionType The class type of action that it redirects to. (NotNull)
+     * @param chain The chain of URL to build additional info on URL. (NotNull)
+     * @return The URL string to move to the action. (NotNull)
+     */
+    public String toActionUrl(Class<?> actionType, UrlChain chain) {
+        assertArgumentNotNull("actionType", actionType);
+        assertArgumentNotNull("chain", chain);
         final String actionPath = resolveActionPath(actionType);
         final List<Object> getParamList = extractGetParamList(chain);
         final StringBuilder sb = new StringBuilder();
@@ -526,8 +542,8 @@ public class ActionPathResolver {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
+    //                                                                        Small Helper
+    //                                                                        ============
     protected void assertArgumentNotNull(String variableName, Object value) {
         if (variableName == null) {
             throw new IllegalArgumentException("The variableName should not be null.");

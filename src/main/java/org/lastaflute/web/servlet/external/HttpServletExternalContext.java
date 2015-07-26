@@ -29,10 +29,17 @@ import org.lastaflute.di.core.ExternalContext;
  * @author modified by jflute (originated in Seasar)
  */
 @SuppressWarnings({ "unchecked", "rawtypes" })
-public class HttpServletExternalContext implements ExternalContext { // TODO jflute lastaflute: [F] refactor: HttpServletExternalContext generic resolve
+public class HttpServletExternalContext implements ExternalContext {
 
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
     protected static final Map LAZY_MARK = new HashMap();
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    // #hope: resolve generic by jflute
     protected final ThreadLocal requests = new ThreadLocal();
     protected final ThreadLocal responses = new ThreadLocal();
     protected final ThreadLocal requestMaps = new ThreadLocal();
@@ -45,6 +52,10 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
 
     protected ServletContext application;
 
+    // ===================================================================================
+    //                                                                      Implementation
+    //                                                                      ==============
+    @Override
     public Object getRequest() {
         return getHttpServletRequest();
     }
@@ -53,6 +64,7 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         return (HttpServletRequest) requests.get();
     }
 
+    @Override
     public void setRequest(Object request) {
         requests.set(request);
         if (request == null) {
@@ -75,14 +87,17 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         }
     }
 
+    @Override
     public Object getResponse() {
         return responses.get();
     }
 
+    @Override
     public void setResponse(Object response) {
         responses.set(response);
     }
 
+    @Override
     public Object getSession() {
         return getHttpSession();
     }
@@ -95,10 +110,12 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         return request.getSession();
     }
 
+    @Override
     public Object getApplication() {
         return application;
     }
 
+    @Override
     public void setApplication(Object application) {
         if (!(application instanceof ServletContext)) {
             throw new IllegalArgumentException("application:" + application);
@@ -106,14 +123,17 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         this.application = (ServletContext) application;
     }
 
+    @Override
     public Map getApplicationMap() {
         return new ServletApplicationMap(application);
     }
 
+    @Override
     public Map getInitParameterMap() {
         return new ServletInitParameterMap(application);
     }
 
+    @Override
     public Map getRequestCookieMap() {
         Map requestCookieMap = (Map) requestCookieMaps.get();
         if (requestCookieMap == null) {
@@ -123,6 +143,7 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         return requestCookieMap;
     }
 
+    @Override
     public Map getRequestHeaderMap() {
         Map requestHeaderMap = (Map) requestHeaderMaps.get();
         if (requestHeaderMap == null) {
@@ -132,6 +153,7 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         return requestHeaderMap;
     }
 
+    @Override
     public Map getRequestHeaderValuesMap() {
         Map requestHeaderMap = (Map) requestHeaderValuesMaps.get();
         if (requestHeaderMap == null) {
@@ -141,6 +163,7 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         return requestHeaderMap;
     }
 
+    @Override
     public Map getRequestMap() {
         Map requestMap = (Map) requestMaps.get();
         if (requestMap == null) {
@@ -150,6 +173,7 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         return requestMap;
     }
 
+    @Override
     public Map getRequestParameterMap() {
         Map requestParameterMap = (Map) requestParameterMaps.get();
         if (requestParameterMap == null) {
@@ -162,6 +186,7 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         return requestParameterMap;
     }
 
+    @Override
     public Map getRequestParameterValuesMap() {
         Map requestParameterValuesMap = (Map) requestParameterValuesMaps.get();
         if (requestParameterValuesMap == null) {
@@ -174,6 +199,7 @@ public class HttpServletExternalContext implements ExternalContext { // TODO jfl
         return requestParameterValuesMap;
     }
 
+    @Override
     public Map getSessionMap() {
         Map sessionMap = (Map) sessionMaps.get();
         if (sessionMap == null) {

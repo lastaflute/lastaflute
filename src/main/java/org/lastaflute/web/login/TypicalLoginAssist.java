@@ -25,15 +25,13 @@ import javax.annotation.Resource;
 import org.dbflute.Entity;
 import org.dbflute.helper.HandyDate;
 import org.dbflute.optional.OptionalEntity;
-import org.dbflute.optional.OptionalObject;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.lastaflute.core.security.PrimaryCipher;
 import org.lastaflute.core.time.TimeManager;
-import org.lastaflute.db.jta.stage.TransactionStage;
-import org.lastaflute.web.api.ApiAction;
+import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.login.exception.LoginFailureException;
-import org.lastaflute.web.login.exception.LoginTimeoutException;
+import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.login.option.LoginOpCall;
 import org.lastaflute.web.login.option.LoginOption;
 import org.lastaflute.web.login.option.LoginSpecifiedOption;
@@ -55,12 +53,15 @@ import org.slf4j.LoggerFactory;
  * @param <USER_ENTITY> The type of user entity or model.
  * @author jflute
  */
-public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY> implements LoginManager {
+public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY> implements LoginAssistable {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(TypicalLoginAssist.class);
+
+    /** The session key of user bean. */
+    private static final String USER_BEAN_KEY = LastaWebKey.USER_BEAN_KEY;
 
     /** The delimiter of remember-me login value saved in cookie. */
     private static final String REMEMBER_ME_COOKIE_DELIMITER = ":>:<:";
@@ -92,9 +93,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     @Resource
     private ActionPathResolver actionPathResolver;
 
-    @Resource
-    private TransactionStage transactionStage;;
-
     // ===================================================================================
     //                                                                           Find User
     //                                                                           =========
@@ -104,6 +102,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
      * @return true if the user is login-able.
      */
+    @Override
     public boolean checkUserLoginable(String email, String password) {
         return doCheckUserLoginable(email, encryptPassword(password));
     }
@@ -122,6 +121,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
      * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
      */
+    @Override
     public OptionalEntity<USER_ENTITY> findLoginUser(String email, String password) {
         return doFindLoginUser(email, encryptPassword(password));
     }
@@ -135,19 +135,11 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(String email, String cipheredPassword);
 
     /**
-     * Encrypt the password of the login user.
-     * @param plainPassword The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return The encrypted string of the password. (NotNull)
-     */
-    protected String encryptPassword(String plainPassword) {
-        return primaryCipher.oneway(plainPassword);
-    }
-
-    /**
      * Find the login user in the database.
      * @param userId for the login user. (NotNull)
      * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
      */
+    @Override
     public OptionalEntity<USER_ENTITY> findLoginUser(Long userId) {
         return doFindLoginUser(userId);
     }
@@ -167,29 +159,25 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                       ---------------
     @Override
     public void login(String account, String password, LoginOpCall opLambda) throws LoginFailureException {
-        final LoginOption option = createLoginOption(opLambda);
-        doLogin(account, password, option);
+        doLogin(account, password, createLoginOption(opLambda));
     }
 
     @Override
     public HtmlResponse loginRedirect(String account, String password, LoginOpCall opLambda, LoginRedirectSuccessCall oneArgLambda)
             throws LoginFailureException {
-        final LoginOption option = createLoginOption(opLambda);
-        doLogin(account, password, option); // exception if login failure
+        doLogin(account, password, createLoginOption(opLambda)); // exception if login failure
         return switchToRequestedActionIfExists(oneArgLambda.success()); // so success only here
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public void givenLogin(Entity givenEntity, LoginOpCall opLambda) throws LoginFailureException {
-        final LoginOption option = createLoginOption(opLambda);
-        doLoginByGivenEntity((USER_ENTITY) givenEntity, option);
+        doLoginByGivenEntity((USER_ENTITY) givenEntity, createLoginOption(opLambda));
     }
 
     @Override
     public void identityLogin(Long userId, LoginOpCall opLambda) throws LoginFailureException {
-        final LoginOption op = createLoginOption(opLambda);
-        doLoginByIdentity(userId, op);
+        doLoginByIdentity(userId, createLoginOption(opLambda));
     }
 
     protected LoginOption createLoginOption(LoginOpCall opLambda) {
@@ -222,9 +210,8 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * Do actually login for the user by given entity. (no silent)
      * @param givenEntity The given entity for user. (NotNull)
      * @param option The option of login specified by caller. (NotNull)
-     * @throws LoginFailureException When it fails to do login by the user info.
      */
-    protected void doLoginByGivenEntity(USER_ENTITY givenEntity, LoginSpecifiedOption option) throws LoginFailureException {
+    protected void doLoginByGivenEntity(USER_ENTITY givenEntity, LoginSpecifiedOption option) {
         assertGivenEntityRequired(givenEntity);
         handleLoginSuccess(givenEntity, option);
     }
@@ -256,10 +243,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             ((SyncCheckable) userBean).setLastestSyncCheckDateTime(timeManager.currentDateTime());
         }
         if (option.isRememberMe()) {
-            saveAutoLoginKeyToCookie(userEntity, userBean);
+            saveRememberMeKeyToCookie(userEntity, userBean);
         }
         if (!option.isSilentLogin()) { // mainly here
-            transactionCallSaveLoginHistory(userEntity, userBean, option);
+            saveLoginHistory(userEntity, userBean, option);
             processOnBrightLogin(userEntity, userBean, option);
         } else {
             processOnSilentLogin(userEntity, userBean, option);
@@ -286,7 +273,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         regenerateSessionId();
         logger.debug("...Saving login info to session");
         final USER_BEAN userBean = createUserBean(userEntity);
-        sessionManager.setAttribute(userBean);
+        sessionManager.setAttribute(getUserBeanKey(), userBean);
         return userBean;
     }
 
@@ -306,19 +293,24 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected abstract USER_BEAN createUserBean(USER_ENTITY userEntity);
 
+    protected String getUserBeanKey() {
+        return USER_BEAN_KEY;
+    }
+
     @Override
     public void reselectSessionUserBeanIfExists() throws LoginFailureException {
         getSessionUserBean().ifPresent(oldBean -> {
             inheritUserBeanAdditionalInfo(oldBean);
             final Long userId = oldBean.getUserId();
             logger.debug("...Re-selecting user bean in session: userId={}", userId);
-            sessionManager.setAttribute(createUserBean(findLoginUser(userId).orElseThrow(() -> { /* might be already left */
-                logout(); /* to clear old user info in session */
-                String msg = "Not found the user by the user ID: " + userId;
-                return handleLoginFailure(msg, userId, OptionalThing.ofNullable(null, () -> {
+            final USER_ENTITY userEntity = findLoginUser(userId).orElseThrow(() -> { // might be already left
+                logout(); // to clear old user info in session
+                final OptionalThing<LoginSpecifiedOption> emptyOption = OptionalThing.ofNullable(null, () -> {
                     throw new IllegalStateException("Not found the login option when reselect: userId=" + userId);
-                }));
-            })));
+                });
+                return handleLoginFailure("Not found the user by the user ID: " + userId, userId, emptyOption);
+            });
+            sessionManager.setAttribute(getUserBeanKey(), createUserBean(userEntity));
         });
     }
 
@@ -327,17 +319,17 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     }
 
     // -----------------------------------------------------
-    //                                    AutoLogin Handling
-    //                                    ------------------
+    //                                   RememberMe Handling
+    //                                   -------------------
     /**
      * Save remember-me key to cookie.
      * @param userEntity The selected entity of login user. (NotNull)
      * @param userBean The user bean saved in session. (NotNull)
      */
-    protected void saveAutoLoginKeyToCookie(USER_ENTITY userEntity, USER_BEAN userBean) {
-        final int expireDays = getAutoLoginAccessTokenExpireDays();
-        final String cookieKey = getCookieAutoLoginKey();
-        doSaveAutoLoginCookie(userEntity, userBean, expireDays, cookieKey);
+    protected void saveRememberMeKeyToCookie(USER_ENTITY userEntity, USER_BEAN userBean) {
+        final int expireDays = getRememberMeAccessTokenExpireDays();
+        final String cookieKey = getCookieRememberMeKey();
+        doSaveRememberMeCookie(userEntity, userBean, expireDays, cookieKey);
     }
 
     /**
@@ -345,15 +337,15 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * You can change it by override.
      * @return The count of expire days. (NotMinus, NotZero)
      */
-    protected int getAutoLoginAccessTokenExpireDays() {
+    protected int getRememberMeAccessTokenExpireDays() {
         return REMEMBER_ME_ACCESS_TOKEN_DEFAULT_EXPIRE_DAYS; // as default for compatibility
     }
 
     /**
-     * Get the key of auto login saved in cookie.
+     * Get the key of remember-me saved in cookie.
      * @return The string key for cookie. (NotNull)
      */
-    protected abstract String getCookieAutoLoginKey();
+    protected abstract String getCookieRememberMeKey();
 
     /**
      * Do save remember-me key to cookie.
@@ -362,27 +354,27 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param expireDays The expire days of both access token and cookie value.
      * @param cookieKey The key of the cookie. (NotNull)
      */
-    protected void doSaveAutoLoginCookie(USER_ENTITY userEntity, USER_BEAN userBean, int expireDays, String cookieKey) {
+    protected void doSaveRememberMeCookie(USER_ENTITY userEntity, USER_BEAN userBean, int expireDays, String cookieKey) {
         logger.debug("...Saving remember-me key to cookie: key={}", cookieKey);
-        final String value = buildAutoLoginCookieValue(userEntity, userBean, expireDays);
+        final String value = buildRememberMeCookieValue(userEntity, userBean, expireDays);
         final int expireSeconds = expireDays * 60 * 60 * 24; // cookie's expire, same as access token
         cookieManager.setCookieCiphered(cookieKey, value, expireSeconds);
     }
 
     /**
-     * Build the value for auto login saved in cookie. <br>
+     * Build the value for remember-me saved in cookie. <br>
      * You can change access token's structure by override. #change_access_token
      * @param userEntity The selected entity of login user. (NotNull)
      * @param userBean The user bean saved in session. (NotNull)
      * @param expireDays The count of expired days from current times. (NotNull)
-     * @return The string value for auto login. (NotNull)
+     * @return The string value for remember-me. (NotNull)
      */
-    protected String buildAutoLoginCookieValue(USER_ENTITY userEntity, USER_BEAN userBean, int expireDays) {
-        final String autoLoginKey = createAutoLoginKey(userEntity, userBean);
-        final String delimiter = getAutoLoginDelimiter();
+    protected String buildRememberMeCookieValue(USER_ENTITY userEntity, USER_BEAN userBean, int expireDays) {
+        final String autoLoginKey = createRememberMeKey(userEntity, userBean);
+        final String delimiter = getRememberMeDelimiter();
         final HandyDate currentHandyDate = timeManager.currentHandyDate();
         final HandyDate expireDate = currentHandyDate.addDay(expireDays); // access token's expire
-        return autoLoginKey + delimiter + formatForAutoLoginExpireDate(expireDate);
+        return autoLoginKey + delimiter + formatForRememberMeExpireDate(expireDate);
     }
 
     /**
@@ -392,46 +384,27 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param userBean The user bean saved in session. (NotNull)
      * @return The string expression for remember-me key. (NotNull)
      */
-    protected String createAutoLoginKey(USER_ENTITY userEntity, USER_BEAN userBean) {
+    protected String createRememberMeKey(USER_ENTITY userEntity, USER_BEAN userBean) {
         return String.valueOf(userBean.getUserId()); // as default (override if it needs)
     }
 
-    // -----------------------------------------------------
-    //                                      History Handling
-    //                                      ----------------
     /**
-     * Call the process, saving login history, in new transaction for e.g. remember-me in callback. <br>
-     * Update statement needs transaction (access-context) so needed. <br>
-     * Meanwhile, the transaction inherits already-begun transaction for e.g. normal login process.
-     * @param userEntity The entity of the found login user. (NotNull)
-     * @param userBean The bean of the user saved in session. (NotNull)
-     * @param option The option of login specified by caller. (NotNull)
-     */
-    protected void transactionCallSaveLoginHistory(USER_ENTITY userEntity, USER_BEAN userBean, LoginSpecifiedOption option) {
-        try {
-            // inherit when e.g. called by action, begin new when e.g. remember-me
-            transactionStage.requiresNew(tx -> {
-                saveLoginHistory(userEntity, userBean, option);
-            });
-        } catch (Throwable e) {
-            handleSavingLoginHistoryTransactionFailure(userBean, e);
-        }
-    }
-
-    /**
-     * Handle the exception of transaction failure for saving login history.
-     * @param userBean The bean of the user saved in session. (NotNull)
-     * @param cause The cause exception of transaction failure. (NotNull)
-     */
-    protected void handleSavingLoginHistoryTransactionFailure(USER_BEAN userBean, Throwable cause) {
-        // continue the request because of history, latter process throws the exception if fatal error
-        logger.warn("Failed to save login history: {}", userBean.getUserId(), cause);
-    }
-
-    /**
-     * Save the history of the success login. (already saved in session at this point) <br>
+     * Save the history of the success login. (except silent login) <br>
      * For example, you can save the login user's info to database. <br>
-     * This is NOT called when silent login.
+     * You should use other transaction because this process is not related to main business.
+     * <pre>
+     * <span style="color: #3F7E5E">// use other transaction</span>
+     * <span style="color: #0000C0">transactionStage</span>.requiresNew(tx <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     ...
+     * });
+     * 
+     * <span style="color: #3F7E5E">// and also asynchronous (then exception is handled by the other thread)</span>
+     * <span style="color: #0000C0">asyncManager</span>.async(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #0000C0">transactionStage</span>.requiresNew(tx <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         ...
+     *     });
+     * });
+     * </pre>
      * @param userEntity The entity of the login user. (NotNull)
      * @param userBean The user bean of the login user, already saved in session. (NotNull)
      * @param option The option of login specified by caller. (NotNull)
@@ -461,12 +434,18 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         // do nothing as default
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public String encryptPassword(String plainPassword) {
+        return primaryCipher.oneway(plainPassword);
+    }
+
     // ===================================================================================
     //                                                                    RememberMe Login
     //                                                                    ================
     @Override
     public boolean rememberMe(RememberMeLoginOpCall opLambda) {
-        return delegateAutoLogin(createRememberMeLoginOption(opLambda));
+        return delegateRememberMe(createRememberMeLoginOption(opLambda));
     }
 
     protected RememberMeLoginOption createRememberMeLoginOption(RememberMeLoginOpCall opLambda) {
@@ -475,16 +454,16 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         return option;
     }
 
-    protected boolean delegateAutoLogin(RememberMeLoginSpecifiedOption option) {
-        return cookieManager.getCookieCiphered(getCookieAutoLoginKey()).map(cookie -> {
+    protected boolean delegateRememberMe(RememberMeLoginSpecifiedOption option) {
+        return cookieManager.getCookieCiphered(getCookieRememberMeKey()).map(cookie -> {
             final String cookieValue = cookie.getValue();
             if (cookieValue != null && cookieValue.trim().length() > 0) {
-                final String[] valueAry = cookieValue.split(getAutoLoginDelimiter());
-                final Boolean handled = handleAutoLoginCookie(valueAry, option);
+                final String[] valueAry = cookieValue.split(getRememberMeDelimiter());
+                final Boolean handled = handleRememberMeCookie(valueAry, option);
                 if (handled != null) {
                     return handled;
                 }
-                if (handleAutoLoginInvalidCookie(cookieValue, valueAry)) { // you can also retry
+                if (handleRememberMeInvalidCookie(cookieValue, valueAry)) { // you can also retry
                     return true; // success by the handling
                 }
             }
@@ -492,11 +471,11 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         }).orElse(false);
     }
 
-    protected String getAutoLoginDelimiter() {
+    protected String getRememberMeDelimiter() {
         return REMEMBER_ME_COOKIE_DELIMITER;
     }
 
-    protected boolean handleAutoLoginInvalidCookie(String cookieValue, String[] valueAry) {
+    protected boolean handleRememberMeInvalidCookie(String cookieValue, String[] valueAry) {
         return false; // if invalid length, it might be hack so do nothing here as default
     }
 
@@ -510,15 +489,15 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param option The option of remember-me login specified by caller. (NotNull)
      * @return The determination of remember-me, true or false or null. (NullAllowed: means invalid cookie) 
      */
-    protected Boolean handleAutoLoginCookie(String[] valueAry, RememberMeLoginSpecifiedOption option) {
+    protected Boolean handleRememberMeCookie(String[] valueAry, RememberMeLoginSpecifiedOption option) {
         if (valueAry.length != 2) { // invalid cookie
             return null;
         }
         final String userKey = valueAry[0]; // resolved by identity login
         final String expireDate = valueAry[1]; // AccessToken's expire
-        if (isValidAutoLoginCookie(userKey, expireDate)) {
+        if (isValidRememberMeCookie(userKey, expireDate)) {
             final Long userId = convertCookieUserKeyToUserId(userKey);
-            return doAutoLogin(userId, expireDate, option);
+            return doRememberMe(userId, expireDate, option);
         }
         return null;
     }
@@ -527,10 +506,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * Are the user ID and expire date extracted from cookie valid?
      * @param userKey The key of the login user. (NotNull)
      * @param expireDate The string expression for expire date of remember-me access token. (NotNull)
-     * @return Is a validation for auto login OK?
+     * @return Is a validation for remember-me OK?
      */
-    protected boolean isValidAutoLoginCookie(String userKey, String expireDate) {
-        final String currentDate = formatForAutoLoginExpireDate(timeManager.currentHandyDate());
+    protected boolean isValidRememberMeCookie(String userKey, String expireDate) {
+        final String currentDate = formatForRememberMeExpireDate(timeManager.currentHandyDate());
         if (currentDate.compareTo(expireDate) < 0) { // String v.s. String
             return true; // valid access token within time limit
         }
@@ -539,7 +518,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         return false;
     }
 
-    protected String formatForAutoLoginExpireDate(HandyDate expireDate) {
+    protected String formatForRememberMeExpireDate(HandyDate expireDate) {
         return expireDate.toDisp(REMEMBER_ME_ACCESS_TOKEN_EXPIRE_DATE_PATTERN);
     }
 
@@ -560,8 +539,8 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     }
 
     // -----------------------------------------------------
-    //                                    Actually AutoLogin
-    //                                    ------------------
+    //                                   Actually RememberMe
+    //                                   -------------------
     /**
      * Do actually remember-me for the user.
      * @param userId The ID of the login user, used by identity login. (NotNull)
@@ -569,7 +548,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param option The option of remember-me login specified by caller. (NotNull)
      * @return Is the remember-me success?
      */
-    protected boolean doAutoLogin(Long userId, String expireDate, RememberMeLoginSpecifiedOption option) {
+    protected boolean doRememberMe(Long userId, String expireDate, RememberMeLoginSpecifiedOption option) {
         final boolean updateToken = option.isUpdateToken();
         final boolean silentLogin = option.isSilentLogin();
         if (logger.isDebugEnabled()) {
@@ -601,8 +580,8 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                                                              ======
     @Override
     public void logout() {
-        sessionManager.removeAttribute(getUserBeanType());
-        cookieManager.removeCookie(getCookieAutoLoginKey());
+        sessionManager.removeAttribute(getUserBeanKey());
+        cookieManager.removeCookie(getCookieRememberMeKey());
     }
 
     /**
@@ -618,45 +597,47 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                         LoginRequired
     //                                         -------------
     @Override
-    public OptionalThing<String> checkLoginRequired(LoginHandlingResource resource) {
-        final OptionalThing<String> redirectTo;
+    public void checkLoginRequired(LoginHandlingResource resource) throws LoginRequiredException {
         if (isLoginRequiredAction(resource)) {
-            redirectTo = processLoginRequired(resource);
+            asLoginRequired(resource);
         } else {
-            redirectTo = processNotLoginRequired(resource);
+            asNonLoginRequired(resource);
         }
-        return redirectTo;
     }
 
     /**
-     * Process for the login-required action.
+     * Check as the login-required action.
      * @param resource The resource of login handling to determine. (NotNull)
-     * @return The optional forward path, basically for login redirect. (NotNull, EmptyAllowed: then login check passed)
+     * @throws LoginRequiredException When it fails to access the action for non-login.
      */
-    protected OptionalThing<String> processLoginRequired(LoginHandlingResource resource) {
+    protected void asLoginRequired(LoginHandlingResource resource) throws LoginRequiredException {
         logger.debug("...Checking login status for login required");
-        if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
-            return processAuthority(resource);
+        if (tryAlreadyLoginOrRememberMe(resource)) {
+            checkPermission(resource); // throws if denied
+            return; // OK
         }
-        saveRequestedLoginRedirectInfo();
-        final OptionalThing<String> loginAction = redirectToRequiredCheckedLoginAction();
-        loginAction.ifPresent(action -> logger.debug("...Redirecting to login action: {}", action));
-        return loginAction;
+        if (needsSavingRequestedLoginRedirect(resource)) {
+            saveRequestedLoginRedirectInfo();
+        }
+        throwLoginRequiredException("Cannot access the action: " + resource);
     }
 
-    /**
-     * Redirect to action when required checked (basically login action). <br>
-     * You can customize the redirection when not login but login required.
-     * @return The optional forward path, basically for login redirect. (NotNull, EmptyAllowed: then login check passed)
-     */
-    protected OptionalThing<String> redirectToRequiredCheckedLoginAction() {
-        return OptionalThing.of(redirectToLoginAction());
+    protected boolean needsSavingRequestedLoginRedirect(LoginHandlingResource resource) {
+        return !resource.isApiExecute(); // unneeded when API
+    }
+
+    protected void throwLoginRequiredException(String msg) {
+        throw new LoginRequiredException(msg);
     }
 
     // -----------------------------------------------------
-    //                                         Already Login
-    //                                         -------------
-    protected boolean processAlreadyLogin(LoginHandlingResource resource) {
+    //                          Already Login or Remember Me
+    //                          ----------------------------
+    protected boolean tryAlreadyLoginOrRememberMe(LoginHandlingResource resource) {
+        return doTryAlreadyLogin(resource) || doTryRememberMe(resource);
+    }
+
+    protected boolean doTryAlreadyLogin(LoginHandlingResource resource) {
         return getSessionUserBean().map(userBean -> {
             if (!syncCheckLoginSessionIfNeeds(userBean)) {
                 return false;
@@ -665,6 +646,25 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             logger.debug("...Passing login check as already-login");
             return true;
         }).orElse(false);
+    }
+
+    protected boolean doTryRememberMe(LoginHandlingResource resource) {
+        final boolean updateToken = isUpdateTokenWhenRememberMe(resource);
+        final boolean silently = isSilentlyWhenRememberMe(resource);
+        final boolean success = rememberMe(op -> op.updateToken(updateToken).silentLogin(silently));
+        return success && getSessionUserBean().map(userBean -> {
+            clearLoginRedirectBean();
+            logger.debug("...Passing login check as remember-me");
+            return true;
+        }).orElse(false);
+    }
+
+    protected boolean isUpdateTokenWhenRememberMe(LoginHandlingResource resource) {
+        return false; // as default
+    }
+
+    protected boolean isSilentlyWhenRememberMe(LoginHandlingResource resource) {
+        return false; // as default
     }
 
     // -----------------------------------------------------
@@ -689,10 +689,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         return findLoginSessionSyncCheckUser(userBean).map(loginUser -> {
             handleLoginSessionSyncCheckSuccess(userBean, loginUser);
             return true;
-        }).orElseGet(() -> { /* the user might be assigned here */
+        }).orElseGet(() -> { // the user might be assigned here
             logger.debug("*The user already cannot login: {}", userBean);
-            logout(); /* remove user info from session */
-            return false; /* means check NG */
+            logout(); // remove user info from session
+            return false; // means check NG
         });
     }
 
@@ -713,28 +713,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     protected void handleLoginSessionSyncCheckSuccess(USER_BEAN userBean, USER_ENTITY loginUser) {
         // do nothing as default (you can add original process by override)
-    }
-
-    // -----------------------------------------------------
-    //                                            Auto Login
-    //                                            ----------
-    protected boolean processAutoLogin(LoginHandlingResource resource) {
-        final boolean updateToken = isUpdateTokenWhenAutoLogin(resource);
-        final boolean silently = isSilentlyWhenAutoLogin(resource);
-        final boolean success = rememberMe(op -> op.updateToken(updateToken).silentLogin(silently));
-        return success && getSessionUserBean().map(userBean -> {
-            clearLoginRedirectBean();
-            logger.debug("...Passing login check as remember-me");
-            return true;
-        }).orElse(false);
-    }
-
-    protected boolean isUpdateTokenWhenAutoLogin(LoginHandlingResource resource) {
-        return false; // as default
-    }
-
-    protected boolean isSilentlyWhenAutoLogin(LoginHandlingResource resource) {
-        return false; // as default
     }
 
     // -----------------------------------------------------
@@ -761,39 +739,27 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                      Session UserBean
     //                                      ----------------
     @Override
-    public OptionalThing<USER_BEAN> getSessionUserBean() { // quit covariant return type for optional
-        final Class<USER_BEAN> beanType = getUserBeanType();
-        return OptionalThing.ofNullable(sessionManager.getAttribute(beanType).orElse(null), () -> {
-            String msg = "Not found the user in session by the type:" + beanType;
-            throw new LoginTimeoutException(msg); /* to login action */
+    public OptionalThing<USER_BEAN> getSessionUserBean() { // use covariant generic type
+        final String key = getUserBeanKey();
+        return OptionalThing.ofNullable(sessionManager.getAttribute(key, getUserBeanType()).orElse(null), () -> {
+            throwLoginRequiredException("Not found the user in session by the key:" + key); // to login action
         });
     }
 
     // -----------------------------------------------------
-    //                                             Authority
-    //                                             ---------
-    /**
-     * Process for the authority of the login user. (called in login status)
-     * @param resource The resource of login handling to determine. (NotNull)
-     * @return The forward path, basically for authority redirect. (NotNull, EmptyAllowed: then authority check passed)
-     */
-    protected OptionalThing<String> processAuthority(LoginHandlingResource resource) {
-        return OptionalObject.empty(); // no check as default, you can override
-    }
-
-    // -----------------------------------------------------
-    //                                     Not LoginRequired
+    //                                     Non LoginRequired
     //                                     -----------------
     /**
-     * Process for the NOT login-required action.
+     * Check as the non login required action.
      * @param resource The resource of login handling to determine. (NotNull)
-     * @return The forward path, basically for login redirect. (NullAllowed)
+     * @throws LoginRequiredException When it fails to access the action for login authority.
      */
-    protected OptionalThing<String> processNotLoginRequired(LoginHandlingResource resource) {
-        if (isAutoLoginWhenNotLoginRequired(resource)) {
-            logger.debug("...Checking login status for not-login required");
-            if (processAlreadyLogin(resource) || processAutoLogin(resource)) {
-                return processAuthority(resource);
+    protected void asNonLoginRequired(LoginHandlingResource resource) throws LoginRequiredException {
+        if (!isSuppressRememberMeOfNonLoginRequired(resource)) { // option just in case
+            logger.debug("...Checking login status for non login required");
+            if (tryAlreadyLoginOrRememberMe(resource)) {
+                checkPermission(resource); // throws if denied
+                return; // OK
             }
         }
         if (isLoginRedirectBeanKeptAction(resource)) {
@@ -801,9 +767,17 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             logger.debug("...Passing login check as login action (or redirect-kept action)");
         } else {
             clearLoginRedirectBean();
-            logger.debug("...Passing login check as not required");
+            logger.debug("...Passing login check as non login required");
         }
-        return OptionalObject.empty(); // no redirect
+    }
+
+    /**
+     * Does it suppress remember-me when non login required?
+     * @param resource The resource of login handling to determine. (NotNull)
+     * @return The determination, true or false.
+     */
+    protected boolean isSuppressRememberMeOfNonLoginRequired(LoginHandlingResource resource) {
+        return false; // as default
     }
 
     /**
@@ -812,19 +786,20 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @return The determination, true or false.
      */
     protected boolean isLoginRedirectBeanKeptAction(LoginHandlingResource resource) {
-        // normally both are same action, but redirect action might be changed
-        return isLoginActionOrRedirectLoginAction(resource);
+        return isLoginActionOrRedirectLoginAction(resource); // normally both are same action, you can change it.
     }
 
+    // -----------------------------------------------------
+    //                                            Permission
+    //                                            ----------
     /**
-     * Does it remember-me when not-login required? <br>
-     * If not-login-required action also should accept remember-me, <br>
-     * e.g. switch display by login or not, override this and return true.
+     * Check the permission of the login user. (called in login status) <br>
+     * If the request cannot access the action for permission denied, throw LoginRequiredException.
      * @param resource The resource of login handling to determine. (NotNull)
-     * @return The determination, true or false.
+     * @throws LoginRequiredException When it fails to access the action for permission denied.
      */
-    protected boolean isAutoLoginWhenNotLoginRequired(LoginHandlingResource resource) {
-        return false; // as default
+    protected void checkPermission(LoginHandlingResource resource) throws LoginRequiredException {
+        // no check as default, you can override
     }
 
     // -----------------------------------------------------
@@ -832,9 +807,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                           -----------
     @Override
     public boolean isLoginAction(LoginHandlingResource resource) {
-        final Class<?> actionClass = resource.getActionClass();
-        final Class<?> loginActionType = getLoginActionType();
-        return loginActionType.isAssignableFrom(actionClass);
+        return getLoginActionType().isAssignableFrom(resource.getActionClass());
     }
 
     /**
@@ -850,9 +823,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @return The determination, true or false.
      */
     protected boolean isRedirectLoginAction(LoginHandlingResource resource) {
-        final Class<?> actionClass = resource.getActionClass();
-        final Class<?> loginActionType = getRedirectLoginActionType();
-        return loginActionType.isAssignableFrom(actionClass);
+        return getRedirectLoginActionType().isAssignableFrom(resource.getActionClass());
     }
 
     /**
@@ -862,12 +833,6 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected Class<?> getRedirectLoginActionType() {
         return getLoginActionType(); // same pure login type as default
-    }
-
-    @Override
-    public boolean isApiAction(LoginHandlingResource resource) {
-        final Class<?> actionClass = resource.getActionClass();
-        return ApiAction.class.isAssignableFrom(actionClass);
     }
 
     protected boolean isLoginActionOrRedirectLoginAction(LoginHandlingResource resource) {
@@ -891,9 +856,10 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     }
 
     @Override
-    public String redirectToLoginAction() {
+    public HtmlResponse redirectToLoginAction() {
         final Class<?> redirectLoginActionType = getRedirectLoginActionType();
-        return actionPathResolver.toActionUrl(redirectLoginActionType, true, null);
+        final String actionUrl = actionPathResolver.toActionUrl(redirectLoginActionType);
+        return HtmlResponse.fromRedirectPath(actionUrl);
     }
 
     @Override
@@ -916,15 +882,12 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     @Override
     public HtmlResponse switchToRequestedActionIfExists(HtmlResponse response) {
-        final OptionalThing<LoginRedirectBean> opt = getLoginRedirectBean();
-        if (opt.isPresent() && opt.get().hasRedirectPath()) {
+        return getLoginRedirectBean().filter(bean -> bean.hasRedirectPath()).map(bean -> {
             clearLoginRedirectBean();
-            final String redirectPath = opt.get().getRedirectPath();
+            final String redirectPath = bean.getRedirectPath();
             logger.debug("...Switching redirection to requested {}", redirectPath);
             return HtmlResponse.fromRedirectPath(redirectPath);
-        } else {
-            return response;
-        }
+        }).orElse(response);
     }
 
     // ===================================================================================

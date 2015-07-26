@@ -41,7 +41,7 @@ public class SimpleTimeManager implements TimeManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleTimeManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleTimeManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -64,6 +64,9 @@ public class SimpleTimeManager implements TimeManager {
 
     /** Is it absolute time mode when using {@link adjustTimeMillis}? (not used if development) */
     protected boolean adjustAbsoluteMode;
+
+    /** The provider of current time as real time. (NullAllowed: option, so normally null) */
+    protected CurrentTimeProvider realCurrentTimeProvider;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -88,6 +91,7 @@ public class SimpleTimeManager implements TimeManager {
             adjustTimeMillis = provider.provideAdjustTimeMillis();
             adjustAbsoluteMode = provider.isAdjustAbsoluteMode();
         }
+        realCurrentTimeProvider = provider.provideRealCurrentTimeProvider(); // null allowed
         showBootLogging();
     }
 
@@ -96,15 +100,18 @@ public class SimpleTimeManager implements TimeManager {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Time Manager]");
-            LOG.info(" businessTimeHandler: " + businessTimeHandler);
+        if (logger.isInfoEnabled()) {
+            logger.info("[Time Manager]");
+            logger.info(" businessTimeHandler: " + businessTimeHandler);
             if (developmentProvider != null) { // in development
-                LOG.info(" developmentProvider: " + developmentProvider);
+                logger.info(" developmentProvider: " + developmentProvider);
             } else {
-                LOG.info(" currentIgnoreTransaction: " + currentIgnoreTransaction);
-                LOG.info(" adjustTimeMillis: " + adjustTimeMillis);
-                LOG.info(" adjustAbsoluteMode: " + adjustAbsoluteMode);
+                logger.info(" currentIgnoreTransaction: " + currentIgnoreTransaction);
+                logger.info(" adjustTimeMillis: " + adjustTimeMillis);
+                logger.info(" adjustAbsoluteMode: " + adjustAbsoluteMode);
+            }
+            if (realCurrentTimeProvider != null) {
+                logger.info(" realCurrentTimeProvider: " + realCurrentTimeProvider);
             }
         }
     }
@@ -174,7 +181,15 @@ public class SimpleTimeManager implements TimeManager {
         if (absolute) {
             return adjust;
         } else {
-            return System.currentTimeMillis() + adjust;
+            return realCurrentTimeMillis() + adjust;
+        }
+    }
+
+    protected long realCurrentTimeMillis() {
+        if (realCurrentTimeProvider != null) {
+            return realCurrentTimeProvider.currentTimeMillis();
+        } else {
+            return System.currentTimeMillis();
         }
     }
 

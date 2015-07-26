@@ -9,23 +9,28 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.api;
+package org.lastaflute.web.token;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.lastaflute.web.LastaWebKey;
 
 /**
- * @author jflute
+ * @author modified by jflute (originated in Struts)
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE })
-@Documented
-public @interface JsonBody {
+public interface DoubleSubmitManager {
+
+    String TOKEN_KEY = LastaWebKey.TRANSACTION_TOKEN_KEY;
+
+    boolean determineToken(Class<?> groupType);
+
+    boolean determineTokenWithReset(Class<?> groupType);
+
+    void saveToken(Class<?> groupType);
+
+    String generateToken(Class<?> groupType);
+
+    void resetToken(Class<?> groupType);
 }

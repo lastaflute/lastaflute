@@ -29,28 +29,30 @@ import org.lastaflute.web.response.next.RedirectNext;
 import org.lastaflute.web.response.next.RedirectNext.RedirectPathStyle;
 import org.lastaflute.web.response.next.RoutingNext;
 import org.lastaflute.web.response.render.RenderDataRegistration;
+import org.lastaflute.web.servlet.request.Redirectable;
 
 /**
  * @author jflute
  */
-public class HtmlResponse implements ActionResponse {
+public class HtmlResponse implements ActionResponse, Redirectable {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
     protected static final ForwardNext DUMMY = new ForwardNext("dummy");
-    protected static final HtmlResponse INSTANCE_OF_EMPTY = new HtmlResponse(DUMMY).asEmptyResponse();
+    protected static final HtmlResponse INSTANCE_OF_UNDEFINED = new HtmlResponse(DUMMY).ofUndefined();
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     protected final RoutingNext nextRouting;
-    protected Map<String, String> headerMap; // lazy loaded (for when no use)
-    protected boolean empty;
-    protected boolean skip;
+    protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
+    protected boolean undefined;
+    protected boolean returnAsEmptyBody;
     protected List<RenderDataRegistration> registrationList; // lazy loaded
     protected Class<?> pushedFormType; // null allowed
     protected boolean errorsToSession;
+    protected ResponseHook afterTxCommitHook;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -83,23 +85,27 @@ public class HtmlResponse implements ActionResponse {
     // ===================================================================================
     //                                                                              Header
     //                                                                              ======
-    // TODO jflute lastaflute: [E] function: Response header multiple value
     @Override
-    public HtmlResponse header(String name, String value) {
+    public HtmlResponse header(String name, String... values) {
         assertArgumentNotNull("name", name);
-        assertArgumentNotNull("value", value);
-        prepareHeaderMap().put(name, value);
+        assertArgumentNotNull("value", values);
+        assertDefinedState("header");
+        final Map<String, String[]> headerMap = prepareHeaderMap();
+        if (headerMap.containsKey(name)) {
+            throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
+        }
+        headerMap.put(name, values);
         return this;
     }
 
     @Override
-    public Map<String, String> getHeaderMap() {
+    public Map<String, String[]> getHeaderMap() {
         return headerMap != null ? Collections.unmodifiableMap(headerMap) : DfCollectionUtil.emptyMap();
     }
 
-    protected Map<String, String> prepareHeaderMap() {
+    protected Map<String, String[]> prepareHeaderMap() {
         if (headerMap == null) {
-            headerMap = new LinkedHashMap<String, String>(4);
+            headerMap = new LinkedHashMap<String, String[]>(4);
         }
         return headerMap;
     }
@@ -107,8 +113,24 @@ public class HtmlResponse implements ActionResponse {
     // ===================================================================================
     //                                                                         Render Data
     //                                                                         ===========
+    /**
+     * Set up the HTML response rendering the HTML with registered data. <br>
+     * And you can use the registered data (variable) in your HTML template.
+     * <pre>
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     ...
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaJsp</span>).<span style="color: #CC4747">renderWith</span>(<span style="color: #553000">data</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #553000">data</span>.<span style="color: #994747">register</span>(<span style="color: #2A00FF">"beans"</span>, <span style="color: #553000">beans</span>);
+     *     });
+     * }
+     * </pre>
+     * @param dataLambda The callback for data registration to HTML template. (NotNull)
+     * @return this. (NotNull)
+     */
     public HtmlResponse renderWith(RenderDataRegistration dataLambda) {
         assertArgumentNotNull("dataLambda", dataLambda);
+        assertDefinedState("renderWith");
         if (registrationList == null) {
             registrationList = new ArrayList<RenderDataRegistration>(4);
         }
@@ -119,6 +141,19 @@ public class HtmlResponse implements ActionResponse {
     // ===================================================================================
     //                                                                         Action Form
     //                                                                         ===========
+    /**
+     * Set up the HTML response as using action form without initial value. <br>
+     * And you can use the action form in your HTML template.
+     * <pre>
+     * <span style="color: #3F7E5E">// case of no initial value, empty display, but needs form</span>
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaJsp</span>).<span style="color: #CC4747">useForm</span>(SeaForm.<span style="color: #70226C">class</span>);
+     * }
+     * </pre>
+     * @param formType The type of action form. (NotNull)
+     * @return this. (NotNull)
+     */
     public HtmlResponse useForm(Class<?> formType) {
         assertArgumentNotNull("formType", formType);
         this.pushedFormType = formType;
@@ -128,25 +163,53 @@ public class HtmlResponse implements ActionResponse {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
-    public static HtmlResponse empty() { // user interface
-        return INSTANCE_OF_EMPTY;
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
+    public static HtmlResponse asEmptyBody() { // user interface
+        return new HtmlResponse(DUMMY).ofEmptyBody();
     }
 
-    protected HtmlResponse asEmptyResponse() { // internal use
-        empty = true;
+    protected HtmlResponse ofEmptyBody() { // internal use
+        returnAsEmptyBody = true;
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
+    public static HtmlResponse undefined() { // user interface
+        return INSTANCE_OF_UNDEFINED;
+    }
+
+    protected HtmlResponse ofUndefined() { // internal use
+        undefined = true;
+        return this;
+    }
+
+    // -----------------------------------------------------
+    //                                     Errors to Session
+    //                                     -----------------
     /**
      * Save errors in request to session scope. (redirect only use) <br>
      * You can use the errors in next action after redirection.
      */
-    protected void saveErrorsToSession() {
+    public void saveErrorsToSession() {
         if (!isRedirectTo()) {
             String msg = "Not allowed operation when forward: saveErrorsToSession(): " + toString();
             throw new IllegalStateException(msg);
         }
         errorsToSession = true;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    @Override
+    public HtmlResponse afterTxCommit(ResponseHook noArgLambda) {
+        assertArgumentNotNull("noArgLambda", noArgLambda);
+        afterTxCommitHook = noArgLambda;
+        return this;
     }
 
     // ===================================================================================
@@ -158,15 +221,21 @@ public class HtmlResponse implements ActionResponse {
         }
     }
 
+    protected void assertDefinedState(String methodName) {
+        if (undefined) {
+            throw new IllegalStateException("undefined response: method=" + methodName + "() this=" + toString());
+        }
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        final String emptyExp = empty ? ", empty" : "";
-        final String skipExp = skip ? ", skip" : "";
-        return classTitle + ":{" + nextRouting + emptyExp + skipExp + "}";
+        final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
+        final String undefinedExp = undefined ? ", undefined" : "";
+        return classTitle + ":{" + nextRouting + emptyExp + undefinedExp + "}";
     }
 
     // ===================================================================================
@@ -189,13 +258,13 @@ public class HtmlResponse implements ActionResponse {
     }
 
     @Override
-    public boolean isEmpty() {
-        return empty;
+    public boolean isReturnAsEmptyBody() {
+        return returnAsEmptyBody;
     }
 
     @Override
-    public boolean isSkip() {
-        return skip;
+    public boolean isUndefined() {
+        return undefined;
     }
 
     public List<RenderDataRegistration> getRegistrationList() {
@@ -210,5 +279,15 @@ public class HtmlResponse implements ActionResponse {
 
     public boolean isErrorsToSession() {
         return errorsToSession;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public OptionalThing<ResponseHook> getAfterTxCommitHook() {
+        return OptionalThing.ofNullable(afterTxCommitHook, () -> {
+            String msg = "Not found the response hook: " + HtmlResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 }

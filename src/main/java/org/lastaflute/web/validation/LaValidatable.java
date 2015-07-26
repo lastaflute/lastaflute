@@ -23,6 +23,9 @@ import org.lastaflute.web.ruts.message.ActionMessages;
  */
 public interface LaValidatable<MESSAGES extends ActionMessages> {
 
+    // ===================================================================================
+    //                                                                            Validate
+    //                                                                            ========
     /**
      * Validate the form values. <br>
      * <pre>
@@ -43,9 +46,10 @@ public interface LaValidatable<MESSAGES extends ActionMessages> {
      * @param form The form that has request parameters. (NotNull)
      * @param moreValidationLambda The callback for more validation, e.g. correlation rule. (NotNull)
      * @param validationErrorLambda The callback for response when validation error. (NotNull)
+     * @return The success information of validation, basically for success attribute. (NotNull)
      */
-    default void validate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
-        createValidator().validate(form, moreValidationLambda, validationErrorLambda);
+    default ValidationSuccess validate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
+        return createValidator().validate(form, moreValidationLambda, validationErrorLambda);
     }
 
     /**
@@ -64,11 +68,27 @@ public interface LaValidatable<MESSAGES extends ActionMessages> {
      * </pre>
      * @param form The form that has request parameters. (NotNull)
      * @param moreValidationLambda The callback for more validation, e.g. correlation rule, very complex rule. (NotNull)
+     * @return The success information of validation, basically for success attribute. (NotNull)
      */
-    default void validateApi(Object form, VaMore<MESSAGES> moreValidationLambda) {
-        createValidator().validateApi(form, moreValidationLambda);
+    default ValidationSuccess validateApi(Object form, VaMore<MESSAGES> moreValidationLambda) {
+        return createValidator().validateApi(form, moreValidationLambda);
     }
 
+    // ===================================================================================
+    //                                                                         Throw Error
+    //                                                                         ===========
+    /**
+     * Throw validation error exception immediately. <br>
+     * <pre>
+     * <span style="color: #70226C">if</span> (...) { <span style="color: #3F7E5E">// any invalid state</span> 
+     *     <span style="color: #CC4747">throwValidationError</span>(<span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> <span style="color: #553000">messages</span>.addConstraints..., () <span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaListJsp</span>);
+     *     });
+     * }
+     * </pre>
+     * @param validationMessagesLambda The callback for setting of validation error messages. (NotNull)
+     * @param validationErrorLambda The callback for response when validation error. (NotNull)
+     */
     default void throwValidationError(VaMessenger<MESSAGES> validationMessagesLambda, VaErrorHook validationErrorLambda) {
         createValidator().throwValidationError(() -> {
             final MESSAGES messages = createMessages();
@@ -77,6 +97,16 @@ public interface LaValidatable<MESSAGES extends ActionMessages> {
         } , validationErrorLambda);
     }
 
+    /**
+     * Throw validation error exception immediately, for API, when e.g. JsonResponse. <br>
+     * <pre>
+     * <span style="color: #70226C">if</span> (...) { <span style="color: #3F7E5E">// any invalid state</span> 
+     *     <span style="color: #CC4747">throwValidationErrorApi</span>(<span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> <span style="color: #553000">messages</span>.addConstraints...);
+     * }
+     * </pre>
+     * @param validationMessagesLambda The callback for setting of validation error messages. (NotNull)
+     * @param validationErrorLambda The callback for response when validation error. (NotNull)
+     */
     default void throwValidationErrorApi(VaMessenger<MESSAGES> validationMessagesLambda) {
         createValidator().throwValidationErrorApi(() -> {
             final MESSAGES messages = createMessages();
@@ -85,7 +115,16 @@ public interface LaValidatable<MESSAGES extends ActionMessages> {
         });
     }
 
+    // ===================================================================================
+    //                                                                    Validation Parts
+    //                                                                    ================
+    /**
+     * @return The new-created validator for action. (NotNull)
+     */
     ActionValidator<MESSAGES> createValidator();
 
+    /**
+     * @return The new-created messages for action. (NotNull)
+     */
     MESSAGES createMessages();
 }

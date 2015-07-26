@@ -24,11 +24,11 @@ public interface TypicalEmbeddedKeySupplier {
 
     String getErrorsLoginFailureKey();
 
-    String getErrorsAppAlreadyDeletedKey();
-
-    String getErrorsAppAlreadyUpdatedKey();
-
-    String getErrorsAppAlreadyExistsKey();
-
     String getErrorsAppIllegalTransitionKey();
+
+    String getErrorsAppDbAlreadyDeletedKey();
+
+    String getErrorsAppDbAlreadyUpdatedKey();
+
+    String getErrorsAppDbAlreadyExistsKey();
 }

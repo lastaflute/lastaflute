@@ -24,14 +24,6 @@ import org.dbflute.optional.OptionalThing;
  */
 public interface ScopedAttributeHolder {
 
-    /**
-     * Get the attribute value of the scope by the value's type.
-     * @param <ATTRIBUTE> The type of attribute object.
-     * @param typeKey The type key of attribute saved in the scope. (NotNull)
-     * @return The optional attribute object for the type. (NotNull, EmptyAllowed: when not found)
-     */
-    <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey);
-
     // second argument 'attributeType' is to write like this:
     // getAttribute("sea", SeaBean.class).ifPresent(seaBean -> ...)
     /**
@@ -50,15 +42,6 @@ public interface ScopedAttributeHolder {
     List<String> getAttributeNameList();
 
     /**
-     * Set the attribute value to the scope by the value's type. <br>
-     * You should not set string object to suppress mistake. <br>
-     * However you should not use this when the object might be extended. <br>
-     * (Then the key is changed to sub-class type so you might have mistakes...)
-     * @param value The attribute value added to the scope. (NotNull)
-     */
-    void setAttribute(Object value);
-
-    /**
      * Set the attribute value to the scope by your original key.
      * @param key The key of the attribute. (NotNull)
      * @param value The attribute value added to the scope. (NotNull)
@@ -66,14 +49,30 @@ public interface ScopedAttributeHolder {
     void setAttribute(String key, Object value);
 
     /**
-     * Remove the attribute value by the value's type.
-     * @param type The type of removed object. (NotNull)
-     */
-    void removeAttribute(Class<?> type);
-
-    /**
      * Remove the attribute value by the key.
      * @param key The string key of attribute saved in the scope. (NotNull)
      */
     void removeAttribute(String key);
+
+    // useful but dangerous so remove it at least in first release
+    ///**
+    // * Get the attribute value of the scope by the value's type.
+    // * @param <ATTRIBUTE> The type of attribute object.
+    // * @param typeKey The type key of attribute saved in the scope. (NotNull)
+    // * @return The optional attribute object for the type. (NotNull, EmptyAllowed: when not found)
+    // */
+    //<ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(Class<ATTRIBUTE> typeKey);
+    ///**
+    // * Set the attribute value to the scope by the value's type. <br>
+    // * You should not set string object to suppress mistake. <br>
+    // * However you should not use this when the object might be extended. <br>
+    // * (Then the key is changed to sub-class type so you might have mistakes...)
+    // * @param value The attribute value added to the scope. (NotNull)
+    // */
+    //void setAttribute(Object value);
+    ///**
+    // * Remove the attribute value by the value's type.
+    // * @param type The type of removed object. (NotNull)
+    // */
+    //void removeAttribute(Class<?> type);
 }

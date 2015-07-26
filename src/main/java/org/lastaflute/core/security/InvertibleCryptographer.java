@@ -222,8 +222,8 @@ public class InvertibleCryptographer {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
+    //                                                                        Small Helper
+    //                                                                        ============
     protected void assertArgumentNotNull(String variableName, Object value) {
         if (variableName == null) {
             throw new IllegalArgumentException("The variableName should not be null.");

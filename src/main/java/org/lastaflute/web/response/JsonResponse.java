@@ -34,20 +34,19 @@ public class JsonResponse<BEAN> implements ApiResponse {
     //                                                                          Definition
     //                                                                          ==========
     protected static final Object DUMMY = new Object();
-    protected static final JsonResponse<?> INSTANCE_OF_EMPTY = new JsonResponse<Object>(DUMMY).asEmpty();
-    protected static final JsonResponse<?> INSTANCE_OF_SKIP = new JsonResponse<Object>(DUMMY).asSkip();
+    protected static final JsonResponse<?> INSTANCE_OF_UNDEFINED = new JsonResponse<Object>(DUMMY).ofUndefined();
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     protected final BEAN jsonBean;
     protected String callback;
-    protected Map<String, String> headerMap; // lazy loaded (for when no use)
+    protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
-
     protected boolean forcedlyJavaScript;
-    protected boolean empty;
-    protected boolean skip;
+    protected boolean undefined;
+    protected boolean returnAsEmptyBody;
+    protected ResponseHook afterTxCommitHook;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -57,17 +56,15 @@ public class JsonResponse<BEAN> implements ApiResponse {
      * This needs {@link RomanticActionCustomizer} in your customizer.dicon.
      * <pre>
      * <span style="color: #3F7E5E">// e.g. normal JSON response</span>
-     * return new JsonResponse(bean);
+     * <span style="color: #70226C">return new</span> JsonResponse(bean);
      * 
      * <span style="color: #3F7E5E">// e.g. JSONP response</span>
-     * return new JsonResponse(bean).asJsonp("callback");
+     * <span style="color: #70226C">return new</span> JsonResponse(bean).asJsonp("callback");
      * </pre>
      * @param jsonObj The JSON object to send response. (NotNull)
      */
     public JsonResponse(BEAN jsonObj) {
-        if (jsonObj == null) {
-            throw new IllegalArgumentException("The argument 'jsonObj' should not be null.");
-        }
+        assertArgumentNotNull("jsonObj", jsonObj);
         this.jsonBean = jsonObj;
     }
 
@@ -75,25 +72,26 @@ public class JsonResponse<BEAN> implements ApiResponse {
     //                                                                              Header
     //                                                                              ======
     @Override
-    public JsonResponse<BEAN> header(String name, String value) {
-        if (name == null) {
-            throw new IllegalArgumentException("The argument 'name' should not be null.");
+    public JsonResponse<BEAN> header(String name, String... values) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("values", values);
+        assertDefinedState("header");
+        final Map<String, String[]> headerMap = prepareHeaderMap();
+        if (headerMap.containsKey(name)) {
+            throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
         }
-        if (value == null) {
-            throw new IllegalArgumentException("The argument 'value' should not be null.");
-        }
-        prepareHeaderMap().put(name, value);
+        headerMap.put(name, values);
         return this;
     }
 
     @Override
-    public Map<String, String> getHeaderMap() {
+    public Map<String, String[]> getHeaderMap() {
         return headerMap != null ? Collections.unmodifiableMap(headerMap) : DfCollectionUtil.emptyMap();
     }
 
-    protected Map<String, String> prepareHeaderMap() {
+    protected Map<String, String[]> prepareHeaderMap() {
         if (headerMap == null) {
-            headerMap = new LinkedHashMap<String, String>(4);
+            headerMap = new LinkedHashMap<String, String[]>(4);
         }
         return headerMap;
     }
@@ -103,6 +101,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     //                                                                         ===========
     @Override
     public JsonResponse<BEAN> httpStatus(int httpStatus) {
+        assertDefinedState("httpStatus");
         this.httpStatus = httpStatus;
         return this;
     }
@@ -115,34 +114,70 @@ public class JsonResponse<BEAN> implements ApiResponse {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
+    // -----------------------------------------------------
+    //                                                 JSON
+    //                                                ------
     public JsonResponse<BEAN> asJsonp(String callback) {
+        assertArgumentNotNull("callback", callback);
+        assertDefinedState("asJsonp");
         this.callback = callback;
         return this;
     }
 
     public JsonResponse<BEAN> forcedlyJavaScript() {
         forcedlyJavaScript = true;
+        assertDefinedState("forcedlyJavaScript");
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
     @SuppressWarnings("unchecked")
-    public static <OBJ> JsonResponse<OBJ> empty() { // user interface
-        return (JsonResponse<OBJ>) INSTANCE_OF_EMPTY;
+    public static <OBJ> JsonResponse<OBJ> asEmptyBody() { // user interface
+        return (JsonResponse<OBJ>) new JsonResponse<Object>(DUMMY).ofEmptyBody();
     }
 
-    protected JsonResponse<BEAN> asEmpty() { // internal use
-        empty = true;
+    protected JsonResponse<BEAN> ofEmptyBody() { // internal use
+        returnAsEmptyBody = true;
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
     @SuppressWarnings("unchecked")
-    public static <OBJ> JsonResponse<OBJ> skip() { // user interface
-        return (JsonResponse<OBJ>) INSTANCE_OF_SKIP;
+    public static <OBJ> JsonResponse<OBJ> undefined() { // user interface
+        return (JsonResponse<OBJ>) INSTANCE_OF_UNDEFINED;
     }
 
-    protected JsonResponse<BEAN> asSkip() { // internal use
-        skip = true;
+    protected JsonResponse<BEAN> ofUndefined() { // internal use
+        undefined = true;
         return this;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public JsonResponse<BEAN> afterTxCommit(ResponseHook noArgLambda) {
+        assertArgumentNotNull("noArgLambda", noArgLambda);
+        afterTxCommitHook = noArgLambda;
+        return this;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String title, Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + title + "' should not be null.");
+        }
+    }
+
+    protected void assertDefinedState(String methodName) {
+        if (undefined) {
+            throw new IllegalStateException("undefined response: method=" + methodName + "() this=" + toString());
+        }
     }
 
     // ===================================================================================
@@ -154,9 +189,9 @@ public class JsonResponse<BEAN> implements ApiResponse {
         final String jsonExp = jsonBean != null ? DfTypeUtil.toClassTitle(jsonBean) : null;
         final String callbackExp = callback != null ? ", callback=" + callback : "";
         final String forcedlyJSExp = forcedlyJavaScript ? ", JavaScript" : "";
-        final String emptyExp = empty ? ", empty" : "";
-        final String skipExp = skip ? ", skip" : "";
-        return classTitle + ":{" + jsonExp + callbackExp + forcedlyJSExp + emptyExp + skipExp + "}";
+        final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
+        final String undefinedExp = undefined ? ", undefined" : "";
+        return classTitle + ":{" + jsonExp + callbackExp + forcedlyJSExp + emptyExp + undefinedExp + "}";
     }
 
     // ===================================================================================
@@ -178,12 +213,22 @@ public class JsonResponse<BEAN> implements ApiResponse {
     }
 
     @Override
-    public boolean isEmpty() {
-        return empty;
+    public boolean isReturnAsEmptyBody() {
+        return returnAsEmptyBody;
     }
 
     @Override
-    public boolean isSkip() {
-        return skip;
+    public boolean isUndefined() {
+        return undefined;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public OptionalThing<ResponseHook> getAfterTxCommitHook() {
+        return OptionalThing.ofNullable(afterTxCommitHook, () -> {
+            String msg = "Not found the response hook: " + JsonResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 }

@@ -48,4 +48,12 @@ public interface TimeResourceProvider {
      * @return The determination, true or false.
      */
     boolean isAdjustAbsoluteMode();
+
+    /**
+     * Provider the provider of real current time.
+     * @return The instance of the provider. (NullAllowed: option, so normally null)
+     */
+    default CurrentTimeProvider provideRealCurrentTimeProvider() {
+        return null; // use embedded as default
+    }
 }

@@ -64,7 +64,7 @@ public class SimpleAsyncManager implements AsyncManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleAsyncManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleAsyncManager.class);
     protected static final String LF = "\n";
     protected static final String IND = "  ";
 
@@ -147,27 +147,21 @@ public class SimpleAsyncManager implements AsyncManager {
     //                            Rejected Execution Handler
     //                            --------------------------
     protected RejectedExecutionHandler createRejectedExecutionHandler() {
-        return new RejectedExecutionHandler() {
-            @Override
-            public void rejectedExecution(Runnable runnable, ThreadPoolExecutor executor) { // caller thread
-                handleRejectedExecution(runnable, executor);
-            }
+        return (runnable, executor) -> {
+            handleRejectedExecution(runnable, executor);
         };
     }
 
     protected void handleRejectedExecution(final Runnable runnable, final ThreadPoolExecutor executor) { // caller thread
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("#flow #async ...Registering the runnable to waiting queue as retry: " + runnable);
+        if (logger.isDebugEnabled()) {
+            logger.debug("#flow #async ...Registering the runnable to waiting queue as retry: " + runnable);
         }
-        getWaitingQueueExecutorService().execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    retryPuttingQueue(runnable, executor);
-                } catch (InterruptedException e) {
-                    final String torExp = buildExecutorHashExp(executor);
-                    LOG.warn("*Failed to put the runnable to the executor" + torExp + "'s queue: " + runnable, e);
-                }
+        getWaitingQueueExecutorService().execute(() -> {
+            try {
+                retryPuttingQueue(runnable, executor);
+            } catch (InterruptedException e) {
+                final String torExp = buildExecutorHashExp(executor);
+                logger.warn("*Failed to put the runnable to the executor" + torExp + "'s queue: " + runnable, e);
             }
         });
     }
@@ -180,7 +174,7 @@ public class SimpleAsyncManager implements AsyncManager {
             if (waitingQueueExecutorService != null) {
                 return waitingQueueExecutorService;
             }
-            LOG.info("#flow #async ...Creating the executor service for waiting queue.");
+            logger.info("#flow #async ...Creating the executor service for waiting queue.");
             waitingQueueExecutorService = newWaitingQueueExecutorService();
             return waitingQueueExecutorService;
         }
@@ -191,14 +185,14 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     protected void retryPuttingQueue(Runnable runnable, ThreadPoolExecutor executor) throws InterruptedException { // waiting queue thread
-        if (LOG.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             final String torExp = buildExecutorHashExp(executor);
-            LOG.debug("#flow #async ...Retrying putting the runnable to the executor" + torExp + " in waiting queue: " + runnable);
+            logger.debug("#flow #async ...Retrying putting the runnable to the executor" + torExp + " in waiting queue: " + runnable);
         }
         executor.getQueue().put(runnable);
-        if (LOG.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             final String torExp = buildExecutorHashExp(executor);
-            LOG.debug("#flow #async Success to retry putting the runnable to the executor" + torExp + " in waiting queue: " + runnable);
+            logger.debug("#flow #async Success to retry putting the runnable to the executor" + torExp + " in waiting queue: " + runnable);
         }
     }
 
@@ -210,11 +204,11 @@ public class SimpleAsyncManager implements AsyncManager {
     //                                          Boot Logging
     //                                          ------------
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Async Manager]");
-            LOG.info(" defaultConcurrentAsyncOption: " + defaultConcurrentAsyncOption);
-            LOG.info(" primaryExecutorService: " + buildExecutorNamedExp(primaryExecutorService));
-            LOG.info(" secondaryExecutorService: " + buildExecutorNamedExp(secondaryExecutorService));
+        if (logger.isInfoEnabled()) {
+            logger.info("[Async Manager]");
+            logger.info(" defaultConcurrentAsyncOption: " + defaultConcurrentAsyncOption);
+            logger.info(" primaryExecutorService: " + buildExecutorNamedExp(primaryExecutorService));
+            logger.info(" secondaryExecutorService: " + buildExecutorNamedExp(secondaryExecutorService));
         }
     }
 
@@ -254,24 +248,22 @@ public class SimpleAsyncManager implements AsyncManager {
         final AccessContext accessContext = inheritAccessContext(call);
         final CallbackContext callbackContext = inheritCallbackContext(call);
         final Map<String, Object> variousContextMap = findCallerVariousContextMap();
-        return new Runnable() {
-            public void run() {
-                final long before = showRunning(keyword);
-                prepareThreadCacheContext(call, threadCacheMap);
-                prepareAccessContext(call, accessContext);
-                prepareCallbackContext(call, callbackContext);
-                final Object variousPreparedObj = prepareVariousContext(call, variousContextMap);
-                try {
-                    call.callback();
-                } catch (RuntimeException e) {
-                    handleAsyncCallbackException(call, before, e);
-                } finally {
-                    clearVariousContext(call, variousContextMap, variousPreparedObj);
-                    clearAccessContext(call);
-                    clearCallbackContext(call);
-                    clearThreadCacheContext(call);
-                    showFinishing(keyword, before);
-                }
+        return () -> {
+            final long before = showRunning(keyword);
+            prepareThreadCacheContext(call, threadCacheMap);
+            prepareAccessContext(call, accessContext);
+            prepareCallbackContext(call, callbackContext);
+            final Object variousPreparedObj = prepareVariousContext(call, variousContextMap);
+            try {
+                call.callback();
+            } catch (RuntimeException e) {
+                handleAsyncCallbackException(call, before, e);
+            } finally {
+                clearVariousContext(call, variousContextMap, variousPreparedObj);
+                clearAccessContext(call);
+                clearCallbackContext(call);
+                clearThreadCacheContext(call);
+                showFinishing(keyword, before);
             }
         };
     }
@@ -428,8 +420,8 @@ public class SimpleAsyncManager implements AsyncManager {
     //                                                                Asynchronous Process
     //                                                                ====================
     protected long showRunning(String keyword) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("#flow #async ...Running asynchronous call as " + keyword);
+        if (logger.isDebugEnabled()) {
+            logger.debug("#flow #async ...Running asynchronous call as " + keyword);
         }
         return System.currentTimeMillis();
     }
@@ -472,7 +464,7 @@ public class SimpleAsyncManager implements AsyncManager {
         if (handled == null) {
             handled = cause;
         }
-        LOG.error(buildAsyncCallbackExceptionMessage(call, before, handled), handled);
+        logger.error(buildAsyncCallbackExceptionMessage(call, before, handled), handled);
     }
 
     protected String buildAsyncCallbackExceptionMessage(ConcurrentAsyncCall call, long before, Throwable cause) {
@@ -548,10 +540,10 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     protected void showFinishing(String keyword, long before) {
-        if (LOG.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             final long after = System.currentTimeMillis();
             final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
-            LOG.debug("#flow #async ...Finishing asynchronous call as " + keyword + ": " + performanceView);
+            logger.debug("#flow #async ...Finishing asynchronous call as " + keyword + ": " + performanceView);
         }
     }
 

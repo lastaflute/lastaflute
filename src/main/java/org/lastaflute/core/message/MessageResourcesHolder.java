@@ -28,7 +28,7 @@ public class MessageResourcesHolder {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(MessageResourcesHolder.class);
+    private static final Logger logger = LoggerFactory.getLogger(MessageResourcesHolder.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -58,7 +58,7 @@ public class MessageResourcesHolder {
      * @param specified The instance of gateway. (NotNull)
      */
     public void acceptGateway(MessageResourcesGateway specified) {
-        LOG.info("...Accepting the gateway of message resources: " + specified);
+        logger.info("...Accepting the gateway of message resources: " + specified);
         if (specified == null) {
             String msg = "The argument 'specified' should not be null.";
             throw new IllegalArgumentException(msg);

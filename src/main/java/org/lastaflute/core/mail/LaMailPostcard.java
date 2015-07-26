@@ -23,5 +23,9 @@ import org.dbflute.mail.Postcard;
  */
 public interface LaMailPostcard {
 
+    /**
+     * Go to native postcard.
+     * @return The wrapped postcard instance as native type. (NotNull)
+     */
     Postcard toNativePostcard();
 }

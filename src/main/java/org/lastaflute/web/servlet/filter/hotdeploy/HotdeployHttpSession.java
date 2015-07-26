@@ -33,7 +33,8 @@ import javax.servlet.http.HttpSessionContext;
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.di.exception.IORuntimeException;
 import org.lastaflute.di.exception.SessionObjectNotSerializableRuntimeException;
-import org.lastaflute.di.helper.log.SLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author modified by jflute (originated in Seasar)
@@ -41,7 +42,7 @@ import org.lastaflute.di.helper.log.SLogger;
 @SuppressWarnings("deprecation")
 public class HotdeployHttpSession implements HttpSession {
 
-    private static final SLogger logger = SLogger.getLogger(HotdeployHttpSession.class);
+    private static final Logger logger = LoggerFactory.getLogger(HotdeployHttpSession.class);
 
     protected final HotdeployHttpServletRequest request;
     protected final HttpSession originalSession;
@@ -61,12 +62,13 @@ public class HotdeployHttpSession implements HttpSession {
         if (active) {
             for (Iterator<Entry<String, Object>> it = attributes.entrySet().iterator(); it.hasNext();) {
                 final Entry<String, Object> entry = (Entry<String, Object>) it.next();
+                final String key = (String) entry.getKey();
                 try {
-                    originalSession.setAttribute((String) entry.getKey(), new SerializedObjectHolder(entry.getValue()));
+                    originalSession.setAttribute(key, new SerializedObjectHolder(entry.getValue()));
                 } catch (final IllegalStateException e) {
                     return;
                 } catch (final Exception e) {
-                    logger.log("ESSR0017", new Object[] { e }, e);
+                    logger.info("Failed to set session attribute as HotDeploy: " + key, e);
                 }
             }
         }
@@ -192,7 +194,7 @@ public class HotdeployHttpSession implements HttpSession {
             try {
                 return HotdeployUtil.deserializeInternal(bytes);
             } catch (final Exception e) {
-                logger.log("ISSR0008", new Object[] { name }, e);
+                logger.info("Failed to get deserialized object as HotDeploy: " + name, e);
                 return null;
             }
         }

@@ -32,14 +32,12 @@ import org.lastaflute.db.dbflute.accesscontext.AccessContextResource;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
-import org.lastaflute.web.api.ApiFailureResource;
-import org.lastaflute.web.api.ApiLoginRedirectProvider;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginHandlingResource;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
+import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.slf4j.Logger;
@@ -62,6 +60,7 @@ public class TypicalGodHandPrologue {
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
+    protected final OptionalThing<CrossOriginResourceSharing> corSharing;
     protected final AccessContextArranger accessContextArranger;
     protected final Supplier<OptionalThing<? extends UserBean>> userBeanSupplier;
     protected final Supplier<String> appTypeSupplier;
@@ -69,12 +68,14 @@ public class TypicalGodHandPrologue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger accessContextArranger,
-            Supplier<OptionalThing<? extends UserBean>> userBeanSupplier, Supplier<String> appTypeSupplier) {
+    public TypicalGodHandPrologue(TypicalGodHandResource resource, OptionalThing<CrossOriginResourceSharing> corSharing,
+            AccessContextArranger accessContextArranger, Supplier<OptionalThing<? extends UserBean>> userBeanSupplier,
+            Supplier<String> appTypeSupplier) {
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
         this.loginManager = resource.getLoginManager();
         this.apiManager = resource.getApiManager();
+        this.corSharing = corSharing;
         this.accessContextArranger = accessContextArranger;
         this.userBeanSupplier = userBeanSupplier;
         this.appTypeSupplier = appTypeSupplier;
@@ -85,16 +86,15 @@ public class TypicalGodHandPrologue {
     //                                                                            ========
     public ActionResponse performPrologue(ActionRuntime runtime) { // fixed process
         arrangeThreadCacheContextBasicItem(runtime);
+        final ActionResponse sharedResponse = handleCrossOriginResourceSharing();
+        if (sharedResponse.isDefined()) {
+            return sharedResponse;
+        }
         arrangePreparedAccessContext(runtime);
         arrangeCallbackContext(runtime); // should be after access-context (using access context's info)
-
-        // should be after access-context (may have update)
-        final ActionResponse redirectTo = handleLoginRequiredCheck(runtime);
-        if (redirectTo.isPresent()) {
-            return redirectTo;
-        }
+        checkLoginRequired(runtime); // should be after access-context (may have update)
         arrangeThreadCacheContextLoginItem(runtime);
-        return ActionResponse.empty();
+        return ActionResponse.undefined();
     }
 
     protected void arrangeThreadCacheContextBasicItem(ActionRuntime runtime) {
@@ -108,6 +108,10 @@ public class TypicalGodHandPrologue {
         if (ThreadCacheContext.exists()) { // basically true, just in case
             ThreadCacheContext.registerUserBean(userBeanSupplier.get().orElse(null)); // basically for asynchronous
         }
+    }
+
+    protected ActionResponse handleCrossOriginResourceSharing() {
+        return corSharing.map(sharing -> sharing.share()).orElseGet(() -> ActionResponse.undefined());
     }
 
     // ===================================================================================
@@ -256,41 +260,17 @@ public class TypicalGodHandPrologue {
     //                                                                      Login Handling
     //                                                                      ==============
     /**
-     * Handle the login required check for the requested action.
+     * Check the login required for the requested action.
      * @param runtime The runtime meta of action execute to determine required action. (NotNull)
-     * @return The forward path, basically for login-redirect. (NullAllowed)
+     * @throws LoginRequiredException When it fails to access the action for non-login.
      */
-    protected ActionResponse handleLoginRequiredCheck(ActionRuntime runtime) {
-        return loginManager.map(nager -> {
-            final LoginHandlingResource resource = createLogingHandlingResource(runtime);
-            return nager.checkLoginRequired(resource).map(routingPath -> {
-                if (runtime.isApiExecute()) {
-                    return dispatchApiLoginRequiredFailure(runtime, routingPath);
-                } else {
-                    return HtmlResponse.fromRedirectPath(routingPath);
-                }
-            }).orElse(HtmlResponse.empty());
-        }).orElseGet(() -> {
-            return ActionResponse.empty();
+    protected void checkLoginRequired(ActionRuntime runtime) throws LoginRequiredException {
+        loginManager.ifPresent(nager -> {
+            nager.checkLoginRequired(createLogingHandlingResource(runtime));
         });
     }
 
     protected LoginHandlingResource createLogingHandlingResource(ActionRuntime runtime) {
         return new LoginHandlingResource(runtime);
-    }
-
-    protected ActionResponse dispatchApiLoginRequiredFailure(ActionRuntime runtime, String routingPath) {
-        final ApiFailureResource resource = createLoginRequiredApiFailureResource();
-        final ApiLoginRedirectProvider provider = createApiLoginRedirectProvider(routingPath);
-        return apiManager.handleLoginRequiredFailure(resource, runtime, provider);
-    }
-
-    protected ApiFailureResource createLoginRequiredApiFailureResource() {
-        return new ApiFailureResource(sessionManager.errors().get(), requestManager);
-    }
-
-    protected ApiLoginRedirectProvider createApiLoginRedirectProvider(String routingPath) {
-        final String contextAbsolutePath = requestManager.toContextAbsolutePath(routingPath);
-        return new ApiLoginRedirectProvider(contextAbsolutePath, routingPath);
     }
 }

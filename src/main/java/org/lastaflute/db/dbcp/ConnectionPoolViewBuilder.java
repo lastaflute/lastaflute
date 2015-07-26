@@ -39,7 +39,7 @@ public class ConnectionPoolViewBuilder {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(ConnectionPoolViewBuilder.class);
+    private static final Logger logger = LoggerFactory.getLogger(ConnectionPoolViewBuilder.class);
 
     // ===================================================================================
     //                                                                          Build View
@@ -86,7 +86,7 @@ public class ConnectionPoolViewBuilder {
             }
         } catch (RuntimeException continued) {
             String msg = "*Failed to build transaction expression";
-            LOG.info(msg, continued);
+            logger.info(msg, continued);
             txViewList.add(msg + ": " + continued.getMessage());
         }
         return txViewList;

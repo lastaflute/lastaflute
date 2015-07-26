@@ -19,6 +19,7 @@ import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 
@@ -32,7 +33,9 @@ public interface ActionAdjustmentProvider {
      * You should return effective size against array injection problem.
      * @return The integer for the size. (MinusAllowed: if minus, no guard)
      */
-    int provideIndexedPropertySizeLimit();
+    default int provideIndexedPropertySizeLimit() {
+        return 256; // as default
+    }
 
     /**
      * Decode the escaped character for property value from URL parameter. <br>
@@ -43,15 +46,19 @@ public interface ActionAdjustmentProvider {
      * @param value The property value to decode. (NotNull)
      * @return The decoded value for property value. (NullAllowed: if null, no decoded)
      */
-    String decodeUrlParameterPropertyValue(Object bean, String name, String value);
+    default String decodeUrlParameterPropertyValue(Object bean, String name, String value) {
+        return null;
+    }
 
     /**
      * Filter the HTML path.
-     * @param path The path for JSP, that has view-prefix e.g. '/WEB-INF/view/'. (NotNull)
+     * @param path The path for HTML template, e.g. if JSP, it has view-prefix '/WEB-INF/view/'. (NotNull)
      * @param actionMapping The action mapping for current action. (NotNull)
-     * @return The filtered path for JSP. (NullAllowed: if null, no filter)
+     * @return The filtered path for HTML. (NullAllowed: if null, no filter)
      */
-    String filterHtmlPath(String path, ActionMapping actionMapping);
+    default String filterHtmlPath(String path, ActionMapping actionMapping) {
+        return null;
+    }
 
     /**
      * Prepare the word list for retry calculation of action path for the HTML. <br>
@@ -64,7 +71,9 @@ public interface ActionAdjustmentProvider {
      * @param wordList The list of words in JSP file name, always has two or more elements. (NotNull)
      * @return The filtered list of words for action path calculation. (NullAllowed: if null, no filter)
      */
-    List<String> prepareHtmlRetryWordList(String requestPath, List<String> wordList);
+    default List<String> prepareHtmlRetryWordList(String requestPath, List<String> wordList) {
+        return null;
+    }
 
     /**
      * Is the request routing target forcedly?
@@ -72,7 +81,9 @@ public interface ActionAdjustmentProvider {
      * @param requestPath The path of request to search action. (NotNull)
      * @return The determination, true or false. If false, default determination for routing.
      */
-    boolean isForcedRoutingTarget(HttpServletRequest request, String requestPath);
+    default boolean isForcedRoutingTarget(HttpServletRequest request, String requestPath) {
+        return false;
+    }
 
     /**
      * Does it suppress 'trailing slash redirect' for SEO?
@@ -81,7 +92,9 @@ public interface ActionAdjustmentProvider {
      * @param execute The action execute of the request. (NotNull)
      * @return The determination, true or false. If false, default determination for routing.
      */
-    boolean isSuppressTrailingSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute execute);
+    default boolean isSuppressTrailingSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute execute) {
+        return false;
+    }
 
     /**
      * Customize the request path for action mapping. <br>
@@ -89,5 +102,14 @@ public interface ActionAdjustmentProvider {
      * @param requestPath The path of request to search action. (NotNull)
      * @return The customized request path. (NullAllowed: if null, search by the plain request path)
      */
-    String customizeActionMappingRequestPath(String requestPath);
+    default String customizeActionMappingRequestPath(String requestPath) {
+        return null;
+    }
+
+    /**
+     * Adjust (defined) action response just before reflection to response, e.g. header.
+     * @param response The defined action response. (NotNull)
+     */
+    default void adjustActionResponseJustBefore(ActionResponse response) {
+    }
 }

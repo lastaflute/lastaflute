@@ -15,7 +15,6 @@
  */
 package org.lastaflute.web.ruts.multipart;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -24,21 +23,15 @@ import java.io.InputStream;
  */
 public interface MultipartFormFile {
 
-    String getContentType();
+    byte[] getFileData() throws IOException;
 
-    void setContentType(String contentType);
+    InputStream getInputStream() throws IOException;
+
+    String getContentType();
 
     int getFileSize();
 
-    void setFileSize(int fileSize);
-
     String getFileName();
-
-    void setFileName(String fileName);
-
-    byte[] getFileData() throws FileNotFoundException, IOException;
-
-    InputStream getInputStream() throws FileNotFoundException, IOException;
 
     void destroy();
 }

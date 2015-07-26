@@ -40,7 +40,7 @@ public class SimpleCookieManager implements CookieManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleCookieManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(SimpleCookieManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -87,10 +87,10 @@ public class SimpleCookieManager implements CookieManager {
     }
 
     protected void showBootLogging() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("[Cookie Manager]");
-            LOG.info(" cookieCipher: " + cookieCipher);
-            LOG.info(" defaultExpire: " + defaultExpire);
+        if (logger.isInfoEnabled()) {
+            logger.info("[Cookie Manager]");
+            logger.info(" cookieCipher: " + cookieCipher);
+            logger.info(" defaultExpire: " + defaultExpire);
         }
     }
 
@@ -199,8 +199,8 @@ public class SimpleCookieManager implements CookieManager {
                 try {
                     cookie.setValue(cookieCipher.decrypt(value));
                 } catch (CookieCipherDecryptFailureException e) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("...Ignoring decrypt failure to avoid hack cookie: " + value);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("...Ignoring decrypt failure to avoid hack cookie: " + value);
                     }
                     return null; /* treated as not found */
                 }
@@ -286,8 +286,8 @@ public class SimpleCookieManager implements CookieManager {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
+    //                                                                        Assist Logic
+    //                                                                        ============
     protected HttpServletRequest getRequest() {
         return LaRequestUtil.getRequest();
     }

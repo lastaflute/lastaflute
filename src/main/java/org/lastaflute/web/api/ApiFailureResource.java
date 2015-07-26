@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.request.RequestManager;
 
@@ -31,14 +32,16 @@ public class ApiFailureResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final OptionalThing<ActionMessages> errors;
+    protected final ActionRuntime runtime;
+    protected final OptionalThing<ActionMessages> messages;
     protected final RequestManager requestManager;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
-        this.errors = errors;
+    public ApiFailureResource(ActionRuntime runtime, OptionalThing<ActionMessages> messages, RequestManager requestManager) {
+        this.runtime = runtime;
+        this.messages = messages;
         this.requestManager = requestManager;
     }
 
@@ -50,7 +53,7 @@ public class ApiFailureResource {
      * @return The list of message, resolved by resource. (NotNull, EmptyAllowed)
      */
     public List<String> getMessageList() {
-        return errors.map(er -> {
+        return messages.map(er -> {
             return requestManager.getMessageManager().toMessageList(requestManager.getUserLocale(), er);
         }).orElse(Collections.emptyList());
     }
@@ -60,7 +63,7 @@ public class ApiFailureResource {
      * @return The map of message, resolved by resource. (NotNull, EmptyAllowed)
      */
     public Map<String, List<String>> getPropertyMessageMap() {
-        return errors.map(er -> {
+        return messages.map(er -> {
             return requestManager.getMessageManager().toPropertyMessageMap(requestManager.getUserLocale(), er);
         }).orElse(Collections.emptyMap());
     }
@@ -68,8 +71,12 @@ public class ApiFailureResource {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    public ActionRuntime getRuntime() {
+        return runtime;
+    }
+
     public OptionalThing<ActionMessages> getMessages() {
-        return errors;
+        return messages;
     }
 
     public RequestManager getRequestManager() {

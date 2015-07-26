@@ -15,10 +15,10 @@
  */
 package org.lastaflute.web.ruts.process;
 
-import org.dbflute.optional.OptionalObject;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
@@ -27,8 +27,8 @@ import org.lastaflute.web.response.StreamResponse;
 import org.lastaflute.web.response.XmlResponse;
 import org.lastaflute.web.response.render.RenderData;
 import org.lastaflute.web.ruts.NextJourney;
+import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 
@@ -43,24 +43,31 @@ public class ActionResponseReflector {
     protected final ActionExecute execute;
     protected final ActionRuntime runtime;
     protected final RequestManager requestManager;
+    protected final ActionAdjustmentProvider adjustmentProvider;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionResponseReflector(ActionRuntime runtime, RequestManager requestManager) {
+    public ActionResponseReflector(ActionRuntime runtime, RequestManager requestManager, ActionAdjustmentProvider adjustmentProvider) {
         this.execute = runtime.getActionExecute();
         this.runtime = runtime;
         this.requestManager = requestManager;
+        this.adjustmentProvider = adjustmentProvider;
     }
 
     // ===================================================================================
     //                                                                 Reflect to Response
     //                                                                 ===================
     public NextJourney reflect(ActionResponse response) {
-        if (response.isEmpty() || response.isSkip()) {
-            return emptyJourney();
+        if (response.isUndefined()) {
+            return undefinedJourney();
         }
-        return doReflect(response);
+        adjustActionResponseJustBefore(response);
+        return doReflect(response); // normally here
+    }
+
+    protected void adjustActionResponseJustBefore(ActionResponse response) {
+        adjustmentProvider.adjustActionResponseJustBefore(response);
     }
 
     protected NextJourney doReflect(ActionResponse response) {
@@ -77,16 +84,14 @@ public class ActionResponseReflector {
         }
     }
 
-    protected NextJourney handleUnknownResponse(ActionResponse response) {
-        String msg = "Unknown action response type: " + response.getClass() + ", " + response;
-        throw new IllegalStateException(msg);
-    }
-
     // ===================================================================================
     //                                                                       HTML Response
     //                                                                       =============
     protected NextJourney handleHtmlResponse(HtmlResponse response) {
         setupHtmlResponseHeader(response);
+        if (response.isReturnAsEmptyBody()) {
+            return undefinedJourney();
+        }
         setupForwardRenderData(response);
         setupPushedActionForm(response);
         setupSavingErrorsToSession(response);
@@ -94,7 +99,14 @@ public class ActionResponseReflector {
     }
 
     protected void setupHtmlResponseHeader(HtmlResponse response) {
-        response.getHeaderMap().forEach((key, value) -> requestManager.getResponseManager().addHeader(key, value));
+        response.getHeaderMap().forEach((key, values) -> {
+            if (values.length > 0) {
+                final ResponseManager responseManager = requestManager.getResponseManager();
+                for (String value : values) {
+                    responseManager.addHeader(key, value);
+                }
+            }
+        });
     }
 
     protected void setupForwardRenderData(HtmlResponse htmlResponse) {
@@ -110,14 +122,13 @@ public class ActionResponseReflector {
     protected void setupPushedActionForm(HtmlResponse response) {
         response.getPushedFormType().ifPresent(formType -> {
             final String formKey = LastaWebKey.PUSHED_ACTION_FORM_KEY;
-            final ActionFormMeta formMeta = createPushedActionFormMeta(formType, formKey);
-            requestManager.setAttribute(formKey, formMeta.createActionForm());
+            final VirtualActionForm form = createPushedActionForm(formType, formKey);
+            requestManager.setAttribute(formKey, form);
         });
     }
 
-    protected ActionFormMeta createPushedActionFormMeta(Class<?> formType, String formKey) {
-        // TODO jflute lastaflute: [E] fitting: cache of action form meta for pushed and also argument
-        return new ActionFormMeta(formKey, formType, OptionalObject.empty());
+    protected VirtualActionForm createPushedActionForm(Class<?> formType, String formKey) {
+        return execute.prepareFormMeta(formType, null).get().createActionForm();
     }
 
     protected NextJourney createActionNext(HtmlResponse response) {
@@ -133,29 +144,36 @@ public class ActionResponseReflector {
     // ===================================================================================
     //                                                                       JSON Response
     //                                                                       =============
-    protected NextJourney handleJsonResponse(JsonResponse<?> jsonResponse) {
+    protected NextJourney handleJsonResponse(JsonResponse<?> response) {
         // this needs original action customizer in your customizer.dicon
-        final JsonManager jsonManager = requestManager.getJsonManager();
-        final String json = jsonManager.toJson(jsonResponse.getJsonBean());
         final ResponseManager responseManager = requestManager.getResponseManager();
-        setupApiResponseHeader(responseManager, jsonResponse);
-        setupApiResponseHttpStatus(responseManager, jsonResponse);
-        jsonResponse.getCallback().ifPresent(callback -> {
+        setupApiResponseHeader(responseManager, response);
+        setupApiResponseHttpStatus(responseManager, response);
+        if (response.isReturnAsEmptyBody()) {
+            return undefinedJourney();
+        }
+        final JsonManager jsonManager = requestManager.getJsonManager();
+        final String json = jsonManager.toJson(response.getJsonBean());
+        response.getCallback().ifPresent(callback -> {
             final String script = callback + "(" + json + ")";
             responseManager.writeAsJavaScript(script);
         }).orElse(() -> {
             /* responseManager might have debug logging so no logging here */
-            if (jsonResponse.isForcedlyJavaScript()) {
+            if (response.isForcedlyJavaScript()) {
                 responseManager.writeAsJavaScript(json);
             } else { /* as JSON (default) */
                 responseManager.writeAsJson(json);
             }
         });
-        return emptyJourney();
+        return undefinedJourney();
     }
 
     protected void setupApiResponseHeader(ResponseManager responseManager, ApiResponse apiResponse) {
-        apiResponse.getHeaderMap().forEach((key, value) -> responseManager.addHeader(key, value));
+        apiResponse.getHeaderMap().forEach((key, values) -> {
+            for (String value : values) {
+                responseManager.addHeader(key, value); // added as array if already exists
+            }
+        });
     }
 
     protected void setupApiResponseHttpStatus(ResponseManager responseManager, ApiResponse apiResponse) {
@@ -168,22 +186,25 @@ public class ActionResponseReflector {
     // ===================================================================================
     //                                                                        XML Response
     //                                                                        ============
-    protected NextJourney handleXmlResponse(XmlResponse xmlResponse) {
+    protected NextJourney handleXmlResponse(XmlResponse response) {
         final ResponseManager responseManager = requestManager.getResponseManager();
-        setupApiResponseHeader(responseManager, xmlResponse);
-        setupApiResponseHttpStatus(responseManager, xmlResponse);
-        responseManager.writeAsXml(xmlResponse.getXmlStr(), xmlResponse.getEncoding());
-        return emptyJourney();
+        setupApiResponseHeader(responseManager, response);
+        setupApiResponseHttpStatus(responseManager, response);
+        if (response.isReturnAsEmptyBody()) {
+            return undefinedJourney();
+        }
+        responseManager.writeAsXml(response.getXmlStr(), response.getEncoding());
+        return undefinedJourney();
     }
 
     // ===================================================================================
     //                                                                     Stream Response
     //                                                                     ===============
-    protected NextJourney handleStreamResponse(StreamResponse streamResponse) {
+    protected NextJourney handleStreamResponse(StreamResponse response) {
         final ResponseManager responseManager = requestManager.getResponseManager();
-        setupStreamResponseHttpStatus(responseManager, streamResponse);
-        responseManager.download(streamResponse.toDownloadResource());
-        return emptyJourney();
+        setupStreamResponseHttpStatus(responseManager, response);
+        responseManager.download(response.toDownloadResource());
+        return undefinedJourney();
     }
 
     protected void setupStreamResponseHttpStatus(ResponseManager responseManager, StreamResponse streamResponse) {
@@ -194,9 +215,17 @@ public class ActionResponseReflector {
     }
 
     // ===================================================================================
-    //                                                                       Empty Journey
-    //                                                                       =============
-    protected NextJourney emptyJourney() {
-        return NextJourney.empty();
+    //                                                                    Unknown Response
+    //                                                                    ================
+    protected NextJourney handleUnknownResponse(ActionResponse response) {
+        String msg = "Unknown action response type: " + response.getClass() + ", " + response;
+        throw new IllegalStateException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                   Undefined Journey
+    //                                                                   =================
+    protected NextJourney undefinedJourney() {
+        return NextJourney.undefined();
     }
 }

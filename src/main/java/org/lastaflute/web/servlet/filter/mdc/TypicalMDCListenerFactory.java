@@ -34,6 +34,7 @@ public class TypicalMDCListenerFactory {
     public static final String LA_USER_AGENT = "la.userAgent";
     public static final String LA_HEADER_HOST = "la.headerHost";
     public static final String LA_X_FORWARDED_FOR = "la.xForwardedFor";
+    public static final String LA_REMOTE_IP = "la.remoteIp";
     public static final String LA_REQUEST_ID = "la.requestId";
     public static final String LA_USER_TRACE_ID = "la.userTraceId";
     public static final String DEFAULT_USER_TRACE_COOKIE_KEY = "USTRCID";
@@ -60,11 +61,12 @@ public class TypicalMDCListenerFactory {
     protected Map<String, Function<MDCSetupResource, String>> prepareMDCMap() {
         final Map<String, Function<MDCSetupResource, String>> mdcMap = new LinkedHashMap<String, Function<MDCSetupResource, String>>();
         mdcMap.put(LA_REQUEST_PATH, res -> res.getRequestManager().getRequestPath());
+        mdcMap.put(LA_USER_AGENT, res -> res.getRequestManager().getHeaderUserAgent().orElse(null));
         // getting remote host may have heavy performance cost by DNS lookup so not default item
         //mdcMap.put(LA_REMOTE_HOST, res -> res.getRequestManager().getRequest().getRemoteHost());
         mdcMap.put(LA_HEADER_HOST, res -> res.getRequestManager().getHeaderHost().orElse(null));
-        mdcMap.put(LA_USER_AGENT, res -> res.getRequestManager().getHeaderUserAgent().orElse(null));
         mdcMap.put(LA_X_FORWARDED_FOR, res -> res.getRequestManager().getHeaderXForwardedFor().orElse(null));
+        mdcMap.put(LA_REMOTE_IP, res -> res.getRequestManager().getRemoteIp().orElse(null));
         mdcMap.put(LA_REQUEST_ID, res -> buildRequestId(res));
         mdcMap.put(LA_USER_TRACE_ID, res -> handleUserTrace(res)); // should be after request ID putting
         return mdcMap;

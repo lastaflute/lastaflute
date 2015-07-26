@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.aspect.RomanticActionCustomizer;
@@ -35,18 +36,18 @@ public class XmlResponse implements ApiResponse {
     protected static final String ENCODING_WINDOWS_31J = "Windows-31J";
     protected static final String DEFAULT_ENCODING = ENCODING_UTF8;
     protected static final String DUMMY = "dummy";
-    protected static final XmlResponse INSTANCE_OF_EMPTY = new XmlResponse(DUMMY).asEmpty();
-    protected static final XmlResponse INSTANCE_OF_SKIP = new XmlResponse(DUMMY).asSkip();
+    protected static final XmlResponse INSTANCE_OF_UNDEFINED = new XmlResponse(DUMMY).ofUndefined();
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     protected final String xmlStr;
-    protected Map<String, String> headerMap; // lazy loaded (for when no use)
+    protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
     protected String encoding = DEFAULT_ENCODING;
-    protected boolean empty;
-    protected boolean skip;
+    protected boolean undefined;
+    protected boolean returnAsEmptyBody;
+    protected ResponseHook afterTxCommitHook;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -64,9 +65,7 @@ public class XmlResponse implements ApiResponse {
      * @param xmlStr The string of XML to send response. (NotNull)
      */
     public XmlResponse(String xmlStr) {
-        if (xmlStr == null) {
-            throw new IllegalArgumentException("The argument 'xmlStr' should not be null.");
-        }
+        assertArgumentNotNull("xmlStr", xmlStr);
         this.xmlStr = xmlStr;
     }
 
@@ -74,25 +73,26 @@ public class XmlResponse implements ApiResponse {
     //                                                                              Header
     //                                                                              ======
     @Override
-    public XmlResponse header(String name, String value) {
-        if (name == null) {
-            throw new IllegalArgumentException("The argument 'name' should not be null.");
+    public XmlResponse header(String name, String... values) {
+        assertArgumentNotNull("name", name);
+        assertArgumentNotNull("values", values);
+        assertDefinedState("header");
+        final Map<String, String[]> headerMap = prepareHeaderMap();
+        if (headerMap.containsKey(name)) {
+            throw new IllegalStateException("Already exists the header: name=" + name + " existing=" + headerMap);
         }
-        if (value == null) {
-            throw new IllegalArgumentException("The argument 'value' should not be null.");
-        }
-        prepareHeaderMap().put(name, value);
+        headerMap.put(name, values);
         return this;
     }
 
     @Override
-    public Map<String, String> getHeaderMap() {
+    public Map<String, String[]> getHeaderMap() {
         return headerMap != null ? Collections.unmodifiableMap(headerMap) : DfCollectionUtil.emptyMap();
     }
 
-    protected Map<String, String> prepareHeaderMap() {
+    protected Map<String, String[]> prepareHeaderMap() {
         if (headerMap == null) {
-            headerMap = new LinkedHashMap<String, String>(4);
+            headerMap = new LinkedHashMap<String, String[]>(4);
         }
         return headerMap;
     }
@@ -102,6 +102,7 @@ public class XmlResponse implements ApiResponse {
     //                                                                         ===========
     @Override
     public XmlResponse httpStatus(int httpStatus) {
+        assertDefinedState("httpStatus");
         this.httpStatus = httpStatus;
         return this;
     }
@@ -114,8 +115,11 @@ public class XmlResponse implements ApiResponse {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
+    // -----------------------------------------------------
+    //                                              Encoding
+    //                                              --------
     public XmlResponse encodeAsUTF8() {
-        encoding = DEFAULT_ENCODING;
+        encoding = ENCODING_UTF8;
         return this;
     }
 
@@ -124,22 +128,52 @@ public class XmlResponse implements ApiResponse {
         return this;
     }
 
-    public static XmlResponse empty() { // user interface
-        return INSTANCE_OF_EMPTY;
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
+    public static XmlResponse asEmptyBody() { // user interface
+        return new XmlResponse(DUMMY).ofEmptyBody();
     }
 
-    protected XmlResponse asEmpty() { // internal use
-        empty = true;
+    protected XmlResponse ofEmptyBody() { // internal use
+        returnAsEmptyBody = true;
         return this;
     }
 
-    public static XmlResponse skip() { // user interface
-        return INSTANCE_OF_SKIP;
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
+    public static XmlResponse undefined() { // user interface
+        return INSTANCE_OF_UNDEFINED;
     }
 
-    protected XmlResponse asSkip() { // internal use
-        skip = true;
+    protected XmlResponse ofUndefined() { // internal use
+        undefined = true;
         return this;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public XmlResponse afterTxCommit(ResponseHook noArgLambda) {
+        assertArgumentNotNull("noArgLambda", noArgLambda);
+        afterTxCommitHook = noArgLambda;
+        return this;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String title, Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + title + "' should not be null.");
+        }
+    }
+
+    protected void assertDefinedState(String methodName) {
+        if (undefined) {
+            throw new IllegalStateException("undefined response: method=" + methodName + "() this=" + toString());
+        }
     }
 
     // ===================================================================================
@@ -148,9 +182,9 @@ public class XmlResponse implements ApiResponse {
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        final String emptyExp = empty ? ", empty" : "";
-        final String skipExp = skip ? ", skip" : "";
-        return classTitle + ":{" + encoding + emptyExp + skipExp + "}";
+        final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
+        final String undefinedExp = undefined ? ", undefined" : "";
+        return classTitle + ":{" + encoding + emptyExp + undefinedExp + "}";
     }
 
     // ===================================================================================
@@ -165,12 +199,22 @@ public class XmlResponse implements ApiResponse {
     }
 
     @Override
-    public boolean isEmpty() {
-        return empty;
+    public boolean isReturnAsEmptyBody() {
+        return returnAsEmptyBody;
     }
 
     @Override
-    public boolean isSkip() {
-        return skip;
+    public boolean isUndefined() {
+        return undefined;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    public OptionalThing<ResponseHook> getAfterTxCommitHook() {
+        return OptionalThing.ofNullable(afterTxCommitHook, () -> {
+            String msg = "Not found the response hook: " + XmlResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 }

@@ -29,6 +29,14 @@ import java.lang.annotation.Target;
  *  &#64;EnvDispatch(development=FooLogicVirtual.class, production=FooLogicReal.class)
  *  public interface FooLogic {
  *  }
+ *  
+ *  // for development
+ *  public class FooLogicVirtual implements FooLogic {
+ *  }
+ *  
+ *  // for production
+ *  public class FooLogicReal implements FooLogic {
+ *  }
  * </pre>
  * @author jflute
  */

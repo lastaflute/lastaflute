@@ -35,7 +35,8 @@ public class ActionMessages implements Serializable {
     //                                                                          ==========
     private static final long serialVersionUID = 1L;
 
-    public static final String GLOBAL_PROPERTY_KEY = "lastaflute.message.GLOBAL_PROPERTY";
+    /** The property key for global property (non-specific property) for protocol with HTML, JavaScipt. */
+    public static final String GLOBAL_PROPERTY_KEY = "_global";
 
     protected static final Comparator<ActionMessageItem> actionItemComparator = (item1, item2) -> {
         return item1.getOrder() - item2.getOrder();
@@ -47,6 +48,7 @@ public class ActionMessages implements Serializable {
     protected final Map<String, ActionMessageItem> messageMap = new LinkedHashMap<String, ActionMessageItem>();
     protected boolean accessed;
     protected int itemCount;
+    protected Map<String, Object> successAttributeMap; // lazy loaded
 
     // ===================================================================================
     //                                                                         Constructor
@@ -94,6 +96,10 @@ public class ActionMessages implements Serializable {
         if (messageMap.isEmpty()) {
             return Collections.emptyIterator();
         }
+        return doAccessByFlatIterator();
+    }
+
+    protected Iterator<ActionMessage> doAccessByFlatIterator() {
         final List<ActionMessage> msgList = new ArrayList<ActionMessage>();
         final List<ActionMessageItem> itemList = new ArrayList<ActionMessageItem>(messageMap.size());
         for (Iterator<ActionMessageItem> ite = messageMap.values().iterator(); ite.hasNext();) {
@@ -110,6 +116,14 @@ public class ActionMessages implements Serializable {
 
     public Iterator<ActionMessage> accessByIteratorOf(String property) {
         accessed = true;
+        return doAccessByIteratorOf(property);
+    }
+
+    public Iterator<ActionMessage> nonAccessByIteratorOf(String property) { // e.g. for logging
+        return doAccessByIteratorOf(property);
+    }
+
+    protected Iterator<ActionMessage> doAccessByIteratorOf(String property) {
         final ActionMessageItem item = messageMap.get(property);
         return item != null ? item.getList().iterator() : Collections.emptyIterator();
     }
@@ -157,6 +171,59 @@ public class ActionMessages implements Serializable {
     public int size(String property) {
         final ActionMessageItem item = messageMap.get(property);
         return (item == null) ? 0 : item.getList().size();
+    }
+
+    // ===================================================================================
+    //                                                                        Success Data
+    //                                                                        ============
+    /**
+     * Save validation success attribute, derived in validation process, e.g. selected data, <br>
+     * to avoid duplicate database access between validation and main logic.
+     * <pre>
+     * String <span style="color: #553000">keyOfProduct</span> = Product.<span style="color: #70226C">class</span>.getName();
+     * ValidationSuccess <span style="color: #553000">success</span> = validate(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     ...
+     *     selectProduct().ifPresent(<span style="color: #553000">product</span> <span style="font-size: 120%">-</span>&gt;</span> {}, () <span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #553000">messages</span>.<span style="color: #CC4747">saveSuccessData</span>(<span style="color: #553000">keyOfProduct</span>, <span style="color: #553000">product</span>);
+     *     }).orElse(() <span style="font-size: 120%">-</span>&gt;</span> {}, () <span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #553000">messages</span>.addConstraint...();
+     *     });
+     * }, () <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">return</span> asHtml(path_Product_ProductListJsp);
+     * });
+     * <span style="color: #553000">success</span>.<span style="color: #994747">getAttribute</span>(keyOfProduct).alwaysPresent(product <span style="font-size: 120%">-</span>&gt;</span> {
+     *     ...
+     * });
+     * </pre>
+     * @param key The string key of the success attribute. (NotNull)
+     * @param value The value of success attribute. (NotNull)
+     */
+    public void saveSuccessAttribute(String key, Object value) {
+        assertArgumentNotNull("key", key);
+        assertArgumentNotNull("value", value);
+        if (successAttributeMap == null) {
+            successAttributeMap = new LinkedHashMap<String, Object>(4);
+        }
+        successAttributeMap.put(key, value);
+    }
+
+    /**
+     * @return The read-only map of success attribute. (NotNull)
+     */
+    public Map<String, Object> getSuccessAttributeMap() {
+        return successAttributeMap != null ? Collections.unmodifiableMap(successAttributeMap) : Collections.emptyMap();
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 
     // ===================================================================================

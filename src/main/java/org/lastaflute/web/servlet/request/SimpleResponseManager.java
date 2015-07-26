@@ -21,7 +21,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -37,7 +36,6 @@ import org.lastaflute.di.util.LdiInputStreamUtil;
 import org.lastaflute.di.util.LdiOutputStreamUtil;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionPathResolver;
-import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.util.LaRequestUtil;
 import org.lastaflute.web.util.LaResponseUtil;
 import org.slf4j.Logger;
@@ -112,40 +110,23 @@ public class SimpleResponseManager implements ResponseManager {
     //                                                                   Redirect Response
     //                                                                   =================
     @Override
-    public void forward(String forwardPath) throws ServletException, IOException {
-        assertArgumentNotNull("forwardPath", forwardPath);
-        final HttpServletRequest request = getRequestManager().getRequest();
-        final RequestDispatcher rd = request.getRequestDispatcher(forwardPath); // same context
-        if (rd == null) {
-            String msg = "Not found the request dispatcher for the URI: " + forwardPath;
-            throw new IllegalStateException(msg);
-        }
-        rd.forward(request, getResponse());
+    public void redirect(Redirectable redirectable) throws IOException {
+        assertArgumentNotNull("response", redirectable);
+        doRedirect(redirectable);
     }
 
-    @Override
-    public void redirect(String redirectPath) throws IOException {
-        assertArgumentNotNull("redirectPath", redirectPath);
-        doRedirect(redirectPath, false);
-    }
-
-    @Override
-    public void redirectAsIs(String redirectPath) throws IOException {
-        assertArgumentNotNull("redirectPath", redirectPath);
-        doRedirect(redirectPath, true);
-    }
-
-    protected void doRedirect(String redirectPath, boolean asIs) throws IOException {
+    protected void doRedirect(Redirectable redirectable) throws IOException {
         final HttpServletResponse response = getResponse();
-        response.sendRedirect(buildRedirectUrl(response, redirectPath, asIs));
+        response.sendRedirect(buildRedirectUrl(response, redirectable));
     }
 
-    protected String buildRedirectUrl(HttpServletResponse response, String redirectPath, boolean asIs) {
+    protected String buildRedirectUrl(HttpServletResponse response, Redirectable redirectable) {
+        final String routingPath = redirectable.getRoutingPath();
         final String redirectUrl;
-        if (needsContextPathForRedirectPath(redirectPath, asIs)) {
-            redirectUrl = getRequestManager().getContextPath() + redirectPath;
+        if (needsContextPathForRedirectPath(routingPath, redirectable.isAsIs())) {
+            redirectUrl = getRequestManager().getContextPath() + routingPath;
         } else {
-            redirectUrl = redirectPath;
+            redirectUrl = routingPath;
         }
         return response.encodeRedirectURL(redirectUrl);
     }
@@ -155,12 +136,21 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     @Override
-    public HtmlResponse movedPermanently(HtmlResponse response) {
-        if (!response.isRedirectTo()) {
-            throw new IllegalArgumentException("Not redirect response for permanently: " + response);
+    public void movedPermanently(Redirectable redirectable) {
+        setLocationPermanently(buildRedirectUrl(getResponse(), redirectable)); // set up headers for 301
+    }
+
+    @Override
+    public void forward(Forwardable forwardable) throws ServletException, IOException {
+        assertArgumentNotNull("forwardable", forwardable);
+        final String forwardPath = forwardable.getRoutingPath();
+        final HttpServletRequest request = getRequestManager().getRequest();
+        final RequestDispatcher rd = request.getRequestDispatcher(forwardPath); // same context
+        if (rd == null) {
+            String msg = "Not found the request dispatcher for the URI: " + forwardable;
+            throw new IllegalStateException(msg);
         }
-        setLocationPermanently(response.getRoutingPath()); // set up headers for 301
-        return HtmlResponse.empty(); // because of already done about response process
+        rd.forward(request, getResponse());
     }
 
     // ===================================================================================
@@ -185,7 +175,7 @@ public class SimpleResponseManager implements ResponseManager {
     public void writeAsJson(String json) {
         assertArgumentNotNull("json", json);
         final String contentType = "application/json";
-        logger.debug("#flow ...Writing response as {}: \n{}", contentType, json);
+        showWritingResponse(json, contentType);
         write(json, contentType);
     }
 
@@ -193,7 +183,7 @@ public class SimpleResponseManager implements ResponseManager {
     public void writeAsJavaScript(String script) {
         assertArgumentNotNull("script", script);
         final String contentType = "application/javascript";
-        logger.debug("#flow ...Writing response as {}: \n{}", contentType, script);
+        showWritingResponse(script, contentType);
         write(script, contentType);
     }
 
@@ -202,8 +192,20 @@ public class SimpleResponseManager implements ResponseManager {
         assertArgumentNotNull("xmlStr", xmlStr);
         assertArgumentNotNull("encoding", encoding);
         final String contentType = "text/xml";
-        logger.debug("#flow ...Writing response as {}: \n", contentType, xmlStr);
+        showWritingResponse(xmlStr, contentType);
         write(xmlStr, contentType, encoding);
+    }
+
+    protected void showWritingResponse(String value, String contentType) {
+        if (logger.isDebugEnabled()) {
+            // to suppress noisy big data (no need all data for debug: also you can see it by response)
+            final String exp = buildApiResponseDebugDisplay(value);
+            logger.debug("#flow ...Writing response as {}: \n{}", contentType, exp);
+        }
+    }
+
+    protected String buildApiResponseDebugDisplay(String value) {
+        return Srl.cut(value, 300, "...");
     }
 
     // -----------------------------------------------------
@@ -295,6 +297,9 @@ public class SimpleResponseManager implements ResponseManager {
     protected void doDownload(ResponseDownloadResource resource) {
         final HttpServletResponse response = getResponse();
         prepareDownloadResponse(resource, response);
+        if (resource.isReturnAsEmptyBody()) {
+            return;
+        }
         final byte[] byteData = resource.getByteData();
         if (byteData != null) {
             doDownloadByteData(resource, response, byteData);
@@ -310,12 +315,12 @@ public class SimpleResponseManager implements ResponseManager {
         }
         final String contentType = resource.getContentType();
         response.setContentType(contentType);
-        final Map<String, String> headerMap = resource.getHeaderMap();
-        for (Entry<String, String> entry : headerMap.entrySet()) {
-            final String name = entry.getKey();
-            final String value = entry.getValue();
-            response.setHeader(name, value);
-        }
+        final Map<String, String[]> headerMap = resource.getHeaderMap();
+        headerMap.forEach((key, values) -> {
+            for (String value : values) {
+                response.addHeader(key, value); // added as array if already exists
+            }
+        });
     }
 
     protected void doDownloadByteData(ResponseDownloadResource resource, HttpServletResponse response, byte[] byteData) {
@@ -401,8 +406,8 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     // ===================================================================================
-    //                                                                       Assist Helper
-    //                                                                       =============
+    //                                                                        Small Helper
+    //                                                                        ============
     protected void assertArgumentNotNull(String variableName, Object value) {
         if (variableName == null) {
             throw new IllegalArgumentException("The variableName should not be null.");

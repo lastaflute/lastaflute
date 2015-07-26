@@ -16,11 +16,9 @@
 package org.lastaflute.web.callback;
 
 import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.ruts.ActionRequestProcessor;
-import org.lastaflute.web.ruts.GodHandableAction;
 
 /**
- * The hook for action, which is called from {@link ActionRequestProcessor}. <br>
+ * The hook for action, which is called from ActionRequestProcessor. <br>
  * Methods that start with 'godHand' and 'callback' exist. <br >
  * You can creatively use like this:
  * <ul>
@@ -28,7 +26,7 @@ import org.lastaflute.web.ruts.GodHandableAction;
  *     <li>The 'callback' methods are basically for concrete class by (many) developers.</li>
  * </ul>
  * The methods calling order is like this: <br>
- * (And you can see the details of this callback process by reading {@link GodHandableAction})
+ * (And you can see the details of this callback process by reading GodHandableAction)
  * <pre>
  * try {
  *     godHandPrologue()
@@ -65,10 +63,10 @@ public interface ActionHook {
      *     godHandEpilogue()
      * }
      * </pre>
-     * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
-     * @return The path to forward. (NotNull: skip action execute, EmptyAllowed: if empty, proceed to next step)
+     * @param runtime The runtime meta of action execution which you can get the calling method. (NotNull)
+     * @return The path to forward. (NotNull: and if defined, skip action execute, UndefinedAllowed: if undefined, proceed to next step)
      */
-    ActionResponse godHandPrologue(ActionRuntime runtimeMeta);
+    ActionResponse godHandPrologue(ActionRuntime runtime);
 
     /**
      * Callback process as God hand (means Framework process) before action execution and validation. <br>
@@ -87,10 +85,10 @@ public interface ActionHook {
      *     godHandEpilogue()
      * }
      * </pre>
-     * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
-     * @return The path to forward. (NotNull: skip action execute, EmptyAllowed: if empty, proceed to next step)
+     * @param runtime The runtime meta of action execution which you can get the calling method. (NotNull)
+     * @return The path to forward. (NotNull: and if defined, skip action execute, UndefinedAllowed: if undefined, proceed to next step)
      */
-    ActionResponse hookBefore(ActionRuntime runtimeMeta);
+    ActionResponse hookBefore(ActionRuntime runtime);
 
     // ===================================================================================
     //                                                                          on Failure
@@ -113,10 +111,10 @@ public interface ActionHook {
      *     godHandEpilogue()
      * }
      * </pre>
-     * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
-     * @return The path to forward. (NotNull, EmptyAllowed: if empty, proceed to next step)
+     * @param runtime The runtime meta of action execution which you can get the calling method. (NotNull)
+     * @return The path to forward. (NotNull, UndefinedAllowed: if undefined, proceed to next step)
      */
-    ActionResponse godHandMonologue(ActionRuntime runtimeMeta);
+    ActionResponse godHandMonologue(ActionRuntime runtime);
 
     // ===================================================================================
     //                                                                             Finally
@@ -137,9 +135,9 @@ public interface ActionHook {
      *     godHandEpilogue()
      * }
      * </pre>
-     * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
+     * @param runtime The runtime meta of action execution which you can get the calling method. (NotNull)
      */
-    void hookFinally(ActionRuntime runtimeMeta);
+    void hookFinally(ActionRuntime runtime);
 
     /**
      * Callback process as God hand (means Framework process) for action epilogue (closing action). <br>
@@ -157,7 +155,7 @@ public interface ActionHook {
      *     godHandEpilogue() *here
      * }
      * </pre>
-     * @param runtimeMeta The meta of action execution which you can get the calling method. (NotNull)
+     * @param runtime The runtime meta of action execution which you can get the calling method. (NotNull)
      */
-    void godHandEpilogue(ActionRuntime runtimeMeta);
+    void godHandEpilogue(ActionRuntime runtime);
 }

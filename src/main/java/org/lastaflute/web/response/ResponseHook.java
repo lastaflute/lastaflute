@@ -9,28 +9,18 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.token;
-
-import org.lastaflute.web.LastaWebKey;
+package org.lastaflute.web.response;
 
 /**
- * @author modified by jflute (originated in Struts)
+ * @author jflute
+ * @since 0.6.0 (2015/07/11 Saturday)
  */
-public interface TokenManager {
+@FunctionalInterface
+public interface ResponseHook {
 
-    String TOKEN_KEY = LastaWebKey.TRANSACTION_TOKEN_KEY;
-
-    boolean isTokenValid();
-
-    boolean isTokenValid(boolean reset);
-
-    void resetToken();
-
-    void saveToken();
-
-    String generateToken();
+    void hook();
 }

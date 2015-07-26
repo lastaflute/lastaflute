@@ -29,6 +29,7 @@ import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.exception.RequestForwardFailureException;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
@@ -37,7 +38,6 @@ import org.lastaflute.web.ruts.process.ActionFormMapper;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.RequestUrlParam;
 import org.lastaflute.web.servlet.request.RequestManager;
-import org.lastaflute.web.servlet.request.ResponseManager;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -135,7 +135,8 @@ public class ActionRequestProcessor {
     //                                                                               Ready
     //                                                                               =====
     protected ActionResponseReflector createResponseReflector(ActionRuntime runtime) {
-        return new ActionResponseReflector(runtime, getRequestManager());
+        final ActionAdjustmentProvider adjustmentProvider = getAssistantDirector().assistWebDirection().assistActionAdjustmentProvider();
+        return new ActionResponseReflector(runtime, getRequestManager(), adjustmentProvider);
     }
 
     protected void ready(ActionRuntime runtime, ActionResponseReflector reflector) {
@@ -197,28 +198,22 @@ public class ActionRequestProcessor {
     //                                                                             to Next
     //                                                                             =======
     protected void toNext(ActionRuntime runtime, NextJourney journey) throws IOException, ServletException {
-        if (journey.isEmpty()) { // e.g. JSON handling
+        if (journey.isUndefined()) { // e.g. JSON handling
             return;
         }
-        final String routingPath = journey.getRoutingPath();
         if (journey.isRedirectTo()) {
-            doRedirect(runtime, routingPath, journey.isAsIs());
+            doRedirect(runtime, journey);
         } else {
             exportFormPropertyToRequest(runtime); // for e.g. EL expression in JSP
-            doForward(runtime, routingPath);
+            doForward(runtime, journey);
         }
     }
 
     // -----------------------------------------------------
     //                                              Redirect
     //                                              --------
-    protected void doRedirect(ActionRuntime runtime, String redirectPath, boolean asIs) throws IOException {
-        final ResponseManager responseManager = getRequestManager().getResponseManager();
-        if (asIs) {
-            responseManager.redirectAsIs(redirectPath);
-        } else { // mainly here
-            responseManager.redirect(redirectPath);
-        }
+    protected void doRedirect(ActionRuntime runtime, NextJourney journey) throws IOException {
+        getRequestManager().getResponseManager().redirect(journey);
     }
 
     protected void exportFormPropertyToRequest(ActionRuntime runtime) {
@@ -247,23 +242,23 @@ public class ActionRequestProcessor {
     // -----------------------------------------------------
     //                                               Forward
     //                                               -------
-    protected void doForward(ActionRuntime runtime, String forwardPath) throws IOException, ServletException {
+    protected void doForward(ActionRuntime runtime, NextJourney journey) throws IOException, ServletException {
         try {
-            getRequestManager().getResponseManager().forward(forwardPath);
+            getRequestManager().getResponseManager().forward(journey);
         } catch (RuntimeException | IOException | ServletException e) { // because of e.g. compile error may be poor
-            throwRequestForwardFailureException(runtime, forwardPath, e);
+            throwRequestForwardFailureException(runtime, journey, e);
         }
     }
 
-    protected void throwRequestForwardFailureException(ActionRuntime runtime, String forwardPath, Exception e) {
+    protected void throwRequestForwardFailureException(ActionRuntime runtime, NextJourney journey, Exception e) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Failed to forward the request to the path.");
         br.addItem("Advice");
         br.addElement("Read the nested exception message.");
         br.addItem("Action Runtime");
         br.addElement(runtime);
-        br.addItem("Forward Path");
-        br.addElement(forwardPath);
+        br.addItem("Forward Journey");
+        br.addElement(journey);
         final String msg = br.buildExceptionMessage();
         throw new RequestForwardFailureException(msg, e);
     }

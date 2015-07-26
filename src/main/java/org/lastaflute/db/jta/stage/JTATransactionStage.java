@@ -64,6 +64,9 @@ public class JTATransactionStage implements TransactionStage {
         try {
             final BegunTx<RESULT> tx = newBegunTransaction();
             txLambda.perform(tx);
+            if (tx.isRollbackOnly()) { // e.g. when validation error
+                adapter.setRollbackOnly();
+            }
             return tx.getResult();
         } catch (Throwable e) {
             adapter.setRollbackOnly();

@@ -9,7 +9,6 @@ import org.lastaflute.unit.UnitLastaFluteTestCase;
  */
 public class ActionFormMapperTest extends UnitLastaFluteTestCase {
 
-    // TODO jflute lastaflute: [E] test: ActionFormMapperTest various case
     // ===================================================================================
     //                                                                       setProperty()
     //                                                                       =============

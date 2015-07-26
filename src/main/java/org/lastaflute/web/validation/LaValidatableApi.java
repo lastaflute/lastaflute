@@ -23,27 +23,44 @@ import org.lastaflute.web.ruts.message.ActionMessages;
  */
 public interface LaValidatableApi<MESSAGES extends ActionMessages> {
 
+    // ===================================================================================
+    //                                                                            Validate
+    //                                                                            ========
     /**
-     * Validate the form values for API, when e.g. JsonResponse. <br>
+     * Validate the JSON body values for API, when e.g. JsonResponse. <br>
      * The validation error handling is in ApiFailureHook.
      * <pre>
      * <span style="color: #3F7E5E">// by-annotation only</span>
-     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {});
+     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">body</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {});
      * 
      * <span style="color: #3F7E5E">// by-annotation and by-program</span>
-     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">body</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
      *     <span style="color: #70226C">if</span> (...) {
      *         <span style="color: #553000">messages</span>.addConstraint...
      *     }
      * });
      * </pre>
-     * @param form The form that has request parameters. (NotNull)
+     * @param body The JSON body (or action form) that has request parameters. (NotNull)
      * @param moreValidationLambda The callback for more validation, e.g. correlation rule, very complex rule. (NotNull)
+     * @return The success information of validation, basically for success attribute. (NotNull)
      */
-    default void validate(Object form, VaMore<MESSAGES> moreValidationLambda) {
-        createValidator().validateApi(form, moreValidationLambda);
+    default ValidationSuccess validate(Object body, VaMore<MESSAGES> moreValidationLambda) {
+        return createValidator().validateApi(body, moreValidationLambda);
     }
 
+    // ===================================================================================
+    //                                                                         Throw Error
+    //                                                                         ===========
+    /**
+     * Throw validation error exception immediately, for API, when e.g. JsonResponse. <br>
+     * <pre>
+     * <span style="color: #70226C">if</span> (...) { <span style="color: #3F7E5E">// any invalid state</span> 
+     *     <span style="color: #CC4747">throwValidationError</span>(<span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> <span style="color: #553000">messages</span>.addConstraints...);
+     * }
+     * </pre>
+     * @param validationMessagesLambda The callback for setting of validation error messages. (NotNull)
+     * @param validationErrorLambda The callback for response when validation error. (NotNull)
+     */
     default void throwValidationError(VaMessenger<MESSAGES> validationMessagesLambda) {
         createValidator().throwValidationErrorApi(() -> {
             final MESSAGES messages = createMessages();
@@ -52,7 +69,16 @@ public interface LaValidatableApi<MESSAGES extends ActionMessages> {
         });
     }
 
+    // ===================================================================================
+    //                                                                    Validation Parts
+    //                                                                    ================
+    /**
+     * @return The new-created validator for action. (NotNull)
+     */
     ActionValidator<MESSAGES> createValidator();
 
+    /**
+     * @return The new-created messages for action. (NotNull)
+     */
     MESSAGES createMessages();
 }

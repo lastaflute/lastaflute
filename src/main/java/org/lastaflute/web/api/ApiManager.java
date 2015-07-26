@@ -16,7 +16,6 @@
 package org.lastaflute.web.api;
 
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.response.ApiResponse;
 
 /**
@@ -29,55 +28,43 @@ public interface ApiManager {
     //                                                                    Business Failure
     //                                                                    ================
     /**
-     * Handle API failure when login required failure. <br>
-     * The hookFinally() of action hook will be called after this.
-     * @param resource The resource of API result for login, contains e.g. error messages if it exists. (NotNull)
-     * @param errors The optional action message for errors, but basically no errors. (NullAllowed)
-     * @param runtime The runtime meta of action execute for the current request. (NotNull)
-     * @param provider The provider of login redirect info, e.g. redirect path /signin/. (NotNull)
-     * @return The API response, which is for e.g. JSON or XML. (NotNull)
-     */
-    ApiResponse handleLoginRequiredFailure(ApiFailureResource resource, ActionRuntime runtime, ApiLoginRedirectProvider provider);
-
-    /**
      * Handle API failure when validation error. <br>
-     * The hookFinally() of action hook will be called after this.
+     * The hookFinally() of action hook will be called after this. <br>
+     * This method is called in action transaction (always rolled-back).
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
-     * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
-    ApiResponse handleValidationError(ApiFailureResource resource, ActionRuntime runtime);
+    ApiResponse handleValidationError(ApiFailureResource resource);
 
     /**
      * Handle API failure when application exception. <br>
      * The hookFinally() of action hook will be called after this.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
-     * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
-    ApiResponse handleApplicationException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause);
+    ApiResponse handleApplicationException(ApiFailureResource resource, RuntimeException cause);
 
     // ===================================================================================
     //                                                                      System Failure
     //                                                                      ==============
     /**
      * Handle API failure when client exception, e.g. 404 not found, 400 bad request. (Not Required) <br>
+     * HTTP status will be automatically sent by framework's hook so empty response allowed. <br>
      * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
      * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)
-     * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The optional API response, which is for e.g. JSON or XML. (NotNull: if empty, default handling about it)
      */
-    OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, ActionRuntime runtime, RuntimeException cause);
+    OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, RuntimeException cause);
 
     /**
      * Handle API failure when server exception, e.g. 500 server error. (Not Required) <br>
+     * HTTP status will be automatically sent by framework's hook so empty response allowed. <br>
      * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
      * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)
-     * @param runtime The runtime meta of action execute for the current request. (NotNull)
      * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The optional API response, which is for e.g. JSON or XML. (NotNull: if empty, default handling about it)
      */
-    OptionalThing<ApiResponse> handleServerException(ApiFailureResource resource, ActionRuntime runtime, Throwable cause);
+    OptionalThing<ApiResponse> handleServerException(ApiFailureResource resource, Throwable cause);
 }

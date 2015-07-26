@@ -21,18 +21,45 @@ package org.lastaflute.web.docs;
 public interface LaActionDocs {
 
     /**
+     * About Action class implementation.
      * <pre>
-     * [AtMark]Execute
-     * public HtmlResponse index() {
-     *     ListResultBean&lt;Product&gt; memberList = productBhv.selectList(cb -> {
-     *         cb.query().addOrderBy_RegularPrice_Desc();
-     *         cb.fetchFirst(3);
+     * <span style="font-size: 130%; color: #553000">[URL Mapping]</span>
+     * <span style="color: #0000C0">ProfilePassword</span>Action#<span style="color: #0000C0">change</span>() =&gt; <span style="color: #994747">/profile/password/change/</span>
+     * <span style="color: #0000C0">Product</span>Action#<span style="color: #0000C0">list</span>() =&gt; <span style="color: #994747">/product/list/</span>
+     * <span style="color: #0000C0">ProductList</span>Action#index() =&gt; <span style="color: #994747">/product/list/</span>
+     * <span style="color: #0000C0">Mypage</span>Action#index() =&gt; <span style="color: #994747">/mypage/</span>
+     * 
+     * <span style="font-size: 130%; color: #553000">[URL Parameter]</span>
+     * <span style="color: #70226C">public</span> HtmlResponse index(<span style="color: #994747">int pageNumber</span>) { <span style="color: #3F7E5E">// /product/list/3</span>
+     * <span style="color: #70226C">public</span> HtmlResponse index(<span style="color: #994747">OptionalThing&lt;Integer&gt;</span> pageNumber) { <span style="color: #3F7E5E">// /product/list/3 or /product/list/</span>
+     * 
+     * <span style="color: #3F7E5E">// /product/list/mystic/ikspiary/oneman/ (sea=mystic, land=oneman)</span>
+     * &#064;Execute(<span style="color: #994747">urlPattern</span> = <span style="color: #2A00FF">"{}/ikspiary/{}"</span>)
+     * <span style="color: #70226C">public</span> HtmlResponse index(String <span style="color: #553000">sea</span>, String <span style="color: #553000">land</span>) {
+     * 
+     * <span style="font-size: 130%; color: #553000">[Action Form]</span> <span style="color: #3F7E5E">// for POST, GET parameter</span>
+     * <span style="color: #70226C">public</span> HtmlResponse doSignin(<span style="color: #994747">SinginForm form</span>) { <span style="color: #3F7E5E">// POST (or also GET)</span>
+     * 
+     * <span style="color: #3F7E5E">// e.g. /.../list/3?favoriteCode=sea&nextName=land</span>
+     * <span style="color: #70226C">public</span> HtmlResponse list(<span style="color: #994747">Integer pageNumber, SinginForm form</span>) { <span style="color: #3F7E5E">// GET</span>
+     * 
+     * <span style="font-size: 130%; color: #553000">[Action Response]</span>
+     * <span style="color: #70226C">return</span> asHtml(path_MyPage_MyPageJsp); <span style="color: #3F7E5E">// HTML template</span>
+     * <span style="color: #70226C">return</span> asJson(bean); <span style="color: #3F7E5E">// JSON e.g. AJAX, API server</span>
+     * <span style="color: #70226C">return</span> asStream(ins); <span style="color: #3F7E5E">// Stream e.g. download</span>
+     * 
+     * <span style="font-size: 130%; color: #553000">[Example Code]</span>
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     ListResultBean&lt;Product&gt; <span style="color: #553000">productList</span> = <span style="color: #0000C0">productBhv</span>.selectList(<span style="color: #553000">cb</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #553000">cb</span>.query().addOrderBy_RegularPrice_Desc();
+     *         <span style="color: #553000">cb</span>.fetchFirst(<span style="color: #2A00FF">3</span>);
      *     });
-     *     List&lt;MypageProductBean&gt; beans = memberList.stream().map(member -> {
-     *         return new MypageProductBean(member);
-     *     }).collect(Collectors.toList());
-     *     return asHtml(path_Mypage_MypageJsp).renderWith(data -> {
-     *         data.register("beans", beans);
+     *     ListResultBean&lt;MypageProductBean&gt; <span style="color: #553000">topProducts</span> = <span style="color: #553000">memberList</span>.mappingList(<span style="color: #553000">product</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #70226C">return new</span> MypageProductBean(<span style="color: #553000">product</span>);
+     *     });
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #553000">path_Mypage_MypageJsp</span>).renderWith(<span style="color: #553000">data</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #553000">data</span>.register(<span style="color: #2A00FF">"topProducts"</span>, <span style="color: #553000">topProducts</span>);
      *     });
      * }
      * </pre>
@@ -65,6 +92,8 @@ public interface LaActionDocs {
      * o forwardById(actionType, ids) <span style="color: #3F7E5E">// by the ID, /product/list/3</span>
      * o forwardByParam(actionType, params) <span style="color: #3F7E5E">// by the GET parameter, /product/list?sea=mystic</span>
      * o forwardWith(actionType, moreUrl_or_params) <span style="color: #3F7E5E">// with various parameters</span>
+     * 
+     * o toActionUrl(actionType [with chain]) <span style="color: #3F7E5E">// build action URL by action type e.g. /product/list</span>
      * 
      * <span style="font-size: 130%; color: #553000">[Advance]</span>
      * o async(noArgLambda) <span style="color: #3F7E5E">// execute asynchronous process</span>

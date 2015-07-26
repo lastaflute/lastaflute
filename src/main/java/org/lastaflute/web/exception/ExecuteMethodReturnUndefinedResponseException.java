@@ -13,18 +13,22 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.login.exception;
+package org.lastaflute.web.exception;
 
 import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
  */
-public class LoginTransactionFailureException extends LaSystemException {
+public class ExecuteMethodReturnUndefinedResponseException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public LoginTransactionFailureException(String msg, Throwable cause) {
+    public ExecuteMethodReturnUndefinedResponseException(String msg) {
+        super(msg);
+    }
+
+    public ExecuteMethodReturnUndefinedResponseException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

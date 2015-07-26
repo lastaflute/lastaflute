@@ -13,26 +13,22 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.api;
+package org.lastaflute.web.exception;
+
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
  */
-public class ApiLoginRedirectProvider {
+public class ExecuteMethodFormPropertyValidationMismatchException extends LaSystemException {
 
-    protected final String contextAbsolutePath;
-    protected final String contextRelativePath;
+    private static final long serialVersionUID = 1L;
 
-    public ApiLoginRedirectProvider(String contextAbsolutePath, String contextRelativePath) {
-        this.contextAbsolutePath = contextAbsolutePath;
-        this.contextRelativePath = contextRelativePath;
+    public ExecuteMethodFormPropertyValidationMismatchException(String msg) {
+        super(msg);
     }
 
-    public String provideContextAbsolutePath() {
-        return contextAbsolutePath;
-    }
-
-    public String provideContextRelativePath() {
-        return contextRelativePath;
+    public ExecuteMethodFormPropertyValidationMismatchException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }
