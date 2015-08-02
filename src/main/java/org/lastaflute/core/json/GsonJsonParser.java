@@ -88,17 +88,36 @@ public class GsonJsonParser implements RealJsonParser // adapters here
     // ===================================================================================
     //                                                                      JSON Interface
     //                                                                      ==============
-    @SuppressWarnings("unchecked")
     @Override
     public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) { // are not null, already checked
         final BEAN bean = gson.fromJson(json, beanType); // if empty JSON, new-only instance
-        return bean != null ? bean : (BEAN) DfReflectionUtil.newInstance(beanType);
+        return bean != null ? bean : newEmptyInstance(beanType);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <BEAN> BEAN newEmptyInstance(Class<BEAN> beanType) {
+        return (BEAN) DfReflectionUtil.newInstance(beanType);
     }
 
     @Override
     public <BEAN> List<BEAN> fromJsonList(String json, ParameterizedType elementType) { // are not null, already checked
         final List<BEAN> list = gson.fromJson(json, elementType); // if empty JSON, empty list
         return list != null ? Collections.unmodifiableList(list) : DfCollectionUtil.emptyList();
+    }
+
+    @Override
+    public <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType) {
+        final BEAN bean = gson.fromJson(json, parameterizedType); // if empty JSON, new-only instance
+        return bean != null ? bean : newEmptyInstance(parameterizedType);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <BEAN> BEAN newEmptyInstance(ParameterizedType parameterizedType) {
+        final Class<?> rawClass = DfReflectionUtil.getRawClass(parameterizedType);
+        if (rawClass == null) {
+            throw new IllegalStateException("Cannot get raw type from the parameterized type: " + parameterizedType);
+        }
+        return (BEAN) newEmptyInstance(rawClass);
     }
 
     @Override

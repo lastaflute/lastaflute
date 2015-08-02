@@ -27,8 +27,8 @@ public interface RealJsonParser {
     /**
      * Convert from the JSON string to the bean new-created by the specified type.
      * @param <BEAN> The type of JSON bean.
-     * @param json The string of JSON to be parsed. (NotNull)
-     * @param beanType The type of bean to convert, should have default constructor. (NotNull, EmptyAllowed: returns new-only)
+     * @param json The string of JSON to be parsed. (NotNull, EmptyAllowed: returns new-only)
+     * @param beanType The type of bean to convert, should have default constructor. (NotNull)
      * @return The new-created bean that has the JSON values. (NotNull: if empty JSON, new-only)
      */
     <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
@@ -40,11 +40,24 @@ public interface RealJsonParser {
      * ... = fromJsonList(json, new ParameterizedRef&lt;List&lt;SeaBean&gt;&gt;(){}.getType());
      * </pre>
      * @param <ELEMENT> The element type of JSON list.
-     * @param json The string of JSON to be parsed. (NotNull)
-     * @param elementType The type of bean to convert, should have default constructor. (NotNull, EmptyAllowed: returns empty list)
+     * @param json The string of JSON to be parsed. (NotNull, EmptyAllowed: returns new-only)
+     * @param elementType The type of bean to convert, should have default constructor. (NotNull)
      * @return The read-only list of new-created bean that has the JSON values. (NotNull, EmptyAllowed: if empty JSON)
      */
     <ELEMENT> List<ELEMENT> fromJsonList(String json, ParameterizedType elementType);
+
+    /**
+     * Convert from the JSON string to the parameterized bean.
+     * You need to specify parameterized type like this:
+     * <pre>
+     * ... = fromJsonList(json, new ParameterizedRef&lt;MaihamaBean&lt;SeaBean&gt;&gt;(){}.getType());
+     * </pre>
+     * @param <BEAN> The type of JSON bean as root.
+     * @param json The string of JSON to be parsed. (NotNull, EmptyAllowed: returns new-only)
+     * @param parameterizedType The parameterized type of bean to convert, should have default constructor. (NotNull)
+     * @return The new-created bean that has the JSON values. (NotNull: if empty JSON, new-only)
+     */
+    <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType);
 
     /**
      * Convert from the source object to JSON string.

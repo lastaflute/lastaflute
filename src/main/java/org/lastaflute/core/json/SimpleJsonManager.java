@@ -193,6 +193,13 @@ public class SimpleJsonManager implements JsonManager {
     }
 
     @Override
+    public <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType) {
+        assertArgumentNotNull("json", json);
+        assertArgumentNotNull("parameterizedType", parameterizedType);
+        return realJsonParser.fromJsonParameteried(json, parameterizedType);
+    }
+
+    @Override
     public String toJson(Object bean) {
         assertArgumentNotNull("bean", bean);
         return realJsonParser.toJson(bean);
