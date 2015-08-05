@@ -224,6 +224,10 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
         postcard.suppressSendFailure();
     }
 
+    public void forcedlyDirect(String subject, String plainBody) {
+        postcard.useDirectBody(plainBody).useWholeFixedText().forcedlyDirect(subject);
+    }
+
     // ===================================================================================
     //                                                                   Template Variable
     //                                                                   =================
