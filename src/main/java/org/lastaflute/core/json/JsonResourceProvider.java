@@ -42,4 +42,12 @@ public interface JsonResourceProvider {
     default boolean isPrettyPrintSuppressed() {
         return false; // line separating if development.here as default
     }
+
+    /**
+     * Is null-to-empty writing valid?
+     * @return The determination, true or false.
+     */
+    default boolean isNullToEmptyWriting() {
+        return false; // show as null
+    }
 }

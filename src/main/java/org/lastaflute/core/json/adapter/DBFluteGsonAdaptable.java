@@ -19,6 +19,7 @@ import java.io.IOException;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
+import org.lastaflute.core.json.GsonOption;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeUnknownException;
 import org.lastaflute.core.util.LaDBFluteUtil;
@@ -41,27 +42,39 @@ public interface DBFluteGsonAdaptable {
     // ===================================================================================
     //                                                                        Type Adapter
     //                                                                        ============
-    class TypeAdapterClassifictory implements TypeAdapterFactory {
+    class ClassificationTypeAdapterFactory implements TypeAdapterFactory {
+
+        protected final GsonOption option;
+
+        public ClassificationTypeAdapterFactory(GsonOption option) {
+            this.option = option;
+        }
 
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final Class<? super T> rawType = type.getRawType();
             if (rawType != null && LaDBFluteUtil.isClassificationType(rawType)) {
                 @SuppressWarnings("unchecked")
-                final TypeAdapter<T> pter = (TypeAdapter<T>) new TypeAdapterClassification(rawType);
+                final TypeAdapter<T> pter = (TypeAdapter<T>) createTypeAdapterClassification(rawType);
                 return pter;
             } else {
                 return null;
             }
+        }
+
+        protected TypeAdapterClassification createTypeAdapterClassification(Class<?> rawType) {
+            return new TypeAdapterClassification(rawType, option);
         }
     }
 
     class TypeAdapterClassification extends TypeAdapter<Classification> {
 
         protected final Class<?> clsType;
+        protected final GsonOption option;
 
-        public TypeAdapterClassification(Class<?> clsType) {
+        public TypeAdapterClassification(Class<?> clsType, GsonOption option) {
             this.clsType = clsType;
+            this.option = option;
         }
 
         @Override
@@ -126,14 +139,27 @@ public interface DBFluteGsonAdaptable {
 
         @Override
         public void write(JsonWriter out, Classification value) throws IOException {
-            out.value(value != null ? value.code() : null);
+            if (value == null && isNullToEmptyWriting()) {
+                out.value("");
+            } else {
+                out.value(value != null ? value.code() : null);
+            }
+        }
+
+        protected boolean isNullToEmptyWriting() {
+            return option.isNullToEmptyWriting();
         }
     }
 
     // ===================================================================================
     //                                                                             Creator
     //                                                                             =======
-    default TypeAdapterClassifictory createClassifictory() {
-        return new TypeAdapterClassifictory();
+    default ClassificationTypeAdapterFactory createClassificationTypeAdapterFactory() {
+        return new ClassificationTypeAdapterFactory(getGsonOption());
     }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    GsonOption getGsonOption();
 }

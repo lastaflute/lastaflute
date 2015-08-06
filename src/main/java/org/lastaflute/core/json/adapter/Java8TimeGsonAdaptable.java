@@ -24,6 +24,7 @@ import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.lastaflute.core.json.GsonOption;
 import org.lastaflute.core.json.exception.JsonPropertyDateTimeParseFailureException;
 
 import com.google.gson.Gson;
@@ -42,7 +43,13 @@ public interface Java8TimeGsonAdaptable {
     // ===================================================================================
     //                                                                        Type Adapter
     //                                                                        ============
-    class TypeAdapterDateTimctory implements TypeAdapterFactory {
+    class DateTimeTypeAdapterFactory implements TypeAdapterFactory {
+
+        protected final GsonOption option;
+
+        public DateTimeTypeAdapterFactory(GsonOption option) {
+            this.option = option;
+        }
 
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
@@ -68,19 +75,25 @@ public interface Java8TimeGsonAdaptable {
         }
 
         protected TypeAdapterLocalDate createTypeAdapterLocalDate() {
-            return new TypeAdapterLocalDate();
+            return new TypeAdapterLocalDate(option);
         }
 
         protected TypeAdapterLocalDateTime createTypeAdapterLocalDateTime() {
-            return new TypeAdapterLocalDateTime();
+            return new TypeAdapterLocalDateTime(option);
         }
 
         protected TypeAdapterLocalTime createTypeAdapterLocalTime() {
-            return new TypeAdapterLocalTime();
+            return new TypeAdapterLocalTime(option);
         }
     }
 
     abstract class AbstractTypeDateTimeAdapter<DATE extends TemporalAccessor> extends TypeAdapter<DATE> {
+
+        protected final GsonOption option;
+
+        public AbstractTypeDateTimeAdapter(GsonOption option) {
+            this.option = option;
+        }
 
         @Override
         public DATE read(JsonReader in) throws IOException {
@@ -100,7 +113,15 @@ public interface Java8TimeGsonAdaptable {
 
         @Override
         public void write(JsonWriter out, DATE value) throws IOException {
-            out.value(value != null ? getDateTimeFormatter().format(value) : null);
+            if (value == null && isNullToEmptyWriting()) {
+                out.value("");
+            } else {
+                out.value(value != null ? getDateTimeFormatter().format(value) : null);
+            }
+        }
+
+        protected boolean isNullToEmptyWriting() {
+            return option.isNullToEmptyWriting();
         }
 
         protected abstract DateTimeFormatter getDateTimeFormatter();
@@ -134,6 +155,10 @@ public interface Java8TimeGsonAdaptable {
 
         public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
 
+        public TypeAdapterLocalDate(GsonOption option) {
+            super(option);
+        }
+
         @Override
         protected DateTimeFormatter getDateTimeFormatter() {
             return formatter;
@@ -153,6 +178,10 @@ public interface Java8TimeGsonAdaptable {
     class TypeAdapterLocalDateTime extends AbstractTypeDateTimeAdapter<LocalDateTime> {
 
         public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+        public TypeAdapterLocalDateTime(GsonOption option) {
+            super(option);
+        }
 
         @Override
         protected DateTimeFormatter getDateTimeFormatter() {
@@ -174,6 +203,10 @@ public interface Java8TimeGsonAdaptable {
 
         public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_TIME;
 
+        public TypeAdapterLocalTime(GsonOption option) {
+            super(option);
+        }
+
         @Override
         protected DateTimeFormatter getDateTimeFormatter() {
             return formatter;
@@ -193,7 +226,12 @@ public interface Java8TimeGsonAdaptable {
     // ===================================================================================
     //                                                                             Creator
     //                                                                             =======
-    default TypeAdapterDateTimctory createDateTimctory() {
-        return new TypeAdapterDateTimctory();
+    default DateTimeTypeAdapterFactory createDateTimeTypeAdapterFactory() {
+        return new DateTimeTypeAdapterFactory(getGsonOption());
     }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    GsonOption getGsonOption();
 }

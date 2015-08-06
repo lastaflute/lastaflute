@@ -54,6 +54,9 @@ public class SimpleJsonManager implements JsonManager {
     /** Is pretty print suppressed (not line separating) in output JSON string? */
     protected boolean prettyPrintSuppressed;
 
+    /** Is null-to-empty writing valid? */
+    protected boolean nullToEmptyWriting;
+
     /** The real parser of JSON. (NotNull: after initialization) */
     protected RealJsonParser realJsonParser;
 
@@ -71,6 +74,7 @@ public class SimpleJsonManager implements JsonManager {
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
         nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
         prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
+        nullToEmptyWriting = provider != null ? provider.isNullToEmptyWriting() : false;
         final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
         showBootLogging();
@@ -97,16 +101,24 @@ public class SimpleJsonManager implements JsonManager {
     protected RealJsonParser createGsonJsonParser() {
         final boolean serializeNulls = !nullsSuppressed;
         final boolean prettyPrinting = !prettyPrintSuppressed && developmentHere;
-        return newGsonJsonParser(serializeNulls, prettyPrinting);
+        return newGsonJsonParser(serializeNulls, prettyPrinting, nullToEmptyWriting);
     }
 
-    protected GsonJsonParser newGsonJsonParser(boolean serializeNulls, boolean prettyPrinting) {
+    protected GsonJsonParser newGsonJsonParser( // option arguments
+            boolean serializeNulls // to builder
+            , boolean prettyPrinting // to builder
+            , boolean nullToEmptyWriting // to option
+    ) {
         return new GsonJsonParser(builder -> {
             if (serializeNulls) {
                 builder.serializeNulls();
             }
             if (prettyPrinting) {
                 builder.setPrettyPrinting();
+            }
+        } , op -> {
+            if (nullToEmptyWriting) {
+                op.asNullToEmptyWriting();
             }
         });
     }

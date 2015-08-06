@@ -25,6 +25,7 @@ import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.core.json.adapter.DBFluteGsonAdaptable;
 import org.lastaflute.core.json.adapter.Java8TimeGsonAdaptable;
 import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
+import org.lastaflute.core.json.adapter.StringGsonAdaptable;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -33,54 +34,80 @@ import com.google.gson.GsonBuilder;
  * @author jflute
  */
 public class GsonJsonParser implements RealJsonParser // adapters here
-        , DBFluteGsonAdaptable, Java8TimeGsonAdaptable, NumberGsonAdaptable {
+        , DBFluteGsonAdaptable, StringGsonAdaptable, NumberGsonAdaptable, Java8TimeGsonAdaptable {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final GsonOption option;
     protected final Gson gson;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public GsonJsonParser(Consumer<GsonBuilder> settings) {
+    public GsonJsonParser(Consumer<GsonBuilder> oneArgLambda, Consumer<GsonOption> opLambda) {
+        option = createOption(opLambda);
+        gson = createGson(oneArgLambda);
+    }
+
+    protected GsonOption createOption(Consumer<GsonOption> opLambda) {
+        final GsonOption option = new GsonOption();
+        opLambda.accept(option);
+        return option;
+    }
+
+    protected Gson createGson(Consumer<GsonBuilder> settings) {
         final GsonBuilder builder = newGsonBuilder();
         setupDefaultSettings(builder);
         setupYourSettings(builder);
         acceptGsonSettings(settings, builder);
-        gson = builder.create();
+        return builder.create();
     }
 
     protected GsonBuilder newGsonBuilder() {
         return new GsonBuilder();
     }
 
-    protected void setupDefaultSettings(final GsonBuilder builder) {
+    // -----------------------------------------------------
+    //                                      Default Settings
+    //                                      ----------------
+    protected void setupDefaultSettings(GsonBuilder builder) {
         registerDBFluteAdapter(builder);
-        registerJava8TimeAdapter(builder);
+        registerStringAdapter(builder);
         registerNumberAdapter(builder);
+        registerJava8TimeAdapter(builder);
         registerUtilDateFormat(builder);
     }
 
     protected void registerDBFluteAdapter(GsonBuilder builder) {
-        builder.registerTypeAdapterFactory(createClassifictory());
+        builder.registerTypeAdapterFactory(createClassificationTypeAdapterFactory());
     }
 
-    protected void registerJava8TimeAdapter(GsonBuilder builder) { // until supported by Gson
-        builder.registerTypeAdapterFactory(createDateTimctory());
+    protected void registerStringAdapter(GsonBuilder builder) {
+        builder.registerTypeAdapterFactory(createStringTypeAdapterFactory());
     }
 
     protected void registerNumberAdapter(GsonBuilder builder) { // to show property path in exception message
-        FACTORIES.forEach(factory -> builder.registerTypeAdapterFactory(factory));
+        createNumberFactoryList().forEach(factory -> builder.registerTypeAdapterFactory(factory));
+    }
+
+    protected void registerJava8TimeAdapter(GsonBuilder builder) { // until supported by Gson
+        builder.registerTypeAdapterFactory(createDateTimeTypeAdapterFactory());
     }
 
     protected void registerUtilDateFormat(GsonBuilder builder) {
         builder.setDateFormat("yyyy-MM-dd'T'HH:mm:ss"); // same as local date-time
     }
 
+    // -----------------------------------------------------
+    //                                         Your Settings
+    //                                         -------------
     protected void setupYourSettings(GsonBuilder builder) { // you can override
     }
 
+    // -----------------------------------------------------
+    //                                         Gson Settings
+    //                                         -------------
     protected void acceptGsonSettings(Consumer<GsonBuilder> settings, GsonBuilder builder) {
         settings.accept(builder);
     }
@@ -123,5 +150,13 @@ public class GsonJsonParser implements RealJsonParser // adapters here
     @Override
     public String toJson(Object bean) { // is not null, already checked
         return gson.toJson(bean);
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    @Override
+    public GsonOption getGsonOption() {
+        return option;
     }
 }
