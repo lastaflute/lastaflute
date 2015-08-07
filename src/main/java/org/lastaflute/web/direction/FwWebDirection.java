@@ -21,13 +21,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+import javax.servlet.Filter;
+
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
-import org.lastaflute.web.servlet.filter.FilterListener;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
+import org.lastaflute.web.servlet.filter.listener.FilterListener;
+import org.lastaflute.web.servlet.filter.listener.FilterListenerServletAdapter;
 import org.lastaflute.web.servlet.filter.mdc.MDCListener;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
 import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
@@ -153,6 +156,15 @@ public class FwWebDirection {
     public void directMDC(MDCListener listener) {
         assertArgumentNotNull("listener", listener);
         getFilterListenerList().add(listener);
+    }
+
+    public void directServletFilter(Filter servletFilter, boolean beforeLogging) {
+        assertArgumentNotNull("servletFilter", servletFilter);
+        getFilterListenerList().add(newFilterListenerServletAdapter(servletFilter, beforeLogging));
+    }
+
+    protected FilterListenerServletAdapter newFilterListenerServletAdapter(Filter servletFilter, boolean beforeLogging) {
+        return new FilterListenerServletAdapter(servletFilter, beforeLogging);
     }
 
     protected List<FilterListener> getFilterListenerList() {

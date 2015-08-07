@@ -20,6 +20,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -52,13 +53,13 @@ import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.message.MessageResources;
 import org.lastaflute.web.ruts.message.RutsMessageResourceGateway;
 import org.lastaflute.web.ruts.message.objective.ObjectiveMessageResources;
-import org.lastaflute.web.servlet.filter.FilterListener;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.filter.RequestRoutingFilter;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogResource;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpServletRequest;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpSession;
+import org.lastaflute.web.servlet.filter.listener.FilterListener;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,6 +125,7 @@ public class LastaFilter implements Filter {
             throw e;
         }
         initEmbeddedFilter(filterConfig);
+        initFilterListener(filterConfig);
         try {
             showBoot(assistantDirector);
         } catch (RuntimeException e) {
@@ -239,6 +241,16 @@ public class LastaFilter implements Filter {
     }
 
     // -----------------------------------------------------
+    //                                       Filter Listener
+    //                                       ---------------
+    protected void initFilterListener(FilterConfig filterConfig) throws ServletException {
+        final List<FilterListener> listenerList = assistFilterListenerList();
+        for (FilterListener listener : listenerList) {
+            listener.init(filterConfig);
+        }
+    }
+
+    // -----------------------------------------------------
     //                                             Show Boot
     //                                             ---------
     protected void showBoot(FwAssistantDirector assistantDirector) {
@@ -301,14 +313,14 @@ public class LastaFilter implements Filter {
     protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         if (!HotdeployUtil.isHotdeploy()) {
-            viaFilterListener(request, response, chain); // #to_action
+            viaOutsideListener(request, response, chain); // #to_action
             return;
         }
         final String loaderKey = HOTDEPLOY_CLASSLOADER_KEY;
         if (request.getAttribute(loaderKey) != null) { // check recursive call
             final ClassLoader loader = (ClassLoader) request.getAttribute(loaderKey);
             Thread.currentThread().setContextClassLoader(loader);
-            viaFilterListener(request, response, chain); // #to_action
+            viaOutsideListener(request, response, chain); // #to_action
             return;
         }
         final HotdeployBehavior ondemand = (HotdeployBehavior) LaContainerBehavior.getProvider();
@@ -318,7 +330,7 @@ public class LastaFilter implements Filter {
             ContainerUtil.overrideExternalRequest(hotdeployRequest); // override formal request
             try {
                 request.setAttribute(loaderKey, Thread.currentThread().getContextClassLoader());
-                viaFilterListener(hotdeployRequest, response, chain); // #to_action
+                viaOutsideListener(hotdeployRequest, response, chain); // #to_action
             } finally {
                 final HotdeployHttpSession session = (HotdeployHttpSession) hotdeployRequest.getSession(false);
                 if (session != null) {
@@ -335,23 +347,27 @@ public class LastaFilter implements Filter {
     }
 
     // -----------------------------------------------------
-    //                                   via Filter Listener
-    //                                   -------------------
-    protected void viaFilterListener(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    //                                  via Outside Listener
+    //                                  --------------------
+    protected void viaOutsideListener(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        viaListenerDeque(request, response, chain, prepareFilterListener()); // #to_action
+        viaOutsideListenerDeque(request, response, chain, prepareOutsideListener()); // #to_action
     }
 
-    protected Deque<FilterListener> prepareFilterListener() { // null allowed (if no listener)
-        final List<FilterListener> listenerList = assistFilterListenerList();
+    protected Deque<FilterListener> prepareOutsideListener() { // null allowed (if no listener)
+        final List<FilterListener> listenerList = assistFilterListenerList().stream().filter(li -> {
+            return li.isBeforeLogging();
+        }).collect(Collectors.toList());
         return !listenerList.isEmpty() ? new LinkedList<FilterListener>(listenerList) : null;
     }
 
-    protected void viaListenerDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
+    protected void viaOutsideListenerDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
             Deque<FilterListener> deque) throws IOException, ServletException {
         final FilterListener next = deque != null ? deque.poll() : null; // null if no listener
         if (next != null) {
-            next.listen(() -> viaListenerDeque(request, response, chain, deque)); // e.g. MDC
+            next.listen(request, response, (argreq, argres) -> {
+                viaOutsideListenerDeque(argreq, argres, chain, deque);
+            }); // e.g. MDC
         } else {
             viaEmbeddedFilter(request, response, chain); // #to_action
         }
@@ -362,9 +378,9 @@ public class LastaFilter implements Filter {
     //                                   -------------------
     protected void viaEmbeddedFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        loggingFilter.doFilter(request, response, (req, res) -> {
+        loggingFilter.doFilter(request, response, (argreq, argres) -> {
             enableAccessLogIfNeeds();
-            routingFilter.doFilter(req, res, prepareFinalChain(chain)); /* #to_action */
+            viaInsideListener((HttpServletRequest) argreq, (HttpServletResponse) argres, chain);
         });
     }
 
@@ -379,6 +395,37 @@ public class LastaFilter implements Filter {
         }
     }
 
+    // -----------------------------------------------------
+    //                                   via Inside Listener
+    //                                   -------------------
+    protected void viaInsideListener(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        viaInsideListenerDeque(request, response, chain, prepareInsideListenerDeque());
+    }
+
+    protected Deque<FilterListener> prepareInsideListenerDeque() { // null allowed (if no listener)
+        final List<FilterListener> listenerList = assistInsideListenerList();
+        return !listenerList.isEmpty() ? new LinkedList<FilterListener>(listenerList) : null;
+    }
+
+    protected List<FilterListener> assistInsideListenerList() {
+        return assistFilterListenerList().stream().filter(listener -> {
+            return !listener.isBeforeLogging();
+        }).collect(Collectors.toList());
+    }
+
+    protected void viaInsideListenerDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
+            final Deque<FilterListener> deque) throws IOException, ServletException {
+        final FilterListener next = deque != null ? deque.poll() : null; // null if no listener
+        if (next != null) {
+            next.listen(request, response, (argreq, argres) -> {
+                viaInsideListenerDeque(argreq, argres, chain, deque);
+            }); // e.g. original listener
+        } else {
+            routingFilter.doFilter(request, response, prepareFinalChain(chain)); /* #to_action */
+        }
+    }
+
     protected FilterChain prepareFinalChain(FilterChain chain) {
         return chain;
     }
@@ -390,15 +437,20 @@ public class LastaFilter implements Filter {
     public void destroy() {
         WebLastaContainerDestroyer.destroy();
         destroyEmbeddedFilter();
+        destroyFilterListener();
     }
 
     protected void destroyEmbeddedFilter() {
-        if (loggingFilter != null) {
+        if (loggingFilter != null) { // just in case
             loggingFilter.destroy();
         }
-        if (routingFilter != null) {
+        if (routingFilter != null) { // just in case
             routingFilter.destroy();
         }
+    }
+
+    protected void destroyFilterListener() {
+        assistFilterListenerList().forEach(listener -> listener.destroy());
     }
 
     // ===================================================================================
