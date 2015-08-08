@@ -13,14 +13,14 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.custom;
+package org.lastaflute.web.validation;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
 /**
  * @author jflute
- * @since 0.6.0 (2015/08/08 Saturday in American Water Front)
+ * @since 0.6.0 (2015/08/08 Saturday at American Water Front)
  */
 public class RequiredValidator implements ConstraintValidator<Required, Object> {
 

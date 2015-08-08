@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.custom;
+package org.lastaflute.web.validation;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.CONSTRUCTOR;
@@ -31,7 +31,7 @@ import javax.validation.Payload;
 
 /**
  * @author jflute
- * @since 0.6.0 (2015/08/08 Saturday in American Water Front)
+ * @since 0.6.0 (2015/08/08 Saturday at American Water Front)
  */
 @Target({ METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER })
 @Retention(RUNTIME)
