@@ -31,8 +31,7 @@ public class RequiredValidator implements ConstraintValidator<Required, Object> 
     @Override
     public boolean isValid(Object value, ConstraintValidatorContext context) {
         if (value instanceof String) {
-            // TODO jflute blank? (2015/08/08)
-            return value != null && ((String) value).length() > 0;
+            return value != null && ((String) value).trim().length() > 0; // means not blank
         } else { // e.g. Number, LocalDate
             return value != null;
         }
