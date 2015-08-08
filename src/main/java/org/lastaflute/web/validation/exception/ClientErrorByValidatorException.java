@@ -15,13 +15,14 @@
  */
 package org.lastaflute.web.validation.exception;
 
+import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.validation.VaErrorHook;
 
 /**
  * @author jflute
+ * @since 0.6.0 (2015/08/08 Saturday at Showbase)
  */
-public class ValidationErrorException extends RuntimeException {
+public class ClientErrorByValidatorException extends ForcedRequest400BadRequestException {
 
     // ===================================================================================
     //                                                                          Definition
@@ -32,20 +33,13 @@ public class ValidationErrorException extends RuntimeException {
     //                                                                           Attribute
     //                                                                           =========
     protected final ActionMessages messages;
-    protected final VaErrorHook errorHandler;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ValidationErrorException(ActionMessages messages, VaErrorHook errorHandler) {
-        if (messages == null) {
-            throw new IllegalArgumentException("The argument 'messages' should not be null.");
-        }
-        if (errorHandler == null) {
-            throw new IllegalArgumentException("The argument 'errorHandler' should not be null.");
-        }
+    public ClientErrorByValidatorException(String msg, ActionMessages messages) {
+        super(msg);
         this.messages = messages;
-        this.errorHandler = errorHandler;
     }
 
     // ===================================================================================
@@ -53,7 +47,7 @@ public class ValidationErrorException extends RuntimeException {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "validationError:{messages=" + messages + ", handler=" + errorHandler + "}";
+        return "validationClientError:{messages=" + messages + "}";
     }
 
     // ===================================================================================
@@ -61,9 +55,5 @@ public class ValidationErrorException extends RuntimeException {
     //                                                                            ========
     public ActionMessages getMessages() {
         return messages;
-    }
-
-    public VaErrorHook getErrorHandler() {
-        return errorHandler;
     }
 }

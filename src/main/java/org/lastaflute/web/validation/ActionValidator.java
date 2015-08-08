@@ -44,13 +44,13 @@ import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.callback.ActionRuntime;
-import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.message.MessagesCreator;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
+import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 
 /**
@@ -99,7 +99,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         assertArgumentNotNull("form", form);
         assertArgumentNotNull("doValidateLambda", doValidateLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
-        checkClientError(form);
+        verifyClientError(form);
         final Set<ConstraintViolation<Object>> vioSet = hibernateValidate(form);
         @SuppressWarnings("unchecked")
         final MESSAGES messages = (MESSAGES) toActionMessages(form, vioSet);
@@ -372,10 +372,10 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                        Client Error
     //                                                                        ============
-    protected void checkClientError(Object form) {
+    protected void verifyClientError(Object form) {
         final Set<ConstraintViolation<Object>> clientErrorSet = clientErrorHibernateValidate(form);
         if (!clientErrorSet.isEmpty()) {
-            throwClientError(form, clientErrorSet);
+            throwClientErrorByValidatorException(form, clientErrorSet);
         }
     }
 
@@ -383,20 +383,19 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return comeOnHibernateValidator().validate(form, ClientError.class);
     }
 
-    protected void throwClientError(Object form, Set<ConstraintViolation<Object>> clientErrorSet) {
-        // TODO jflute client error handling (2015/08/08)
+    protected void throwClientErrorByValidatorException(Object form, Set<ConstraintViolation<Object>> clientErrorSet) {
         final StringBuilder sb = new StringBuilder();
         sb.append("Client Error detected by validator:");
         @SuppressWarnings("unchecked")
         final MESSAGES messages = (MESSAGES) toActionMessages(form, clientErrorSet);
         messages.toPropertySet().forEach(property -> {
-            final Iterator<ActionMessage> ite = messages.accessByIteratorOf(property);
+            final Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property);
             while (ite.hasNext()) {
                 sb.append("\n ").append(property).append(" ").append((ActionMessage) ite.next());
             }
         });
         final String msg = sb.toString();
-        throw new ForcedRequest400BadRequestException(msg);
+        throw new ClientErrorByValidatorException(msg, messages);
     }
 
     // ===================================================================================
