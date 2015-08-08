@@ -206,11 +206,14 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         protected String filterMessageKey(String key) {
             final String javaxPackage = "javax.validation.";
             final String hibernatePackage = "org.hibernate.validator.";
+            final String lastaflutePackage = "org.lastaflute.validator.";
             final String realKey;
             if (key.startsWith(javaxPackage)) {
                 realKey = Srl.substringFirstRear(key, javaxPackage);
             } else if (key.startsWith(hibernatePackage)) {
                 realKey = Srl.substringFirstRear(key, hibernatePackage);
+            } else if (key.startsWith(lastaflutePackage)) {
+                realKey = Srl.substringFirstRear(key, lastaflutePackage);
             } else {
                 realKey = key;
             }
