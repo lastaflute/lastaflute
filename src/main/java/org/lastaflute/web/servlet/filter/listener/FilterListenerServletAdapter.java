@@ -31,22 +31,14 @@ import javax.servlet.http.HttpServletResponse;
 public class FilterListenerServletAdapter implements FilterListener {
 
     protected final Filter servletFilter;
-    protected final boolean beforeLogging;
 
-    // TODO jflute destroy() (2015/08/07)
-    public FilterListenerServletAdapter(Filter servletFilter, boolean beforeLogging) {
+    public FilterListenerServletAdapter(Filter servletFilter) {
         this.servletFilter = servletFilter;
-        this.beforeLogging = beforeLogging;
     }
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         servletFilter.init(filterConfig);
-    }
-
-    @Override
-    public boolean isBeforeLogging() {
-        return beforeLogging;
     }
 
     @Override

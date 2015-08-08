@@ -20,7 +20,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -244,8 +243,10 @@ public class LastaFilter implements Filter {
     //                                       Filter Listener
     //                                       ---------------
     protected void initFilterListener(FilterConfig filterConfig) throws ServletException {
-        final List<FilterListener> listenerList = assistFilterListenerList();
-        for (FilterListener listener : listenerList) {
+        for (FilterListener listener : assistInsideListenerList()) {
+            listener.init(filterConfig);
+        }
+        for (FilterListener listener : assistOutsideListenerList()) {
             listener.init(filterConfig);
         }
     }
@@ -355,9 +356,7 @@ public class LastaFilter implements Filter {
     }
 
     protected Deque<FilterListener> prepareOutsideListener() { // null allowed (if no listener)
-        final List<FilterListener> listenerList = assistFilterListenerList().stream().filter(li -> {
-            return li.isBeforeLogging();
-        }).collect(Collectors.toList());
+        final List<FilterListener> listenerList = assistOutsideListenerList();
         return !listenerList.isEmpty() ? new LinkedList<FilterListener>(listenerList) : null;
     }
 
@@ -408,12 +407,6 @@ public class LastaFilter implements Filter {
         return !listenerList.isEmpty() ? new LinkedList<FilterListener>(listenerList) : null;
     }
 
-    protected List<FilterListener> assistInsideListenerList() {
-        return assistFilterListenerList().stream().filter(listener -> {
-            return !listener.isBeforeLogging();
-        }).collect(Collectors.toList());
-    }
-
     protected void viaInsideListenerDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
             final Deque<FilterListener> deque) throws IOException, ServletException {
         final FilterListener next = deque != null ? deque.poll() : null; // null if no listener
@@ -450,7 +443,8 @@ public class LastaFilter implements Filter {
     }
 
     protected void destroyFilterListener() {
-        assistFilterListenerList().forEach(listener -> listener.destroy());
+        assistInsideListenerList().forEach(listener -> listener.destroy());
+        assistOutsideListenerList().forEach(listener -> listener.destroy());
     }
 
     // ===================================================================================
@@ -464,8 +458,12 @@ public class LastaFilter implements Filter {
         return getAssistantDirector().assistWebDirection();
     }
 
-    protected List<FilterListener> assistFilterListenerList() {
-        return assistWebDirection().assistFilterListenerList();
+    protected List<FilterListener> assistInsideListenerList() {
+        return assistWebDirection().assistInsideFilterListenerList();
+    }
+
+    protected List<FilterListener> assistOutsideListenerList() {
+        return assistWebDirection().assistOutsideFilterListenerList();
     }
 
     protected MessageResourcesHolder getMessageResourceHolder() {

@@ -30,8 +30,6 @@ public interface FilterListener {
 
     void init(FilterConfig filterConfig) throws ServletException;
 
-    boolean isBeforeLogging();
-
     void listen(HttpServletRequest request, HttpServletResponse response, FilterListenerChain chain) throws IOException, ServletException;
 
     void destroy();

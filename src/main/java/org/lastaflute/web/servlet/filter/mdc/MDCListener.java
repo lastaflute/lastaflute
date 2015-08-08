@@ -88,11 +88,6 @@ public class MDCListener implements FilterListener {
     //                                                                              Listen
     //                                                                              ======
     @Override
-    public boolean isBeforeLogging() {
-        return true; // MDC is for logging
-    }
-
-    @Override
     public void listen(HttpServletRequest request, HttpServletResponse response, FilterListenerChain chain)
             throws IOException, ServletException {
         final Map<String, String> originallyMap = prepareOriginallyMap();

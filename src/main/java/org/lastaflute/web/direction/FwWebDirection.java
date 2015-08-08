@@ -72,7 +72,8 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                       Filter Listener
     //                                       ---------------
-    protected List<FilterListener> filterListenerList; // lazy loaded
+    protected List<FilterListener> insideFilterListenerList; // lazy loaded
+    protected List<FilterListener> outsideFilterListenerList; // lazy loaded
 
     // -----------------------------------------------------
     //                                            Access Log
@@ -155,23 +156,31 @@ public class FwWebDirection {
     // independent per purpose
     public void directMDC(MDCListener listener) {
         assertArgumentNotNull("listener", listener);
-        getFilterListenerList().add(listener);
+        getOutsideFilterListenerList().add(listener); // for logging
     }
 
-    public void directServletFilter(Filter servletFilter, boolean beforeLogging) {
+    public void directServletFilter(Filter servletFilter, boolean inside) { // inside means after logging
         assertArgumentNotNull("servletFilter", servletFilter);
-        getFilterListenerList().add(newFilterListenerServletAdapter(servletFilter, beforeLogging));
+        final List<FilterListener> listenerList = inside ? getInsideFilterListenerList() : getOutsideFilterListenerList();
+        listenerList.add(newFilterListenerServletAdapter(servletFilter));
     }
 
-    protected FilterListenerServletAdapter newFilterListenerServletAdapter(Filter servletFilter, boolean beforeLogging) {
-        return new FilterListenerServletAdapter(servletFilter, beforeLogging);
+    protected FilterListenerServletAdapter newFilterListenerServletAdapter(Filter servletFilter) {
+        return new FilterListenerServletAdapter(servletFilter);
     }
 
-    protected List<FilterListener> getFilterListenerList() {
-        if (filterListenerList == null) {
-            filterListenerList = new ArrayList<FilterListener>(4);
+    protected List<FilterListener> getInsideFilterListenerList() {
+        if (insideFilterListenerList == null) {
+            insideFilterListenerList = new ArrayList<FilterListener>(4);
         }
-        return filterListenerList;
+        return insideFilterListenerList;
+    }
+
+    protected List<FilterListener> getOutsideFilterListenerList() {
+        if (outsideFilterListenerList == null) {
+            outsideFilterListenerList = new ArrayList<FilterListener>(4);
+        }
+        return outsideFilterListenerList;
     }
 
     // -----------------------------------------------------
@@ -253,8 +262,12 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                       Filter Listener
     //                                       ---------------
-    public List<FilterListener> assistFilterListenerList() { // empty allowed and normally empty
-        return filterListenerList != null ? filterListenerList : Collections.emptyList();
+    public List<FilterListener> assistInsideFilterListenerList() { // empty allowed and normally empty
+        return insideFilterListenerList != null ? insideFilterListenerList : Collections.emptyList();
+    }
+
+    public List<FilterListener> assistOutsideFilterListenerList() { // empty allowed and normally empty
+        return outsideFilterListenerList != null ? outsideFilterListenerList : Collections.emptyList();
     }
 
     // -----------------------------------------------------
