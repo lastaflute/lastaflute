@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.json.GsonOption;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
 
@@ -29,6 +30,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
 import com.google.gson.internal.bind.TypeAdapters;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
 /**
@@ -49,8 +51,11 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         @Override
         public NUM read(JsonReader in) throws IOException {
+            if (isEmptyToNullReading()) { // option
+                return processEmptyToNullReading(in);
+            }
             try {
-                return getRealAdapter().read(in);
+                return getRealAdapter().read(in); // mainly here
             } catch (NumberFormatException e) {
                 throwJsonPropertyNumberParseFailureException(in, e);
                 return null; // unreachable
@@ -60,13 +65,32 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
             }
         }
 
+        protected NUM processEmptyToNullReading(JsonReader in) throws IOException {
+            if (in.peek() == JsonToken.NULL) {
+                in.nextNull();
+                return null;
+            }
+            final String str = in.nextString();
+            if ("".equals(str)) {
+                return null;
+            } else { // original reading because already next element by nextString()
+                @SuppressWarnings("unchecked")
+                final NUM num = (NUM) DfTypeUtil.toNumber(str, getNumberType());
+                return num;
+            }
+        }
+
         @Override
         public void write(JsonWriter out, NUM value) throws IOException {
-            if (value == null && isNullToEmptyWriting()) {
+            if (isNullToEmptyWriting() && value == null) { // option
                 out.value("");
             } else {
                 getRealAdapter().write(out, value);
             }
+        }
+
+        protected boolean isEmptyToNullReading() {
+            return option.isEmptyToNullReading();
         }
 
         protected boolean isNullToEmptyWriting() {

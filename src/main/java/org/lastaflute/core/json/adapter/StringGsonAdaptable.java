@@ -44,16 +44,25 @@ public interface StringGsonAdaptable { // to show property path in exception mes
 
         @Override
         public String read(JsonReader in) throws IOException {
-            return realAdapter.read(in);
+            final String read = realAdapter.read(in);
+            if (isEmptyToNullReading() && "".equals(read)) { // option
+                return null;
+            } else { // mainly here
+                return read;
+            }
         }
 
         @Override
         public void write(JsonWriter out, String value) throws IOException {
-            if (value == null && isNullToEmptyWriting()) {
+            if (isNullToEmptyWriting() && value == null) { // option
                 out.value("");
-            } else {
+            } else { // mainly here
                 realAdapter.write(out, value);
             }
+        }
+
+        protected boolean isEmptyToNullReading() {
+            return option.isEmptyToNullReading();
         }
 
         protected boolean isNullToEmptyWriting() {

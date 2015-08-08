@@ -20,11 +20,30 @@ package org.lastaflute.core.json;
  */
 public class GsonOption {
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected boolean emptyToNullReading;
     protected boolean nullToEmptyWriting;
+
+    // ===================================================================================
+    //                                                                      Option Setting
+    //                                                                      ==============
+    public GsonOption asEmptyToNullReading() {
+        emptyToNullReading = true;
+        return this;
+    }
 
     public GsonOption asNullToEmptyWriting() {
         nullToEmptyWriting = true;
         return this;
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public boolean isEmptyToNullReading() {
+        return emptyToNullReading;
     }
 
     public boolean isNullToEmptyWriting() {

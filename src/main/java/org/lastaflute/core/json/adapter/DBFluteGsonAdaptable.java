@@ -84,6 +84,9 @@ public interface DBFluteGsonAdaptable {
                 return null;
             }
             final String code = in.nextString();
+            if (isEmptyToNullReading() && "".equals(code)) { // option
+                return null;
+            }
             try {
                 return LaDBFluteUtil.toVerifiedClassification(clsType, code);
             } catch (ClassificationCodeOfMethodNotFoundException e) {
@@ -139,11 +142,15 @@ public interface DBFluteGsonAdaptable {
 
         @Override
         public void write(JsonWriter out, Classification value) throws IOException {
-            if (value == null && isNullToEmptyWriting()) {
+            if (isNullToEmptyWriting() && value == null) { // option
                 out.value("");
-            } else {
+            } else { // mainly here
                 out.value(value != null ? value.code() : null);
             }
+        }
+
+        protected boolean isEmptyToNullReading() {
+            return option.isEmptyToNullReading();
         }
 
         protected boolean isNullToEmptyWriting() {

@@ -101,23 +101,30 @@ public interface Java8TimeGsonAdaptable {
                 in.nextNull();
                 return null;
             }
-            final String code = in.nextString();
+            final String exp = in.nextString();
+            if (isEmptyToNullReading() && "".equals(exp)) { // option
+                return null;
+            }
             final DateTimeFormatter formatter = getDateTimeFormatter();
             try {
-                return formatter.parse(code, temporal -> fromTemporal(temporal));
+                return formatter.parse(exp, temporal -> fromTemporal(temporal));
             } catch (DateTimeParseException e) {
-                throwJsonPropertyDateTimeParseFailureException(formatter, code, in, e);
+                throwJsonPropertyDateTimeParseFailureException(formatter, exp, in, e);
                 return null; // unreachable
             }
         }
 
         @Override
         public void write(JsonWriter out, DATE value) throws IOException {
-            if (value == null && isNullToEmptyWriting()) {
+            if (isNullToEmptyWriting() && value == null) { // option
                 out.value("");
-            } else {
+            } else { // mainly here
                 out.value(value != null ? getDateTimeFormatter().format(value) : null);
             }
+        }
+
+        protected boolean isEmptyToNullReading() {
+            return option.isEmptyToNullReading();
         }
 
         protected boolean isNullToEmptyWriting() {
