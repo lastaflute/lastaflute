@@ -58,7 +58,7 @@ import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogResource;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpServletRequest;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpSession;
-import org.lastaflute.web.servlet.filter.listener.FilterListener;
+import org.lastaflute.web.servlet.filter.listener.FilterHook;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,7 +124,7 @@ public class LastaFilter implements Filter {
             throw e;
         }
         initEmbeddedFilter(filterConfig);
-        initFilterListener(filterConfig);
+        initFilterHook(filterConfig);
         try {
             showBoot(assistantDirector);
         } catch (RuntimeException e) {
@@ -240,14 +240,14 @@ public class LastaFilter implements Filter {
     }
 
     // -----------------------------------------------------
-    //                                       Filter Listener
-    //                                       ---------------
-    protected void initFilterListener(FilterConfig filterConfig) throws ServletException {
-        for (FilterListener listener : assistInsideListenerList()) {
-            listener.init(filterConfig);
+    //                                           Filter Hook
+    //                                           -----------
+    protected void initFilterHook(FilterConfig filterConfig) throws ServletException {
+        for (FilterHook hook : assistInsideHookList()) {
+            hook.init(filterConfig);
         }
-        for (FilterListener listener : assistOutsideListenerList()) {
-            listener.init(filterConfig);
+        for (FilterHook hook : assistOutsideHookList()) {
+            hook.init(filterConfig);
         }
     }
 
@@ -314,14 +314,14 @@ public class LastaFilter implements Filter {
     protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         if (!HotdeployUtil.isHotdeploy()) {
-            viaOutsideListener(request, response, chain); // #to_action
+            viaOutsideHook(request, response, chain); // #to_action
             return;
         }
         final String loaderKey = HOTDEPLOY_CLASSLOADER_KEY;
         if (request.getAttribute(loaderKey) != null) { // check recursive call
             final ClassLoader loader = (ClassLoader) request.getAttribute(loaderKey);
             Thread.currentThread().setContextClassLoader(loader);
-            viaOutsideListener(request, response, chain); // #to_action
+            viaOutsideHook(request, response, chain); // #to_action
             return;
         }
         final HotdeployBehavior ondemand = (HotdeployBehavior) LaContainerBehavior.getProvider();
@@ -331,7 +331,7 @@ public class LastaFilter implements Filter {
             ContainerUtil.overrideExternalRequest(hotdeployRequest); // override formal request
             try {
                 request.setAttribute(loaderKey, Thread.currentThread().getContextClassLoader());
-                viaOutsideListener(hotdeployRequest, response, chain); // #to_action
+                viaOutsideHook(hotdeployRequest, response, chain); // #to_action
             } finally {
                 final HotdeployHttpSession session = (HotdeployHttpSession) hotdeployRequest.getSession(false);
                 if (session != null) {
@@ -348,24 +348,24 @@ public class LastaFilter implements Filter {
     }
 
     // -----------------------------------------------------
-    //                                  via Outside Listener
-    //                                  --------------------
-    protected void viaOutsideListener(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    //                                      via Outside Hook
+    //                                      ----------------
+    protected void viaOutsideHook(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        viaOutsideListenerDeque(request, response, chain, prepareOutsideListener()); // #to_action
+        viaOutsideHookDeque(request, response, chain, prepareOutsideHook()); // #to_action
     }
 
-    protected Deque<FilterListener> prepareOutsideListener() { // null allowed (if no listener)
-        final List<FilterListener> listenerList = assistOutsideListenerList();
-        return !listenerList.isEmpty() ? new LinkedList<FilterListener>(listenerList) : null;
+    protected Deque<FilterHook> prepareOutsideHook() { // null allowed (if no hook)
+        final List<FilterHook> listenerList = assistOutsideHookList();
+        return !listenerList.isEmpty() ? new LinkedList<FilterHook>(listenerList) : null;
     }
 
-    protected void viaOutsideListenerDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
-            Deque<FilterListener> deque) throws IOException, ServletException {
-        final FilterListener next = deque != null ? deque.poll() : null; // null if no listener
+    protected void viaOutsideHookDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Deque<FilterHook> deque)
+            throws IOException, ServletException {
+        final FilterHook next = deque != null ? deque.poll() : null; // null if no hook
         if (next != null) {
             next.listen(request, response, (argreq, argres) -> {
-                viaOutsideListenerDeque(argreq, argres, chain, deque);
+                viaOutsideHookDeque(argreq, argres, chain, deque);
             }); // e.g. MDC
         } else {
             viaEmbeddedFilter(request, response, chain); // #to_action
@@ -379,7 +379,7 @@ public class LastaFilter implements Filter {
             throws IOException, ServletException {
         loggingFilter.doFilter(request, response, (argreq, argres) -> {
             enableAccessLogIfNeeds();
-            viaInsideListener((HttpServletRequest) argreq, (HttpServletResponse) argres, chain);
+            viaInsideHook((HttpServletRequest) argreq, (HttpServletResponse) argres, chain);
         });
     }
 
@@ -395,25 +395,25 @@ public class LastaFilter implements Filter {
     }
 
     // -----------------------------------------------------
-    //                                   via Inside Listener
-    //                                   -------------------
-    protected void viaInsideListener(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    //                                       via Inside Hook
+    //                                       ---------------
+    protected void viaInsideHook(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        viaInsideListenerDeque(request, response, chain, prepareInsideListenerDeque());
+        viaInsideHookDeque(request, response, chain, prepareInsideHookDeque());
     }
 
-    protected Deque<FilterListener> prepareInsideListenerDeque() { // null allowed (if no listener)
-        final List<FilterListener> listenerList = assistInsideListenerList();
-        return !listenerList.isEmpty() ? new LinkedList<FilterListener>(listenerList) : null;
+    protected Deque<FilterHook> prepareInsideHookDeque() { // null allowed (if no hook)
+        final List<FilterHook> listenerList = assistInsideHookList();
+        return !listenerList.isEmpty() ? new LinkedList<FilterHook>(listenerList) : null;
     }
 
-    protected void viaInsideListenerDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
-            final Deque<FilterListener> deque) throws IOException, ServletException {
-        final FilterListener next = deque != null ? deque.poll() : null; // null if no listener
+    protected void viaInsideHookDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Deque<FilterHook> deque)
+            throws IOException, ServletException {
+        final FilterHook next = deque != null ? deque.poll() : null; // null if no hook
         if (next != null) {
             next.listen(request, response, (argreq, argres) -> {
-                viaInsideListenerDeque(argreq, argres, chain, deque);
-            }); // e.g. original listener
+                viaInsideHookDeque(argreq, argres, chain, deque);
+            }); // e.g. original hook
         } else {
             routingFilter.doFilter(request, response, prepareFinalChain(chain)); /* #to_action */
         }
@@ -430,7 +430,7 @@ public class LastaFilter implements Filter {
     public void destroy() {
         WebLastaContainerDestroyer.destroy();
         destroyEmbeddedFilter();
-        destroyFilterListener();
+        destroyFilterHook();
     }
 
     protected void destroyEmbeddedFilter() {
@@ -442,9 +442,9 @@ public class LastaFilter implements Filter {
         }
     }
 
-    protected void destroyFilterListener() {
-        assistInsideListenerList().forEach(listener -> listener.destroy());
-        assistOutsideListenerList().forEach(listener -> listener.destroy());
+    protected void destroyFilterHook() {
+        assistInsideHookList().forEach(hook -> hook.destroy());
+        assistOutsideHookList().forEach(hook -> hook.destroy());
     }
 
     // ===================================================================================
@@ -458,12 +458,12 @@ public class LastaFilter implements Filter {
         return getAssistantDirector().assistWebDirection();
     }
 
-    protected List<FilterListener> assistInsideListenerList() {
-        return assistWebDirection().assistInsideFilterListenerList();
+    protected List<FilterHook> assistInsideHookList() {
+        return assistWebDirection().assistInsideFilterHookList();
     }
 
-    protected List<FilterListener> assistOutsideListenerList() {
-        return assistWebDirection().assistOutsideFilterListenerList();
+    protected List<FilterHook> assistOutsideHookList() {
+        return assistWebDirection().assistOutsideFilterHookList();
     }
 
     protected MessageResourcesHolder getMessageResourceHolder() {

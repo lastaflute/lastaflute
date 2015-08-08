@@ -54,8 +54,8 @@ public class TypicalMDCListenerFactory {
     // ===================================================================================
     //                                                                              Create
     //                                                                              ======
-    public MDCListener create() {
-        return new MDCListener(prepareMDCMap());
+    public MDCHook create() {
+        return new MDCHook(prepareMDCMap());
     }
 
     protected Map<String, Function<MDCSetupResource, String>> prepareMDCMap() {

@@ -28,11 +28,11 @@ import javax.servlet.http.HttpServletResponse;
  * @author jflute
  * @since 0.6.0 (2015/08/06 Friday)
  */
-public class FilterListenerServletAdapter implements FilterListener {
+public class FilterHookServletAdapter implements FilterHook {
 
     protected final Filter servletFilter;
 
-    public FilterListenerServletAdapter(Filter servletFilter) {
+    public FilterHookServletAdapter(Filter servletFilter) {
         this.servletFilter = servletFilter;
     }
 

@@ -27,7 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.web.servlet.filter.listener.FilterListener;
+import org.lastaflute.web.servlet.filter.listener.FilterHook;
 import org.lastaflute.web.servlet.filter.listener.FilterListenerChain;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.slf4j.MDC;
@@ -36,7 +36,7 @@ import org.slf4j.MDC;
  * @author jflute
  * @since 0.6.0 (2015/05/30 Saturday)
  */
-public class MDCListener implements FilterListener {
+public class MDCHook implements FilterHook {
 
     // ===================================================================================
     //                                                                          Definition
@@ -70,7 +70,7 @@ public class MDCListener implements FilterListener {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public MDCListener(Map<String, Function<MDCSetupResource, String>> mdcMap) {
+    public MDCHook(Map<String, Function<MDCSetupResource, String>> mdcMap) {
         if (mdcMap == null) {
             throw new IllegalArgumentException("The argument 'mdcMap' should not be null.");
         }

@@ -29,9 +29,9 @@ import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
-import org.lastaflute.web.servlet.filter.listener.FilterListener;
-import org.lastaflute.web.servlet.filter.listener.FilterListenerServletAdapter;
-import org.lastaflute.web.servlet.filter.mdc.MDCListener;
+import org.lastaflute.web.servlet.filter.listener.FilterHook;
+import org.lastaflute.web.servlet.filter.listener.FilterHookServletAdapter;
+import org.lastaflute.web.servlet.filter.mdc.MDCHook;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
 import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
 import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
@@ -72,8 +72,8 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                       Filter Listener
     //                                       ---------------
-    protected List<FilterListener> insideFilterListenerList; // lazy loaded
-    protected List<FilterListener> outsideFilterListenerList; // lazy loaded
+    protected List<FilterHook> insideFilterHookList; // lazy loaded
+    protected List<FilterHook> outsideFilterHookList; // lazy loaded
 
     // -----------------------------------------------------
     //                                            Access Log
@@ -154,33 +154,33 @@ public class FwWebDirection {
     //                                       Filter Listener
     //                                       ---------------
     // independent per purpose
-    public void directMDC(MDCListener listener) {
+    public void directMDC(MDCHook listener) {
         assertArgumentNotNull("listener", listener);
-        getOutsideFilterListenerList().add(listener); // for logging
+        getOutsideFilterHookList().add(listener); // for logging
     }
 
     public void directServletFilter(Filter servletFilter, boolean inside) { // inside means after logging
         assertArgumentNotNull("servletFilter", servletFilter);
-        final List<FilterListener> listenerList = inside ? getInsideFilterListenerList() : getOutsideFilterListenerList();
-        listenerList.add(newFilterListenerServletAdapter(servletFilter));
+        final List<FilterHook> hookList = inside ? getInsideFilterHookList() : getOutsideFilterHookList();
+        hookList.add(newFilterHookServletAdapter(servletFilter));
     }
 
-    protected FilterListenerServletAdapter newFilterListenerServletAdapter(Filter servletFilter) {
-        return new FilterListenerServletAdapter(servletFilter);
+    protected FilterHookServletAdapter newFilterHookServletAdapter(Filter servletFilter) {
+        return new FilterHookServletAdapter(servletFilter);
     }
 
-    protected List<FilterListener> getInsideFilterListenerList() {
-        if (insideFilterListenerList == null) {
-            insideFilterListenerList = new ArrayList<FilterListener>(4);
+    protected List<FilterHook> getInsideFilterHookList() {
+        if (insideFilterHookList == null) {
+            insideFilterHookList = new ArrayList<FilterHook>(4);
         }
-        return insideFilterListenerList;
+        return insideFilterHookList;
     }
 
-    protected List<FilterListener> getOutsideFilterListenerList() {
-        if (outsideFilterListenerList == null) {
-            outsideFilterListenerList = new ArrayList<FilterListener>(4);
+    protected List<FilterHook> getOutsideFilterHookList() {
+        if (outsideFilterHookList == null) {
+            outsideFilterHookList = new ArrayList<FilterHook>(4);
         }
-        return outsideFilterListenerList;
+        return outsideFilterHookList;
     }
 
     // -----------------------------------------------------
@@ -260,14 +260,14 @@ public class FwWebDirection {
     }
 
     // -----------------------------------------------------
-    //                                       Filter Listener
-    //                                       ---------------
-    public List<FilterListener> assistInsideFilterListenerList() { // empty allowed and normally empty
-        return insideFilterListenerList != null ? insideFilterListenerList : Collections.emptyList();
+    //                                           Filter Hook
+    //                                           -----------
+    public List<FilterHook> assistInsideFilterHookList() { // empty allowed and normally empty
+        return insideFilterHookList != null ? insideFilterHookList : Collections.emptyList();
     }
 
-    public List<FilterListener> assistOutsideFilterListenerList() { // empty allowed and normally empty
-        return outsideFilterListenerList != null ? outsideFilterListenerList : Collections.emptyList();
+    public List<FilterHook> assistOutsideFilterHookList() { // empty allowed and normally empty
+        return outsideFilterHookList != null ? outsideFilterHookList : Collections.emptyList();
     }
 
     // -----------------------------------------------------

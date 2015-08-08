@@ -26,7 +26,7 @@ import javax.servlet.http.HttpServletResponse;
  * @author jflute
  * @since 0.6.0 (2015/05/30 Saturday)
  */
-public interface FilterListener {
+public interface FilterHook {
 
     void init(FilterConfig filterConfig) throws ServletException;
 
