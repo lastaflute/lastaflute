@@ -26,7 +26,7 @@ import javax.servlet.http.HttpServletResponse;
  * @since 0.6.0 (2015/05/30 Saturday)
  */
 @FunctionalInterface
-public interface FilterListenerChain {
+public interface FilterHookChain {
 
     void doNext(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException;
 }

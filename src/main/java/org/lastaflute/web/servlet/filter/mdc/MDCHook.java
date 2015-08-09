@@ -28,7 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.web.servlet.filter.listener.FilterHook;
-import org.lastaflute.web.servlet.filter.listener.FilterListenerChain;
+import org.lastaflute.web.servlet.filter.listener.FilterHookChain;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.slf4j.MDC;
 
@@ -88,7 +88,7 @@ public class MDCHook implements FilterHook {
     //                                                                              Listen
     //                                                                              ======
     @Override
-    public void listen(HttpServletRequest request, HttpServletResponse response, FilterListenerChain chain)
+    public void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain)
             throws IOException, ServletException {
         final Map<String, String> originallyMap = prepareOriginallyMap();
         if (originallyMap != null) {

@@ -30,7 +30,7 @@ public interface FilterHook {
 
     void init(FilterConfig filterConfig) throws ServletException;
 
-    void listen(HttpServletRequest request, HttpServletResponse response, FilterListenerChain chain) throws IOException, ServletException;
+    void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain) throws IOException, ServletException;
 
     void destroy();
 }

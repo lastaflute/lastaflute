@@ -16,16 +16,17 @@
 package org.lastaflute.core.direction;
 
 /**
- * The listener (callback) for curtain before the application performance. <br>
+ * The hook (callback) for curtain finally the application performance. <br>
  * You can add your own process when your application is booting.
  * @author jflute
+ * @since 0.6.1 (2015/08/09 Sunday at Theatre Orleans)
  */
-public interface CurtainBeforeListener {
+public interface CurtainFinallyHook {
 
     /**
-     * Listen your process when curtain before the application performance. <br>
+     * Hook your process when curtain before the application performance. <br>
      * You can know whether the current environment is development or not by the assistant director.
      * @param assistantDirector The assistant director for the framework. (NotNull)
      */
-    void listen(FwAssistantDirector assistantDirector);
+    void hook(FwAssistantDirector assistantDirector);
 }

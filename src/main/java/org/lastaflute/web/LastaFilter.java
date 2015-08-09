@@ -33,7 +33,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.bhv.BehaviorSelector;
-import org.lastaflute.core.direction.CurtainBeforeListener;
+import org.lastaflute.core.direction.CurtainBeforeHook;
+import org.lastaflute.core.direction.CurtainFinallyHook;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.message.MessageResourcesHolder;
@@ -118,7 +119,7 @@ public class LastaFilter implements Filter {
         }
         final FwAssistantDirector assistantDirector = getAssistantDirector();
         try {
-            callbackProcess(assistantDirector);
+            hookCurtainBefore(assistantDirector);
         } catch (RuntimeException e) {
             logger.error("Failed to callback process.", e);
             throw e;
@@ -198,13 +199,13 @@ public class LastaFilter implements Filter {
     }
 
     // -----------------------------------------------------
-    //                                      Callback Process
-    //                                      ----------------
-    protected void callbackProcess(FwAssistantDirector assistantDirector) {
+    //                                        Curtain Before
+    //                                        --------------
+    protected void hookCurtainBefore(FwAssistantDirector assistantDirector) {
         final FwCoreDirection coreDirection = assistantDirector.assistCoreDirection();
-        final CurtainBeforeListener listener = coreDirection.assistCurtainBeforeListener();
-        if (listener != null) {
-            listener.listen(assistantDirector);
+        final CurtainBeforeHook hook = coreDirection.assistCurtainBeforeHook();
+        if (hook != null) {
+            hook.hook(assistantDirector);
         }
     }
 
@@ -364,7 +365,7 @@ public class LastaFilter implements Filter {
             throws IOException, ServletException {
         final FilterHook next = deque != null ? deque.poll() : null; // null if no hook
         if (next != null) {
-            next.listen(request, response, (argreq, argres) -> {
+            next.hook(request, response, (argreq, argres) -> {
                 viaOutsideHookDeque(argreq, argres, chain, deque);
             }); // e.g. MDC
         } else {
@@ -411,7 +412,7 @@ public class LastaFilter implements Filter {
             throws IOException, ServletException {
         final FilterHook next = deque != null ? deque.poll() : null; // null if no hook
         if (next != null) {
-            next.listen(request, response, (argreq, argres) -> {
+            next.hook(request, response, (argreq, argres) -> {
                 viaInsideHookDeque(argreq, argres, chain, deque);
             }); // e.g. original hook
         } else {
@@ -428,11 +429,33 @@ public class LastaFilter implements Filter {
     //                                                                             =======
     @Override
     public void destroy() {
-        WebLastaContainerDestroyer.destroy();
+        hookCurtainFinally(getAssistantDirector());
+        destroyContainer();
         destroyEmbeddedFilter();
         destroyFilterHook();
     }
 
+    // -----------------------------------------------------
+    //                                       Curtain Finally
+    //                                       ---------------
+    protected void hookCurtainFinally(FwAssistantDirector assistantDirector) {
+        final FwCoreDirection coreDirection = assistantDirector.assistCoreDirection();
+        final CurtainFinallyHook hook = coreDirection.assistCurtainFinallyHook();
+        if (hook != null) {
+            hook.hook(assistantDirector);
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                     LastaDi Container
+    //                                     -----------------
+    protected void destroyContainer() {
+        WebLastaContainerDestroyer.destroy();
+    }
+
+    // -----------------------------------------------------
+    //                                       Embedded Filter
+    //                                       ---------------
     protected void destroyEmbeddedFilter() {
         if (loggingFilter != null) { // just in case
             loggingFilter.destroy();
@@ -442,6 +465,9 @@ public class LastaFilter implements Filter {
         }
     }
 
+    // -----------------------------------------------------
+    //                                           Filter Hook
+    //                                           -----------
     protected void destroyFilterHook() {
         assistInsideHookList().forEach(hook -> hook.destroy());
         assistOutsideHookList().forEach(hook -> hook.destroy());
