@@ -328,8 +328,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected void saveRememberMeKeyToCookie(USER_ENTITY userEntity, USER_BEAN userBean) {
         final int expireDays = getRememberMeAccessTokenExpireDays();
-        final String cookieKey = getCookieRememberMeKey();
-        doSaveRememberMeCookie(userEntity, userBean, expireDays, cookieKey);
+        getCookieRememberMeKey().ifPresent(cookieKey -> {
+            doSaveRememberMeCookie(userEntity, userBean, expireDays, cookieKey);
+        });
     }
 
     /**
@@ -343,9 +344,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     /**
      * Get the key of remember-me saved in cookie.
-     * @return The string key for cookie. (NotNull)
+     * @return The string key for cookie. (NotNull, EmptyAllowed: when no remember-me)
      */
-    protected abstract String getCookieRememberMeKey();
+    protected abstract OptionalThing<String> getCookieRememberMeKey();
 
     /**
      * Do save remember-me key to cookie.
@@ -445,20 +446,17 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                                                    ================
     @Override
     public boolean rememberMe(RememberMeLoginOpCall opLambda) {
-        return delegateRememberMe(createRememberMeLoginOption(opLambda));
+        return getCookieRememberMeKey().map(cookieKey -> {
+            return delegateRememberMe(cookieKey, opLambda);
+        }).orElse(false);
     }
 
-    protected RememberMeLoginOption createRememberMeLoginOption(RememberMeLoginOpCall opLambda) {
-        final RememberMeLoginOption option = new RememberMeLoginOption();
-        opLambda.callback(option);
-        return option;
-    }
-
-    protected boolean delegateRememberMe(RememberMeLoginSpecifiedOption option) {
-        return cookieManager.getCookieCiphered(getCookieRememberMeKey()).map(cookie -> {
+    protected boolean delegateRememberMe(String cookieKey, RememberMeLoginOpCall opLambda) {
+        return cookieManager.getCookieCiphered(cookieKey).map(cookie -> {
             final String cookieValue = cookie.getValue();
             if (cookieValue != null && cookieValue.trim().length() > 0) {
                 final String[] valueAry = cookieValue.split(getRememberMeDelimiter());
+                final RememberMeLoginOption option = createRememberMeLoginOption(opLambda);
                 final Boolean handled = handleRememberMeCookie(valueAry, option);
                 if (handled != null) {
                     return handled;
@@ -473,6 +471,12 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     protected String getRememberMeDelimiter() {
         return REMEMBER_ME_COOKIE_DELIMITER;
+    }
+
+    protected RememberMeLoginOption createRememberMeLoginOption(RememberMeLoginOpCall opLambda) {
+        final RememberMeLoginOption option = new RememberMeLoginOption();
+        opLambda.callback(option);
+        return option;
     }
 
     protected boolean handleRememberMeInvalidCookie(String cookieValue, String[] valueAry) {
@@ -581,7 +585,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     @Override
     public void logout() {
         sessionManager.removeAttribute(getUserBeanKey());
-        cookieManager.removeCookie(getCookieRememberMeKey());
+        getCookieRememberMeKey().ifPresent(cookieKey -> {
+            cookieManager.removeCookie(cookieKey);
+        });
     }
 
     /**
