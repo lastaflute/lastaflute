@@ -17,6 +17,7 @@ package org.lastaflute.web.util;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.util.ContainerUtil;
 
 /**
@@ -37,5 +38,16 @@ public final class LaRequestUtil {
             throw new IllegalStateException("Not found the servlet request, not web scope now?");
         }
         return request;
+    }
+
+    /**
+     * @return The optional request of servlet. (NotNull, EmptyAllowed: when out of scope for external context)
+     * @throws IllegalStateException When the request is not found.
+     */
+    public static OptionalThing<HttpServletRequest> getOptionalRequest() {
+        final HttpServletRequest request = (HttpServletRequest) ContainerUtil.retrieveExternalContext().getRequest();
+        return OptionalThing.ofNullable(request, () -> {
+            throw new IllegalStateException("Not found the servlet request, not web scope now?");
+        });
     }
 }
