@@ -25,7 +25,7 @@ import org.lastaflute.web.servlet.cookie.CookieManager;
  * @author jflute
  * @since 0.6.0 (2015/06/03 Wednesday)
  */
-public class TypicalMDCListenerFactory {
+public class TypicalMDCHookFactory {
 
     // ===================================================================================
     //                                                                          Definition
@@ -47,7 +47,7 @@ public class TypicalMDCListenerFactory {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalMDCListenerFactory(int userTraceExpire) {
+    public TypicalMDCHookFactory(int userTraceExpire) {
         this.userTraceExpire = userTraceExpire;
     }
 
