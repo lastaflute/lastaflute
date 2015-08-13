@@ -33,11 +33,7 @@ public final class LaRequestUtil {
      * @throws IllegalStateException When the request is not found.
      */
     public static HttpServletRequest getRequest() {
-        final HttpServletRequest request = (HttpServletRequest) ContainerUtil.retrieveExternalContext().getRequest();
-        if (request == null) {
-            throw new IllegalStateException("Not found the servlet request, not web scope now?");
-        }
-        return request;
+        return getOptionalRequest().get();
     }
 
     /**
