@@ -189,7 +189,13 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
 
     @Override
     public void godHandEpilogue(ActionRuntime runtime) { // fixed process
+        if (runtime.isForwardToHtml()) {
+            setupHtmlData(runtime);
+        }
         createTypicalGodHandEpilogue(runtime).performEpilogue(runtime);
+    }
+
+    protected void setupHtmlData(ActionRuntime runtime) { // application may override
     }
 
     protected TypicalGodHandActionEpilogue createTypicalGodHandEpilogue(ActionRuntime runtime) {
