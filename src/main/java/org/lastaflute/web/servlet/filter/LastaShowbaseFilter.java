@@ -30,33 +30,29 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
+import org.lastaflute.web.servlet.filter.accesslog.AccessLogResource;
 import org.lastaflute.web.servlet.filter.listener.FilterHook;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
- * Inside hook and routing.
+ * Outside hook and logging.
  * @author jflute
  */
-public class LastaToActionFilter implements Filter {
-
-    // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(LastaToActionFilter.class);
+public class LastaShowbaseFilter implements Filter {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected RequestRoutingFilter routingFilter;
+    protected RequestLoggingFilter loggingFilter;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LastaToActionFilter() {
+    public LastaShowbaseFilter() {
     }
 
     // ===================================================================================
@@ -65,48 +61,39 @@ public class LastaToActionFilter implements Filter {
     public void init(FilterConfig filterConfig) throws ServletException {
         initEmbeddedFilter(filterConfig);
         initFilterHook(filterConfig);
-        try {
-            showBoot(getAssistantDirector());
-        } catch (RuntimeException e) {
-            logger.error("Failed to show boot title.", e);
-            throw e;
-        }
     }
 
     // -----------------------------------------------------
     //                                       Embedded Filter
     //                                       ---------------
     protected void initEmbeddedFilter(FilterConfig filterConfig) throws ServletException {
-        routingFilter = createRequestRoutingFilter();
-        routingFilter.init(filterConfig);
+        loggingFilter = createRequestLoggingFilter();
+        loggingFilter.init(filterConfig);
     }
 
-    protected RequestRoutingFilter createRequestRoutingFilter() {
-        return new RequestRoutingFilter();
+    protected RequestLoggingFilter createRequestLoggingFilter() {
+        final FwWebDirection webDirection = getAssistantDirector().assistWebDirection();
+        final ActionAdjustmentProvider adjustmentProvider = webDirection.assistActionAdjustmentProvider();
+        final RequestManager requestManager = getRequestManager();
+        return new RequestLoggingFilter() {
+            @Override
+            protected boolean isTargetPath(HttpServletRequest request) {
+                // forced routings also should be logging control target
+                if (adjustmentProvider.isForcedRoutingTarget(request, requestManager.getRequestPath())) {
+                    return true;
+                } else {
+                    return super.isTargetPath(request);
+                }
+            }
+        };
     }
 
     // -----------------------------------------------------
     //                                           Filter Hook
     //                                           -----------
     protected void initFilterHook(FilterConfig filterConfig) throws ServletException {
-        for (FilterHook hook : assistInsideHookList()) {
+        for (FilterHook hook : assistOutsideHookList()) {
             hook.init(filterConfig);
-        }
-    }
-
-    // -----------------------------------------------------
-    //                                             Show Boot
-    //                                             ---------
-    protected void showBoot(FwAssistantDirector assistantDirector) {
-        if (logger.isInfoEnabled()) {
-            final FwCoreDirection coreDirection = assistantDirector.assistCoreDirection();
-            final String domainTitle = coreDirection.assistDomainTitle();
-            final String environmentTitle = coreDirection.assistEnvironmentTitle();
-            logger.info("_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
-            logger.info(" the system has been initialized:");
-            logger.info("");
-            logger.info("  -> " + domainTitle + " (" + environmentTitle + ")");
-            logger.info("_/_/_/_/_/_/_/_/_/_/");
         }
     }
 
@@ -116,29 +103,29 @@ public class LastaToActionFilter implements Filter {
     public void doFilter(ServletRequest servReq, ServletResponse servRes, FilterChain chain) throws IOException, ServletException {
         final HttpServletRequest request = (HttpServletRequest) servReq;
         final HttpServletResponse response = (HttpServletResponse) servRes;
-        viaInsideHook(request, response, chain); // #to_action
+        viaOutsideHook(request, response, chain); // #to_action
     }
 
     // -----------------------------------------------------
-    //                                       via Inside Hook
-    //                                       ---------------
-    protected void viaInsideHook(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    //                                      via Outside Hook
+    //                                      ----------------
+    protected void viaOutsideHook(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        viaInsideHookDeque(request, response, chain, prepareInsideHookDeque());
+        viaOutsideHookDeque(request, response, chain, prepareOutsideHook()); // #to_action
     }
 
-    protected Deque<FilterHook> prepareInsideHookDeque() { // null allowed (if no hook)
-        final List<FilterHook> listenerList = assistInsideHookList();
+    protected Deque<FilterHook> prepareOutsideHook() { // null allowed (if no hook)
+        final List<FilterHook> listenerList = assistOutsideHookList();
         return !listenerList.isEmpty() ? new LinkedList<FilterHook>(listenerList) : null;
     }
 
-    protected void viaInsideHookDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Deque<FilterHook> deque)
+    protected void viaOutsideHookDeque(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Deque<FilterHook> deque)
             throws IOException, ServletException {
         final FilterHook next = deque != null ? deque.poll() : null; // null if no hook
         if (next != null) {
             next.hook(request, response, (argreq, argres) -> {
-                viaInsideHookDeque(argreq, argres, chain, deque);
-            }); // e.g. original hook
+                viaOutsideHookDeque(argreq, argres, chain, deque);
+            }); // e.g. MDC
         } else {
             viaEmbeddedFilter(request, response, chain); // #to_action
         }
@@ -149,11 +136,30 @@ public class LastaToActionFilter implements Filter {
     //                                   -------------------
     protected void viaEmbeddedFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        routingFilter.doFilter(request, response, prepareFinalChain(chain)); // #to_action
+        loggingFilter.doFilter(request, response, (argreq, argres) -> {
+            enableAccessLogIfNeeds();
+            toNextChain(argreq, argres, chain); // #to_action
+        });
     }
 
-    protected FilterChain prepareFinalChain(FilterChain chain) {
-        return chain;
+    protected void enableAccessLogIfNeeds() { // for e.g. access log
+        if (loggingFilter.isAlreadyBegun()) { // means handler to be set here always be cleared later
+            final AccessLogHandler handler = assistWebDirection().assistAccessLogHandler();
+            if (handler != null) { // specified by application
+                RequestLoggingFilter.setAccessLogHandlerOnThread((request, response, cause, before) -> {
+                    handler.handle(createAccessLogResource(request, response, cause, before));
+                });
+            }
+        }
+    }
+
+    protected AccessLogResource createAccessLogResource(HttpServletRequest request, HttpServletResponse response, Throwable cause,
+            long before) {
+        return new AccessLogResource(request, response, cause, before);
+    }
+
+    protected void toNextChain(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        chain.doFilter(request, response); // #to_action
     }
 
     // ===================================================================================
@@ -169,8 +175,8 @@ public class LastaToActionFilter implements Filter {
     //                                       Embedded Filter
     //                                       ---------------
     protected void destroyEmbeddedFilter() {
-        if (routingFilter != null) { // just in case
-            routingFilter.destroy();
+        if (loggingFilter != null) { // just in case
+            loggingFilter.destroy();
         }
     }
 
@@ -178,7 +184,7 @@ public class LastaToActionFilter implements Filter {
     //                                           Filter Hook
     //                                           -----------
     protected void destroyFilterHook() {
-        assistInsideHookList().forEach(hook -> hook.destroy());
+        assistOutsideHookList().forEach(hook -> hook.destroy());
     }
 
     // ===================================================================================
@@ -192,7 +198,11 @@ public class LastaToActionFilter implements Filter {
         return getAssistantDirector().assistWebDirection();
     }
 
-    protected List<FilterHook> assistInsideHookList() {
-        return assistWebDirection().assistInsideFilterHookList();
+    protected List<FilterHook> assistOutsideHookList() {
+        return assistWebDirection().assistOutsideFilterHookList();
+    }
+
+    protected RequestManager getRequestManager() {
+        return ContainerUtil.getComponent(RequestManager.class);
     }
 }

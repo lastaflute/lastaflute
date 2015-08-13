@@ -25,6 +25,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 import org.lastaflute.web.servlet.filter.LastaPrepareFilter;
+import org.lastaflute.web.servlet.filter.LastaShowbaseFilter;
 import org.lastaflute.web.servlet.filter.LastaToActionFilter;
 
 /**
@@ -36,6 +37,7 @@ public class LastaFilter implements Filter {
     //                                                                           Attribute
     //                                                                           =========
     protected LastaPrepareFilter lastaPrepareFilter;
+    protected LastaShowbaseFilter lastaShowbaseFilter;
     protected LastaToActionFilter lastaToActionFilter;
 
     // ===================================================================================
@@ -52,18 +54,34 @@ public class LastaFilter implements Filter {
     }
 
     protected void initElementFilter(FilterConfig filterConfig) throws ServletException {
-        lastaPrepareFilter = new LastaPrepareFilter();
+        lastaPrepareFilter = createLastaPrepareFilter();
         lastaPrepareFilter.init(filterConfig);
-        lastaToActionFilter = new LastaToActionFilter();
+        lastaShowbaseFilter = createLastaShowbaseFilter();
+        lastaShowbaseFilter.init(filterConfig);
+        lastaToActionFilter = createLastaToActionFilter();
         lastaToActionFilter.init(filterConfig);
+    }
+
+    protected LastaPrepareFilter createLastaPrepareFilter() {
+        return new LastaPrepareFilter();
+    }
+
+    protected LastaShowbaseFilter createLastaShowbaseFilter() {
+        return new LastaShowbaseFilter();
+    }
+
+    protected LastaToActionFilter createLastaToActionFilter() {
+        return new LastaToActionFilter();
     }
 
     // ===================================================================================
     //                                                                          doFilter()
     //                                                                          ==========
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        lastaPrepareFilter.doFilter(request, response, (argreq, argres) -> {
-            lastaToActionFilter.doFilter(argreq, argres, chain); // #to_action
+        lastaPrepareFilter.doFilter(request, response, (nextreq, nextres) -> {
+            lastaShowbaseFilter.doFilter(nextreq, nextres, (nexnextreq, nexnextres) -> {
+                lastaToActionFilter.doFilter(nexnextreq, nexnextres, chain); // #to_action
+            });
         });
     }
 
@@ -74,6 +92,9 @@ public class LastaFilter implements Filter {
     public void destroy() {
         if (lastaPrepareFilter != null) {
             lastaPrepareFilter.destroy();
+        }
+        if (lastaShowbaseFilter != null) {
+            lastaShowbaseFilter.destroy();
         }
         if (lastaToActionFilter != null) {
             lastaToActionFilter.destroy();

@@ -54,6 +54,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Encoding and Di context and hot deploy
  * @author jflute
  */
 public class LastaPrepareFilter implements Filter {
@@ -236,14 +237,14 @@ public class LastaPrepareFilter implements Filter {
     protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         if (!HotdeployUtil.isHotdeploy()) {
-            chain.doFilter(request, response); // #to_action
+            toNextFilter(request, response, chain); // #to_action
             return;
         }
         final String loaderKey = HOTDEPLOY_CLASSLOADER_KEY;
         if (request.getAttribute(loaderKey) != null) { // check recursive call
             final ClassLoader loader = (ClassLoader) request.getAttribute(loaderKey);
             Thread.currentThread().setContextClassLoader(loader);
-            chain.doFilter(request, response); // #to_action
+            toNextFilter(request, response, chain); // #to_action
             return;
         }
         final HotdeployBehavior ondemand = (HotdeployBehavior) LaContainerBehavior.getProvider();
@@ -253,7 +254,7 @@ public class LastaPrepareFilter implements Filter {
             ContainerUtil.overrideExternalRequest(hotdeployRequest); // override formal request
             try {
                 request.setAttribute(loaderKey, Thread.currentThread().getContextClassLoader());
-                chain.doFilter(request, response); // #to_action
+                toNextFilter(request, response, chain); // #to_action
             } finally {
                 final HotdeployHttpSession session = (HotdeployHttpSession) hotdeployRequest.getSession(false);
                 if (session != null) {
@@ -267,6 +268,11 @@ public class LastaPrepareFilter implements Filter {
 
     protected HotdeployHttpServletRequest newHotdeployHttpServletRequest(HttpServletRequest request) {
         return new HotdeployHttpServletRequest(request);
+    }
+
+    protected void toNextFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        chain.doFilter(request, response); // #to_action
     }
 
     // ===================================================================================
