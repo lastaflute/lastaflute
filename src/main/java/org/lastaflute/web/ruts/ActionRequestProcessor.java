@@ -25,7 +25,9 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.db.jta.stage.NoneTransactionStage;
 import org.lastaflute.db.jta.stage.TransactionStage;
+import org.lastaflute.db.jta.stage.VestibuleTxProvider;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.exception.RequestForwardFailureException;
@@ -170,7 +172,16 @@ public class ActionRequestProcessor {
     //                                                                              Action
     //                                                                              ======
     public VirtualAction createAction(ActionRuntime runtime, ActionResponseReflector reflector) {
-        return newGodHandableAction(runtime, reflector, getTransactionStage(), getRequestManager());
+        return newGodHandableAction(runtime, reflector, prepareVestibuleTxStage(), getRequestManager());
+    }
+
+    protected TransactionStage prepareVestibuleTxStage() {
+        final VestibuleTxProvider provider = getAssistantDirector().assistDbDirection().assistVestibuleTxProvider();
+        if (provider != null && provider.isSuppressed()) {
+            return NoneTransactionStage.DEFAULT_INSTANCE;
+        } else { // mainly here
+            return getTransactionStage();
+        }
     }
 
     protected GodHandableAction newGodHandableAction(ActionRuntime runtime, ActionResponseReflector reflector, TransactionStage stage,

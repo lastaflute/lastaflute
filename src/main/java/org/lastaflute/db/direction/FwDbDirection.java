@@ -16,7 +16,9 @@
 package org.lastaflute.db.direction;
 
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
+import org.lastaflute.db.dbcp.XAConnectionHook;
 import org.lastaflute.db.dbflute.classification.ListedClassificationProvider;
+import org.lastaflute.db.jta.stage.VestibuleTxProvider;
 
 /**
  * @author jflute
@@ -31,6 +33,12 @@ public class FwDbDirection {
     //                                        --------------
     protected ListedClassificationProvider listedClassificationProvider;
 
+    // -----------------------------------------------------
+    //                                                 JDBC
+    //                                                ------
+    protected XAConnectionHook newbornConnectionHook;
+    protected VestibuleTxProvider vestibuleTxProvider;
+
     // ===================================================================================
     //                                                                     Direct Property
     //                                                                     ===============
@@ -42,6 +50,17 @@ public class FwDbDirection {
         this.listedClassificationProvider = listedClassificationProvider;
     }
 
+    // -----------------------------------------------------
+    //                                                 JDBC
+    //                                                ------
+    public void directNewbornConnection(XAConnectionHook newbornConnectionHook) {
+        this.newbornConnectionHook = newbornConnectionHook;
+    }
+
+    public void directVestibuleTx(VestibuleTxProvider vestibuleTxProvider) {
+        this.vestibuleTxProvider = vestibuleTxProvider;
+    }
+
     // ===================================================================================
     //                                                                              Assist
     //                                                                              ======
@@ -51,6 +70,17 @@ public class FwDbDirection {
     public ListedClassificationProvider assistListedClassificationProvider() {
         assertAssistObjectNotNull(listedClassificationProvider, "Not found the provider for listed classification.");
         return listedClassificationProvider;
+    }
+
+    // -----------------------------------------------------
+    //                                                 JDBC
+    //                                                ------
+    public XAConnectionHook assistNewbornConnectionHook() {
+        return newbornConnectionHook; // not required, it's optional assist
+    }
+
+    public VestibuleTxProvider assistVestibuleTxProvider() {
+        return vestibuleTxProvider; // not required, it's optional assist
     }
 
     // ===================================================================================
