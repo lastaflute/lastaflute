@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.lastaflute</groupId>
 	<artifactId>lastaflute</artifactId>
-	<version>0.6.1-RC4</version> <!-- latest is RC4 -->
+	<version>0.6.1-J-SNAPSHOT</version> <!-- latest is RC4 -->
 	<packaging>jar</packaging>
 
 	<name>LastaFlute</name>

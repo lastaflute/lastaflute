@@ -24,9 +24,10 @@ import org.dbflute.helper.HandyDate;
 import org.dbflute.optional.OptionalThing;
 
 /**
+ * @param <ID> The type of user ID.
  * @author jflute
  */
-public abstract class TypicalUserBean implements UserBean, SyncCheckable, I18nable, Serializable {
+public abstract class TypicalUserBean<ID> implements UserBean<ID>, SyncCheckable, I18nable, Serializable {
 
     private static final long serialVersionUID = 1L;
 

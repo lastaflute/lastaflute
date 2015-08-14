@@ -130,7 +130,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
 
     protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource,
             OptionalThing<CrossOriginResourceSharing> sharing, AccessContextArranger arranger,
-            Supplier<OptionalThing<? extends UserBean>> userBeanSupplier, Supplier<String> appTypeSupplier) {
+            Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier, Supplier<String> appTypeSupplier) {
         return new TypicalGodHandPrologue(resource, sharing, arranger, userBeanSupplier, appTypeSupplier);
     }
 
@@ -229,7 +229,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * Get the bean of login user on session as interface type. (for application)
      * @return The optional thing of found user bean. (NotNull, EmptyAllowed: when not login)
      */
-    protected abstract OptionalThing<? extends UserBean> getUserBean();
+    protected abstract OptionalThing<? extends UserBean<?>> getUserBean();
 
     /**
      * Get the application type, e.g. for common column.
