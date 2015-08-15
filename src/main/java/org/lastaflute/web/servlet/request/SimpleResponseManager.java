@@ -378,7 +378,7 @@ public class SimpleResponseManager implements ResponseManager {
             }
             final OutputStream out = response.getOutputStream();
             try {
-                streamCall.write(ins -> {
+                streamCall.callback(ins -> {
                     LdiInputStreamUtil.copy(ins, out);
                 });
                 LdiOutputStreamUtil.flush(out);
