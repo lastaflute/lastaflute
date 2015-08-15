@@ -120,12 +120,14 @@ public class StreamResponse implements ActionResponse {
     // ===================================================================================
     //                                                                         HTTP Status
     //                                                                         ===========
+    @Override
     public StreamResponse httpStatus(int httpStatus) {
         assertDefinedState("httpStatus");
         this.httpStatus = httpStatus;
         return this;
     }
 
+    @Override
     public Integer getHttpStatus() {
         return httpStatus;
     }
@@ -143,6 +145,10 @@ public class StreamResponse implements ActionResponse {
         return this;
     }
 
+    /**
+     * @param stream The download data, will be automatically closed after writing. (NotNull)
+     * @return this. (NotNull)
+     */
     public StreamResponse stream(InputStream stream) {
         assertArgumentNotNull("stream", stream);
         assertDefinedState("stream");
@@ -153,9 +159,13 @@ public class StreamResponse implements ActionResponse {
         return this;
     }
 
-    public StreamResponse stream(InputStream stream, Integer contentLength) {
+    /**
+     * @param stream The download data, will be automatically closed after writing. (NotNull)
+     * @param contentLength The length of the content.
+     * @return this. (NotNull)
+     */
+    public StreamResponse stream(InputStream stream, int contentLength) {
         assertArgumentNotNull("stream", stream);
-        assertArgumentNotNull("contentLength", contentLength);
         assertDefinedState("stream");
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
