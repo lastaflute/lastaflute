@@ -15,7 +15,6 @@
  */
 package org.lastaflute.web.servlet.request;
 
-import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -31,7 +30,7 @@ public class ResponseDownloadResource {
     protected String contentType;
     protected final Map<String, String[]> headerMap = new LinkedHashMap<String, String[]>(4);
     protected byte[] byteData;
-    protected InputStream inputStream;
+    protected WritternStreamCall streamCall;
     protected Integer contentLength;
     protected boolean returnAsEmptyBody;
 
@@ -91,42 +90,37 @@ public class ResponseDownloadResource {
         if (data == null) {
             throw new IllegalArgumentException("The argument 'data' should not be null.");
         }
-        if (inputStream != null) {
-            throw new IllegalStateException("The input stream already exists.");
-        }
         this.byteData = data;
         return this;
     }
 
-    public ResponseDownloadResource stream(InputStream stream) {
-        if (stream == null) {
-            throw new IllegalArgumentException("The argument 'stream' should not be null.");
-        }
-        if (byteData != null) {
-            throw new IllegalStateException("The byte data already exists.");
-        }
-        this.inputStream = stream;
+    public ResponseDownloadResource stream(WritternStreamCall streamCall) {
+        doStream(streamCall);
         return this;
     }
 
-    public ResponseDownloadResource stream(InputStream stream, Integer contentLength) {
-        if (stream == null) {
-            throw new IllegalArgumentException("The argument 'stream' should not be null.");
+    public ResponseDownloadResource stream(WritternStreamCall streamCall, int contentLength) {
+        doStream(streamCall);
+        this.contentLength = contentLength;
+        return this;
+    }
+
+    protected void doStream(WritternStreamCall streamCall) {
+        if (streamCall == null) {
+            throw new IllegalArgumentException("The argument 'streamCall' should not be null.");
         }
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
         }
-        this.inputStream = stream;
-        this.contentLength = contentLength;
-        return this;
+        this.streamCall = streamCall;
     }
 
     public byte[] getByteData() {
         return byteData;
     }
 
-    public InputStream getInputStream() {
-        return inputStream;
+    public WritternStreamCall getStreamCall() {
+        return streamCall;
     }
 
     public Integer getContentLength() {

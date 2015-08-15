@@ -16,7 +16,6 @@
 package org.lastaflute.web.servlet.request;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
@@ -109,17 +108,31 @@ public interface ResponseManager {
     void download(String fileName, byte[] data);
 
     /**
+     * <pre>
+     * responseManager.<span style="color: #CC4747">download</span>("sea.txt", <span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
+     *         <span style="color: #553000">out</span>.write(<span style="color: #553000">ins</span>);
+     *     }
+     * });
+     * </pre>
      * @param fileName The file name as 'filename' used in the header. (NotNull)
-     * @param ins The download data as stream. (NotNull)
+     * @param writtenStreamLambda The callback for writing stream of download data. (NotNull)
      */
-    void download(String fileName, InputStream ins);
+    void download(String fileName, WritternStreamCall writtenStreamLambda);
 
     /**
+     * <pre>
+     * responseManager.<span style="color: #CC4747">download</span>("sea.txt", <span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
+     *         <span style="color: #553000">out</span>.write(<span style="color: #553000">ins</span>);
+     *     }
+     * }, <span style="color: #553000">contentLength</span>);
+     * </pre>
      * @param fileName The file name as 'filename' used in the header. (NotNull)
-     * @param ins The download data as stream. (NotNull)
-     * @param length The content length of the response.
+     * @param writtenStreamLambda The callback for writing stream of download data. (NotNull)
+     * @param contentLength The content length of the response.
      */
-    void download(String fileName, InputStream ins, int length);
+    void download(String fileName, WritternStreamCall writtenStreamLambda, int contentLength);
 
     /**
      * @param resource The resource to download, contains file name and content type and so on... (NotNull)

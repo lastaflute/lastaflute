@@ -15,7 +15,6 @@
  */
 package org.lastaflute.web.response;
 
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,6 +23,7 @@ import java.util.Map.Entry;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
+import org.lastaflute.web.servlet.request.WritternStreamCall;
 
 /**
  * The response of stream for action.
@@ -52,7 +52,7 @@ public class StreamResponse implements ActionResponse {
     protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected Integer httpStatus;
     protected byte[] byteData;
-    protected InputStream inputStream;
+    protected WritternStreamCall streamCall;
     protected Integer contentLength;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
@@ -135,52 +135,68 @@ public class StreamResponse implements ActionResponse {
     // ===================================================================================
     //                                                                       Download Data
     //                                                                       =============
+    /**
+     * @param data The download data as bytes. (NotNull)
+     * @return this. (NotNull)
+     */
     public StreamResponse data(byte[] data) {
         assertArgumentNotNull("data", data);
         assertDefinedState("data");
-        if (inputStream != null) {
-            throw new IllegalStateException("The input stream already exists.");
+        if (streamCall != null) {
+            throw new IllegalStateException("The stream call already exists.");
         }
         this.byteData = data;
         return this;
     }
 
     /**
-     * @param stream The download data, will be automatically closed after writing. (NotNull)
+     * <pre>
+     * <span style="color: #70226C">return</span> asStream("sea.txt").<span style="color: #CC4747">stream</span>(<span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
+     *         <span style="color: #553000">out</span>.write(<span style="color: #553000">ins</span>);
+     *     }
+     * });
+     * </pre>
+     * @param writtenStreamLambda The callback for writing stream of download data. (NotNull)
      * @return this. (NotNull)
      */
-    public StreamResponse stream(InputStream stream) {
-        assertArgumentNotNull("stream", stream);
-        assertDefinedState("stream");
-        if (byteData != null) {
-            throw new IllegalStateException("The byte data already exists.");
-        }
-        this.inputStream = stream;
+    public StreamResponse stream(WritternStreamCall writtenStreamLambda) {
+        doStream(writtenStreamLambda);
         return this;
     }
 
     /**
-     * @param stream The download data, will be automatically closed after writing. (NotNull)
+     * <pre>
+     * <span style="color: #70226C">return</span> asStream("sea.txt").<span style="color: #CC4747">stream</span>(<span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
+     *         <span style="color: #553000">out</span>.write(<span style="color: #553000">ins</span>);
+     *     }
+     * }, <span style="color: #553000">contentLength</span>);
+     * @param writtenStreamLambda The callback for writing stream of download data. (NotNull)
      * @param contentLength The length of the content.
      * @return this. (NotNull)
      */
-    public StreamResponse stream(InputStream stream, int contentLength) {
-        assertArgumentNotNull("stream", stream);
+    public StreamResponse stream(WritternStreamCall writtenStreamLambda, int contentLength) {
+        doStream(writtenStreamLambda);
+        this.contentLength = contentLength;
+        return this;
+    }
+
+    protected void doStream(WritternStreamCall writtenStreamLambda) {
+        assertArgumentNotNull("writtenStreamLambda", writtenStreamLambda);
         assertDefinedState("stream");
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
         }
-        this.inputStream = stream;
-        this.contentLength = contentLength;
-        return this;
+        streamCall = writtenStreamLambda;
     }
 
     public byte[] getByteData() {
         return byteData;
     }
 
-    public InputStream getInputStream() {
-        return inputStream;
+    public WritternStreamCall getStreamCall() {
+        return streamCall;
     }
 
     public Integer getContentLength() {
@@ -235,8 +251,12 @@ public class StreamResponse implements ActionResponse {
         if (byteData != null) {
             resource.data(byteData);
         }
-        if (inputStream != null) {
-            resource.stream(inputStream, contentLength);
+        if (streamCall != null) {
+            if (contentLength != null) {
+                resource.stream(streamCall, contentLength);
+            } else {
+                resource.stream(streamCall);
+            }
         }
         if (returnAsEmptyBody) {
             resource.asEmptyBody();

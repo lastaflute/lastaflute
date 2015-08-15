@@ -180,6 +180,8 @@ public class ActionResponseReflector {
     //                                       ---------------
     protected NextJourney handleStreamResponse(StreamResponse response) {
         final ResponseManager responseManager = requestManager.getResponseManager();
+        // needs to be handled in download()
+        //setupActionResponseHeader(responseManager, response);
         setupActionResponseHttpStatus(responseManager, response);
         responseManager.download(response.toDownloadResource());
         return undefinedJourney();
