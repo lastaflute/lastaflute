@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.lastaflute</groupId>
 	<artifactId>lastaflute</artifactId>
-	<version>0.6.1-L-SNAPSHOT</version> <!-- latest is RC4 -->
+	<version>0.6.1-RC5</version> <!-- latest is RC5 -->
 	<packaging>jar</packaging>
 
 	<name>LastaFlute</name>
@@ -14,7 +14,7 @@
 
 	<properties>
 		<dbflute.version>1.1.0-sp8-RC1</dbflute.version>
-		<lasta.di.version>0.6.3-K-SNAPSHOT</lasta.di.version>
+		<lasta.di.version>0.6.3-RC3</lasta.di.version>
 		<hibernate.version>5.1.3.Final</hibernate.version>
 		<servlet.version>3.1.0</servlet.version>
 		<gson.version>2.3.1</gson.version>
