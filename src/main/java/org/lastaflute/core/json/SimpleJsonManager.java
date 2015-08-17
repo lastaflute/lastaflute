@@ -54,6 +54,9 @@ public class SimpleJsonManager implements JsonManager {
     /** Is pretty print suppressed (not line separating) in output JSON string? */
     protected boolean prettyPrintSuppressed;
 
+    /** Is empty-to-null reading valid? */
+    protected boolean emptyToNullReading;
+
     /** Is null-to-empty writing valid? */
     protected boolean nullToEmptyWriting;
 
@@ -74,6 +77,7 @@ public class SimpleJsonManager implements JsonManager {
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
         nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
         prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
+        emptyToNullReading = provider != null ? provider.isEmptyToNullReading() : false;
         nullToEmptyWriting = provider != null ? provider.isNullToEmptyWriting() : false;
         final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
@@ -101,12 +105,13 @@ public class SimpleJsonManager implements JsonManager {
     protected RealJsonParser createGsonJsonParser() {
         final boolean serializeNulls = !nullsSuppressed;
         final boolean prettyPrinting = !prettyPrintSuppressed && developmentHere;
-        return newGsonJsonParser(serializeNulls, prettyPrinting, nullToEmptyWriting);
+        return newGsonJsonParser(serializeNulls, prettyPrinting, emptyToNullReading, nullToEmptyWriting);
     }
 
     protected GsonJsonParser newGsonJsonParser( // option arguments
             boolean serializeNulls // to builder
             , boolean prettyPrinting // to builder
+            , boolean emptyToNullReading // to option
             , boolean nullToEmptyWriting // to option
     ) {
         return new GsonJsonParser(builder -> {
@@ -117,6 +122,9 @@ public class SimpleJsonManager implements JsonManager {
                 builder.setPrettyPrinting();
             }
         } , op -> {
+            if (emptyToNullReading) {
+                op.asEmptyToNullReading();
+            }
             if (nullToEmptyWriting) {
                 op.asNullToEmptyWriting();
             }

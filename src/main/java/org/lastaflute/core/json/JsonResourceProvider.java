@@ -25,7 +25,9 @@ public interface JsonResourceProvider {
      * Provide the parser of JSON which is actually used for parsing.
      * @return The instance for real parser of JSON. (NullAllowed: if null, use default)
      */
-    RealJsonParser provideJsonParser();
+    default RealJsonParser provideJsonParser() {
+        return null; // use default
+    }
 
     /**
      * Is null property suppressed (not displayed) in output JSON string?
@@ -44,10 +46,18 @@ public interface JsonResourceProvider {
     }
 
     /**
+     * Is empty-to-null reading valid?
+     * @return The determination, true or false.
+     */
+    default boolean isEmptyToNullReading() {
+        return false; // plainly
+    }
+
+    /**
      * Is null-to-empty writing valid?
      * @return The determination, true or false.
      */
     default boolean isNullToEmptyWriting() {
-        return false; // show as null
+        return false; // plainly
     }
 }
