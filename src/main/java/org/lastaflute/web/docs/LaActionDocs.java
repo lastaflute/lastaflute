@@ -46,7 +46,7 @@ public interface LaActionDocs {
      * <span style="font-size: 130%; color: #553000">[Action Response]</span>
      * <span style="color: #70226C">return</span> asHtml(path_MyPage_MyPageJsp); <span style="color: #3F7E5E">// HTML template</span>
      * <span style="color: #70226C">return</span> asJson(bean); <span style="color: #3F7E5E">// JSON e.g. AJAX, API server</span>
-     * <span style="color: #70226C">return</span> asStream(ins); <span style="color: #3F7E5E">// Stream e.g. download</span>
+     * <span style="color: #70226C">return</span> asStream(fileName).stream(...); <span style="color: #3F7E5E">// Stream e.g. download</span>
      * 
      * <span style="font-size: 130%; color: #553000">[Example Code]</span>
      * &#064;Execute
