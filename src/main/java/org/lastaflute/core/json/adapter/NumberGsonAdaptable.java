@@ -85,7 +85,11 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
             if (isNullToEmptyWriting() && value == null) { // option
                 out.value("");
             } else {
-                getRealAdapter().write(out, value);
+                if (isEverywhereQuoteWriting()) { // option
+                    out.value(value.toString()); // as 
+                } else { // mainly here
+                    getRealAdapter().write(out, value);
+                }
             }
         }
 
@@ -95,6 +99,10 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected boolean isNullToEmptyWriting() {
             return option.isNullToEmptyWriting();
+        }
+
+        protected boolean isEverywhereQuoteWriting() {
+            return option.isEverywhereQuoteWriting();
         }
 
         protected abstract TypeAdapter<NUM> getRealAdapter();

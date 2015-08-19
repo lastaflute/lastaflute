@@ -60,6 +60,9 @@ public class SimpleJsonManager implements JsonManager {
     /** Is null-to-empty writing valid? */
     protected boolean nullToEmptyWriting;
 
+    /** Is everywhere-quote writing valid? e.g. even if Integer, quote it. */
+    protected boolean everywhereQuoteWriting;
+
     /** The real parser of JSON. (NotNull: after initialization) */
     protected RealJsonParser realJsonParser;
 
@@ -79,6 +82,7 @@ public class SimpleJsonManager implements JsonManager {
         prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
         emptyToNullReading = provider != null ? provider.isEmptyToNullReading() : false;
         nullToEmptyWriting = provider != null ? provider.isNullToEmptyWriting() : false;
+        everywhereQuoteWriting = provider != null ? provider.isEverywhereQuoteWriting() : false;
         final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
         showBootLogging();
@@ -105,15 +109,6 @@ public class SimpleJsonManager implements JsonManager {
     protected RealJsonParser createGsonJsonParser() {
         final boolean serializeNulls = !nullsSuppressed;
         final boolean prettyPrinting = !prettyPrintSuppressed && developmentHere;
-        return newGsonJsonParser(serializeNulls, prettyPrinting, emptyToNullReading, nullToEmptyWriting);
-    }
-
-    protected GsonJsonParser newGsonJsonParser( // option arguments
-            boolean serializeNulls // to builder
-            , boolean prettyPrinting // to builder
-            , boolean emptyToNullReading // to option
-            , boolean nullToEmptyWriting // to option
-    ) {
         return new GsonJsonParser(builder -> {
             if (serializeNulls) {
                 builder.serializeNulls();
@@ -127,6 +122,9 @@ public class SimpleJsonManager implements JsonManager {
             }
             if (nullToEmptyWriting) {
                 op.asNullToEmptyWriting();
+            }
+            if (everywhereQuoteWriting) {
+                op.asEverywhereQuoteWriting();
             }
         });
     }

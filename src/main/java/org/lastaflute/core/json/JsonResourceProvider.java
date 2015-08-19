@@ -60,4 +60,12 @@ public interface JsonResourceProvider {
     default boolean isNullToEmptyWriting() {
         return false; // plainly
     }
+
+    /**
+     * Is everywhere-quote writing valid? e.g. even if Integer, quote it.
+     * @return The determination, true or false.
+     */
+    default boolean isEverywhereQuoteWriting() {
+        return false; // plainly
+    }
 }

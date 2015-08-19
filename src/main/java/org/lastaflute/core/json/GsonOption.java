@@ -25,6 +25,7 @@ public class GsonOption {
     //                                                                           =========
     protected boolean emptyToNullReading;
     protected boolean nullToEmptyWriting;
+    protected boolean everywhereQuoteWriting;
 
     // ===================================================================================
     //                                                                      Option Setting
@@ -39,6 +40,11 @@ public class GsonOption {
         return this;
     }
 
+    public GsonOption asEverywhereQuoteWriting() {
+        everywhereQuoteWriting = true;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
@@ -48,5 +54,9 @@ public class GsonOption {
 
     public boolean isNullToEmptyWriting() {
         return nullToEmptyWriting;
+    }
+
+    public boolean isEverywhereQuoteWriting() {
+        return everywhereQuoteWriting;
     }
 }
