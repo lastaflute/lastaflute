@@ -15,9 +15,13 @@
  */
 package org.lastaflute.web.callback;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.servlet.request.ResponseManager;
 
 /**
  * @author jflute
@@ -45,16 +49,20 @@ public class CrossOriginResourceSharing {
     //                                                                               Share
     //                                                                               =====
     public ActionResponse share() {
-        return isTargetRequest() ? createAllowResponse() : ActionResponse.undefined();
+        if (isTargetRequest()) {
+            return createPreflightResponse();
+        } else {
+            return handleRealResponse();
+        }
     }
 
-    protected ActionResponse createAllowResponse() {
+    protected boolean isTargetRequest() {
+        return requestManager.getRequest().getMethod().equals("OPTIONS");
+    }
+
+    protected ActionResponse createPreflightResponse() {
         final ActionResponse response = newAllowResponse();
-        response.header("Access-Control-Allow-Origin", prepareAllowOrigin());
-        response.header("Access-Control-Allow-Methods", prepareAllowMethods());
-        response.header("Access-Control-Max-Age", String.valueOf(prepareMaxAge()));
-        response.header("Access-Control-Allow-Headers", prepareAllowHeaders());
-        response.header("Access-Control-Allow-Credentials", prepareAllowCredentials());
+        prepareAllowHeaderMap().forEach((key, value) -> response.header(key, value));
         return response;
     }
 
@@ -62,8 +70,23 @@ public class CrossOriginResourceSharing {
         return JsonResponse.asEmptyBody();
     }
 
-    protected boolean isTargetRequest() {
-        return requestManager.getRequest().getMethod().equals("OPTIONS");
+    protected ActionResponse handleRealResponse() {
+        final ResponseManager responseManager = requestManager.getResponseManager();
+        prepareAllowHeaderMap().forEach((key, value) -> responseManager.addHeader(key, value));
+        return ActionResponse.undefined(); // only header setup here
+    }
+
+    // -----------------------------------------------------
+    //                                          Allow Header
+    //                                          ------------
+    protected Map<String, String> prepareAllowHeaderMap() {
+        final Map<String, String> headerMap = new HashMap<String, String>(5);
+        headerMap.put("Access-Control-Allow-Origin", prepareAllowOrigin());
+        headerMap.put("Access-Control-Allow-Methods", prepareAllowMethods());
+        headerMap.put("Access-Control-Max-Age", String.valueOf(prepareMaxAge()));
+        headerMap.put("Access-Control-Allow-Headers", prepareAllowHeaders());
+        headerMap.put("Access-Control-Allow-Credentials", prepareAllowCredentials());
+        return headerMap;
     }
 
     protected String prepareAllowOrigin() {
