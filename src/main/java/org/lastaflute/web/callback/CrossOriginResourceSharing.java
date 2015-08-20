@@ -59,7 +59,7 @@ public class CrossOriginResourceSharing {
     }
 
     protected ActionResponse newAllowResponse() {
-        return new JsonResponse<Object>(new Object()); // #hope jflute completely empty response
+        return JsonResponse.asEmptyBody();
     }
 
     protected boolean isTargetRequest() {
