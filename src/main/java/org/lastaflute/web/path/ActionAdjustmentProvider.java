@@ -38,19 +38,6 @@ public interface ActionAdjustmentProvider {
     }
 
     /**
-     * Decode the escaped character for property value from URL parameter. <br>
-     * The basic characters (e.g. %2d) is already decoded without this method. <br>
-     * So this method is basically for your original decoding.
-     * @param bean The bean object of the property. (NotNull)
-     * @param name The property name for the value. (NotNull)
-     * @param value The property value to decode. (NotNull)
-     * @return The decoded value for property value. (NullAllowed: if null, no decoded)
-     */
-    default String decodeUrlParameterPropertyValue(Object bean, String name, String value) {
-        return null;
-    }
-
-    /**
      * Filter the HTML path.
      * @param path The path for HTML template, e.g. if JSP, it has view-prefix '/WEB-INF/view/'. (NotNull)
      * @param actionMapping The action mapping for current action. (NotNull)
@@ -111,5 +98,13 @@ public interface ActionAdjustmentProvider {
      * @param response The defined action response. (NotNull)
      */
     default void adjustActionResponseJustBefore(ActionResponse response) {
+    }
+
+    /**
+     * Adjust form mapping from request parameters.
+     * @return The option of form mapping. (NullAllowed: if null, no option)
+     */
+    default FormMappingOption adjustFormMapping() {
+        return null;
     }
 }
