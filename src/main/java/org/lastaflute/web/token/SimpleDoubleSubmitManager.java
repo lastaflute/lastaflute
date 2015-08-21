@@ -65,7 +65,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     //                                                                  Token Manipulation
     //                                                                  ==================
     @Override
-    public synchronized void saveToken(Class<?> groupType) {
+    public synchronized String saveToken(Class<?> groupType) {
         final String tokenKey = getTokenKey();
         final SessionManager sessionManager = requestManager.getSessionManager();
         final DoubleSubmitTokenMap tokenMap = sessionManager.getAttribute(tokenKey, DoubleSubmitTokenMap.class).orElseGet(() -> {
@@ -73,7 +73,9 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
             sessionManager.setAttribute(tokenKey, firstMap);
             return firstMap;
         });
-        tokenMap.put(groupType, generateToken(groupType));
+        final String generated = generateToken(groupType);
+        tokenMap.put(groupType, generated);
+        return generated;
     }
 
     @Override
