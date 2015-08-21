@@ -1129,6 +1129,9 @@ public class ActionFormMapper {
         br.addElement("        public String sea;");
         br.addElement("        public String land; // OK");
         br.addElement("    }");
+        br.addElement("");
+        br.addElement("If you want to ignore the parameter from this check,");
+        br.addElement("adjust FormMappingOption in ActionAdjustmentProvider.");
         br.addItem("Action Form");
         br.addElement(bean.getClass().getName());
         br.addItem("Defined Property");
