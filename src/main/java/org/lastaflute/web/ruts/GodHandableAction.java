@@ -398,6 +398,7 @@ public class GodHandableAction implements VirtualAction {
 
     protected ActionResponse handleValidationErrorException(ValidationErrorException cause) {
         final ActionMessages errors = cause.getMessages();
+        assertValidationErrorMessagesExists(errors, cause);
         if (logger.isDebugEnabled()) {
             final StringBuilder sb = new StringBuilder();
             sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
@@ -423,6 +424,12 @@ public class GodHandableAction implements VirtualAction {
             throw new IllegalStateException("Validation error always rollbacks transaction but tx-commit hook specified:" + hook);
         });
         return response;
+    }
+
+    protected void assertValidationErrorMessagesExists(ActionMessages errors, ValidationErrorException cause) {
+        if (errors.isEmpty()) {
+            throw new IllegalStateException("Empty message even if validation error: " + buildActionDisp(runtime), cause);
+        }
     }
 
     // ===================================================================================
