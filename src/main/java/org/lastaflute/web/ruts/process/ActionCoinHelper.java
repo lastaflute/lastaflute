@@ -16,6 +16,8 @@
  */
 package org.lastaflute.web.ruts.process;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.dbflute.hook.AccessContext;
 import org.dbflute.hook.CallbackContext;
 import org.dbflute.optional.OptionalThing;
@@ -29,6 +31,7 @@ import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
@@ -83,12 +86,15 @@ public class ActionCoinHelper {
         }
     }
 
-    protected void dispatchApiClientException(ActionRuntime runtime, ActionResponseReflector reflector, RuntimeException cause) {
+    protected void dispatchApiClientException(ActionRuntime runtime, ActionResponseReflector reflector, RequestClientErrorException cause) {
         if (canHandleApiException(runtime)) { // check API action just in case
             getApiManager().handleClientException(createApiFailureResource(runtime), cause).ifPresent(apiRes -> {
-                reflector.reflect(apiRes); /* empty journey so ignore return */
+                if (apiRes.getHttpStatus() == null) { // no specified
+                    apiRes.httpStatus(cause.getErrorStatus()); // use thrown status
+                }
+                reflector.reflect(apiRes); // empty journey so ignore return
             });
-            runtime.clearDisplayData(); /* remove (possible) large data just in case */
+            runtime.clearDisplayData(); // remove (possible) large data just in case
         }
     }
 
@@ -106,9 +112,12 @@ public class ActionCoinHelper {
     protected void dispatchApiServerException(ActionRuntime runtime, ActionResponseReflector reflector, Throwable cause) {
         if (canHandleApiException(runtime)) { // check API action just in case
             getApiManager().handleServerException(createApiFailureResource(runtime), cause).ifPresent(apiRes -> {
-                reflector.reflect(apiRes); /* empty journey so ignore return */
+                if (apiRes.getHttpStatus() == null) { // no specified
+                    apiRes.httpStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // use fixed status
+                }
+                reflector.reflect(apiRes); // empty journey so ignore return
             });
-            runtime.clearDisplayData(); /* remove (possible) large data just in case */
+            runtime.clearDisplayData(); // remove (possible) large data just in case
         }
     }
 
