@@ -20,12 +20,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.lastaflute.web.LastaWebKey;
+
 /**
  * @author jflute
  */
 public class FormMappingOption {
 
-    // TODO jflute only when development? (2015/08/20)
     protected boolean undefinedParameterError;
     protected Set<String> indefinableParameterSet;
 
@@ -40,7 +41,13 @@ public class FormMappingOption {
     }
 
     protected Set<String> createIndefinableParameterSet(String... indefinableParameters) {
-        return Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(indefinableParameters)));
+        final Set<String> specifiedSet = new HashSet<String>(Arrays.asList(indefinableParameters));
+        setupDefaultIndefinableParameter(specifiedSet);
+        return Collections.unmodifiableSet(specifiedSet);
+    }
+
+    protected void setupDefaultIndefinableParameter(Set<String> specifiedSet) {
+        specifiedSet.add(LastaWebKey.TRANSACTION_TOKEN_KEY);
     }
 
     public boolean isUndefinedParameterError() {

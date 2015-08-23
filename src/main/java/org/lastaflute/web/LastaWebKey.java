@@ -37,5 +37,5 @@ public interface LastaWebKey {
     String USER_TIMEZONE_KEY = "lastaflute.action.USER_TIMEZONE"; // Request or Session
 
     String CSRF_TOKEN_KEY = "lastaflute.action.CSRF_TOKEN"; // Session
-    String TRANSACTION_TOKEN_KEY = "lastaflute.action.TRANSACTION_TOKEN"; // Session
+    String TRANSACTION_TOKEN_KEY = "lastaflute.action.TRANSACTION_TOKEN"; // Parameter and Session
 }
