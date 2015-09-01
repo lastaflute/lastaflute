@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
-import org.lastaflute.core.json.GsonOption;
+import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
 
 import com.google.gson.JsonSyntaxException;
@@ -43,9 +43,9 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     //                                                                        ============
     abstract class AbstractTypeAdapterNumber<NUM extends Number> extends TypeAdapter<NUM> {
 
-        protected final GsonOption option;
+        protected final JsonMappingOption option;
 
-        public AbstractTypeAdapterNumber(GsonOption option) {
+        public AbstractTypeAdapterNumber(JsonMappingOption option) {
             this.option = option;
         }
 
@@ -133,7 +133,7 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<Number> realAdapter = TypeAdapters.INTEGER;
 
-        public TypeAdapterInteger(GsonOption option) {
+        public TypeAdapterInteger(JsonMappingOption option) {
             super(option);
         }
 
@@ -155,7 +155,7 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<Number> realAdapter = TypeAdapters.LONG;
 
-        public TypeAdapterLong(GsonOption option) {
+        public TypeAdapterLong(JsonMappingOption option) {
             super(option);
         }
 
@@ -177,7 +177,7 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<BigDecimal> realAdapter = TypeAdapters.BIG_DECIMAL;
 
-        public TypeAdapterBigDecimal(GsonOption option) {
+        public TypeAdapterBigDecimal(JsonMappingOption option) {
             super(option);
         }
 
@@ -235,5 +235,5 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    GsonOption getGsonOption();
+    JsonMappingOption getGsonOption();
 }

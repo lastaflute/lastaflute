@@ -46,26 +46,10 @@ public interface JsonResourceProvider {
     }
 
     /**
-     * Is empty-to-null reading valid?
-     * @return The determination, true or false.
+     * Provide the option of JSON mapping, e.g. date format
+     * @return The new-created option of JSON mapping. (NullAllowed: if null, use default)
      */
-    default boolean isEmptyToNullReading() {
-        return false; // plainly
-    }
-
-    /**
-     * Is null-to-empty writing valid?
-     * @return The determination, true or false.
-     */
-    default boolean isNullToEmptyWriting() {
-        return false; // plainly
-    }
-
-    /**
-     * Is everywhere-quote writing valid? e.g. even if Integer, quote it.
-     * @return The determination, true or false.
-     */
-    default boolean isEverywhereQuoteWriting() {
-        return false; // plainly
+    default JsonMappingOption provideOption() {
+        return null;
     }
 }

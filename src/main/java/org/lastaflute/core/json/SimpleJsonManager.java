@@ -21,7 +21,9 @@ import java.util.List;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.slf4j.Logger;
@@ -48,23 +50,17 @@ public class SimpleJsonManager implements JsonManager {
     /** Is development here? */
     protected boolean developmentHere;
 
+    /** The real parser of JSON. (NotNull: after initialization) */
+    protected RealJsonParser realJsonParser;
+
     /** Is null property suppressed (not displayed) in output JSON string? */
     protected boolean nullsSuppressed;
 
     /** Is pretty print suppressed (not line separating) in output JSON string? */
     protected boolean prettyPrintSuppressed;
 
-    /** Is empty-to-null reading valid? */
-    protected boolean emptyToNullReading;
-
-    /** Is null-to-empty writing valid? */
-    protected boolean nullToEmptyWriting;
-
-    /** Is everywhere-quote writing valid? e.g. even if Integer, quote it. */
-    protected boolean everywhereQuoteWriting;
-
-    /** The real parser of JSON. (NotNull: after initialization) */
-    protected RealJsonParser realJsonParser;
+    /** The option of JSON mapping. (NotNull, EmptyAllowed: if empty, use default) */
+    protected OptionalThing<JsonMappingOption> jsonMappingOption = OptionalThing.empty();
 
     // ===================================================================================
     //                                                                          Initialize
@@ -78,13 +74,13 @@ public class SimpleJsonManager implements JsonManager {
         final FwCoreDirection direction = assistCoreDirection();
         developmentHere = direction.isDevelopmentHere();
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
-        nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
-        prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
-        emptyToNullReading = provider != null ? provider.isEmptyToNullReading() : false;
-        nullToEmptyWriting = provider != null ? provider.isNullToEmptyWriting() : false;
-        everywhereQuoteWriting = provider != null ? provider.isEverywhereQuoteWriting() : false;
         final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
+        nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
+        prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
+        jsonMappingOption = OptionalThing.ofNullable(provider != null ? provider.provideOption() : null, () -> {
+            throw new IllegalStateException("Not found the JSON mapping option.");
+        });
         showBootLogging();
     }
 
@@ -100,7 +96,25 @@ public class SimpleJsonManager implements JsonManager {
         if (logger.isInfoEnabled()) {
             logger.info("[JSON Manager]");
             logger.info(" realJsonParser: " + DfTypeUtil.toClassTitle(realJsonParser));
+            final String adjustment = buildAdjustmentExp();
+            if (!adjustment.isEmpty()) {
+                logger.info(" adjustment: " + adjustment);
+            }
+            jsonMappingOption.ifPresent(op -> logger.info(" option: " + op));
         }
+    }
+
+    protected String buildAdjustmentExp() {
+        final StringBuilder sb = new StringBuilder();
+        final String delimiter = ", ";
+        if (nullsSuppressed) {
+            sb.append(delimiter).append("nullsSuppressed");
+        }
+        if (prettyPrintSuppressed) {
+            sb.append(delimiter).append("prettyPrintSuppressed");
+        }
+        final String adjustment = Srl.ltrim(sb.toString(), delimiter);
+        return adjustment;
     }
 
     // ===================================================================================
@@ -117,15 +131,7 @@ public class SimpleJsonManager implements JsonManager {
                 builder.setPrettyPrinting();
             }
         } , op -> {
-            if (emptyToNullReading) {
-                op.asEmptyToNullReading();
-            }
-            if (nullToEmptyWriting) {
-                op.asNullToEmptyWriting();
-            }
-            if (everywhereQuoteWriting) {
-                op.asEverywhereQuoteWriting();
-            }
+            jsonMappingOption.ifPresent(another -> op.acceptAnother(another));
         });
     }
 

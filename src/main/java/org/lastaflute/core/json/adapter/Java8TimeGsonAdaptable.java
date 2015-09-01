@@ -24,7 +24,7 @@ import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
-import org.lastaflute.core.json.GsonOption;
+import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyDateTimeParseFailureException;
 
 import com.google.gson.Gson;
@@ -45,9 +45,9 @@ public interface Java8TimeGsonAdaptable {
     //                                                                        ============
     class DateTimeTypeAdapterFactory implements TypeAdapterFactory {
 
-        protected final GsonOption option;
+        protected final JsonMappingOption option;
 
-        public DateTimeTypeAdapterFactory(GsonOption option) {
+        public DateTimeTypeAdapterFactory(JsonMappingOption option) {
             this.option = option;
         }
 
@@ -89,9 +89,9 @@ public interface Java8TimeGsonAdaptable {
 
     abstract class AbstractTypeDateTimeAdapter<DATE extends TemporalAccessor> extends TypeAdapter<DATE> {
 
-        protected final GsonOption option;
+        protected final JsonMappingOption option;
 
-        public AbstractTypeDateTimeAdapter(GsonOption option) {
+        public AbstractTypeDateTimeAdapter(JsonMappingOption option) {
             this.option = option;
         }
 
@@ -160,15 +160,17 @@ public interface Java8TimeGsonAdaptable {
 
     class TypeAdapterLocalDate extends AbstractTypeDateTimeAdapter<LocalDate> {
 
-        public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
+        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+        protected final DateTimeFormatter realFormatter;
 
-        public TypeAdapterLocalDate(GsonOption option) {
+        public TypeAdapterLocalDate(JsonMappingOption option) {
             super(option);
+            realFormatter = option.getLocalDateFormatter().orElse(DEFAULT_FORMATTER);
         }
 
         @Override
         protected DateTimeFormatter getDateTimeFormatter() {
-            return formatter;
+            return realFormatter;
         }
 
         @Override
@@ -184,15 +186,17 @@ public interface Java8TimeGsonAdaptable {
 
     class TypeAdapterLocalDateTime extends AbstractTypeDateTimeAdapter<LocalDateTime> {
 
-        public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        protected final DateTimeFormatter realFormatter;
 
-        public TypeAdapterLocalDateTime(GsonOption option) {
+        public TypeAdapterLocalDateTime(JsonMappingOption option) {
             super(option);
+            realFormatter = option.getLocalDateTimeFormatter().orElse(DEFAULT_FORMATTER);
         }
 
         @Override
         protected DateTimeFormatter getDateTimeFormatter() {
-            return formatter;
+            return realFormatter;
         }
 
         @Override
@@ -208,15 +212,17 @@ public interface Java8TimeGsonAdaptable {
 
     class TypeAdapterLocalTime extends AbstractTypeDateTimeAdapter<LocalTime> {
 
-        public static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_TIME;
+        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_LOCAL_TIME;
+        protected final DateTimeFormatter realFormatter;
 
-        public TypeAdapterLocalTime(GsonOption option) {
+        public TypeAdapterLocalTime(JsonMappingOption option) {
             super(option);
+            realFormatter = option.getLocalTimeFormatter().orElse(DEFAULT_FORMATTER);
         }
 
         @Override
         protected DateTimeFormatter getDateTimeFormatter() {
-            return formatter;
+            return realFormatter;
         }
 
         @Override
@@ -240,5 +246,5 @@ public interface Java8TimeGsonAdaptable {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    GsonOption getGsonOption();
+    JsonMappingOption getGsonOption();
 }

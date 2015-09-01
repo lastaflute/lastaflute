@@ -17,7 +17,7 @@ package org.lastaflute.core.json.adapter;
 
 import java.io.IOException;
 
-import org.lastaflute.core.json.GsonOption;
+import org.lastaflute.core.json.JsonMappingOption;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -36,9 +36,9 @@ public interface StringGsonAdaptable { // to show property path in exception mes
     class TypeAdapterString extends TypeAdapter<String> {
 
         protected final TypeAdapter<String> realAdapter = TypeAdapters.STRING;
-        protected final GsonOption option;
+        protected final JsonMappingOption option;
 
-        public TypeAdapterString(GsonOption option) {
+        public TypeAdapterString(JsonMappingOption option) {
             this.option = option;
         }
 
@@ -84,5 +84,5 @@ public interface StringGsonAdaptable { // to show property path in exception mes
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    GsonOption getGsonOption();
+    JsonMappingOption getGsonOption();
 }

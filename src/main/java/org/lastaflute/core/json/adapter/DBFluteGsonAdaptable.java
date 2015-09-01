@@ -19,7 +19,7 @@ import java.io.IOException;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
-import org.lastaflute.core.json.GsonOption;
+import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeUnknownException;
 import org.lastaflute.core.util.LaDBFluteUtil;
@@ -44,9 +44,9 @@ public interface DBFluteGsonAdaptable {
     //                                                                        ============
     class ClassificationTypeAdapterFactory implements TypeAdapterFactory {
 
-        protected final GsonOption option;
+        protected final JsonMappingOption option;
 
-        public ClassificationTypeAdapterFactory(GsonOption option) {
+        public ClassificationTypeAdapterFactory(JsonMappingOption option) {
             this.option = option;
         }
 
@@ -70,9 +70,9 @@ public interface DBFluteGsonAdaptable {
     class TypeAdapterClassification extends TypeAdapter<Classification> {
 
         protected final Class<?> clsType;
-        protected final GsonOption option;
+        protected final JsonMappingOption option;
 
-        public TypeAdapterClassification(Class<?> clsType, GsonOption option) {
+        public TypeAdapterClassification(Class<?> clsType, JsonMappingOption option) {
             this.clsType = clsType;
             this.option = option;
         }
@@ -168,5 +168,5 @@ public interface DBFluteGsonAdaptable {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    GsonOption getGsonOption();
+    JsonMappingOption getGsonOption();
 }

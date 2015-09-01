@@ -39,19 +39,19 @@ public class GsonJsonParser implements RealJsonParser // adapters here
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final GsonOption option;
+    protected final JsonMappingOption option;
     protected final Gson gson;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public GsonJsonParser(Consumer<GsonBuilder> oneArgLambda, Consumer<GsonOption> opLambda) {
+    public GsonJsonParser(Consumer<GsonBuilder> oneArgLambda, Consumer<JsonMappingOption> opLambda) {
         option = createOption(opLambda);
         gson = createGson(oneArgLambda);
     }
 
-    protected GsonOption createOption(Consumer<GsonOption> opLambda) {
-        final GsonOption option = new GsonOption();
+    protected JsonMappingOption createOption(Consumer<JsonMappingOption> opLambda) {
+        final JsonMappingOption option = new JsonMappingOption();
         opLambda.accept(option);
         return option;
     }
@@ -156,7 +156,7 @@ public class GsonJsonParser implements RealJsonParser // adapters here
     //                                                                            Accessor
     //                                                                            ========
     @Override
-    public GsonOption getGsonOption() {
+    public JsonMappingOption getGsonOption() {
         return option;
     }
 }
