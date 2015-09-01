@@ -86,7 +86,7 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
                 out.value("");
             } else {
                 if (isEverywhereQuoteWriting()) { // option
-                    out.value(value.toString()); // as 
+                    out.value(value.toString()); // quoted
                 } else { // mainly here
                     getRealAdapter().write(out, value);
                 }

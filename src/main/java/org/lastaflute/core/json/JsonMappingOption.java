@@ -16,6 +16,7 @@
 package org.lastaflute.core.json;
 
 import java.time.format.DateTimeFormatter;
+import java.util.function.Function;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
@@ -31,6 +32,8 @@ public class JsonMappingOption {
     protected OptionalThing<DateTimeFormatter> localDateFormatter = OptionalThing.empty(); // not null
     protected OptionalThing<DateTimeFormatter> localDateTimeFormatter = OptionalThing.empty(); // not null
     protected OptionalThing<DateTimeFormatter> localTimeFormatter = OptionalThing.empty(); // not null
+    protected OptionalThing<Function<Object, Boolean>> booleanDeserializer = OptionalThing.empty(); // not null
+    protected OptionalThing<Function<Boolean, Object>> booleanSerializer = OptionalThing.empty(); // not null
     protected boolean emptyToNullReading;
     protected boolean nullToEmptyWriting;
     protected boolean everywhereQuoteWriting;
@@ -42,6 +45,8 @@ public class JsonMappingOption {
         localDateFormatter = another.getLocalDateFormatter();
         localDateTimeFormatter = another.getLocalDateTimeFormatter();
         localTimeFormatter = another.getLocalTimeFormatter();
+        booleanDeserializer = another.getBooleanDeserializer();
+        booleanSerializer = another.getBooleanSerializer();
         emptyToNullReading = another.isEmptyToNullReading();
         nullToEmptyWriting = another.isNullToEmptyWriting();
         everywhereQuoteWriting = another.isEverywhereQuoteWriting();
@@ -72,6 +77,22 @@ public class JsonMappingOption {
             throw new IllegalArgumentException("The argument 'localTimeFormatter' should not be null.");
         }
         this.localTimeFormatter = OptionalThing.of(localTimeFormatter);
+        return this;
+    }
+
+    public JsonMappingOption deserializeBooleanBy(Function<Object, Boolean> booleanDeserializer) {
+        if (booleanDeserializer == null) {
+            throw new IllegalArgumentException("The argument 'booleanDeserializer' should not be null.");
+        }
+        this.booleanDeserializer = OptionalThing.of(booleanDeserializer);
+        return this;
+    }
+
+    public JsonMappingOption serializeBooleanBy(Function<Boolean, Object> booleanSerializer) {
+        if (booleanSerializer == null) {
+            throw new IllegalArgumentException("The argument 'booleanSerializer' should not be null.");
+        }
+        this.booleanSerializer = OptionalThing.of(booleanSerializer);
         return this;
     }
 
@@ -137,6 +158,14 @@ public class JsonMappingOption {
 
     public OptionalThing<DateTimeFormatter> getLocalTimeFormatter() {
         return localTimeFormatter;
+    }
+
+    public OptionalThing<Function<Object, Boolean>> getBooleanDeserializer() {
+        return booleanDeserializer;
+    }
+
+    public OptionalThing<Function<Boolean, Object>> getBooleanSerializer() {
+        return booleanSerializer;
     }
 
     public boolean isEmptyToNullReading() {
