@@ -74,13 +74,14 @@ public class SimpleJsonManager implements JsonManager {
         final FwCoreDirection direction = assistCoreDirection();
         developmentHere = direction.isDevelopmentHere();
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
-        final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
-        realJsonParser = provided != null ? provided : createDefaultJsonParser();
         nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
         prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
         jsonMappingOption = OptionalThing.ofNullable(provider != null ? provider.provideOption() : null, () -> {
             throw new IllegalStateException("Not found the JSON mapping option.");
         });
+        // should be last because of using other instance variable
+        final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
+        realJsonParser = provided != null ? provided : createDefaultJsonParser();
         showBootLogging();
     }
 
@@ -100,7 +101,9 @@ public class SimpleJsonManager implements JsonManager {
             if (!adjustment.isEmpty()) {
                 logger.info(" adjustment: " + adjustment);
             }
-            jsonMappingOption.ifPresent(op -> logger.info(" option: " + op));
+            if (jsonMappingOption.isPresent()) { // not use lambda to keep log indent
+                logger.info(" option: " + jsonMappingOption.get());
+            }
         }
     }
 

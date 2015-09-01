@@ -47,8 +47,8 @@ public class GsonJsonParser implements RealJsonParser // adapters here
     //                                                                         Constructor
     //                                                                         ===========
     public GsonJsonParser(Consumer<GsonBuilder> oneArgLambda, Consumer<JsonMappingOption> opLambda) {
-        option = createOption(opLambda);
-        gson = createGson(oneArgLambda);
+        option = createOption(opLambda); // should be before creating Gson
+        gson = createGson(oneArgLambda); // using option variable
     }
 
     protected JsonMappingOption createOption(Consumer<JsonMappingOption> opLambda) {

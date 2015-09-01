@@ -133,6 +133,8 @@ public class JsonMappingOption {
         localDateFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
         localDateTimeFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
         localTimeFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
+        booleanDeserializer.ifPresent(zer -> sb.append(delimiter).append(zer));
+        booleanSerializer.ifPresent(zer -> sb.append(delimiter).append(zer));
         if (emptyToNullReading) {
             sb.append(delimiter).append("emptyToNullReading");
         }
