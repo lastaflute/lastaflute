@@ -17,11 +17,11 @@ package org.lastaflute.core.util;
 
 import java.lang.reflect.Method;
 
-import org.dbflute.helper.beans.DfBeanDesc;
-import org.dbflute.helper.beans.exception.DfBeanMethodNotFoundException;
-import org.dbflute.helper.beans.factory.DfBeanDescFactory;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.util.DfReflectionUtil;
+import org.lastaflute.di.helper.beans.BeanDesc;
+import org.lastaflute.di.helper.beans.exception.BeanMethodNotFoundException;
+import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 
 /**
  * @author jflute
@@ -59,12 +59,12 @@ public class LaDBFluteUtil {
         if (code == null || (code instanceof String && ((String) code).isEmpty())) {
             return null;
         }
-        final DfBeanDesc beanDesc = DfBeanDescFactory.getBeanDesc(cdefType);
+        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(cdefType);
         final String methodName = "codeOf";
         final Method method;
         try {
             method = beanDesc.getMethod(methodName, new Class<?>[] { Object.class });
-        } catch (DfBeanMethodNotFoundException e) {
+        } catch (BeanMethodNotFoundException e) {
             String msg = "Failed to get the method " + methodName + "() of the classification type: " + cdefType;
             throw new ClassificationCodeOfMethodNotFoundException(msg, e);
         }
@@ -75,7 +75,7 @@ public class LaDBFluteUtil {
 
         private static final long serialVersionUID = 1L;
 
-        public ClassificationCodeOfMethodNotFoundException(String msg, DfBeanMethodNotFoundException e) {
+        public ClassificationCodeOfMethodNotFoundException(String msg, BeanMethodNotFoundException e) {
             super(msg, e);
         }
     }
