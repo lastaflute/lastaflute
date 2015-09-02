@@ -50,7 +50,7 @@ import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
-import org.lastaflute.di.helper.beans.exception.IllegalPropertyRuntimeException;
+import org.lastaflute.di.helper.beans.exception.BeanIllegalPropertyException;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.di.util.LdiArrayUtil;
 import org.lastaflute.di.util.LdiClassUtil;
@@ -429,8 +429,8 @@ public class ActionFormMapper {
 
     protected void setSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
         try {
-            actuallySetSimpleProperty(bean, name, value, parentBean, parentName);
-        } catch (IllegalPropertyRuntimeException e) {
+            doSetSimpleProperty(bean, name, value, parentBean, parentName);
+        } catch (BeanIllegalPropertyException e) {
             if (!(e.getCause() instanceof NumberFormatException)) {
                 throw e;
             }
@@ -451,10 +451,7 @@ public class ActionFormMapper {
         }
     }
 
-    // ===================================================================================
-    //                                                                 Actually Set Simple
-    //                                                                 ===================
-    protected void actuallySetSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
+    protected void doSetSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
         if (bean instanceof Map) {
             @SuppressWarnings("unchecked")
             final Map<String, Object> map = (Map<String, Object>) bean;
@@ -487,6 +484,7 @@ public class ActionFormMapper {
             } else if (isClassificationProperty(propertyType)) { // means CDef
                 pd.setValue(bean, toVerifiedClassification(bean, name, realValue, pd));
             } else { // mainly here, e.g. String, Integer
+                // TODO jflute LocalDate (2015/09/02)
                 pd.setValue(bean, realValue);
             }
         }
