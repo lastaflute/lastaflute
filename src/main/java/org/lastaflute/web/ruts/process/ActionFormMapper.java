@@ -21,6 +21,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,6 +43,7 @@ import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
@@ -478,14 +482,11 @@ public class ActionFormMapper {
                 pd.setValue(bean, prepareStringList(value, propertyType));
             }
         } else { // not array or list, e.g. String, Object
-            final String realValue = prepareStringScalar(value); // not null (empty if null)
+            final String exp = prepareStringScalar(value); // not null (empty if null)
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
-                pd.setValue(bean, parseJsonParameter(bean, name, realValue, pd));
-            } else if (isClassificationProperty(propertyType)) { // means CDef
-                pd.setValue(bean, toVerifiedClassification(bean, name, realValue, pd));
-            } else { // mainly here, e.g. String, Integer
-                // TODO jflute LocalDate (2015/09/02)
-                pd.setValue(bean, realValue);
+                pd.setValue(bean, parseJsonParameter(bean, name, exp, pd));
+            } else { // mainly here, e.g. String, Integer, LocalDate, CDef, ...
+                pd.setValue(bean, convertStringToPropertyNativeIfNeeds(bean, name, exp, pd));
             }
         }
     }
@@ -522,6 +523,37 @@ public class ActionFormMapper {
     @SuppressWarnings("unchecked")
     protected List<String> newStringList(Class<?> propertyType) {
         return (List<String>) LdiClassUtil.newInstance(propertyType);
+    }
+
+    protected Object convertStringToPropertyNativeIfNeeds(Object bean, String name, String exp, PropertyDesc pd) {
+        // not to depend on conversion logic in BeanDesc
+        final Class<?> propertyType = pd.getPropertyType();
+        final Object filtered;
+        if (propertyType.isPrimitive()) {
+            filtered = DfTypeUtil.toWrapper(exp, propertyType);
+        } else if (Number.class.isAssignableFrom(propertyType)) {
+            filtered = DfTypeUtil.toNumber(exp, propertyType);
+            // old date types are unsupported for LocalDate invitation
+            //} else if (Timestamp.class.isAssignableFrom(propertyType)) {
+            //    filtered = DfTypeUtil.toTimestamp(exp);
+            //} else if (Time.class.isAssignableFrom(propertyType)) {
+            //    filtered = DfTypeUtil.toTime(exp);
+            //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
+            //    filtered = DfTypeUtil.toDate(exp);
+        } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
+            filtered = DfTypeUtil.toLocalDate(exp);
+        } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
+            filtered = DfTypeUtil.toLocalDateTime(exp);
+        } else if (LocalTime.class.isAssignableFrom(propertyType)) {
+            filtered = DfTypeUtil.toLocalTime(exp);
+        } else if (Boolean.class.isAssignableFrom(propertyType)) {
+            filtered = DfTypeUtil.toBoolean(exp);
+        } else if (isClassificationProperty(propertyType)) { // means CDef
+            filtered = toVerifiedClassification(bean, name, exp, pd);
+        } else {
+            filtered = exp;
+        }
+        return filtered;
     }
 
     // -----------------------------------------------------
