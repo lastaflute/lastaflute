@@ -232,6 +232,10 @@ public class RequestUrlParamAnalyzer {
             filtered = DfTypeUtil.toLocalDateTime(filtered);
         } else if (LocalTime.class.isAssignableFrom(paramType)) {
             filtered = DfTypeUtil.toLocalTime(filtered);
+        } else if (Boolean.class.isAssignableFrom(paramType)) {
+            filtered = DfTypeUtil.toBoolean(filtered);
+        } else if (boolean.class.isAssignableFrom(paramType)) {
+            filtered = DfTypeUtil.toPrimitiveBoolean(filtered);
         } else if (LaDBFluteUtil.isClassificationType(paramType)) {
             filtered = toVerifiedClassification(execute, paramType, filtered);
         } else if (isOptionalParameterType(paramType)) {
