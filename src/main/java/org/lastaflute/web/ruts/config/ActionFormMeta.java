@@ -188,6 +188,8 @@ public class ActionFormMeta {
         br.addElement("            public String iks;");
         br.addElement("        }");
         br.addElement("    }");
+        br.addItem("Action Execute");
+        br.addElement(execute.toSimpleMethodExp());
         br.addItem("Field that needs Valid annotation");
         br.addElement(buildFieldExp(goofyField));
         br.addItem("Lonely Field");
