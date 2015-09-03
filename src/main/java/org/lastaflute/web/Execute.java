@@ -39,6 +39,16 @@ public @interface Execute {
     boolean suppressTransaction() default false;
 
     /**
+     * Suppress validator call check of framework. <br>
+     * When validator annotations are specified in your form (or body), <br>
+     * you should call validate() or validateApi() in your execute method of action. <br>
+     * For example, annotations exist but not called, framework gives you error. <br>
+     * But you can supresses the check by this attribute.
+     * @return The determination, true or false.
+     */
+    boolean suppressValidatorCallCheck() default false;
+
+    /**
      * The limit of SQL execution count in one request. <br>
      * If it's over, show warning log (so also in production) <br>
      * For example: (43 executions / limit 30)

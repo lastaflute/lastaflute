@@ -29,15 +29,19 @@ import java.util.TreeMap;
 
 import javax.validation.Configuration;
 import javax.validation.ConstraintViolation;
+import javax.validation.Valid;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.bootstrap.GenericBootstrap;
+import javax.validation.constraints.NotNull;
 import javax.validation.groups.Default;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator;
 import org.hibernate.validator.spi.resourceloading.ResourceBundleLocator;
+import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
@@ -62,6 +66,9 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    public static final String JAVAX_CONSTRAINTS_PKG = NotNull.class.getPackage().getName();
+    public static final String HIBERNATE_CONSTRAINTS_PKG = NotEmpty.class.getPackage().getName();
+
     public static final Class<?>[] DEFAULT_GROUPS = new Class<?>[] { Default.class };
     protected static final String ITEM_VARIABLE = "{item}";
     protected static final String LABELS_PREFIX = "labels.";
@@ -99,6 +106,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         assertArgumentNotNull("form", form);
         assertArgumentNotNull("doValidateLambda", doValidateLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
+        markValidationCalled();
         verifyClientError(form);
         final Set<ConstraintViolation<Object>> vioSet = hibernateValidate(form);
         @SuppressWarnings("unchecked")
@@ -108,6 +116,12 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
             throwValidationErrorException(messages, validationErrorLambda);
         }
         return createValidationSuccess(messages);
+    }
+
+    protected void markValidationCalled() {
+        if (ThreadCacheContext.exists()) {
+            ThreadCacheContext.markValidatorCalled();
+        }
     }
 
     public void throwValidationError(MessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
@@ -396,6 +410,16 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         });
         final String msg = sb.toString();
         throw new ClientErrorByValidatorException(msg, messages);
+    }
+
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    public static boolean isValidatorAnnotation(Class<?> annoType) { // as utility
+        final String annoName = annoType.getName();
+        return Srl.startsWith(annoName, JAVAX_CONSTRAINTS_PKG, HIBERNATE_CONSTRAINTS_PKG) // normal annotations
+                || annoType.equals(Valid.class) // has validated nested bean
+                || annoType.equals(Required.class); // LastaFlute provides
     }
 
     // ===================================================================================

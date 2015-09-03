@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.ruts.config;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.util.Collection;
@@ -32,6 +34,7 @@ import org.lastaflute.web.exception.ActionFormCreateFailureException;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.VirtualActionForm.RealFormSupplier;
 import org.lastaflute.web.util.LaActionExecuteUtil;
+import org.lastaflute.web.validation.ActionValidator;
 
 /**
  * @author modified by jflute (originated in Seasar)
@@ -45,6 +48,7 @@ public class ActionFormMeta {
     protected final Class<?> formType; // not null
     protected final OptionalThing<Parameter> listFormParameter; // not null
     protected final Map<String, ActionFormProperty> propertyMap; // not null
+    protected final boolean validatorAnnotated; // not null
 
     // ===================================================================================
     //                                                                         Constructor
@@ -54,6 +58,7 @@ public class ActionFormMeta {
         this.formType = formType;
         this.listFormParameter = listFormParameter;
         this.propertyMap = setupProperties(formType);
+        this.validatorAnnotated = mightBeValidatorAnnotated();
     }
 
     protected Map<String, ActionFormProperty> setupProperties(Class<?> formType) {
@@ -76,6 +81,26 @@ public class ActionFormMeta {
 
     protected void addProperty(Map<String, ActionFormProperty> map, ActionFormProperty property) {
         map.put(property.getPropertyName(), property);
+    }
+
+    // #hope also want to judge nested bean that has annotations but no valid annotation by jflute (2015/09/03)
+    protected boolean mightBeValidatorAnnotated() {
+        propertyMap.values().stream().map(property -> property.getPropertyDesc().getField());
+        for (ActionFormProperty property : propertyMap.values()) {
+            final Field field = property.getPropertyDesc().getField();
+            if (field != null) { // just in case
+                for (Annotation annotation : field.getAnnotations()) {
+                    if (isValidatorAnnotation(annotation.annotationType())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    protected boolean isValidatorAnnotation(Class<?> annoType) {
+        return ActionValidator.isValidatorAnnotation(annoType);
     }
 
     // ===================================================================================
@@ -125,11 +150,11 @@ public class ActionFormMeta {
 
     protected void throwActionFormCreateFailureException(Exception cause) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Failed to create the action form for the type.");
+        br.addNotice("Failed to create the action form (or body) for the type.");
         br.addItem("Advice");
         br.addElement("Confirm your action form definition,");
         br.addElement("e.g. action form should be located under 'web' package");
-        br.addElement("and the name should end with 'Form'.");
+        br.addElement("and the name should end with 'Form' or 'Body'.");
         if (LaActionExecuteUtil.hasActionExecute()) { // just in case
             br.addItem("Action Execute");
             br.addElement(LaActionExecuteUtil.getActionExecute());
@@ -151,6 +176,7 @@ public class ActionFormMeta {
             return pm.getParameterizedType().getTypeName();
         }).orElse(formType.getName()));
         sb.append(", props=").append(propertyMap.size());
+        sb.append("}");
         return sb.toString();
     }
 
@@ -184,5 +210,12 @@ public class ActionFormMeta {
             /* always parameterized, already checked in romantic action customizer */
             return (ParameterizedType) pm.getParameterizedType();
         });
+    }
+
+    // -----------------------------------------------------
+    //                                              Analyzed
+    //                                              --------
+    public boolean isValidatorAnnotated() {
+        return validatorAnnotated;
     }
 }

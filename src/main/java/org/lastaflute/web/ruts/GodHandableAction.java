@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.web.callback.ActionHook;
@@ -34,14 +35,17 @@ import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
 import org.lastaflute.web.exception.ExecuteMethodReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
 import org.lastaflute.web.exception.ExecuteMethodReturnUndefinedResponseException;
+import org.lastaflute.web.exception.LonelyValidatorAnnotationException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
+import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
+import org.lastaflute.web.validation.LaValidatable;
 import org.lastaflute.web.validation.VaErrorHook;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.slf4j.Logger;
@@ -346,12 +350,13 @@ public class GodHandableAction implements VirtualAction {
         Object result = null;
         try {
             result = executeMethod.invoke(action, requestArgs); // #to_action just here
+            checkValidatorCalled();
         } catch (InvocationTargetException e) { // e.g. exception in the method
             return handleExecuteMethodInvocationTargetException(executeMethod, requestArgs, e);
         } catch (IllegalAccessException e) { // e.g. private invoking
-            handleExecuteMethodIllegalAccessException(executeMethod, requestArgs, e);
+            throwExecuteMethodAccessFailureException(executeMethod, requestArgs, e);
         } catch (IllegalArgumentException e) { // e.g. different argument number
-            handleExecuteMethodIllegalArgumentException(executeMethod, requestArgs, e);
+            throwExecuteMethodArgumentMismatchException(executeMethod, requestArgs, e);
         }
         return result;
     }
@@ -372,13 +377,9 @@ public class GodHandableAction implements VirtualAction {
         throw new IllegalStateException(msg, cause);
     }
 
-    protected void handleExecuteMethodIllegalAccessException(Method executeMethod, Object[] requestArgs, IllegalAccessException cause) {
+    protected void throwExecuteMethodAccessFailureException(Method executeMethod, Object[] requestArgs, IllegalAccessException cause) {
         final String msg = setupMethodExceptionMessage("Cannot access the execute method.", executeMethod, requestArgs);
         throw new ExecuteMethodAccessFailureException(msg, cause);
-    }
-
-    protected void handleExecuteMethodIllegalArgumentException(Method executeMethod, Object[] requestArgs, IllegalArgumentException cause) {
-        throwExecuteMethodArgumentMismatchException(executeMethod, requestArgs, cause);
     }
 
     protected void throwExecuteMethodArgumentMismatchException(Method executeMethod, Object[] requestArgs, IllegalArgumentException cause) {
@@ -463,6 +464,78 @@ public class GodHandableAction implements VirtualAction {
         final Method method = runtime.getExecuteMethod();
         final Class<?> declaringClass = method.getDeclaringClass();
         return declaringClass.getSimpleName();
+    }
+
+    // ===================================================================================
+    //                                                                    Validator Called
+    //                                                                    ================
+    protected void checkValidatorCalled() {
+        if (!execute.isSuppressValidatorCallCheck() && isValidatorCalled()) {
+            execute.getFormMeta().filter(meta -> isValidatorAnnotated(meta)).ifPresent(meta -> {
+                throwLonelyValidatorAnnotationException(meta);
+            });
+        }
+    }
+
+    protected boolean isValidatorCalled() {
+        return ThreadCacheContext.exists() && !ThreadCacheContext.isValidatorCalled();
+    }
+
+    protected boolean isValidatorAnnotated(ActionFormMeta meta) {
+        return meta.isValidatorAnnotated();
+    }
+
+    protected void throwLonelyValidatorAnnotationException(ActionFormMeta meta) {
+        final boolean apiExecute = execute.isApiExecute();
+        final boolean hybrid = LaValidatable.class.isAssignableFrom(execute.getActionType());
+        final String expectedMethod;
+        if (apiExecute) {
+            expectedMethod = hybrid ? "validateApi" : "validate";
+        } else {
+            expectedMethod = "validate";
+        }
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Lonely validator annotations, so call " + expectedMethod + "().");
+        br.addItem("Advice");
+        br.addElement("The " + expectedMethod + "() method should be called in execute method of action");
+        br.addElement("because the validator annotations are specified in the form (or body).");
+        br.addElement("For example:");
+        if (apiExecute) {
+            br.addElement("  (x):");
+            br.addElement("    @Execute");
+            br.addElement("    public JsonResponse index(SeaForm form) { // *NG");
+            br.addElement("        return asJson(...);");
+            br.addElement("    }");
+            br.addElement("  (o):");
+            br.addElement("    @Execute");
+            br.addElement("    public JsonResponse index(SeaForm form) {");
+            br.addElement("        " + expectedMethod + "(form, message -> {}); // OK");
+            br.addElement("        return asJson(...);");
+            br.addElement("    }");
+        } else {
+            br.addElement("  (x):");
+            br.addElement("    @Execute");
+            br.addElement("    public HtmlResponse index(SeaForm form) { // *NG");
+            br.addElement("        return asHtml(...);");
+            br.addElement("    }");
+            br.addElement("  (o):");
+            br.addElement("    @Execute");
+            br.addElement("    public HtmlResponse index(SeaForm form) {");
+            br.addElement("        " + expectedMethod + "(form, message -> {}, () -> { // OK");
+            br.addElement("            return asHtml(path_LandJsp);");
+            br.addElement("        });");
+            br.addElement("        return asHtml(...);");
+            br.addElement("    }");
+        }
+        br.addElement("");
+        br.addElement("Or remove validator annotations from the form (or body)");
+        br.addElement("if the annotations are unneeded.");
+        br.addItem("Action Execute");
+        br.addElement(execute.toSimpleMethodExp());
+        br.addItem("Action Form (or Body)");
+        br.addElement(meta.getFormType());
+        final String msg = br.buildExceptionMessage();
+        throw new LonelyValidatorAnnotationException(msg);
     }
 
     // ===================================================================================

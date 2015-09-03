@@ -68,8 +68,9 @@ public class ActionExecute implements Serializable {
     //                                                                           =========
     protected final ActionMapping actionMapping; // not null
     protected final Method executeMethod; // not null
-    protected final TransactionGenre transactionGenre; // not null
     protected final boolean indexMethod;
+    protected final TransactionGenre transactionGenre; // not null
+    protected final boolean suppressValidatorCallCheck;
     protected final OptionalThing<Integer> sqlExecutionCountLimit;
 
     // -----------------------------------------------------
@@ -97,8 +98,9 @@ public class ActionExecute implements Serializable {
     public ActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {
         this.actionMapping = actionMapping;
         this.executeMethod = executeMethod;
-        this.transactionGenre = chooseTransactionGenre(executeOption);
         this.indexMethod = executeMethod.getName().equals("index");
+        this.transactionGenre = chooseTransactionGenre(executeOption);
+        this.suppressValidatorCallCheck = executeOption.isSuppressValidatorCallCheck();
         this.sqlExecutionCountLimit = createOptionalSqlExecutionCountLimit(executeOption);
 
         // defined parameter (needed in URL pattern analyzing)
@@ -653,20 +655,37 @@ public class ActionExecute implements Serializable {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    /**
+     * @return The action mapping for the execute method. (NotNull)
+     */
     public ActionMapping getActionMapping() {
         return actionMapping;
     }
 
+    /**
+     * @return The type object of action, non enhanced. (NotNull)
+     */
+    public Class<?> getActionType() {
+        return actionMapping.getActionDef().getComponentClass();
+    }
+
+    /**
+     * @return The reflection method of action execute. (NotNull)
+     */
     public Method getExecuteMethod() {
         return executeMethod;
+    }
+
+    public boolean isIndexMethod() {
+        return indexMethod;
     }
 
     public TransactionGenre getTransactionGenre() {
         return transactionGenre;
     }
 
-    public boolean isIndexMethod() {
-        return indexMethod;
+    public boolean isSuppressValidatorCallCheck() {
+        return suppressValidatorCallCheck;
     }
 
     public OptionalThing<Integer> getSqlExecutionCountLimit() {

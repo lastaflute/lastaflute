@@ -42,8 +42,7 @@ public class FilterHookServletAdapter implements FilterHook {
     }
 
     @Override
-    public void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain)
-            throws IOException, ServletException {
+    public void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain) throws IOException, ServletException {
         servletFilter.doFilter(request, response, createChain(chain));
     }
 

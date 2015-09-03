@@ -88,8 +88,7 @@ public class MDCHook implements FilterHook {
     //                                                                              Listen
     //                                                                              ======
     @Override
-    public void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain)
-            throws IOException, ServletException {
+    public void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain) throws IOException, ServletException {
         final Map<String, String> originallyMap = prepareOriginallyMap();
         if (originallyMap != null) {
             mdcMap.forEach((key, value) -> {
