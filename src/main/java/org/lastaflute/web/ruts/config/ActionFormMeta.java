@@ -19,18 +19,22 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfReflectionUtil;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.exception.ActionFormCreateFailureException;
+import org.lastaflute.web.exception.LonelyValidatorAnnotationException;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.VirtualActionForm.RealFormSupplier;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -44,6 +48,7 @@ public class ActionFormMeta {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final ActionExecute execute; // not null
     protected final String formKey; // not null
     protected final Class<?> formType; // not null
     protected final OptionalThing<Parameter> listFormParameter; // not null
@@ -53,12 +58,14 @@ public class ActionFormMeta {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionFormMeta(String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter) {
+    public ActionFormMeta(ActionExecute execute, String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter) {
+        this.execute = execute;
         this.formKey = formKey;
         this.formType = formType;
         this.listFormParameter = listFormParameter;
         this.propertyMap = setupProperties(formType);
         this.validatorAnnotated = mightBeValidatorAnnotated();
+        checkNestedBeanValidatorCalled();
     }
 
     protected Map<String, ActionFormProperty> setupProperties(Class<?> formType) {
@@ -83,20 +90,124 @@ public class ActionFormMeta {
         map.put(property.getPropertyName(), property);
     }
 
-    // #hope also want to judge nested bean that has annotations but no valid annotation by jflute (2015/09/03)
+    // ===================================================================================
+    //                                                                  Validator Handling
+    //                                                                  ==================
     protected boolean mightBeValidatorAnnotated() {
-        propertyMap.values().stream().map(property -> property.getPropertyDesc().getField());
         for (ActionFormProperty property : propertyMap.values()) {
             final Field field = property.getPropertyDesc().getField();
-            if (field != null) { // just in case
-                for (Annotation annotation : field.getAnnotations()) {
-                    if (isValidatorAnnotation(annotation.annotationType())) {
-                        return true;
-                    }
+            if (field == null) { // not field property
+                continue;
+            }
+            for (Annotation anno : field.getAnnotations()) {
+                if (isValidatorAnnotation(anno.annotationType())) {
+                    return true; // first level only
                 }
             }
         }
         return false;
+    }
+
+    protected void checkNestedBeanValidatorCalled() {
+        if (execute.isSuppressValidatorCallCheck()) {
+            return;
+        }
+        propertyMap.values().forEach(property -> doCheckNestedBeanValidatorCalled(property));
+    }
+
+    protected void doCheckNestedBeanValidatorCalled(ActionFormProperty property) {
+        final Field field = property.getPropertyDesc().getField();
+        if (field == null) { // not field property
+            return;
+        }
+        final Class<?> fieldType = field.getType();
+        if (isValidableAndCheckTarget(fieldType) && !hasNestedBeanAnnotation(field)) {
+            if (Collection.class.isAssignableFrom(fieldType)) {
+                final Class<?> genericType = getGenericType(field);
+                if (genericType != null && isValidableAndCheckTarget(genericType)) {
+                    detectLonelyNestedBean(field, genericType);
+                }
+            } else { // single bean
+                detectLonelyNestedBean(field, fieldType);
+            }
+        }
+    }
+
+    protected boolean isValidableAndCheckTarget(Class<?> fieldType) {
+        return !fieldType.isPrimitive() // e.g. int, boolean
+                && !String.class.isAssignableFrom(fieldType) //
+                && !Number.class.isAssignableFrom(fieldType) //
+                && !java.util.Date.class.isAssignableFrom(fieldType) //
+                && !DfTypeUtil.isAnyLocalDateType(fieldType) // e.g. LocalDate
+                && !Boolean.class.isAssignableFrom(fieldType) //
+                && !Classification.class.isAssignableFrom(fieldType) // means CDef
+                && !Map.class.isAssignableFrom(fieldType) // check unsupported
+                && !Object[].class.isAssignableFrom(fieldType) // check unsupported 
+                ;
+    }
+
+    protected boolean hasNestedBeanAnnotation(Field field) {
+        return ActionValidator.hasNestedBeanAnnotation(field);
+    }
+
+    protected void detectLonelyNestedBean(Field field, Class<?> beanType) {
+        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(beanType);
+        for (int i = 0; i < beanDesc.getFieldSize(); i++) {
+            final Field nestedField = beanDesc.getField(i);
+            for (Annotation anno : nestedField.getAnnotations()) {
+                if (isValidatorAnnotation(anno.annotationType())) {
+                    throwLonelyValidatorAnnotationException(field, nestedField); // only first level
+                }
+            }
+        }
+    }
+
+    protected void throwLonelyValidatorAnnotationException(Field goofyField, Field lonelyField) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Lonely validator annotations, add Valid annotation.");
+        br.addItem("Adivce");
+        br.addElement("When any property in nested bean has validator annotations,");
+        br.addElement("The field for nested bean should have the Valid annotation.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public class SeaForm {");
+        br.addElement("        public LandBean land; // *NG: no annotation");
+        br.addElement("");
+        br.addElement("        public static class LandBean {");
+        br.addElement("            @Required");
+        br.addElement("            public String iks;");
+        br.addElement("        }");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public class SeaForm {");
+        br.addElement("        @Valid                // OK: javax.validation");
+        br.addElement("        public LandBean land;");
+        br.addElement("");
+        br.addElement("        public static class LandBean {");
+        br.addElement("            @Required");
+        br.addElement("            public String iks;");
+        br.addElement("        }");
+        br.addElement("    }");
+        br.addItem("Field that needs Valid annotation");
+        br.addElement(buildFieldExp(goofyField));
+        br.addItem("Lonely Field");
+        br.addElement(buildFieldExp(lonelyField));
+        final String msg = br.buildExceptionMessage();
+        throw new LonelyValidatorAnnotationException(msg);
+    }
+
+    protected String buildFieldExp(Field field) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append(field.getDeclaringClass().getSimpleName());
+        sb.append("#").append(field.getName()).append(": ").append(field.getType().getSimpleName());
+        final Class<?> genericBeanType = getGenericType(field);
+        sb.append(genericBeanType != null ? "<" + genericBeanType.getSimpleName() + ">" : "");
+        return sb.toString();
+    }
+
+    protected Class<?> getGenericType(Field field) {
+        final Type genericType = field.getGenericType();
+        return genericType != null ? DfReflectionUtil.getGenericFirstClass(genericType) : null;
     }
 
     protected boolean isValidatorAnnotation(Class<?> annoType) {

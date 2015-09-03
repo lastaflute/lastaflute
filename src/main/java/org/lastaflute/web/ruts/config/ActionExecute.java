@@ -197,7 +197,7 @@ public class ActionExecute implements Serializable {
     }
 
     protected ActionFormMeta newActionFormMeta(String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter) {
-        return new ActionFormMeta(formKey, formType, listFormParameter);
+        return new ActionFormMeta(this, formKey, formType, listFormParameter);
     }
 
     // -----------------------------------------------------

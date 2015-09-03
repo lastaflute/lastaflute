@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.validation;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -418,8 +419,24 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     public static boolean isValidatorAnnotation(Class<?> annoType) { // as utility
         final String annoName = annoType.getName();
         return Srl.startsWith(annoName, JAVAX_CONSTRAINTS_PKG, HIBERNATE_CONSTRAINTS_PKG) // normal annotations
-                || annoType.equals(Valid.class) // has validated nested bean
-                || annoType.equals(Required.class); // LastaFlute provides
+                || isNestedBeanAnnotation(annoType) // has validation nested bean
+                || isRequiredAnnotation(annoType); // LastaFlute provides
+    }
+
+    public static boolean isNestedBeanAnnotation(Class<?> annoType) {
+        return annoType.equals(Valid.class);
+    }
+
+    public static boolean hasNestedBeanAnnotation(Field field) {
+        return field.getAnnotation(Valid.class) != null;
+    }
+
+    public static boolean isRequiredAnnotation(Class<?> annoType) {
+        return annoType.equals(Required.class);
+    }
+
+    public static boolean hasRequiredAnnotation(Field field) {
+        return field.getAnnotation(Required.class) != null;
     }
 
     // ===================================================================================
