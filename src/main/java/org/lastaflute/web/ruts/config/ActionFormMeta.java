@@ -164,7 +164,7 @@ public class ActionFormMeta {
 
     protected void throwLonelyValidatorAnnotationException(Field goofyField, Field lonelyField) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Lonely validator annotations, add Valid annotation.");
+        br.addNotice("Lonely validator annotations, so add Valid annotation.");
         br.addItem("Adivce");
         br.addElement("When any property in nested bean has validator annotations,");
         br.addElement("The field for nested bean should have the Valid annotation.");
