@@ -24,9 +24,25 @@ import java.util.Map;
  */
 public class RenderData {
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
     protected Map<String, Object> dataMap; // lazy loaded
 
+    // ===================================================================================
+    //                                                                            Register
+    //                                                                            ========
+    /**
+     * @param key The key of the data. (NotNull)
+     * @param value The value of the data for the key. (NotNull)
+     */
     public void register(String key, Object value) {
+        assertArgumentNotNull("key", key);
+        assertArgumentNotNull("value", value);
+        doRegister(key, value);
+    }
+
+    protected void doRegister(String key, Object value) {
         if (dataMap == null) {
             dataMap = new HashMap<String, Object>();
         }
@@ -37,6 +53,21 @@ public class RenderData {
         dataMap.put(key, value);
     }
 
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
     public Map<String, Object> getDataMap() {
         return dataMap != null ? dataMap : Collections.emptyMap();
     }

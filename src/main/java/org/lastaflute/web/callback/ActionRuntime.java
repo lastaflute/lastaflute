@@ -70,7 +70,7 @@ public class ActionRuntime {
      * @return The type object of action, non enhanced. (NotNull)
      */
     public Class<?> getActionType() {
-        return execute.getActionMapping().getActionDef().getComponentClass();
+        return execute.getActionType();
     }
 
     /**

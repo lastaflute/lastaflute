@@ -62,14 +62,14 @@ public class TypicalGodHandPrologue {
     protected final ApiManager apiManager;
     protected final OptionalThing<CrossOriginResourceSharing> corSharing;
     protected final AccessContextArranger accessContextArranger;
-    protected final Supplier<OptionalThing<? extends UserBean>> userBeanSupplier;
+    protected final Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier;
     protected final Supplier<String> appTypeSupplier;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public TypicalGodHandPrologue(TypicalGodHandResource resource, OptionalThing<CrossOriginResourceSharing> corSharing,
-            AccessContextArranger accessContextArranger, Supplier<OptionalThing<? extends UserBean>> userBeanSupplier,
+            AccessContextArranger accessContextArranger, Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier,
             Supplier<String> appTypeSupplier) {
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();

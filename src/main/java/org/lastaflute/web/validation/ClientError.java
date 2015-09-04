@@ -13,18 +13,11 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.filter;
-
-import java.io.IOException;
-
-import javax.servlet.ServletException;
+package org.lastaflute.web.validation;
 
 /**
  * @author jflute
- * @since 0.6.0 (2015/05/30 Saturday)
+ * @since 0.6.0 (2015/08/08 Saturday at showbase)
  */
-@FunctionalInterface
-public interface FilterListenerChain {
-
-    void doNext() throws IOException, ServletException;
+public interface ClientError {
 }

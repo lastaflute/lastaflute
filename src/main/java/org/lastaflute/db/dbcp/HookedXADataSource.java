@@ -17,20 +17,82 @@ package org.lastaflute.db.dbcp;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+import javax.sql.XAConnection;
 
 import org.dbflute.util.DfResourceUtil;
 import org.dbflute.util.Srl;
 import org.dbflute.util.Srl.ScopeInfo;
+import org.lastaflute.core.direction.FwAssistantDirector;
+import org.lastaflute.db.direction.FwDbDirection;
 import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.jta.dbcp.SimpleXADataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
  */
 public class HookedXADataSource extends SimpleXADataSource {
 
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(HookedXADataSource.class);
     protected static final String CLASSES_BEGIN_MARK = "$classes(";
     protected static final String CLASSES_END_MARK = ".class)";
+
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    /** The assistant directory (AD) for framework. (NotNull: after initialization) */
+    @Resource
+    protected FwAssistantDirector assistantDirector;
+
+    /** The hook of newborn XA connection. (NullAllowed: option) */
+    protected XAConnectionHook newbornConnectionHook;
+
+    // ===================================================================================
+    //                                                                          Initialize
+    //                                                                          ==========
+    /**
+     * Initialize this component. <br>
+     * This is basically called by DI setting file.
+     */
+    @PostConstruct
+    public synchronized void initialize() {
+        final FwDbDirection direction = assistDbDirection();
+        newbornConnectionHook = direction.assistNewbornConnectionHook();
+        showBootLogging();
+    }
+
+    protected FwDbDirection assistDbDirection() {
+        return assistantDirector.assistDbDirection();
+    }
+
+    protected void showBootLogging() {
+        if (logger.isInfoEnabled()) {
+            logger.info("[XA DataSource]");
+            logger.info(" driver: " + driverClassName);
+            logger.info(" url: " + url);
+            logger.info(" newbornConnectionHook: " + newbornConnectionHook);
+        }
+    }
+
+    // ===================================================================================
+    //                                                                     Hooked Override
+    //                                                                     ===============
+    @Override
+    public XAConnection getXAConnection() throws SQLException {
+        final XAConnection xaconn = super.getXAConnection();
+        if (newbornConnectionHook != null) {
+            newbornConnectionHook.hook(xaconn);
+        }
+        return xaconn;
+    }
 
     @Override
     public void setURL(String url) {

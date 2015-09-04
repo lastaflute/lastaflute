@@ -17,7 +17,6 @@ package org.lastaflute.web.ruts.process;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -217,31 +216,40 @@ public class RequestUrlParamAnalyzer {
     }
 
     protected Object doFilterUrlParam(ActionExecute execute, int index, Class<?> paramType, Map<Integer, Class<?>> optGenTypeMap,
-            Object filtered) {
-        if (Number.class.isAssignableFrom(paramType)) {
-            filtered = DfTypeUtil.toNumber(filtered, paramType);
-        } else if (int.class.isAssignableFrom(paramType)) {
-            filtered = DfTypeUtil.toPrimitiveInt(filtered);
-        } else if (long.class.isAssignableFrom(paramType)) {
-            filtered = DfTypeUtil.toPrimitiveLong(filtered);
-        } else if (Date.class.isAssignableFrom(paramType)) {
-            filtered = DfTypeUtil.toDate(filtered);
-        } else if (LocalDate.class.isAssignableFrom(paramType)) {
-            filtered = DfTypeUtil.toLocalDate(filtered);
+            String exp) {
+        final Object filtered;
+        if (paramType.isPrimitive()) {
+            filtered = DfTypeUtil.toWrapper(exp, paramType);
+        } else if (Number.class.isAssignableFrom(paramType)) {
+            filtered = DfTypeUtil.toNumber(exp, paramType);
+            // old date types are unsupported for LocalDate invitation
+            //} else if (Timestamp.class.isAssignableFrom(paramType)) {
+            //    filtered = DfTypeUtil.toTimestamp(exp);
+            //} else if (Time.class.isAssignableFrom(paramType)) {
+            //    filtered = DfTypeUtil.toTime(exp);
+            //} else if (java.util.Date.class.isAssignableFrom(paramType)) {
+            //    filtered = DfTypeUtil.toDate(exp);
+        } else if (LocalDate.class.isAssignableFrom(paramType)) { // #date_parade
+            filtered = DfTypeUtil.toLocalDate(exp);
         } else if (LocalDateTime.class.isAssignableFrom(paramType)) {
-            filtered = DfTypeUtil.toLocalDateTime(filtered);
+            filtered = DfTypeUtil.toLocalDateTime(exp);
         } else if (LocalTime.class.isAssignableFrom(paramType)) {
-            filtered = DfTypeUtil.toLocalTime(filtered);
+            filtered = DfTypeUtil.toLocalTime(exp);
+        } else if (Boolean.class.isAssignableFrom(paramType)) {
+            filtered = DfTypeUtil.toBoolean(exp);
         } else if (LaDBFluteUtil.isClassificationType(paramType)) {
-            filtered = toVerifiedClassification(execute, paramType, filtered);
+            filtered = toVerifiedClassification(execute, paramType, exp);
         } else if (isOptionalParameterType(paramType)) {
             final Class<?> optGenType = optGenTypeMap.get(index);
             if (optGenType != null) {
-                final Object paramValue = doFilterUrlParam(execute, index, optGenType, optGenTypeMap, filtered);
+                final Object paramValue = doFilterUrlParam(execute, index, optGenType, optGenTypeMap, exp);
                 filtered = createPresentOptional(paramType, paramValue);
             } else { // basically no way
-                throwOptionalGenericTypeNotFoundException(execute, index, paramType, optGenTypeMap, filtered);
+                throwOptionalGenericTypeNotFoundException(execute, index, paramType, optGenTypeMap, exp);
+                return null; // unreachable
             }
+        } else {
+            filtered = exp;
         }
         return filtered;
     }

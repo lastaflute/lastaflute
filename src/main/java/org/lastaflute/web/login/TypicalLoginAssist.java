@@ -49,11 +49,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * @param <ID> The type of user ID.
  * @param <USER_BEAN> The type of user bean.
  * @param <USER_ENTITY> The type of user entity or model.
  * @author jflute
  */
-public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY> implements LoginAssistable {
+public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USER_ENTITY> implements LoginAssistable {
 
     // ===================================================================================
     //                                                                          Definition
@@ -140,8 +141,15 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
      */
     @Override
-    public OptionalEntity<USER_ENTITY> findLoginUser(Long userId) {
-        return doFindLoginUser(userId);
+    public OptionalEntity<USER_ENTITY> findLoginUser(Object userId) {
+        assertUserIdRequired(userId);
+        try {
+            @SuppressWarnings("unchecked")
+            final ID castId = (ID) userId;
+            return doFindLoginUser(castId);
+        } catch (ClassCastException e) { // also find method, because of generic cast
+            throw new IllegalStateException("Cannot cast the user ID: " + userId.getClass() + ", " + userId);
+        }
     }
 
     /**
@@ -149,7 +157,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param userId for the login user. (NotNull)
      * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
      */
-    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(Long userId);
+    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(ID userId);
 
     // ===================================================================================
     //                                                                         Login Logic
@@ -176,7 +184,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     }
 
     @Override
-    public void identityLogin(Long userId, LoginOpCall opLambda) throws LoginFailureException {
+    public void identityLogin(Object userId, LoginOpCall opLambda) throws LoginFailureException {
         doLoginByIdentity(userId, createLoginOption(opLambda));
     }
 
@@ -222,7 +230,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      * @param option The option of login specified by caller. (NotNull)
      * @throws LoginFailureException When it fails to do login by the user info.
      */
-    protected void doLoginByIdentity(Long userId, LoginSpecifiedOption option) throws LoginFailureException {
+    protected void doLoginByIdentity(Object userId, LoginSpecifiedOption option) throws LoginFailureException {
         assertUserIdRequired(userId);
         handleLoginSuccess(findLoginUser(userId).orElseThrow(() -> {
             String msg = "Not found the user by the user ID: " + userId + ", " + option;
@@ -301,7 +309,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     public void reselectSessionUserBeanIfExists() throws LoginFailureException {
         getSessionUserBean().ifPresent(oldBean -> {
             inheritUserBeanAdditionalInfo(oldBean);
-            final Long userId = oldBean.getUserId();
+            final ID userId = oldBean.getUserId();
             logger.debug("...Re-selecting user bean in session: userId={}", userId);
             final USER_ENTITY userEntity = findLoginUser(userId).orElseThrow(() -> { // might be already left
                 logout(); // to clear old user info in session
@@ -328,8 +336,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
      */
     protected void saveRememberMeKeyToCookie(USER_ENTITY userEntity, USER_BEAN userBean) {
         final int expireDays = getRememberMeAccessTokenExpireDays();
-        final String cookieKey = getCookieRememberMeKey();
-        doSaveRememberMeCookie(userEntity, userBean, expireDays, cookieKey);
+        getCookieRememberMeKey().ifPresent(cookieKey -> {
+            doSaveRememberMeCookie(userEntity, userBean, expireDays, cookieKey);
+        });
     }
 
     /**
@@ -343,9 +352,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     /**
      * Get the key of remember-me saved in cookie.
-     * @return The string key for cookie. (NotNull)
+     * @return The string key for cookie. (NotNull, EmptyAllowed: when no remember-me)
      */
-    protected abstract String getCookieRememberMeKey();
+    protected abstract OptionalThing<String> getCookieRememberMeKey();
 
     /**
      * Do save remember-me key to cookie.
@@ -445,20 +454,17 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     //                                                                    ================
     @Override
     public boolean rememberMe(RememberMeLoginOpCall opLambda) {
-        return delegateRememberMe(createRememberMeLoginOption(opLambda));
+        return getCookieRememberMeKey().map(cookieKey -> {
+            return delegateRememberMe(cookieKey, opLambda);
+        }).orElse(false);
     }
 
-    protected RememberMeLoginOption createRememberMeLoginOption(RememberMeLoginOpCall opLambda) {
-        final RememberMeLoginOption option = new RememberMeLoginOption();
-        opLambda.callback(option);
-        return option;
-    }
-
-    protected boolean delegateRememberMe(RememberMeLoginSpecifiedOption option) {
-        return cookieManager.getCookieCiphered(getCookieRememberMeKey()).map(cookie -> {
+    protected boolean delegateRememberMe(String cookieKey, RememberMeLoginOpCall opLambda) {
+        return cookieManager.getCookieCiphered(cookieKey).map(cookie -> {
             final String cookieValue = cookie.getValue();
             if (cookieValue != null && cookieValue.trim().length() > 0) {
                 final String[] valueAry = cookieValue.split(getRememberMeDelimiter());
+                final RememberMeLoginOption option = createRememberMeLoginOption(opLambda);
                 final Boolean handled = handleRememberMeCookie(valueAry, option);
                 if (handled != null) {
                     return handled;
@@ -473,6 +479,12 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
 
     protected String getRememberMeDelimiter() {
         return REMEMBER_ME_COOKIE_DELIMITER;
+    }
+
+    protected RememberMeLoginOption createRememberMeLoginOption(RememberMeLoginOpCall opLambda) {
+        final RememberMeLoginOption option = new RememberMeLoginOption();
+        opLambda.callback(option);
+        return option;
     }
 
     protected boolean handleRememberMeInvalidCookie(String cookieValue, String[] valueAry) {
@@ -581,7 +593,9 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
     @Override
     public void logout() {
         sessionManager.removeAttribute(getUserBeanKey());
-        cookieManager.removeCookie(getCookieRememberMeKey());
+        getCookieRememberMeKey().ifPresent(cookieKey -> {
+            cookieManager.removeCookie(cookieKey);
+        });
     }
 
     /**
@@ -681,7 +695,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
             return true; // means no check
         }
         if (logger.isDebugEnabled()) {
-            final Long userId = userBean.getUserId();
+            final ID userId = userBean.getUserId();
             final String checkDisp = checkDt.map(dt -> new HandyDate(dt).toDisp("yyyy/MM/dd HH:mm:ss")).orElse(null);
             logger.debug("...Sync-checking login session: userId={}, checkDate={}", userId, checkDisp);
         }
@@ -929,7 +943,7 @@ public abstract class TypicalLoginAssist<USER_BEAN extends UserBean, USER_ENTITY
         }
     }
 
-    protected void assertUserIdRequired(Long userId) {
+    protected void assertUserIdRequired(Object userId) {
         if (userId == null) {
             String msg = "The argument 'userId' should not be null.";
             throw new IllegalArgumentException(msg);

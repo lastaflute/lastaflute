@@ -216,12 +216,30 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
         postcard.async();
     }
 
+    /**
+     * Retry sending if failure.
+     * @param retryCount The count of retry. (NotZero, NotMinus)
+     * @param intervalMillis The milliseconds to wait for retrying. (NotZero, NotMinus)
+     */
     public void retry(int retryCount, long intervalMillis) {
         postcard.retry(retryCount, intervalMillis);
     }
 
+    /**
+     * Suppress sending failure. (logging only) <br>
+     */
     public void suppressSendFailure() {
         postcard.suppressSendFailure();
+    }
+
+    /**
+     * Set subject and plain body as forcedly-direct. <br>
+     * It ignores body file settings. (conversely can keep them)
+     * @param subject The subject to be sent plainly. (NotNull)
+     * @param plainBody The plain body to be sent plainly. (NotNull)
+     */
+    public void forcedlyDirect(String subject, String plainBody) {
+        postcard.useDirectBody(plainBody).useWholeFixedText().forcedlyDirect(subject);
     }
 
     // ===================================================================================
@@ -236,6 +254,11 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // ===================================================================================
     //                                                                      Pushed Logging
     //                                                                      ==============
+    /**
+     * Push element of mail logging.
+     * @param key The key of the element. (NotNull)
+     * @param value The value of the element. (NotNull)
+     */
     public void pushLogging(String key, Object value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);

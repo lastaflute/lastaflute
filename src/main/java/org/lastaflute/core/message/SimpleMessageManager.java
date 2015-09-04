@@ -63,53 +63,20 @@ public class SimpleMessageManager implements MessageManager {
     //                                                                         ===========
     @Override
     public String getMessage(Locale locale, String key) {
-        assertArgumentNotNull("locale", locale);
-        assertArgumentNotNull("key", key);
+        return doGetMessage(locale, key);
+    }
+
+    protected String doGetMessage(Locale locale, String key) {
         return doFindMessage(locale, key).get();
     }
 
-    protected void throwMessageKeyNotFoundException(Locale locale, String key, String filtered) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Not found the message by the key.");
-        br.addItem("Key");
-        br.addElement(key);
-        if (!key.equals(filtered)) {
-            br.addElement("(filtered: " + filtered + ")");
-        }
-        br.addItem("Locale");
-        br.addElement(locale);
-        br.addItem("MessageResources");
-        br.addElement(messageResourcesHolder);
-        final String msg = br.buildExceptionMessage();
-        throw new MessageKeyNotFoundException(msg);
-    }
-
     @Override
-    public String getMessage(Locale locale, String key, Object[] values) {
-        assertArgumentNotNull("locale", locale);
-        assertArgumentNotNull("key", key);
-        assertArgumentNotNull("values", values);
-        final MessageResourcesGateway gateway = getMessageResourceGateway();
-        final String message = gateway.getMessage(locale, key, values);
-        if (message == null) {
-            throwMessageKeyNotFoundException(locale, key, values);
-        }
-        return message;
+    public String getMessage(Locale locale, String key, Object... values) {
+        return doGetMessage(locale, key, values);
     }
 
-    protected void throwMessageKeyNotFoundException(Locale locale, String key, Object[] values) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Not found the message by the key.");
-        br.addItem("Key");
-        br.addElement(key);
-        br.addItem("Values");
-        br.addElement(values != null ? Arrays.asList(values) : null);
-        br.addItem("Locale");
-        br.addElement(locale);
-        br.addItem("MessageResources");
-        br.addElement(messageResourcesHolder);
-        final String msg = br.buildExceptionMessage();
-        throw new MessageKeyNotFoundException(msg);
+    protected String doGetMessage(Locale locale, String key, Object[] values) {
+        return doFindMessage(locale, key, values).get();
     }
 
     // ===================================================================================
@@ -135,6 +102,22 @@ public class SimpleMessageManager implements MessageManager {
         return Srl.isQuotedAnything(key, "{", "}") ? Srl.unquoteAnything(key, "{", "}") : key;
     }
 
+    protected void throwMessageKeyNotFoundException(Locale locale, String key, String filtered) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the message by the key.");
+        br.addItem("Key");
+        br.addElement(key);
+        if (!key.equals(filtered)) {
+            br.addElement("(filtered: " + filtered + ")");
+        }
+        br.addItem("Locale");
+        br.addElement(locale);
+        br.addItem("MessageResources");
+        br.addElement(messageResourcesHolder);
+        final String msg = br.buildExceptionMessage();
+        throw new MessageKeyNotFoundException(msg);
+    }
+
     @Override
     public OptionalThing<String> findMessage(Locale locale, String key, Object[] values) {
         assertArgumentNotNull("locale", locale);
@@ -145,10 +128,26 @@ public class SimpleMessageManager implements MessageManager {
 
     protected OptionalThing<String> doFindMessage(Locale locale, String key, Object[] values) {
         final MessageResourcesGateway gateway = getMessageResourceGateway();
-        final String message = gateway.getMessage(locale, key, values);
+        final String filtered = filterMessageKey(key);
+        final String message = gateway.getMessage(locale, filtered, values);
         return OptionalThing.ofNullable(message, () -> {
-            throwMessageKeyNotFoundException(locale, key, values);
+            throwMessageKeyNotFoundException(locale, filtered, values);
         });
+    }
+
+    protected void throwMessageKeyNotFoundException(Locale locale, String key, Object[] values) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the message by the key.");
+        br.addItem("Key");
+        br.addElement(key);
+        br.addItem("Values");
+        br.addElement(values != null ? Arrays.asList(values) : null);
+        br.addItem("Locale");
+        br.addElement(locale);
+        br.addItem("MessageResources");
+        br.addElement(messageResourcesHolder);
+        final String msg = br.buildExceptionMessage();
+        throw new MessageKeyNotFoundException(msg);
     }
 
     // ===================================================================================
@@ -190,7 +189,7 @@ public class SimpleMessageManager implements MessageManager {
 
     protected String resolveMessageText(Locale locale, ActionMessage message) {
         final String key = message.getKey();
-        return message.isResource() ? getMessage(locale, key, message.getValues()) : key;
+        return message.isResource() ? doGetMessage(locale, key, message.getValues()) : key;
     }
 
     // ===================================================================================

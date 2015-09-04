@@ -55,7 +55,7 @@ public interface LoginAssistable {
      * @param userId for the login user. (NotNull)
      * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
      */
-    OptionalEntity<? extends Object> findLoginUser(Long userId);
+    OptionalEntity<? extends Object> findLoginUser(Object userId);
 
     // ===================================================================================
     //                                                                         Basic Login
@@ -98,7 +98,7 @@ public interface LoginAssistable {
      * @param opLambda The callback for option of login. e.g. useAutoLogin (NotNull)
      * @throws LoginFailureException When it fails to login by the user info.
      */
-    void identityLogin(Long userId, LoginOpCall opLambda) throws LoginFailureException;
+    void identityLogin(Object userId, LoginOpCall opLambda) throws LoginFailureException;
 
     /**
      * Re-select user bean of session if exists. <br>
@@ -155,7 +155,7 @@ public interface LoginAssistable {
      * which provides user bean as generic type.
      * @return The user bean in session. (NotNull, EmptyAllowed: means not-login)
      */
-    OptionalThing<? extends UserBean> getSessionUserBean(); // thanks, feedback of "? extends" way
+    OptionalThing<? extends UserBean<?>> getSessionUserBean(); // thanks, feedback of "? extends" way
 
     /**
      * Is the action for login? (login action or not)

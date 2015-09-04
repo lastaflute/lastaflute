@@ -310,50 +310,26 @@ public class RequestLoggingFilter implements Filter {
     }
 
     protected void buildRequestInfo(StringBuilder sb, HttpServletRequest request, HttpServletResponse response, boolean showResponse) {
-        sb.append("Request class=" + request.getClass().getName());
-        sb.append(", RequestedSessionId=").append(request.getRequestedSessionId());
+        sb.append("requestClass=" + request.getClass().getName());
+        sb.append(" ; sessionId=").append(request.getRequestedSessionId());
 
         sb.append(LF).append(IND);
-        sb.append(", REQUEST_URI=").append(request.getRequestURI());
-        sb.append(", SERVLET_PATH=").append(request.getServletPath());
-        sb.append(", CharacterEncoding=" + request.getCharacterEncoding());
-        sb.append(", ContentLength=").append(request.getContentLength());
+        final String queryString = request.getQueryString();
+        sb.append("; url=").append(request.getRequestURL()).append(queryString != null ? "?" + queryString : "");
+        sb.append(LF).append(IND);
+        sb.append("; method=").append(request.getMethod());
+        sb.append(" ; protocol=").append(request.getProtocol());
+        sb.append(" ; scheme=").append(request.getScheme());
+        sb.append(" ; secure=").append(request.isSecure());
+        sb.append(" ; remoteAddr=").append(request.getRemoteAddr());
+        sb.append(" ; remoteHost=").append(request.getRemoteHost());
+        sb.append(LF).append(IND);
+        sb.append("; characterEncoding=").append(request.getCharacterEncoding());
+        sb.append(" ; contentLength=").append(request.getContentLength());
+        sb.append(" ; contentType=").append(request.getContentType());
+        sb.append(" ; locale=").append(request.getLocale());
+        sb.append(" ; locales=").append(buildLocalesExp(request.getLocales()));
 
-        sb.append(LF).append(IND);
-        sb.append(", ContentType=").append(request.getContentType());
-        sb.append(", Locale=").append(request.getLocale());
-        sb.append(", Locales=");
-        final Enumeration<?> locales = request.getLocales();
-        boolean first = true;
-        while (locales.hasMoreElements()) {
-            final Locale locale = (Locale) locales.nextElement();
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(locale.toString());
-        }
-        sb.append(", Scheme=").append(request.getScheme());
-        sb.append(", isSecure=").append(request.isSecure());
-
-        sb.append(LF).append(IND);
-        sb.append(", SERVER_PROTOCOL=").append(request.getProtocol());
-        sb.append(", REMOTE_ADDR=").append(request.getRemoteAddr());
-        sb.append(", REMOTE_HOST=").append(request.getRemoteHost());
-        sb.append(", SERVER_NAME=").append(request.getServerName());
-        sb.append(", SERVER_PORT=").append(request.getServerPort());
-
-        sb.append(LF).append(IND);
-        sb.append(", ContextPath=").append(request.getContextPath());
-        sb.append(", REQUEST_METHOD=").append(request.getMethod());
-        sb.append(", PathInfo=").append(request.getPathInfo());
-        sb.append(", RemoteUser=").append(request.getRemoteUser());
-
-        sb.append(LF).append(IND);
-        sb.append(", REQUEST_URL=").append(request.getRequestURL());
-        sb.append(LF).append(IND);
-        sb.append(", QUERY_STRING=").append(request.getQueryString());
         sb.append(LF);
         buildRequestHeaders(sb, request);
         buildRequestParameters(sb, request);
@@ -364,6 +340,16 @@ public class RequestLoggingFilter implements Filter {
             sb.append(IND);
             buildResponseInfo(sb, request, response);
         }
+    }
+
+    protected String buildLocalesExp(Enumeration<Locale> locales) {
+        final StringBuilder sb = new StringBuilder();
+        while (locales.hasMoreElements()) {
+            final Locale locale = locales.nextElement();
+            sb.append(sb.length() > 0 ? "," : "");
+            sb.append(locale.toString());
+        }
+        return sb.toString();
     }
 
     // -----------------------------------------------------
@@ -531,12 +517,12 @@ public class RequestLoggingFilter implements Filter {
     }
 
     protected void buildResponseInfo(StringBuilder sb, HttpServletRequest request, HttpServletResponse response) {
-        sb.append("Response class=" + response.getClass().getName());
-        sb.append(", Status=").append(response.getStatus());
+        sb.append("responseClass=").append(response.getClass().getName());
+        sb.append(" ; committed=").append(response.isCommitted());
         sb.append(LF).append(IND);
-        sb.append(", ContentType=").append(response.getContentType());
-        sb.append(", Locale=").append(response.getLocale());
-        sb.append(", Committed=").append(response.isCommitted());
+        sb.append("; httpStatus=").append(response.getStatus());
+        sb.append(" ; contentType=").append(response.getContentType());
+        sb.append(" ; locale=").append(response.getLocale());
         sb.append(LF);
         buildResponseHeaders(sb, response);
     }

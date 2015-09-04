@@ -42,6 +42,20 @@ public interface ActionResponse {
     Map<String, String[]> getHeaderMap();
 
     // ===================================================================================
+    //                                                                         HTTP Status
+    //                                                                         ===========
+    /**
+     * @param httpStatus The specified HTTP status for the response.
+     * @return this. (NotNull)
+     */
+    ActionResponse httpStatus(int httpStatus);
+
+    /**
+     * @return The specified HTTP status. (NullAllowed: if null, no specified)
+     */
+    Integer getHttpStatus();
+
+    // ===================================================================================
     //                                                                       Determination
     //                                                                       =============
     /**

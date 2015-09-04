@@ -28,7 +28,7 @@ public interface DoubleSubmitManager {
 
     boolean determineTokenWithReset(Class<?> groupType);
 
-    void saveToken(Class<?> groupType);
+    String saveToken(Class<?> groupType);
 
     String generateToken(Class<?> groupType);
 

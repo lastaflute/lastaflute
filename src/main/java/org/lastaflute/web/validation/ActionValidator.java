@@ -15,9 +15,11 @@
  */
 package org.lastaflute.web.validation;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -28,15 +30,19 @@ import java.util.TreeMap;
 
 import javax.validation.Configuration;
 import javax.validation.ConstraintViolation;
+import javax.validation.Valid;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.bootstrap.GenericBootstrap;
+import javax.validation.constraints.NotNull;
 import javax.validation.groups.Default;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator;
 import org.hibernate.validator.spi.resourceloading.ResourceBundleLocator;
+import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
@@ -49,6 +55,7 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.message.MessagesCreator;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
+import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 
 /**
@@ -60,6 +67,9 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    public static final String JAVAX_CONSTRAINTS_PKG = NotNull.class.getPackage().getName();
+    public static final String HIBERNATE_CONSTRAINTS_PKG = NotEmpty.class.getPackage().getName();
+
     public static final Class<?>[] DEFAULT_GROUPS = new Class<?>[] { Default.class };
     protected static final String ITEM_VARIABLE = "{item}";
     protected static final String LABELS_PREFIX = "labels.";
@@ -97,6 +107,8 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         assertArgumentNotNull("form", form);
         assertArgumentNotNull("doValidateLambda", doValidateLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
+        markValidationCalled();
+        verifyClientError(form);
         final Set<ConstraintViolation<Object>> vioSet = hibernateValidate(form);
         @SuppressWarnings("unchecked")
         final MESSAGES messages = (MESSAGES) toActionMessages(form, vioSet);
@@ -105,6 +117,12 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
             throwValidationErrorException(messages, validationErrorLambda);
         }
         return createValidationSuccess(messages);
+    }
+
+    protected void markValidationCalled() {
+        if (ThreadCacheContext.exists()) {
+            ThreadCacheContext.markValidatorCalled();
+        }
     }
 
     public void throwValidationError(MessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
@@ -147,8 +165,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                                                 Hibernate Validator
     //                                                                 ===================
     protected Set<ConstraintViolation<Object>> hibernateValidate(Object form) {
-        final Validator validator = comeOnHibernateValidator();
-        return validator.validate(form, groups);
+        return comeOnHibernateValidator().validate(form, groups);
     }
 
     // -----------------------------------------------------
@@ -206,11 +223,14 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         protected String filterMessageKey(String key) {
             final String javaxPackage = "javax.validation.";
             final String hibernatePackage = "org.hibernate.validator.";
+            final String lastaflutePackage = "org.lastaflute.validator.";
             final String realKey;
             if (key.startsWith(javaxPackage)) {
                 realKey = Srl.substringFirstRear(key, javaxPackage);
             } else if (key.startsWith(hibernatePackage)) {
                 realKey = Srl.substringFirstRear(key, hibernatePackage);
+            } else if (key.startsWith(lastaflutePackage)) {
+                realKey = Srl.substringFirstRear(key, lastaflutePackage);
             } else {
                 realKey = key;
             }
@@ -362,6 +382,61 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
 
     protected String buildLabelKey(String propertyPath) {
         return LABELS_PREFIX + propertyPath; // as default
+    }
+
+    // ===================================================================================
+    //                                                                        Client Error
+    //                                                                        ============
+    protected void verifyClientError(Object form) {
+        final Set<ConstraintViolation<Object>> clientErrorSet = clientErrorHibernateValidate(form);
+        if (!clientErrorSet.isEmpty()) {
+            throwClientErrorByValidatorException(form, clientErrorSet);
+        }
+    }
+
+    protected Set<ConstraintViolation<Object>> clientErrorHibernateValidate(Object form) {
+        return comeOnHibernateValidator().validate(form, ClientError.class);
+    }
+
+    protected void throwClientErrorByValidatorException(Object form, Set<ConstraintViolation<Object>> clientErrorSet) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("Client Error detected by validator:");
+        @SuppressWarnings("unchecked")
+        final MESSAGES messages = (MESSAGES) toActionMessages(form, clientErrorSet);
+        messages.toPropertySet().forEach(property -> {
+            final Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property);
+            while (ite.hasNext()) {
+                sb.append("\n ").append(property).append(" ").append((ActionMessage) ite.next());
+            }
+        });
+        final String msg = sb.toString();
+        throw new ClientErrorByValidatorException(msg, messages);
+    }
+
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    public static boolean isValidatorAnnotation(Class<?> annoType) { // as utility
+        final String annoName = annoType.getName();
+        return Srl.startsWith(annoName, JAVAX_CONSTRAINTS_PKG, HIBERNATE_CONSTRAINTS_PKG) // normal annotations
+                || isNestedBeanAnnotation(annoType) // has validation nested bean
+                || isRequiredAnnotation(annoType); // LastaFlute provides
+    }
+
+    public static boolean isNestedBeanAnnotation(Class<?> annoType) {
+        return annoType.equals(Valid.class);
+    }
+
+    public static boolean hasNestedBeanAnnotation(Field field) {
+        return field.getAnnotation(Valid.class) != null;
+    }
+
+    public static boolean isRequiredAnnotation(Class<?> annoType) {
+        return annoType.equals(Required.class);
+    }
+
+    public static boolean hasRequiredAnnotation(Field field) {
+        return field.getAnnotation(Required.class) != null;
     }
 
     // ===================================================================================

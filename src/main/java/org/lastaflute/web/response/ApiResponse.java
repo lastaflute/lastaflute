@@ -19,15 +19,4 @@ package org.lastaflute.web.response;
  * @author jflute
  */
 public interface ApiResponse extends ActionResponse {
-
-    /**
-     * @param httpStatus The specified HTTP status for the response.
-     * @return this. (NotNull)
-     */
-    ApiResponse httpStatus(int httpStatus);
-
-    /**
-     * @return The specified HTTP status. (NullAllowed: if null, no specified)
-     */
-    Integer getHttpStatus();
 }

@@ -16,7 +16,6 @@
 package org.lastaflute.web.servlet.request;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -256,21 +255,17 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     @Override
-    public void download(String fileName, InputStream stream) {
+    public void download(String fileName, WritternStreamCall writtenStreamLambda) {
         assertArgumentNotNull("fileName", fileName);
-        assertArgumentNotNull("stream", stream);
-        final ResponseDownloadResource resource = createResponseDownloadResource(fileName);
-        resource.stream(stream);
-        doDownload(resource);
+        assertArgumentNotNull("writtenStreamLambda", writtenStreamLambda);
+        doDownload(createResponseDownloadResource(fileName).stream(writtenStreamLambda));
     }
 
     @Override
-    public void download(String fileName, InputStream stream, int contentLength) {
+    public void download(String fileName, WritternStreamCall writtenStreamLambda, int contentLength) {
         assertArgumentNotNull("fileName", fileName);
-        assertArgumentNotNull("stream", stream);
-        final ResponseDownloadResource resource = createResponseDownloadResource(fileName);
-        resource.stream(stream, contentLength);
-        doDownload(resource);
+        assertArgumentNotNull("writtenStreamLambda", writtenStreamLambda);
+        doDownload(createResponseDownloadResource(fileName).stream(writtenStreamLambda, contentLength));
     }
 
     protected ResponseDownloadResource createResponseDownloadResource(String fileName) {
@@ -304,7 +299,7 @@ public class SimpleResponseManager implements ResponseManager {
         if (byteData != null) {
             doDownloadByteData(resource, response, byteData);
         } else {
-            doDownloadInputStream(resource, response);
+            doDownloadStreamCall(resource, response);
         }
     }
 
@@ -340,9 +335,39 @@ public class SimpleResponseManager implements ResponseManager {
         }
     }
 
-    protected void doDownloadInputStream(ResponseDownloadResource resource, HttpServletResponse response) {
-        final InputStream ins = resource.getInputStream();
-        if (ins == null) {
+    // *switch to stream call way for closing headache
+    //protected void doDownloadInputStream(ResponseDownloadResource resource, HttpServletResponse response) {
+    //    final InputStream ins = resource.getInputStream();
+    //    if (ins == null) {
+    //        String msg = "Either byte data or input stream is required: " + resource;
+    //        throw new IllegalArgumentException(msg);
+    //    }
+    //    try {
+    //        final Integer contentLength = resource.getContentLength();
+    //        if (contentLength != null) {
+    //            response.setContentLength(contentLength);
+    //        }
+    //        final OutputStream out = response.getOutputStream();
+    //        try {
+    //            LdiInputStreamUtil.copy(ins, out);
+    //            LdiOutputStreamUtil.flush(out);
+    //        } finally {
+    //            LdiOutputStreamUtil.close(out);
+    //        }
+    //    } catch (RuntimeException e) {
+    //        String msg = "Failed to download the input stream: " + resource;
+    //        throw new IllegalStateException(msg, e);
+    //    } catch (IOException e) {
+    //        String msg = "Failed to download the input stream: " + resource;
+    //        throw new IllegalStateException(msg, e);
+    //    } finally {
+    //        LdiInputStreamUtil.close(ins);
+    //    }
+    //}
+
+    protected void doDownloadStreamCall(ResponseDownloadResource resource, HttpServletResponse response) {
+        WritternStreamCall streamCall = resource.getStreamCall();
+        if (streamCall == null) {
             String msg = "Either byte data or input stream is required: " + resource;
             throw new IllegalArgumentException(msg);
         }
@@ -353,7 +378,9 @@ public class SimpleResponseManager implements ResponseManager {
             }
             final OutputStream out = response.getOutputStream();
             try {
-                LdiInputStreamUtil.copy(ins, out);
+                streamCall.callback(ins -> {
+                    LdiInputStreamUtil.copy(ins, out);
+                });
                 LdiOutputStreamUtil.flush(out);
             } finally {
                 LdiOutputStreamUtil.close(out);
@@ -364,8 +391,6 @@ public class SimpleResponseManager implements ResponseManager {
         } catch (IOException e) {
             String msg = "Failed to download the input stream: " + resource;
             throw new IllegalStateException(msg, e);
-        } finally {
-            LdiInputStreamUtil.close(ins);
         }
     }
 

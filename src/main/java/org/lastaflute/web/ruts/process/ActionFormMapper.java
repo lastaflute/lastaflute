@@ -21,6 +21,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -39,6 +43,7 @@ import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
@@ -49,7 +54,7 @@ import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
-import org.lastaflute.di.helper.beans.exception.IllegalPropertyRuntimeException;
+import org.lastaflute.di.helper.beans.exception.BeanIllegalPropertyException;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.di.util.LdiArrayUtil;
 import org.lastaflute.di.util.LdiClassUtil;
@@ -63,6 +68,7 @@ import org.lastaflute.web.exception.RequestClassifiationConvertFailureException;
 import org.lastaflute.web.exception.RequestJsonParseFailureException;
 import org.lastaflute.web.exception.RequestPropertyMappingFailureException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.path.FormMappingOption;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
@@ -72,6 +78,7 @@ import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
+import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 
@@ -156,7 +163,7 @@ public class ActionFormMapper {
     }
 
     protected MultipartRequestHandler createMultipartRequestHandler() {
-        final MultipartResourceProvider provider = assistantDirector.assistWebDirection().assistMultipartResourceProvider();
+        final MultipartResourceProvider provider = assistWebDirection().assistMultipartResourceProvider();
         if (provider == null) {
             throw new IllegalStateException("No provider for multipart request in assistant director.");
         }
@@ -346,19 +353,19 @@ public class ActionFormMapper {
         if (bean == null) {
             return;
         }
-        final int nestedIndex = name.indexOf(NESTED_DELIM); // sea.mythica
-        final int indexedIndex = name.indexOf(INDEXED_DELIM); // sea[0]
-        final int mappedIndex = name.indexOf(MAPPED_DELIM); // sea(over)
-        if (nestedIndex < 0 && indexedIndex < 0 && mappedIndex < 0) {
+        final int nestedIndex = name.indexOf(NESTED_DELIM); // e.g. sea.mythica
+        final int indexedIndex = name.indexOf(INDEXED_DELIM); // e.g. sea[0]
+        final int mappedIndex = name.indexOf(MAPPED_DELIM); // e.g. sea(over)
+        if (nestedIndex < 0 && indexedIndex < 0 && mappedIndex < 0) { // as simple
             setSimpleProperty(bean, name, value, parentBean, parentName);
         } else {
             final int minIndex = minIndex(minIndex(nestedIndex, indexedIndex), mappedIndex);
-            if (minIndex == nestedIndex) {
+            if (minIndex == nestedIndex) { // e.g. sea.mythica
                 final String front = name.substring(0, minIndex);
                 final Object simpleProperty = prepareSimpleProperty(bean, front);
                 final String rear = name.substring(minIndex + 1);
                 setProperty(simpleProperty, rear, value, bean, front); // *recursive
-            } else if (minIndex == indexedIndex) {
+            } else if (minIndex == indexedIndex) { // e.g. sea[0]
                 final IndexParsedResult result = parseIndex(name.substring(indexedIndex + 1));
                 final int[] resultIndexes = result.indexes;
                 final String resultName = result.name;
@@ -369,7 +376,7 @@ public class ActionFormMapper {
                     final Object indexedProperty = prepareIndexedProperty(bean, front, resultIndexes);
                     setProperty(indexedProperty, resultName, value, bean, front); // *recursive
                 }
-            } else { // map
+            } else { // map e.g. sea(over)
                 final int endIndex = name.indexOf(MAPPED_DELIM2, mappedIndex); // sea(over)
                 final String front = name.substring(0, mappedIndex);
                 final String middle = name.substring(mappedIndex + 1, endIndex);
@@ -426,8 +433,8 @@ public class ActionFormMapper {
 
     protected void setSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
         try {
-            actuallySetSimpleProperty(bean, name, value, parentBean, parentName);
-        } catch (IllegalPropertyRuntimeException e) {
+            doSetSimpleProperty(bean, name, value, parentBean, parentName);
+        } catch (BeanIllegalPropertyException e) {
             if (!(e.getCause() instanceof NumberFormatException)) {
                 throw e;
             }
@@ -448,10 +455,7 @@ public class ActionFormMapper {
         }
     }
 
-    // ===================================================================================
-    //                                                                 Actually Set Simple
-    //                                                                 ===================
-    protected void actuallySetSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
+    protected void doSetSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
         if (bean instanceof Map) {
             @SuppressWarnings("unchecked")
             final Map<String, Object> map = (Map<String, Object>) bean;
@@ -460,10 +464,12 @@ public class ActionFormMapper {
         }
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
         if (!beanDesc.hasPropertyDesc(name)) {
+            handleUndefinedParameter(bean, name, value, beanDesc);
             return;
         }
         final PropertyDesc pd = beanDesc.getPropertyDesc(name);
         if (!pd.isWritable()) {
+            handleUndefinedParameter(bean, name, value, beanDesc);
             return;
         }
         final Class<?> propertyType = pd.getPropertyType();
@@ -476,13 +482,11 @@ public class ActionFormMapper {
                 pd.setValue(bean, prepareStringList(value, propertyType));
             }
         } else { // not array or list, e.g. String, Object
-            final String realValue = prepareStringScalar(value); // not null (empty if null)
+            final String exp = prepareStringScalar(value); // not null (empty if null)
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
-                pd.setValue(bean, parseJsonParameter(bean, name, realValue, pd));
-            } else if (isClassificationProperty(propertyType)) { // means CDef
-                pd.setValue(bean, toVerifiedClassification(bean, name, realValue, pd));
-            } else { // mainly here, e.g. String, Integer
-                pd.setValue(bean, realValue);
+                pd.setValue(bean, parseJsonParameter(bean, name, exp, pd));
+            } else { // mainly here, e.g. String, Integer, LocalDate, CDef, ...
+                pd.setValue(bean, convertStringToPropertyNativeIfNeeds(bean, name, exp, pd));
             }
         }
     }
@@ -519,6 +523,56 @@ public class ActionFormMapper {
     @SuppressWarnings("unchecked")
     protected List<String> newStringList(Class<?> propertyType) {
         return (List<String>) LdiClassUtil.newInstance(propertyType);
+    }
+
+    protected Object convertStringToPropertyNativeIfNeeds(Object bean, String name, String exp, PropertyDesc pd) {
+        // not to depend on conversion logic in BeanDesc
+        final Class<?> propertyType = pd.getPropertyType();
+        final Object filtered;
+        if (propertyType.isPrimitive()) {
+            filtered = DfTypeUtil.toWrapper(exp, propertyType);
+        } else if (Number.class.isAssignableFrom(propertyType)) {
+            filtered = DfTypeUtil.toNumber(exp, propertyType);
+            // old date types are unsupported for LocalDate invitation
+            //} else if (Timestamp.class.isAssignableFrom(propertyType)) {
+            //    filtered = DfTypeUtil.toTimestamp(exp);
+            //} else if (Time.class.isAssignableFrom(propertyType)) {
+            //    filtered = DfTypeUtil.toTime(exp);
+            //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
+            //    filtered = DfTypeUtil.toDate(exp);
+        } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
+            filtered = DfTypeUtil.toLocalDate(exp);
+        } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
+            filtered = DfTypeUtil.toLocalDateTime(exp);
+        } else if (LocalTime.class.isAssignableFrom(propertyType)) {
+            filtered = DfTypeUtil.toLocalTime(exp);
+        } else if (Boolean.class.isAssignableFrom(propertyType)) {
+            filtered = DfTypeUtil.toBoolean(exp);
+        } else if (isClassificationProperty(propertyType)) { // means CDef
+            filtered = toVerifiedClassification(bean, name, exp, pd);
+        } else {
+            filtered = exp;
+        }
+        return filtered;
+    }
+
+    // -----------------------------------------------------
+    //                                   Undefined Parameter
+    //                                   -------------------
+    protected void handleUndefinedParameter(Object bean, String name, Object value, BeanDesc beanDesc) {
+        if (needsUndefinedParameterCheck() && !getIndefinableParameterSet().contains(name)) {
+            throwRequestUndefinedParameterInFormException(bean, name, value, beanDesc);
+        }
+    }
+
+    protected boolean needsUndefinedParameterCheck() {
+        final FormMappingOption option = adjustFormMapping();
+        return option != null && option.isUndefinedParameterError();
+    }
+
+    protected Set<String> getIndefinableParameterSet() {
+        final FormMappingOption option = adjustFormMapping();
+        return option != null ? option.getIndefinableParameterSet() : Collections.emptySet();
     }
 
     // -----------------------------------------------------
@@ -802,9 +856,7 @@ public class ActionFormMapper {
     }
 
     protected int getIndexedPropertySizeLimit() {
-        final FwWebDirection direction = assistantDirector.assistWebDirection();
-        final ActionAdjustmentProvider provider = direction.assistActionAdjustmentProvider();
-        return provider.provideIndexedPropertySizeLimit();
+        return getAdjustmentProvider().provideIndexedPropertySizeLimit();
     }
 
     protected void throwIndexedPropertyMinusIndexException(String name, int index) {
@@ -1090,5 +1142,54 @@ public class ActionFormMapper {
 
     protected void throwRequestClassifiationConvertFailureException(String msg, Exception e) {
         throw new RequestClassifiationConvertFailureException(msg, e);
+    }
+
+    protected void throwRequestUndefinedParameterInFormException(Object bean, String name, Object value, BeanDesc beanDesc) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Undefined parameter in the form.");
+        br.addItem("Advice");
+        br.addElement("Request parameters should be related to any property of form.");
+        br.addElement("For example:");
+        br.addElement("  (x): ?sea=mystic&land=oneman");
+        br.addElement("    public class MaihamaForm { // *NG: 'land' is undefined");
+        br.addElement("        public String sea;");
+        br.addElement("    }");
+        br.addElement("  (o): ?sea=mystic&land=oneman");
+        br.addElement("    public class MaihamaForm {");
+        br.addElement("        public String sea;");
+        br.addElement("        public String land; // OK");
+        br.addElement("    }");
+        br.addElement("");
+        br.addElement("If you want to ignore the parameter from this check,");
+        br.addElement("adjust FormMappingOption in ActionAdjustmentProvider.");
+        br.addItem("Action Form");
+        br.addElement(bean.getClass().getName());
+        br.addItem("Defined Property");
+        final StringBuilder propertySb = new StringBuilder();
+        for (int i = 0; i < beanDesc.getPropertyDescSize(); i++) {
+            propertySb.append(i % 5 == 4 ? "\n" : "");
+            propertySb.append(i > 0 ? ", " : "");
+            propertySb.append(beanDesc.getPropertyDesc(i).getPropertyName());
+        }
+        br.addElement(propertySb);
+        br.addItem("Requested Parameter");
+        br.addElement(name + "=" + (value instanceof Object[] ? Arrays.asList((Object[]) value) : value));
+        final String msg = br.buildExceptionMessage();
+        throw new RequestUndefinedParameterInFormException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                  Assistant Director
+    //                                                                  ==================
+    protected ActionAdjustmentProvider getAdjustmentProvider() {
+        return assistWebDirection().assistActionAdjustmentProvider();
+    }
+
+    protected FormMappingOption adjustFormMapping() {
+        return getAdjustmentProvider().adjustFormMapping();
+    }
+
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
     }
 }

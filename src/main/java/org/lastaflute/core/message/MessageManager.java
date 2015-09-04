@@ -48,7 +48,7 @@ public interface MessageManager {
      * @return The found message, specified locale resolved. (NotNull: if not found, throws exception)
      * @throws MessageKeyNotFoundException When the message is not found.
      */
-    String getMessage(Locale locale, String key, Object[] values);
+    String getMessage(Locale locale, String key, Object... values);
 
     /**
      * Find the message by the key.

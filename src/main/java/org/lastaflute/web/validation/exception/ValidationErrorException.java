@@ -19,7 +19,7 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.validation.VaErrorHook;
 
 /**
- * @author modified by jflute (originated in Seasar)
+ * @author jflute
  */
 public class ValidationErrorException extends RuntimeException {
 

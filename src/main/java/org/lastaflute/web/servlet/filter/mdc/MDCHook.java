@@ -20,12 +20,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.web.servlet.filter.FilterListener;
-import org.lastaflute.web.servlet.filter.FilterListenerChain;
+import org.lastaflute.web.servlet.filter.listener.FilterHook;
+import org.lastaflute.web.servlet.filter.listener.FilterHookChain;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.slf4j.MDC;
 
@@ -33,7 +36,7 @@ import org.slf4j.MDC;
  * @author jflute
  * @since 0.6.0 (2015/05/30 Saturday)
  */
-public class MDCListener implements FilterListener {
+public class MDCHook implements FilterHook {
 
     // ===================================================================================
     //                                                                          Definition
@@ -67,7 +70,7 @@ public class MDCListener implements FilterListener {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public MDCListener(Map<String, Function<MDCSetupResource, String>> mdcMap) {
+    public MDCHook(Map<String, Function<MDCSetupResource, String>> mdcMap) {
         if (mdcMap == null) {
             throw new IllegalArgumentException("The argument 'mdcMap' should not be null.");
         }
@@ -75,10 +78,17 @@ public class MDCListener implements FilterListener {
     }
 
     // ===================================================================================
+    //                                                                          Initialize
+    //                                                                          ==========
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+    }
+
+    // ===================================================================================
     //                                                                              Listen
     //                                                                              ======
     @Override
-    public void listen(FilterListenerChain chain) throws IOException, ServletException {
+    public void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain) throws IOException, ServletException {
         final Map<String, String> originallyMap = prepareOriginallyMap();
         if (originallyMap != null) {
             mdcMap.forEach((key, value) -> {
@@ -97,7 +107,7 @@ public class MDCListener implements FilterListener {
                 final MDCSetupResource resouce = createSetupResource();
                 mdcMap.forEach((key, value) -> MDC.put(key, value.apply(resouce)));
             }
-            chain.doNext();
+            chain.doNext(request, response);
         } finally {
             if (originallyMap != null) {
                 originallyMap.forEach((key, value) -> MDC.remove(key));
@@ -128,5 +138,12 @@ public class MDCListener implements FilterListener {
 
     protected RequestManager getRequestManager() {
         return ContainerUtil.getComponent(RequestManager.class);
+    }
+
+    // ===================================================================================
+    //                                                                             Destroy
+    //                                                                             =======
+    @Override
+    public void destroy() {
     }
 }

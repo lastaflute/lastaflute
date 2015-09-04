@@ -16,13 +16,14 @@
 package org.lastaflute.web.login;
 
 /**
+ * @param <ID> The type of user ID.
  * @author jflute
  */
-public interface UserBean {
+public interface UserBean<ID> {
 
     /**
      * Get the ID of login user.
      * @return The ID of the login user. (NotNull)
      */
-    Long getUserId();
+    ID getUserId();
 }

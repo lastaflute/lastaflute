@@ -47,6 +47,7 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     //                                                                           =========
     protected final RoutingNext nextRouting;
     protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
+    protected Integer httpStatus;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
     protected List<RenderDataRegistration> registrationList; // lazy loaded
@@ -108,6 +109,21 @@ public class HtmlResponse implements ActionResponse, Redirectable {
             headerMap = new LinkedHashMap<String, String[]>(4);
         }
         return headerMap;
+    }
+
+    // ===================================================================================
+    //                                                                         HTTP Status
+    //                                                                         ===========
+    @Override
+    public HtmlResponse httpStatus(int httpStatus) {
+        assertDefinedState("httpStatus");
+        this.httpStatus = httpStatus;
+        return this;
+    }
+
+    @Override
+    public Integer getHttpStatus() {
+        return httpStatus;
     }
 
     // ===================================================================================

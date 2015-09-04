@@ -42,6 +42,15 @@ public class UndefinedResponse implements ActionResponse {
         return Collections.emptyMap();
     }
 
+    public ActionResponse httpStatus(int httpStatus) {
+        return this;
+    }
+
+    @Override
+    public Integer getHttpStatus() {
+        return null;
+    }
+
     public boolean isUndefined() {
         return true;
     }

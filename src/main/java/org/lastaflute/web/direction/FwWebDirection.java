@@ -21,14 +21,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+import javax.servlet.Filter;
+
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
-import org.lastaflute.web.servlet.filter.FilterListener;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
-import org.lastaflute.web.servlet.filter.mdc.MDCListener;
+import org.lastaflute.web.servlet.filter.listener.FilterHook;
+import org.lastaflute.web.servlet.filter.listener.FilterHookServletAdapter;
+import org.lastaflute.web.servlet.filter.mdc.MDCHook;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
 import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
 import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
@@ -69,7 +72,8 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                       Filter Listener
     //                                       ---------------
-    protected List<FilterListener> filterListenerList; // lazy loaded
+    protected List<FilterHook> insideFilterHookList; // lazy loaded
+    protected List<FilterHook> outsideFilterHookList; // lazy loaded
 
     // -----------------------------------------------------
     //                                            Access Log
@@ -150,16 +154,33 @@ public class FwWebDirection {
     //                                       Filter Listener
     //                                       ---------------
     // independent per purpose
-    public void directMDC(MDCListener listener) {
+    public void directMDC(MDCHook listener) {
         assertArgumentNotNull("listener", listener);
-        getFilterListenerList().add(listener);
+        getOutsideFilterHookList().add(listener); // for logging
     }
 
-    protected List<FilterListener> getFilterListenerList() {
-        if (filterListenerList == null) {
-            filterListenerList = new ArrayList<FilterListener>(4);
+    public void directServletFilter(Filter servletFilter, boolean inside) { // inside means after logging
+        assertArgumentNotNull("servletFilter", servletFilter);
+        final List<FilterHook> hookList = inside ? getInsideFilterHookList() : getOutsideFilterHookList();
+        hookList.add(newFilterHookServletAdapter(servletFilter));
+    }
+
+    protected FilterHookServletAdapter newFilterHookServletAdapter(Filter servletFilter) {
+        return new FilterHookServletAdapter(servletFilter);
+    }
+
+    protected List<FilterHook> getInsideFilterHookList() {
+        if (insideFilterHookList == null) {
+            insideFilterHookList = new ArrayList<FilterHook>(4);
         }
-        return filterListenerList;
+        return insideFilterHookList;
+    }
+
+    protected List<FilterHook> getOutsideFilterHookList() {
+        if (outsideFilterHookList == null) {
+            outsideFilterHookList = new ArrayList<FilterHook>(4);
+        }
+        return outsideFilterHookList;
     }
 
     // -----------------------------------------------------
@@ -239,10 +260,14 @@ public class FwWebDirection {
     }
 
     // -----------------------------------------------------
-    //                                       Filter Listener
-    //                                       ---------------
-    public List<FilterListener> assistFilterListenerList() { // empty allowed and normally empty
-        return filterListenerList != null ? filterListenerList : Collections.emptyList();
+    //                                           Filter Hook
+    //                                           -----------
+    public List<FilterHook> assistInsideFilterHookList() { // empty allowed and normally empty
+        return insideFilterHookList != null ? insideFilterHookList : Collections.emptyList();
+    }
+
+    public List<FilterHook> assistOutsideFilterHookList() { // empty allowed and normally empty
+        return outsideFilterHookList != null ? outsideFilterHookList : Collections.emptyList();
     }
 
     // -----------------------------------------------------

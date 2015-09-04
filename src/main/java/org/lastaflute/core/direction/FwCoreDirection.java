@@ -54,8 +54,11 @@ public class FwCoreDirection {
     /** Is debug enabled for framework? (you should set true only when you want internal debug) */
     protected boolean frameworkDebug;
 
-    /** The listener for application curtain before, called after boot and before open. (NullAllowed: not required) */
-    protected CurtainBeforeListener curtainBeforeListener;
+    /** The hook for application curtain before, called after boot and before open. (NullAllowed: not required) */
+    protected CurtainBeforeHook curtainBeforeHook;
+
+    /** The hook for application curtain finally, called when the application closed. (NullAllowed: not required) */
+    protected CurtainFinallyHook curtainFinallyHook;
 
     // -----------------------------------------------------
     //                                              Security
@@ -115,9 +118,14 @@ public class FwCoreDirection {
         this.frameworkDebug = frameworkDebug;
     }
 
-    public void directCurtainBefore(CurtainBeforeListener curtainBeforeListener) {
-        assertArgumentNotNull("curtainBeforeListener", curtainBeforeListener);
-        this.curtainBeforeListener = curtainBeforeListener;
+    public void directCurtainBefore(CurtainBeforeHook curtainBeforeHook) {
+        assertArgumentNotNull("curtainBeforeHook", curtainBeforeHook);
+        this.curtainBeforeHook = curtainBeforeHook;
+    }
+
+    public void directCurtainFinally(CurtainFinallyHook curtainFinallyHook) {
+        assertArgumentNotNull("curtainFinallyHook", curtainFinallyHook);
+        this.curtainFinallyHook = curtainFinallyHook;
     }
 
     // -----------------------------------------------------
@@ -189,8 +197,12 @@ public class FwCoreDirection {
         return frameworkDebug;
     }
 
-    public CurtainBeforeListener assistCurtainBeforeListener() {
-        return curtainBeforeListener; // not required, no process if null
+    public CurtainBeforeHook assistCurtainBeforeHook() {
+        return curtainBeforeHook; // not required, no process if null
+    }
+
+    public CurtainFinallyHook assistCurtainFinallyHook() {
+        return curtainFinallyHook; // not required, no process if null
     }
 
     // -----------------------------------------------------

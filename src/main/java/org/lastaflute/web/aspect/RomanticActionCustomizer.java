@@ -254,7 +254,11 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     }
 
     protected ExecuteOption createExecuteOption(Execute anno) {
-        return new ExecuteOption(anno.urlPattern(), anno.suppressTransaction(), anno.sqlExecutionCountLimit());
+        final String urlPattern = anno.urlPattern();
+        final boolean suppressTransaction = anno.suppressTransaction();
+        final boolean suppressValidatorCallCheck = anno.suppressValidatorCallCheck();
+        final int sqlExecutionCountLimit = anno.sqlExecutionCountLimit();
+        return new ExecuteOption(urlPattern, suppressTransaction, suppressValidatorCallCheck, sqlExecutionCountLimit);
     }
 
     protected ActionExecute newActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {

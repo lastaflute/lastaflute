@@ -39,12 +39,19 @@ public class ThreadCacheContext {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+
     // -----------------------------------------------------
     //                                             Core Item
     //                                             ---------
     public static final String FW_REQUEST_PATH = "fw:requestPath";
     public static final String FW_ENTRY_METHOD = "fw:entryMethod";
     public static final String FW_USER_BEAN = "fw:userBean";
+
+    // -----------------------------------------------------
+    //                                               Marking
+    //                                               -------
+    public static final String FW_VALIDATOR_CALLED = "fw:validatorCalled";
+    private static final Object MARK_OBJ = new Object();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -184,5 +191,16 @@ public class ThreadCacheContext {
 
     public static void registerUserBean(Object userBean) {
         setObject(FW_USER_BEAN, userBean);
+    }
+
+    // -----------------------------------------------------
+    //                                               Marking
+    //                                               -------
+    public static boolean isValidatorCalled() {
+        return exists() && getObject(FW_VALIDATOR_CALLED) != null;
+    }
+
+    public static void markValidatorCalled() {
+        setObject(FW_VALIDATOR_CALLED, MARK_OBJ);
     }
 }

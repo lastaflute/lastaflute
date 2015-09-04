@@ -40,7 +40,7 @@ public interface ApiManager {
      * Handle API failure when application exception. <br>
      * The hookFinally() of action hook will be called after this.
      * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
-     * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
+     * @param cause The application exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
     ApiResponse handleApplicationException(ApiFailureResource resource, RuntimeException cause);
@@ -53,7 +53,7 @@ public interface ApiManager {
      * HTTP status will be automatically sent by framework's hook so empty response allowed. <br>
      * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
      * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)
-     * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
+     * @param cause The client exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The optional API response, which is for e.g. JSON or XML. (NotNull: if empty, default handling about it)
      */
     OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, RuntimeException cause);
@@ -63,7 +63,7 @@ public interface ApiManager {
      * HTTP status will be automatically sent by framework's hook so empty response allowed. <br>
      * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
      * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)
-     * @param cause The exception thrown by (basically) action execute, might be translated. (NotNull)
+     * @param cause The system exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The optional API response, which is for e.g. JSON or XML. (NotNull: if empty, default handling about it)
      */
     OptionalThing<ApiResponse> handleServerException(ApiFailureResource resource, Throwable cause);

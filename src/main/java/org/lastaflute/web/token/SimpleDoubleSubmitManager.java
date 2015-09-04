@@ -20,8 +20,8 @@ import java.security.NoSuchAlgorithmException;
 
 import javax.annotation.Resource;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.servlet.request.RequestManager;
-import org.lastaflute.web.servlet.session.SessionManager;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -51,12 +51,12 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
 
     protected boolean doDetermineTokenValid(Class<?> groupType, boolean reset) {
         final String tokenKey = getTokenKey();
-        return (boolean) requestManager.getSessionManager().getAttribute(tokenKey, DoubleSubmitTokenMap.class).map(tokenMap -> {
+        return (boolean) getSessionTokenMap(tokenKey).map(tokenMap -> {
             return tokenMap.get(groupType).map(saved -> {
                 if (reset) {
                     resetToken(groupType);
                 }
-                return requestManager.getParameter(tokenKey).map(token -> token.equals(saved)).orElse(false);
+                return getRequestedToken(tokenKey).map(token -> token.equals(saved)).orElse(false);
             }).orElse(false);
         }).orElse(false);
     }
@@ -65,15 +65,16 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     //                                                                  Token Manipulation
     //                                                                  ==================
     @Override
-    public synchronized void saveToken(Class<?> groupType) {
+    public synchronized String saveToken(Class<?> groupType) {
         final String tokenKey = getTokenKey();
-        final SessionManager sessionManager = requestManager.getSessionManager();
-        final DoubleSubmitTokenMap tokenMap = sessionManager.getAttribute(tokenKey, DoubleSubmitTokenMap.class).orElseGet(() -> {
+        final DoubleSubmitTokenMap tokenMap = getSessionTokenMap(tokenKey).orElseGet(() -> {
             final DoubleSubmitTokenMap firstMap = new DoubleSubmitTokenMap();
-            sessionManager.setAttribute(tokenKey, firstMap);
+            requestManager.getSessionManager().setAttribute(tokenKey, firstMap);
             return firstMap;
         });
-        tokenMap.put(groupType, generateToken(groupType));
+        final String generated = generateToken(groupType);
+        tokenMap.put(groupType, generated);
+        return generated;
     }
 
     @Override
@@ -113,15 +114,25 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     @Override
     public synchronized void resetToken(Class<?> groupType) {
         final String tokenKey = getTokenKey();
-        final SessionManager sessionManager = requestManager.getSessionManager();
-        sessionManager.getAttribute(tokenKey, DoubleSubmitTokenMap.class).ifPresent(tokenMap -> {
+        getSessionTokenMap(tokenKey).ifPresent(tokenMap -> {
             tokenMap.remove(groupType);
             if (tokenMap.isEmpty()) {
-                sessionManager.removeAttribute(tokenKey);
+                requestManager.getSessionManager().removeAttribute(tokenKey);
             }
         }).orElse(() -> {
-            sessionManager.removeAttribute(tokenKey);
+            requestManager.getSessionManager().removeAttribute(tokenKey);
         });
+    }
+
+    // ===================================================================================
+    //                                                                        Token Access
+    //                                                                        ============
+    protected OptionalThing<DoubleSubmitTokenMap> getSessionTokenMap(String tokenKey) {
+        return requestManager.getSessionManager().getAttribute(tokenKey, DoubleSubmitTokenMap.class);
+    }
+
+    protected OptionalThing<String> getRequestedToken(String tokenKey) {
+        return requestManager.getParameter(tokenKey);
     }
 
     // ===================================================================================

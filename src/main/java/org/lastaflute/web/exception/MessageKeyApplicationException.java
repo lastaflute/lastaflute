@@ -24,13 +24,13 @@ public class MessageKeyApplicationException extends LaApplicationException {
 
     private static final long serialVersionUID = 1L;
 
-    public MessageKeyApplicationException(String msg, String messageKey) {
+    public MessageKeyApplicationException(String msg, String messageKey, Object... args) {
         super(msg + ": " + messageKey);
-        saveErrors(messageKey);
+        saveErrors(messageKey, args);
     }
 
-    public MessageKeyApplicationException(String msg, String messageKey, Throwable cause) {
+    public MessageKeyApplicationException(String msg, Throwable cause, String messageKey, Object... args) {
         super(msg + ": " + messageKey, cause);
-        saveErrors(messageKey);
+        saveErrors(messageKey, args);
     }
 }

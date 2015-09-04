@@ -22,9 +22,11 @@ import java.util.function.Consumer;
 
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
+import org.lastaflute.core.json.adapter.BooleanGsonAdaptable;
 import org.lastaflute.core.json.adapter.DBFluteGsonAdaptable;
 import org.lastaflute.core.json.adapter.Java8TimeGsonAdaptable;
 import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
+import org.lastaflute.core.json.adapter.StringGsonAdaptable;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -33,54 +35,85 @@ import com.google.gson.GsonBuilder;
  * @author jflute
  */
 public class GsonJsonParser implements RealJsonParser // adapters here
-        , DBFluteGsonAdaptable, Java8TimeGsonAdaptable, NumberGsonAdaptable {
+        , StringGsonAdaptable, NumberGsonAdaptable, Java8TimeGsonAdaptable, BooleanGsonAdaptable, DBFluteGsonAdaptable {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final JsonMappingOption option;
     protected final Gson gson;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public GsonJsonParser(Consumer<GsonBuilder> settings) {
+    public GsonJsonParser(Consumer<GsonBuilder> oneArgLambda, Consumer<JsonMappingOption> opLambda) {
+        option = createOption(opLambda); // should be before creating Gson
+        gson = createGson(oneArgLambda); // using option variable
+    }
+
+    protected JsonMappingOption createOption(Consumer<JsonMappingOption> opLambda) {
+        final JsonMappingOption option = new JsonMappingOption();
+        opLambda.accept(option);
+        return option;
+    }
+
+    protected Gson createGson(Consumer<GsonBuilder> settings) {
         final GsonBuilder builder = newGsonBuilder();
         setupDefaultSettings(builder);
         setupYourSettings(builder);
         acceptGsonSettings(settings, builder);
-        gson = builder.create();
+        return builder.create();
     }
 
     protected GsonBuilder newGsonBuilder() {
         return new GsonBuilder();
     }
 
-    protected void setupDefaultSettings(final GsonBuilder builder) {
-        registerDBFluteAdapter(builder);
-        registerJava8TimeAdapter(builder);
+    // -----------------------------------------------------
+    //                                      Default Settings
+    //                                      ----------------
+    protected void setupDefaultSettings(GsonBuilder builder) {
+        registerStringAdapter(builder);
         registerNumberAdapter(builder);
+        registerJava8TimeAdapter(builder);
+        registerBooleanAdapter(builder);
         registerUtilDateFormat(builder);
+        registerDBFluteAdapter(builder);
     }
 
-    protected void registerDBFluteAdapter(GsonBuilder builder) {
-        builder.registerTypeAdapterFactory(createClassifictory());
-    }
-
-    protected void registerJava8TimeAdapter(GsonBuilder builder) { // until supported by Gson
-        builder.registerTypeAdapterFactory(createDateTimctory());
+    protected void registerStringAdapter(GsonBuilder builder) {
+        builder.registerTypeAdapterFactory(createStringTypeAdapterFactory());
     }
 
     protected void registerNumberAdapter(GsonBuilder builder) { // to show property path in exception message
-        FACTORIES.forEach(factory -> builder.registerTypeAdapterFactory(factory));
+        createNumberFactoryList().forEach(factory -> builder.registerTypeAdapterFactory(factory));
+    }
+
+    protected void registerJava8TimeAdapter(GsonBuilder builder) { // until supported by Gson
+        builder.registerTypeAdapterFactory(createDateTimeTypeAdapterFactory());
+    }
+
+    protected void registerBooleanAdapter(GsonBuilder builder) { // to adjust boolean expression flexibly
+        builder.registerTypeAdapterFactory(createBooleanTypeAdapterFactory());
     }
 
     protected void registerUtilDateFormat(GsonBuilder builder) {
         builder.setDateFormat("yyyy-MM-dd'T'HH:mm:ss"); // same as local date-time
     }
 
+    protected void registerDBFluteAdapter(GsonBuilder builder) {
+        builder.registerTypeAdapterFactory(createClassificationTypeAdapterFactory());
+    }
+
+    // -----------------------------------------------------
+    //                                         Your Settings
+    //                                         -------------
     protected void setupYourSettings(GsonBuilder builder) { // you can override
     }
 
+    // -----------------------------------------------------
+    //                                         Gson Settings
+    //                                         -------------
     protected void acceptGsonSettings(Consumer<GsonBuilder> settings, GsonBuilder builder) {
         settings.accept(builder);
     }
@@ -88,11 +121,15 @@ public class GsonJsonParser implements RealJsonParser // adapters here
     // ===================================================================================
     //                                                                      JSON Interface
     //                                                                      ==============
-    @SuppressWarnings("unchecked")
     @Override
     public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) { // are not null, already checked
         final BEAN bean = gson.fromJson(json, beanType); // if empty JSON, new-only instance
-        return bean != null ? bean : (BEAN) DfReflectionUtil.newInstance(beanType);
+        return bean != null ? bean : newEmptyInstance(beanType);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <BEAN> BEAN newEmptyInstance(Class<BEAN> beanType) {
+        return (BEAN) DfReflectionUtil.newInstance(beanType);
     }
 
     @Override
@@ -102,7 +139,30 @@ public class GsonJsonParser implements RealJsonParser // adapters here
     }
 
     @Override
+    public <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType) {
+        final BEAN bean = gson.fromJson(json, parameterizedType); // if empty JSON, new-only instance
+        return bean != null ? bean : newEmptyInstance(parameterizedType);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <BEAN> BEAN newEmptyInstance(ParameterizedType parameterizedType) {
+        final Class<?> rawClass = DfReflectionUtil.getRawClass(parameterizedType);
+        if (rawClass == null) {
+            throw new IllegalStateException("Cannot get raw type from the parameterized type: " + parameterizedType);
+        }
+        return (BEAN) newEmptyInstance(rawClass);
+    }
+
+    @Override
     public String toJson(Object bean) { // is not null, already checked
         return gson.toJson(bean);
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    @Override
+    public JsonMappingOption getGsonOption() {
+        return option;
     }
 }

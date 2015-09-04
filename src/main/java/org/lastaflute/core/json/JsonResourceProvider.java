@@ -25,7 +25,9 @@ public interface JsonResourceProvider {
      * Provide the parser of JSON which is actually used for parsing.
      * @return The instance for real parser of JSON. (NullAllowed: if null, use default)
      */
-    RealJsonParser provideJsonParser();
+    default RealJsonParser provideJsonParser() {
+        return null; // use default
+    }
 
     /**
      * Is null property suppressed (not displayed) in output JSON string?
@@ -41,5 +43,13 @@ public interface JsonResourceProvider {
      */
     default boolean isPrettyPrintSuppressed() {
         return false; // line separating if development.here as default
+    }
+
+    /**
+     * Provide the option of JSON mapping, e.g. date format
+     * @return The new-created option of JSON mapping. (NullAllowed: if null, use default)
+     */
+    default JsonMappingOption provideOption() {
+        return null;
     }
 }

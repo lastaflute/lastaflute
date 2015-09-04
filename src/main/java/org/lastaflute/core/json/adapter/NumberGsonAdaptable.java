@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
 
 import com.google.gson.JsonSyntaxException;
@@ -28,6 +30,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
 import com.google.gson.internal.bind.TypeAdapters;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
 /**
@@ -36,31 +39,23 @@ import com.google.gson.stream.JsonWriter;
 public interface NumberGsonAdaptable { // to show property path in exception message
 
     // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    TypeAdapter<Number> INTEGER = new TypeAdapterInteger();
-
-    TypeAdapterFactory INTEGER_FACTORY = TypeAdapters.newFactory(int.class, Integer.class, INTEGER);
-
-    TypeAdapter<Number> LONG = new TypeAdapterLong();
-
-    TypeAdapterFactory LONG_FACTORY = TypeAdapters.newFactory(long.class, Long.class, LONG);
-
-    TypeAdapter<BigDecimal> BIGDECIMAL = new TypeAdapterBigDecimal();
-
-    TypeAdapterFactory BIGDECIMAL_FACTORY = TypeAdapters.newFactory(BigDecimal.class, BIGDECIMAL);
-
-    List<TypeAdapterFactory> FACTORIES = Arrays.asList(INTEGER_FACTORY, LONG_FACTORY, BIGDECIMAL_FACTORY);
-
-    // ===================================================================================
     //                                                                        Type Adapter
     //                                                                        ============
     abstract class AbstractTypeAdapterNumber<NUM extends Number> extends TypeAdapter<NUM> {
 
+        protected final JsonMappingOption option;
+
+        public AbstractTypeAdapterNumber(JsonMappingOption option) {
+            this.option = option;
+        }
+
         @Override
         public NUM read(JsonReader in) throws IOException {
+            if (isEmptyToNullReading()) { // option
+                return processEmptyToNullReading(in);
+            }
             try {
-                return getRealAdapter().read(in);
+                return getRealAdapter().read(in); // mainly here
             } catch (NumberFormatException e) {
                 throwJsonPropertyNumberParseFailureException(in, e);
                 return null; // unreachable
@@ -70,9 +65,44 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
             }
         }
 
+        protected NUM processEmptyToNullReading(JsonReader in) throws IOException {
+            if (in.peek() == JsonToken.NULL) {
+                in.nextNull();
+                return null;
+            }
+            final String str = in.nextString();
+            if ("".equals(str)) {
+                return null;
+            } else { // original reading because already next element by nextString()
+                @SuppressWarnings("unchecked")
+                final NUM num = (NUM) DfTypeUtil.toNumber(str, getNumberType());
+                return num;
+            }
+        }
+
         @Override
         public void write(JsonWriter out, NUM value) throws IOException {
-            getRealAdapter().write(out, value);
+            if (isNullToEmptyWriting() && value == null) { // option
+                out.value("");
+            } else {
+                if (isEverywhereQuoteWriting()) { // option
+                    out.value(value.toString()); // quoted
+                } else { // mainly here
+                    getRealAdapter().write(out, value);
+                }
+            }
+        }
+
+        protected boolean isEmptyToNullReading() {
+            return option.isEmptyToNullReading();
+        }
+
+        protected boolean isNullToEmptyWriting() {
+            return option.isNullToEmptyWriting();
+        }
+
+        protected boolean isEverywhereQuoteWriting() {
+            return option.isEverywhereQuoteWriting();
         }
 
         protected abstract TypeAdapter<NUM> getRealAdapter();
@@ -103,6 +133,10 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<Number> realAdapter = TypeAdapters.INTEGER;
 
+        public TypeAdapterInteger(JsonMappingOption option) {
+            super(option);
+        }
+
         @Override
         protected TypeAdapter<Number> getRealAdapter() {
             return realAdapter;
@@ -120,6 +154,10 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     class TypeAdapterLong extends AbstractTypeAdapterNumber<Number> {
 
         protected final TypeAdapter<Number> realAdapter = TypeAdapters.LONG;
+
+        public TypeAdapterLong(JsonMappingOption option) {
+            super(option);
+        }
 
         @Override
         protected TypeAdapter<Number> getRealAdapter() {
@@ -139,6 +177,10 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<BigDecimal> realAdapter = TypeAdapters.BIG_DECIMAL;
 
+        public TypeAdapterBigDecimal(JsonMappingOption option) {
+            super(option);
+        }
+
         @Override
         protected TypeAdapter<BigDecimal> getRealAdapter() {
             return realAdapter;
@@ -149,4 +191,49 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
             return BigDecimal.class;
         }
     }
+
+    // ===================================================================================
+    //                                                                             Creator
+    //                                                                             =======
+    default List<TypeAdapterFactory> createNumberFactoryList() {
+        return Arrays.asList(createIntegerTypeAdapterFactory() // Integer
+        , createLongTypeAdapterFactory() // Long
+        , createBigDecimalTypeAdapterFactory() // BigDecimal
+        );
+    }
+
+    // -----------------------------------------------------
+    //                                  Type Adapter Factory
+    //                                  --------------------
+    default TypeAdapterFactory createIntegerTypeAdapterFactory() {
+        return TypeAdapters.newFactory(int.class, Integer.class, createTypeAdapterInteger());
+    }
+
+    default TypeAdapterFactory createLongTypeAdapterFactory() {
+        return TypeAdapters.newFactory(long.class, Long.class, createTypeAdapterLong());
+    }
+
+    default TypeAdapterFactory createBigDecimalTypeAdapterFactory() {
+        return TypeAdapters.newFactory(BigDecimal.class, createTypeAdapterBigDecimal());
+    }
+
+    // -----------------------------------------------------
+    //                                          Type Adapter
+    //                                          ------------
+    default TypeAdapterInteger createTypeAdapterInteger() {
+        return new TypeAdapterInteger(getGsonOption());
+    }
+
+    default TypeAdapterLong createTypeAdapterLong() {
+        return new TypeAdapterLong(getGsonOption());
+    }
+
+    default TypeAdapterBigDecimal createTypeAdapterBigDecimal() {
+        return new TypeAdapterBigDecimal(getGsonOption());
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    JsonMappingOption getGsonOption();
 }
