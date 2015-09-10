@@ -20,9 +20,13 @@ package org.lastaflute.web.exception;
  */
 public class FormPropertyNotFoundException extends RuntimeException {
 
-    private static final long serialVersionUID = -5177019197796206774L;
+    private static final long serialVersionUID = -1;
 
     public FormPropertyNotFoundException(String msg) {
         super(msg);
+    }
+
+    public FormPropertyNotFoundException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }
