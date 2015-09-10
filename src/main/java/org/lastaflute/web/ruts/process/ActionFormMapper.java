@@ -215,7 +215,7 @@ public class ActionFormMapper {
             final List<Object> objList = DfCollectionUtil.toListFromArray(value);
             valueObj = objList.size() == 1 ? objList.get(0) : objList;
         } else {
-            valueObj = (String[]) value;
+            valueObj = value;
         }
         br.addElement(valueObj);
         final String msg = br.buildExceptionMessage();
@@ -477,33 +477,22 @@ public class ActionFormMapper {
             pd.setValue(bean, prepareStringArray(value)); // plain mapping to array, e.g. JSON not supported
         } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
             if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
-                pd.setValue(bean, parseJsonParameter(bean, name, prepareStringScalar(value), pd));
+                pd.setValue(bean, parseJsonParameter(bean, name, prepareJsonScalar(value), pd));
             } else { // e.g. public List<String> strList;
                 pd.setValue(bean, prepareStringList(value, propertyType));
             }
         } else { // not array or list, e.g. String, Object
-            final String exp = prepareStringScalar(value); // not null (empty if null)
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
-                pd.setValue(bean, parseJsonParameter(bean, name, exp, pd));
+                pd.setValue(bean, parseJsonParameter(bean, name, prepareJsonScalar(value), pd));
             } else { // mainly here, e.g. String, Integer, LocalDate, CDef, ...
-                pd.setValue(bean, convertStringToPropertyNativeIfNeeds(bean, name, exp, pd));
+                final Object resolved = prepareObjectScalar(value);
+                final Object converted = convertToPropertyNativeIfPossible(bean, name, resolved, pd);
+                if (converted != null) { // mainly here
+                    pd.setValue(bean, converted);
+                } else { // e.g. multipart form file
+                    pd.setValue(bean, resolved);
+                }
             }
-        }
-    }
-
-    protected String[] prepareStringArray(Object value) {
-        if (value != null && value instanceof String[]) {
-            return (String[]) value;
-        } else {
-            return value != null ? new String[] { value.toString() } : EMPTY_STRING_ARRAY;
-        }
-    }
-
-    protected String prepareStringScalar(Object value) {
-        if (value != null && value instanceof String[] && ((String[]) value).length > 0) {
-            return ((String[]) value)[0];
-        } else {
-            return value != null ? value.toString() : "";
         }
     }
 
@@ -520,19 +509,50 @@ public class ActionFormMapper {
         return Collections.unmodifiableList(valueList);
     }
 
+    protected String[] prepareStringArray(Object value) {// not null (empty if null)
+        if (value != null && value instanceof String[]) {
+            return (String[]) value;
+        } else {
+            return value != null ? new String[] { value.toString() } : EMPTY_STRING_ARRAY;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     protected List<String> newStringList(Class<?> propertyType) {
         return (List<String>) LdiClassUtil.newInstance(propertyType);
     }
 
-    protected Object convertStringToPropertyNativeIfNeeds(Object bean, String name, String exp, PropertyDesc pd) {
+    protected String prepareJsonScalar(Object value) { // not null (empty if null)
+        final Object resolved = prepareObjectScalar(value);
+        if (resolved != null) {
+            if (resolved instanceof String) {
+                return (String) resolved;
+            } else {
+                return resolved.toString();
+            }
+        } else {
+            return "";
+        }
+    }
+
+    protected Object prepareObjectScalar(Object value) { // null allowed
+        if (value != null && value instanceof String[] && ((String[]) value).length > 0) {
+            return ((String[]) value)[0];
+        } else {
+            return value;
+        }
+    }
+
+    protected Object convertToPropertyNativeIfPossible(Object bean, String name, Object exp, PropertyDesc pd) {
         // not to depend on conversion logic in BeanDesc
         final Class<?> propertyType = pd.getPropertyType();
-        final Object filtered;
+        final Object converted;
         if (propertyType.isPrimitive()) {
-            filtered = DfTypeUtil.toWrapper(exp, propertyType);
+            converted = DfTypeUtil.toWrapper(exp, propertyType);
+        } else if (String.class.isAssignableFrom(propertyType)) {
+            converted = exp;
         } else if (Number.class.isAssignableFrom(propertyType)) {
-            filtered = DfTypeUtil.toNumber(exp, propertyType);
+            converted = DfTypeUtil.toNumber(exp, propertyType);
             // old date types are unsupported for LocalDate invitation
             //} else if (Timestamp.class.isAssignableFrom(propertyType)) {
             //    filtered = DfTypeUtil.toTimestamp(exp);
@@ -541,19 +561,19 @@ public class ActionFormMapper {
             //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
             //    filtered = DfTypeUtil.toDate(exp);
         } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
-            filtered = DfTypeUtil.toLocalDate(exp);
+            converted = DfTypeUtil.toLocalDate(exp);
         } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
-            filtered = DfTypeUtil.toLocalDateTime(exp);
+            converted = DfTypeUtil.toLocalDateTime(exp);
         } else if (LocalTime.class.isAssignableFrom(propertyType)) {
-            filtered = DfTypeUtil.toLocalTime(exp);
+            converted = DfTypeUtil.toLocalTime(exp);
         } else if (Boolean.class.isAssignableFrom(propertyType)) {
-            filtered = DfTypeUtil.toBoolean(exp);
+            converted = DfTypeUtil.toBoolean(exp);
         } else if (isClassificationProperty(propertyType)) { // means CDef
-            filtered = toVerifiedClassification(bean, name, exp, pd);
+            converted = toVerifiedClassification(bean, name, exp, pd);
         } else {
-            filtered = exp;
+            converted = null;
         }
-        return filtered;
+        return converted;
     }
 
     // -----------------------------------------------------
@@ -782,7 +802,7 @@ public class ActionFormMapper {
         return LaDBFluteUtil.isClassificationType(propertyType);
     }
 
-    protected Classification toVerifiedClassification(Object bean, String name, String code, PropertyDesc pd) {
+    protected Classification toVerifiedClassification(Object bean, String name, Object code, PropertyDesc pd) {
         final Class<?> propertyType = pd.getPropertyType();
         try {
             return LaDBFluteUtil.toVerifiedClassification(propertyType, code);
@@ -1110,12 +1130,18 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                        Client Error
     //                                                                        ============
-    protected void buildClientErrorHeader(StringBuilder sb, String title, Object bean, String name, String value, Type propertyType,
+    protected void buildClientErrorHeader(StringBuilder sb, String title, Object bean, String name, Object value, Type propertyType,
             String challengeDisp) {
         sb.append(LF).append(LF).append("[").append(title).append("]");
         sb.append(LF).append("Mapping To: ");
         sb.append(bean.getClass().getSimpleName()).append("#").append(name).append(" (").append(propertyType.getTypeName()).append(")");
-        sb.append(LF).append("Requested Value: ").append(value != null && value.contains(LF) ? LF : "").append(value);
+        sb.append(LF).append("Requested Value: ");
+        if (value != null) {
+            final String exp = value.toString();
+            sb.append(exp.contains(LF) ? LF : "").append(exp);
+        } else {
+            sb.append("null");
+        }
         if (challengeDisp != null && challengeDisp.length() > 0) {
             sb.append(LF).append(buildDebugChallengeTitle());
             sb.append(challengeDisp); // debugChallenge starts with LF
