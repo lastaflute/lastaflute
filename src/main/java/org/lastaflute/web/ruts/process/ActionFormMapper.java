@@ -357,7 +357,12 @@ public class ActionFormMapper {
         final int indexedIndex = name.indexOf(INDEXED_DELIM); // e.g. sea[0]
         final int mappedIndex = name.indexOf(MAPPED_DELIM); // e.g. sea(over)
         if (nestedIndex < 0 && indexedIndex < 0 && mappedIndex < 0) { // as simple
-            setSimpleProperty(bean, name, value, parentBean, parentName);
+            try {
+                setSimpleProperty(bean, name, value, parentBean, parentName);
+            } catch (BeanIllegalPropertyException e) {
+                handleSimpleBeanIllegalPropertyException(bean, name, value, e);
+            }
+
         } else {
             final int minIndex = minIndex(minIndex(nestedIndex, indexedIndex), mappedIndex);
             if (minIndex == nestedIndex) { // e.g. sea.mythica
@@ -384,6 +389,26 @@ public class ActionFormMapper {
                 setProperty(bean, front + "." + middle + rear, value, bean, front); // *recursive
             }
         }
+    }
+
+    protected void handleSimpleBeanIllegalPropertyException(Object bean, String name, Object value, BeanIllegalPropertyException e) {
+        if (!(e.getCause() instanceof NumberFormatException)) {
+            throw e;
+        }
+        // here: non-number GET or URL parameter but number type property
+        // suppress easy 500 error by non-number GET or URL parameter
+        //  (o): /edit/123/
+        //  (x): /edit/abc/ *this case
+        // you can accept ID on URL parameter as Long type in ActionForm
+        final Object dispValue;
+        if (value instanceof Object[]) {
+            dispValue = Arrays.asList((Object[]) value).toString();
+        } else {
+            dispValue = value;
+        }
+        String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case
+        String msg = "The property value cannot be number: " + beanExp + ", name=" + name + ", value=" + dispValue;
+        throwRequestPropertyMappingFailureException(msg, e);
     }
 
     protected static class IndexParsedResult {
@@ -432,30 +457,6 @@ public class ActionFormMapper {
     }
 
     protected void setSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
-        try {
-            doSetSimpleProperty(bean, name, value, parentBean, parentName);
-        } catch (BeanIllegalPropertyException e) {
-            if (!(e.getCause() instanceof NumberFormatException)) {
-                throw e;
-            }
-            // here: non-number GET or URL parameter but number type property
-            // suppress easy 500 error by non-number GET or URL parameter
-            //  (o): /edit/123/
-            //  (x): /edit/abc/ *this case
-            // you can accept ID on URL parameter as Long type in ActionForm
-            final Object dispValue;
-            if (value instanceof Object[]) {
-                dispValue = Arrays.asList((Object[]) value).toString();
-            } else {
-                dispValue = value;
-            }
-            String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case
-            String msg = "The property value cannot be number: " + beanExp + ", name=" + name + ", value=" + dispValue;
-            throwRequestPropertyMappingFailureException(msg, e);
-        }
-    }
-
-    protected void doSetSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
         if (bean instanceof Map) {
             @SuppressWarnings("unchecked")
             final Map<String, Object> map = (Map<String, Object>) bean;
@@ -484,7 +485,7 @@ public class ActionFormMapper {
         } else { // not array or list, e.g. String, Object
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
                 pd.setValue(bean, parseJsonParameter(bean, name, prepareJsonScalar(value), pd));
-            } else { // mainly here, e.g. String, Integer, LocalDate, CDef, ...
+            } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
                 final Object resolved = prepareObjectScalar(value);
                 final Object converted = convertToPropertyNativeIfPossible(bean, name, resolved, pd);
                 if (converted != null) { // mainly here
@@ -493,6 +494,14 @@ public class ActionFormMapper {
                     pd.setValue(bean, resolved);
                 }
             }
+        }
+    }
+
+    protected String[] prepareStringArray(Object value) {// not null (empty if null)
+        if (value != null && value instanceof String[]) {
+            return (String[]) value;
+        } else {
+            return value != null ? new String[] { value.toString() } : EMPTY_STRING_ARRAY;
         }
     }
 
@@ -507,14 +516,6 @@ public class ActionFormMapper {
             valueList.add(element);
         }
         return Collections.unmodifiableList(valueList);
-    }
-
-    protected String[] prepareStringArray(Object value) {// not null (empty if null)
-        if (value != null && value instanceof String[]) {
-            return (String[]) value;
-        } else {
-            return value != null ? new String[] { value.toString() } : EMPTY_STRING_ARRAY;
-        }
     }
 
     @SuppressWarnings("unchecked")
@@ -550,7 +551,7 @@ public class ActionFormMapper {
         if (propertyType.isPrimitive()) {
             converted = DfTypeUtil.toWrapper(exp, propertyType);
         } else if (String.class.isAssignableFrom(propertyType)) {
-            converted = exp;
+            converted = exp != null ? exp : ""; // empty string as default 
         } else if (Number.class.isAssignableFrom(propertyType)) {
             converted = DfTypeUtil.toNumber(exp, propertyType);
             // old date types are unsupported for LocalDate invitation
