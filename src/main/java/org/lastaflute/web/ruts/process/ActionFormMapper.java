@@ -474,27 +474,29 @@ public class ActionFormMapper {
             return;
         }
         final Class<?> propertyType = pd.getPropertyType();
+        final Object mappedValue;
         if (propertyType.isArray()) { // e.g. public String[] strArray;
-            pd.setValue(bean, prepareStringArray(value)); // plain mapping to array, e.g. JSON not supported
+            mappedValue = prepareStringArray(value); // plain mapping to array, e.g. JSON not supported
         } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
             if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
-                pd.setValue(bean, parseJsonParameter(bean, name, prepareJsonScalar(value), pd));
+                mappedValue = parseJsonParameter(bean, name, prepareJsonScalar(value), pd);
             } else { // e.g. public List<String> strList;
-                pd.setValue(bean, prepareStringList(value, propertyType));
+                mappedValue = prepareStringList(value, propertyType);
             }
         } else { // not array or list, e.g. String, Object
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
-                pd.setValue(bean, parseJsonParameter(bean, name, prepareJsonScalar(value), pd));
+                mappedValue = parseJsonParameter(bean, name, prepareJsonScalar(value), pd);
             } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
                 final Object resolved = prepareObjectScalar(value);
                 final Object converted = convertToPropertyNativeIfPossible(bean, name, resolved, pd);
                 if (converted != null) { // mainly here
-                    pd.setValue(bean, converted);
+                    mappedValue = converted;
                 } else { // e.g. multipart form file
-                    pd.setValue(bean, resolved);
+                    mappedValue = resolved;
                 }
             }
         }
+        pd.setValue(bean, mappedValue);
     }
 
     protected String[] prepareStringArray(Object value) {// not null (empty if null)
