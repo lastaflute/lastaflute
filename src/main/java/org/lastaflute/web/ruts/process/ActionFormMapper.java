@@ -479,20 +479,23 @@ public class ActionFormMapper {
             mappedValue = prepareStringArray(value); // plain mapping to array, e.g. JSON not supported
         } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
             if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
-                mappedValue = parseJsonParameter(bean, name, prepareJsonScalar(value), pd);
+                final Object scalar = prepareObjectScalar(value);
+                mappedValue = parseJsonParameter(bean, name, prepareJsonString(scalar), pd);
             } else { // e.g. public List<String> strList;
                 mappedValue = prepareStringList(value, propertyType);
             }
         } else { // not array or list, e.g. String, Object
+            final Object scalar = prepareObjectScalar(value);
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
-                mappedValue = parseJsonParameter(bean, name, prepareJsonScalar(value), pd);
-            } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
-                final Object resolved = prepareObjectScalar(value);
-                final Object converted = convertToPropertyNativeIfPossible(bean, name, resolved, pd);
+                mappedValue = parseJsonParameter(bean, name, prepareJsonString(scalar), pd);
+            } else if (isClassificationProperty(propertyType)) { // e.g. CDef
+                mappedValue = toVerifiedClassification(bean, name, scalar, pd); // null allowed
+            } else { // e.g. String, Integer, LocalDate, MultipartFormFile, ...
+                final Object converted = convertToPropertyNativeIfPossible(bean, name, scalar, pd);
                 if (converted != null) { // mainly here
                     mappedValue = converted;
                 } else { // e.g. multipart form file
-                    mappedValue = resolved;
+                    mappedValue = scalar;
                 }
             }
         }
@@ -525,13 +528,12 @@ public class ActionFormMapper {
         return (List<String>) LdiClassUtil.newInstance(propertyType);
     }
 
-    protected String prepareJsonScalar(Object value) { // not null (empty if null)
-        final Object resolved = prepareObjectScalar(value);
-        if (resolved != null) {
-            if (resolved instanceof String) {
-                return (String) resolved;
+    protected String prepareJsonString(Object value) { // not null (empty if null)
+        if (value != null) {
+            if (value instanceof String) {
+                return (String) value;
             } else {
-                return resolved.toString();
+                return value.toString();
             }
         } else {
             return "";
@@ -571,8 +573,9 @@ public class ActionFormMapper {
             converted = DfTypeUtil.toLocalTime(exp);
         } else if (Boolean.class.isAssignableFrom(propertyType)) {
             converted = DfTypeUtil.toBoolean(exp);
-        } else if (isClassificationProperty(propertyType)) { // means CDef
-            converted = toVerifiedClassification(bean, name, exp, pd);
+            // already resolved here, because of null handling
+            //} else if (isClassificationProperty(propertyType)) { // means CDef
+            //    converted = toVerifiedClassification(bean, name, exp, pd);
         } else {
             converted = null;
         }
