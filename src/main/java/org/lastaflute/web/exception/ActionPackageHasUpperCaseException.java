@@ -20,15 +20,15 @@ import org.lastaflute.core.exception.LaSystemException;
 /**
  * @author jflute
  */
-public class ActionDefinitionMistakeException extends LaSystemException {
+public class ActionPackageHasUpperCaseException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public ActionDefinitionMistakeException(String msg) {
+    public ActionPackageHasUpperCaseException(String msg) {
         super(msg);
     }
 
-    public ActionDefinitionMistakeException(String msg, Throwable cause) {
+    public ActionPackageHasUpperCaseException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }
