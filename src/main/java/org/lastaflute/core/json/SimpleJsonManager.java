@@ -16,7 +16,6 @@
 package org.lastaflute.core.json;
 
 import java.lang.reflect.ParameterizedType;
-import java.util.List;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -210,13 +209,6 @@ public class SimpleJsonManager implements JsonManager {
         assertArgumentNotNull("json", json);
         assertArgumentNotNull("beanType", beanType);
         return realJsonParser.fromJson(json, beanType);
-    }
-
-    @Override
-    public <ELEMENT> List<ELEMENT> fromJsonList(String json, ParameterizedType elementType) {
-        assertArgumentNotNull("json", json);
-        assertArgumentNotNull("elementType", elementType);
-        return realJsonParser.fromJsonList(json, elementType);
     }
 
     @Override

@@ -47,7 +47,6 @@ import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.core.util.GenericTypeRef;
 import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
 import org.lastaflute.di.core.aop.javassist.AspectWeaver;
@@ -56,6 +55,7 @@ import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.exception.BeanIllegalPropertyException;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
+import org.lastaflute.di.helper.misc.ParameterizedRef;
 import org.lastaflute.di.util.LdiArrayUtil;
 import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.di.util.LdiModifierUtil;
@@ -308,7 +308,7 @@ public class ActionFormMapper {
         try {
             final ActionFormMeta formMeta = virtualActionForm.getFormMeta();
             final ParameterizedType pt = formMeta.getListFormParameterParameterizedType().get(); // already checked
-            final List<Object> fromJsonList = getJsonManager().fromJsonList(json, pt);
+            final List<Object> fromJsonList = getJsonManager().fromJsonParameteried(json, pt);
             acceptJsonRealForm(virtualActionForm, fromJsonList);
         } catch (RuntimeException e) {
             throwListJsonBodyParseFailureException(runtime, virtualActionForm, json, e);
@@ -671,7 +671,7 @@ public class ActionFormMapper {
                 return null; // unreachable
             }
             try {
-                return jsonManager.fromJsonList(json, paramedType); // e.g. public List<SeaBean> beanList;
+                return jsonManager.fromJsonParameteried(json, paramedType); // e.g. public List<SeaBean> beanList;
             } catch (RuntimeException e) {
                 throwListJsonParameterParseFailureException(bean, name, json, paramedType, e);
                 return null; // unreachable
@@ -1121,8 +1121,8 @@ public class ActionFormMapper {
 
     protected List<Map<String, Object>> retryJsonListAsMapForDebug(String json) {
         try {
-            return getJsonManager().fromJsonList(json, new GenericTypeRef<List<Map<String, Object>>>() {
-            }.getParameterizedType());
+            return getJsonManager().fromJsonParameteried(json, new ParameterizedRef<List<Map<String, Object>>>() {
+            }.getType());
         } catch (RuntimeException ignored) {
             return Collections.emptyList();
         }

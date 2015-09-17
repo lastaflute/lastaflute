@@ -16,8 +16,8 @@
 package org.lastaflute.core.json;
 
 import java.lang.reflect.ParameterizedType;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.dbflute.util.DfCollectionUtil;
@@ -127,21 +127,25 @@ public class GsonJsonParser implements RealJsonParser // adapters here
         return bean != null ? bean : newEmptyInstance(beanType);
     }
 
-    @SuppressWarnings("unchecked")
-    protected <BEAN> BEAN newEmptyInstance(Class<BEAN> beanType) {
-        return (BEAN) DfReflectionUtil.newInstance(beanType);
-    }
-
-    @Override
-    public <BEAN> List<BEAN> fromJsonList(String json, ParameterizedType elementType) { // are not null, already checked
-        final List<BEAN> list = gson.fromJson(json, elementType); // if empty JSON, empty list
-        return list != null ? Collections.unmodifiableList(list) : DfCollectionUtil.emptyList();
-    }
-
     @Override
     public <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType) {
         final BEAN bean = gson.fromJson(json, parameterizedType); // if empty JSON, new-only instance
-        return bean != null ? bean : newEmptyInstance(parameterizedType);
+        if (bean != null) {
+            return bean;
+        } else { // e.g. empty string JSON
+            final Class<?> rawClass = DfReflectionUtil.getRawClass(parameterizedType.getRawType()); // null allowed?
+            if (List.class.equals(rawClass)) {
+                @SuppressWarnings("unchecked")
+                final BEAN emptyList = (BEAN) DfCollectionUtil.newArrayListSized(2); // empty but mutable for coherence
+                return emptyList;
+            } else if (Map.class.equals(rawClass)) {
+                @SuppressWarnings("unchecked")
+                final BEAN emptyList = (BEAN) DfCollectionUtil.newHashMapSized(2); // empty but mutable for coherence
+                return emptyList;
+            } else {
+                return newEmptyInstance(parameterizedType);
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -151,6 +155,11 @@ public class GsonJsonParser implements RealJsonParser // adapters here
             throw new IllegalStateException("Cannot get raw type from the parameterized type: " + parameterizedType);
         }
         return (BEAN) newEmptyInstance(rawClass);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <BEAN> BEAN newEmptyInstance(Class<BEAN> beanType) {
+        return (BEAN) DfReflectionUtil.newInstance(beanType);
     }
 
     @Override
