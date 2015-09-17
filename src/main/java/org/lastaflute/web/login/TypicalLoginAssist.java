@@ -148,7 +148,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             final ID castId = (ID) userId;
             return doFindLoginUser(castId);
         } catch (ClassCastException e) { // also find method, because of generic cast
-            throw new IllegalStateException("Cannot cast the user ID: " + userId.getClass() + ", " + userId);
+            throw new IllegalStateException("Cannot cast the user ID: " + userId.getClass() + ", " + userId, e);
         }
     }
 
