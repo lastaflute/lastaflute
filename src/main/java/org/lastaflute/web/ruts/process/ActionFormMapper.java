@@ -64,6 +64,7 @@ import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.IndexedPropertyNonParameterizedListException;
 import org.lastaflute.web.exception.IndexedPropertyNotListArrayException;
+import org.lastaflute.web.exception.JsonBodyCannotReadFromRequestException;
 import org.lastaflute.web.exception.RequestClassifiationConvertFailureException;
 import org.lastaflute.web.exception.RequestJsonParseFailureException;
 import org.lastaflute.web.exception.RequestPropertyMappingFailureException;
@@ -227,11 +228,11 @@ public class ActionFormMapper {
     //                                                                           =========
     protected boolean handleJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm) throws IOException {
         if (isJsonBodyForm(virtualActionForm.getFormMeta().getFormType())) {
-            mappingJsonBody(runtime, virtualActionForm, getRequestBody());
+            mappingJsonBody(runtime, virtualActionForm, extractJsonFromRequestBody(virtualActionForm));
             return true;
         }
         if (isListJsonBodyForm(virtualActionForm)) {
-            mappingListJsonBody(runtime, virtualActionForm, getRequestBody());
+            mappingListJsonBody(runtime, virtualActionForm, extractJsonFromRequestBody(virtualActionForm));
             return true;
         }
         return false;
@@ -247,8 +248,21 @@ public class ActionFormMapper {
         }).orElse(false);
     }
 
-    protected String getRequestBody() throws IOException {
-        return requestManager.getRequestBody();
+    protected String extractJsonFromRequestBody(VirtualActionForm virtualActionForm) {
+        try {
+            return requestManager.getRequestBody();
+        } catch (RuntimeException e) {
+            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("Cannot read request body for JSON.");
+            br.addItem("Advice");
+            br.addElement("Your action expects JSON string on request body.");
+            br.addElement("Make sure your request for JSON body.");
+            br.addElement("Or it should be form...? e.g. SeaBody => SeaForm");
+            br.addItem("Body Class");
+            br.addElement(virtualActionForm);
+            final String msg = br.buildExceptionMessage();
+            throw new JsonBodyCannotReadFromRequestException(msg, e);
+        }
     }
 
     // -----------------------------------------------------
