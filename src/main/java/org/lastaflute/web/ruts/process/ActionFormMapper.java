@@ -44,6 +44,7 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
@@ -82,6 +83,8 @@ import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureExcept
 import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -91,6 +94,7 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(ActionFormMapper.class);
     protected static final String MULTIPART_CONTENT_TYPE = "multipart/form-data";
     protected static final String CACHE_KEY_DECODED_PROPERTY_MAP = "requestProcessor.decodedPropertyMap";
     protected static final String CACHE_KEY_URL_PARAM_NAMES_CACHED_SET = "requestProcessor.urlParamNames.cachedSet";
@@ -228,11 +232,11 @@ public class ActionFormMapper {
     //                                                                           =========
     protected boolean handleJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm) throws IOException {
         if (isJsonBodyForm(virtualActionForm.getFormMeta().getFormType())) {
-            mappingJsonBody(runtime, virtualActionForm, extractJsonFromRequestBody(virtualActionForm));
+            mappingJsonBody(runtime, virtualActionForm, prepareJsonFromRequestBody(virtualActionForm));
             return true;
         }
         if (isListJsonBodyForm(virtualActionForm)) {
-            mappingListJsonBody(runtime, virtualActionForm, extractJsonFromRequestBody(virtualActionForm));
+            mappingListJsonBody(runtime, virtualActionForm, prepareJsonFromRequestBody(virtualActionForm));
             return true;
         }
         return false;
@@ -248,9 +252,13 @@ public class ActionFormMapper {
         }).orElse(false);
     }
 
-    protected String extractJsonFromRequestBody(VirtualActionForm virtualActionForm) {
+    protected String prepareJsonFromRequestBody(VirtualActionForm virtualActionForm) {
         try {
-            return requestManager.getRequestBody();
+            final String body = requestManager.getRequestBody();
+            if (logger.isDebugEnabled()) {
+                logger.debug("#flow ...Parsing JSON from request body:\n{}", buildJsonBodyDebugDisplay(body));
+            }
+            return body;
         } catch (RuntimeException e) {
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
             br.addNotice("Cannot read request body for JSON.");
@@ -263,6 +271,11 @@ public class ActionFormMapper {
             final String msg = br.buildExceptionMessage();
             throw new JsonBodyCannotReadFromRequestException(msg, e);
         }
+    }
+
+    protected String buildJsonBodyDebugDisplay(String value) {
+        // want to show all as parameter, but limit just in case to avoid large logging
+        return Srl.cut(value.trim(), 800, "..."); // might have rear LF
     }
 
     // -----------------------------------------------------
