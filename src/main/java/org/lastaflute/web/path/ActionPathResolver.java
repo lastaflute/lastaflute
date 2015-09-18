@@ -126,7 +126,7 @@ public class ActionPathResolver {
         List<String> previousList = null; // lazy loaded, (empty) => [sea] => [sea, land]
         for (int index = 0; index < names.length; index++) {
             final String currentName = names[index];
-            if (Srl.isUpperCaseAny(currentName)) { // e.g. /Sea/land/, /sea/Land/
+            if (containsNotAllowedCharacterAsActionPath(currentName)) { // e.g. /Sea/land/, /sea/Land/
                 return false; // cannot use upper case in action path (while, allowed in param path)
             }
             final int nextIndex = index + 1;
@@ -228,6 +228,10 @@ public class ActionPathResolver {
         br.addElement(componentName);
         final String msg = br.buildExceptionMessage();
         throw new ActionClassPackageMismatchException(msg, e);
+    }
+
+    protected boolean containsNotAllowedCharacterAsActionPath(String currentName) {
+        return Srl.isUpperCaseAny(currentName);
     }
 
     protected String buildActionName(String pkg, String classPrefix) {
@@ -449,11 +453,11 @@ public class ActionPathResolver {
         final List<String> nameList = buildExpectedRoutingActionList(customizedPath != null ? customizedPath : requestPath);
         boolean exists = false;
         for (String name : nameList) {
-            if (name.endsWith("@index()") && Srl.isUpperCaseAny(requestPath)) { // e.g. /product/List/
+            if (name.endsWith("@index()") && containsNotAllowedCharacterAsActionPath(requestPath)) { // e.g. /product/List/
                 continue;
             }
             final String packageExp = Srl.substringLastFront(name, ".");
-            if (!Srl.isUpperCaseAny(packageExp)) {
+            if (!containsNotAllowedCharacterAsActionPath(packageExp)) {
                 sb.append("  web.").append(name).append("\n");
                 exists = true;
             }

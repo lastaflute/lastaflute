@@ -69,10 +69,14 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     protected void verifyPackageConvention(ComponentDef actionDef, String actionName) {
         if (actionName.contains("_")) {
             final String packageExp = Srl.substringLastFront(actionName, "_");
-            if (Srl.isUpperCaseAny(packageExp)) { // e.g. seaLand_seaLandAction
+            if (containsNotAllowedCharacterAsActionPath(packageExp)) { // e.g. seaLand_seaLandAction
                 throwActionPackageHasUpperCaseException(actionDef, actionName);
             }
         }
+    }
+
+    protected boolean containsNotAllowedCharacterAsActionPath(String packageExp) {
+        return Srl.isUpperCaseAny(packageExp);
     }
 
     protected void throwActionPackageHasUpperCaseException(ComponentDef actionDef, String actionName) {
