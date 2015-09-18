@@ -13,15 +13,13 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.callback;
+package org.lastaflute.web.servlet.filter.cors;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.response.JsonResponse;
-import org.lastaflute.web.servlet.request.RequestManager;
-import org.lastaflute.web.servlet.request.ResponseManager;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * @author jflute
@@ -32,48 +30,30 @@ public class CrossOriginResourceSharing {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final RequestManager requestManager;
     protected final String allowOrigin;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public CrossOriginResourceSharing(RequestManager requestManager, String allowOrigin) {
-        assertArgumentNotNull("requestManager", requestManager);
+    public CrossOriginResourceSharing(String allowOrigin) {
         assertArgumentNotNull("allowOrigin", allowOrigin);
-        this.requestManager = requestManager;
         this.allowOrigin = allowOrigin;
     }
 
     // ===================================================================================
     //                                                                               Share
     //                                                                               =====
-    public ActionResponse share() {
-        if (isTargetRequest()) {
-            return createPreflightResponse();
-        } else {
-            return handleRealResponse();
-        }
+    public boolean share(HttpServletRequest request, HttpServletResponse response) {
+        setupAllowHeader(response);
+        return isOptionsRequest(request);
     }
 
-    protected boolean isTargetRequest() {
-        return requestManager.getRequest().getMethod().equals("OPTIONS");
+    protected boolean isOptionsRequest(HttpServletRequest request) {
+        return request.getMethod().equals("OPTIONS");
     }
 
-    protected ActionResponse createPreflightResponse() {
-        final ActionResponse response = newAllowResponse();
-        prepareAllowHeaderMap().forEach((key, value) -> response.header(key, value));
-        return response;
-    }
-
-    protected ActionResponse newAllowResponse() {
-        return JsonResponse.asEmptyBody();
-    }
-
-    protected ActionResponse handleRealResponse() {
-        final ResponseManager responseManager = requestManager.getResponseManager();
-        prepareAllowHeaderMap().forEach((key, value) -> responseManager.addHeader(key, value));
-        return ActionResponse.undefined(); // only header setup here
+    protected void setupAllowHeader(HttpServletResponse response) {
+        prepareAllowHeaderMap().forEach((key, value) -> response.addHeader(key, value));
     }
 
     // -----------------------------------------------------

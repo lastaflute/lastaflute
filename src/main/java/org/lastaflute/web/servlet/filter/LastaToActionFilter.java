@@ -33,7 +33,7 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.web.direction.FwWebDirection;
-import org.lastaflute.web.servlet.filter.listener.FilterHook;
+import org.lastaflute.web.servlet.filter.hook.FilterHook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

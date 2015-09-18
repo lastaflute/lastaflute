@@ -60,7 +60,6 @@ public class TypicalGodHandPrologue {
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
-    protected final OptionalThing<CrossOriginResourceSharing> corSharing;
     protected final AccessContextArranger accessContextArranger;
     protected final Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier;
     protected final Supplier<String> appTypeSupplier;
@@ -68,14 +67,12 @@ public class TypicalGodHandPrologue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandPrologue(TypicalGodHandResource resource, OptionalThing<CrossOriginResourceSharing> corSharing,
-            AccessContextArranger accessContextArranger, Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier,
-            Supplier<String> appTypeSupplier) {
+    public TypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger accessContextArranger,
+            Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier, Supplier<String> appTypeSupplier) {
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
         this.loginManager = resource.getLoginManager();
         this.apiManager = resource.getApiManager();
-        this.corSharing = corSharing;
         this.accessContextArranger = accessContextArranger;
         this.userBeanSupplier = userBeanSupplier;
         this.appTypeSupplier = appTypeSupplier;
@@ -86,10 +83,6 @@ public class TypicalGodHandPrologue {
     //                                                                            ========
     public ActionResponse performPrologue(ActionRuntime runtime) { // fixed process
         arrangeThreadCacheContextBasicItem(runtime);
-        final ActionResponse sharedResponse = handleCrossOriginResourceSharing();
-        if (sharedResponse.isDefined()) {
-            return sharedResponse;
-        }
         arrangePreparedAccessContext(runtime);
         arrangeCallbackContext(runtime); // should be after access-context (using access context's info)
         checkLoginRequired(runtime); // should be after access-context (may have update)
@@ -108,10 +101,6 @@ public class TypicalGodHandPrologue {
         if (ThreadCacheContext.exists()) { // basically true, just in case
             ThreadCacheContext.registerUserBean(userBeanSupplier.get().orElse(null)); // basically for asynchronous
         }
-    }
-
-    protected ActionResponse handleCrossOriginResourceSharing() {
-        return corSharing.map(sharing -> sharing.share()).orElseGet(() -> ActionResponse.undefined());
     }
 
     // ===================================================================================
