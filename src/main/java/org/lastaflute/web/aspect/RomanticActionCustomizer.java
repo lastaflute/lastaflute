@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ComponentDef;
@@ -27,6 +28,7 @@ import org.lastaflute.di.core.customizer.ComponentCustomizer;
 import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.web.Execute;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.exception.ActionPackageHasUpperCaseException;
 import org.lastaflute.web.exception.ExecuteMethodIllegalDefinitionException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
@@ -54,6 +56,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     //                                                                      ==============
     protected ActionMapping createActionMapping(ComponentDef actionDef) {
         final String actionName = buildActionName(actionDef);
+        verifyPackageConvention(actionDef, actionName);
         final ActionMapping mapping = newActionMapping(actionDef, actionName, comeOnAdjustmentProvider());
         setupMethod(mapping);
         return mapping;
@@ -61,6 +64,40 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
 
     protected String buildActionName(ComponentDef actionDef) {
         return actionDef.getComponentName();
+    }
+
+    protected void verifyPackageConvention(ComponentDef actionDef, String actionName) {
+        if (actionName.contains("_")) {
+            final String packageExp = Srl.substringLastFront(actionName, "_");
+            if (containsNotAllowedCharacterAsActionPath(packageExp)) { // e.g. seaLand_seaLandAction
+                throwActionPackageHasUpperCaseException(actionDef, actionName);
+            }
+        }
+    }
+
+    protected boolean containsNotAllowedCharacterAsActionPath(String packageExp) {
+        return Srl.isUpperCaseAny(packageExp);
+    }
+
+    protected void throwActionPackageHasUpperCaseException(ComponentDef actionDef, String actionName) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The package name of the action has upper case.");
+        br.addItem("Advice");
+        br.addElement("Cannot use upper case in action package.");
+        br.addElement("Lower cases are only allowed like this:");
+        br.addElement("  (x):");
+        br.addElement("    seaLand.SeaLandAction // *NG: sea[L]and");
+        br.addElement("  (o):");
+        br.addElement("    sealand.SealandAction  => /sealand/");
+        br.addElement("    sea.SeaLandAction      => /sea/land/");
+        br.addElement("    sea.land.SeaLandAction => /sea/land/");
+        br.addElement("    SeaLandAction          => /sea/land/");
+        br.addItem("Illegal Action");
+        br.addElement(actionName);
+        br.addItem("Component Def");
+        br.addElement(actionDef);
+        final String msg = br.buildExceptionMessage();
+        throw new ActionPackageHasUpperCaseException(msg);
     }
 
     protected ActionAdjustmentProvider comeOnAdjustmentProvider() {

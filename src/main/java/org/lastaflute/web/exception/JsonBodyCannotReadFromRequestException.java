@@ -20,15 +20,15 @@ import org.lastaflute.core.exception.LaSystemException;
 /**
  * @author jflute
  */
-public class ActionDefinitionMistakeException extends LaSystemException {
+public class JsonBodyCannotReadFromRequestException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public ActionDefinitionMistakeException(String msg) {
+    public JsonBodyCannotReadFromRequestException(String msg) {
         super(msg);
     }
 
-    public ActionDefinitionMistakeException(String msg, Throwable cause) {
+    public JsonBodyCannotReadFromRequestException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

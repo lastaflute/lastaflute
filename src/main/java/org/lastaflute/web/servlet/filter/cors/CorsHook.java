@@ -13,45 +13,39 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.filter.listener;
+package org.lastaflute.web.servlet.filter.cors;
 
 import java.io.IOException;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.lastaflute.web.servlet.filter.hook.FilterHookChain;
+import org.lastaflute.web.servlet.filter.hook.FilterHookSimply;
+
 /**
  * @author jflute
- * @since 0.6.0 (2015/08/06 Friday)
+ * @since 0.6.2 (2015/09/18 Friday)
  */
-public class FilterHookServletAdapter implements FilterHook {
+public class CorsHook extends FilterHookSimply {
 
-    protected final Filter servletFilter;
+    protected final CrossOriginResourceSharing sharing;
 
-    public FilterHookServletAdapter(Filter servletFilter) {
-        this.servletFilter = servletFilter;
+    public CorsHook(String allowOrigin) {
+        this.sharing = newCrossOriginResourceSharing(allowOrigin);
     }
 
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-        servletFilter.init(filterConfig);
+    protected CrossOriginResourceSharing newCrossOriginResourceSharing(String allowOrigin) {
+        return new CrossOriginResourceSharing(allowOrigin);
     }
 
     @Override
     public void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain) throws IOException, ServletException {
-        servletFilter.doFilter(request, response, createChain(chain));
-    }
-
-    protected FilterChain createChain(FilterHookChain chain) {
-        return (request, response) -> chain.doNext((HttpServletRequest) request, (HttpServletResponse) response);
-    }
-
-    @Override
-    public void destroy() {
-        servletFilter.destroy();
+        if (sharing.share(request, response)) { // options
+            return;
+        } else { // normal request with allow headers
+            chain.doNext(request, response);
+        }
     }
 }

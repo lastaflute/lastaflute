@@ -148,7 +148,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             final ID castId = (ID) userId;
             return doFindLoginUser(castId);
         } catch (ClassCastException e) { // also find method, because of generic cast
-            throw new IllegalStateException("Cannot cast the user ID: " + userId.getClass() + ", " + userId);
+            throw new IllegalStateException("Cannot cast the user ID: " + userId.getClass() + ", " + userId, e);
         }
     }
 
@@ -508,7 +508,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         final String userKey = valueAry[0]; // resolved by identity login
         final String expireDate = valueAry[1]; // AccessToken's expire
         if (isValidRememberMeCookie(userKey, expireDate)) {
-            final Long userId = convertCookieUserKeyToUserId(userKey);
+            final ID userId = convertCookieUserKeyToUserId(userKey);
             return doRememberMe(userId, expireDate, option);
         }
         return null;
@@ -540,15 +540,17 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
      * @param userKey The string key for the login user, same as remember-me key. (NotNull)
      * @return The ID for the login user. (NotNull)
      */
-    protected Long convertCookieUserKeyToUserId(String userKey) {
-        final Long userId;
+    protected ID convertCookieUserKeyToUserId(String userKey) {
+        final ID userId;
         try {
-            userId = Long.valueOf(userKey); // as default (override if it needs)
+            userId = toTypedUserId(userKey); // as default (override if it needs)
         } catch (NumberFormatException e) {
             throw new LoginFailureException("Invalid user key (not ID): " + userKey, e);
         }
         return userId;
     }
+
+    protected abstract ID toTypedUserId(String userKey);
 
     // -----------------------------------------------------
     //                                   Actually RememberMe
@@ -560,7 +562,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
      * @param option The option of remember-me login specified by caller. (NotNull)
      * @return Is the remember-me success?
      */
-    protected boolean doRememberMe(Long userId, String expireDate, RememberMeLoginSpecifiedOption option) {
+    protected boolean doRememberMe(ID userId, String expireDate, RememberMeLoginSpecifiedOption option) {
         final boolean updateToken = option.isUpdateToken();
         final boolean silentLogin = option.isSilentLogin();
         if (logger.isDebugEnabled()) {

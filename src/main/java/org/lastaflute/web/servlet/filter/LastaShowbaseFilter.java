@@ -35,7 +35,7 @@ import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogResource;
-import org.lastaflute.web.servlet.filter.listener.FilterHook;
+import org.lastaflute.web.servlet.filter.hook.FilterHook;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**

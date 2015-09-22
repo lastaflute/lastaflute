@@ -13,20 +13,20 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
+package org.lastaflute.web.servlet.filter.hook;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
- * @author modified by jflute (originated in Seasar)
+ * @author jflute
+ * @since 0.6.0 (2015/05/30 Saturday)
  */
-public class FormPropertyNotFoundException extends RuntimeException {
+@FunctionalInterface
+public interface FilterHookChain {
 
-    private static final long serialVersionUID = -1;
-
-    public FormPropertyNotFoundException(String msg) {
-        super(msg);
-    }
-
-    public FormPropertyNotFoundException(String msg, Throwable cause) {
-        super(msg, cause);
-    }
+    void doNext(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException;
 }

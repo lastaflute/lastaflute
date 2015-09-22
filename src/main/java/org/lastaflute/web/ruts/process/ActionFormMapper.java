@@ -44,10 +44,10 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.core.util.GenericTypeRef;
 import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
 import org.lastaflute.di.core.aop.javassist.AspectWeaver;
@@ -56,6 +56,7 @@ import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.exception.BeanIllegalPropertyException;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
+import org.lastaflute.di.helper.misc.ParameterizedRef;
 import org.lastaflute.di.util.LdiArrayUtil;
 import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.di.util.LdiModifierUtil;
@@ -64,6 +65,7 @@ import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.IndexedPropertyNonParameterizedListException;
 import org.lastaflute.web.exception.IndexedPropertyNotListArrayException;
+import org.lastaflute.web.exception.JsonBodyCannotReadFromRequestException;
 import org.lastaflute.web.exception.RequestClassifiationConvertFailureException;
 import org.lastaflute.web.exception.RequestJsonParseFailureException;
 import org.lastaflute.web.exception.RequestPropertyMappingFailureException;
@@ -81,6 +83,8 @@ import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureExcept
 import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)
@@ -90,6 +94,7 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(ActionFormMapper.class);
     protected static final String MULTIPART_CONTENT_TYPE = "multipart/form-data";
     protected static final String CACHE_KEY_DECODED_PROPERTY_MAP = "requestProcessor.decodedPropertyMap";
     protected static final String CACHE_KEY_URL_PARAM_NAMES_CACHED_SET = "requestProcessor.urlParamNames.cachedSet";
@@ -215,7 +220,7 @@ public class ActionFormMapper {
             final List<Object> objList = DfCollectionUtil.toListFromArray(value);
             valueObj = objList.size() == 1 ? objList.get(0) : objList;
         } else {
-            valueObj = (String[]) value;
+            valueObj = value;
         }
         br.addElement(valueObj);
         final String msg = br.buildExceptionMessage();
@@ -227,11 +232,11 @@ public class ActionFormMapper {
     //                                                                           =========
     protected boolean handleJsonBody(ActionRuntime runtime, VirtualActionForm virtualActionForm) throws IOException {
         if (isJsonBodyForm(virtualActionForm.getFormMeta().getFormType())) {
-            mappingJsonBody(runtime, virtualActionForm, getRequestBody());
+            mappingJsonBody(runtime, virtualActionForm, prepareJsonFromRequestBody(virtualActionForm));
             return true;
         }
         if (isListJsonBodyForm(virtualActionForm)) {
-            mappingListJsonBody(runtime, virtualActionForm, getRequestBody());
+            mappingListJsonBody(runtime, virtualActionForm, prepareJsonFromRequestBody(virtualActionForm));
             return true;
         }
         return false;
@@ -247,8 +252,30 @@ public class ActionFormMapper {
         }).orElse(false);
     }
 
-    protected String getRequestBody() throws IOException {
-        return requestManager.getRequestBody();
+    protected String prepareJsonFromRequestBody(VirtualActionForm virtualActionForm) {
+        try {
+            final String body = requestManager.getRequestBody();
+            if (logger.isDebugEnabled()) {
+                logger.debug("#flow ...Parsing JSON from request body:\n{}", buildJsonBodyDebugDisplay(body));
+            }
+            return body;
+        } catch (RuntimeException e) {
+            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("Cannot read request body for JSON.");
+            br.addItem("Advice");
+            br.addElement("Your action expects JSON string on request body.");
+            br.addElement("Make sure your request for JSON body.");
+            br.addElement("Or it should be form...? e.g. SeaBody => SeaForm");
+            br.addItem("Body Class");
+            br.addElement(virtualActionForm);
+            final String msg = br.buildExceptionMessage();
+            throw new JsonBodyCannotReadFromRequestException(msg, e);
+        }
+    }
+
+    protected String buildJsonBodyDebugDisplay(String value) {
+        // want to show all as parameter, but limit just in case to avoid large logging
+        return Srl.cut(value.trim(), 800, "..."); // might have rear LF
     }
 
     // -----------------------------------------------------
@@ -308,7 +335,7 @@ public class ActionFormMapper {
         try {
             final ActionFormMeta formMeta = virtualActionForm.getFormMeta();
             final ParameterizedType pt = formMeta.getListFormParameterParameterizedType().get(); // already checked
-            final List<Object> fromJsonList = getJsonManager().fromJsonList(json, pt);
+            final List<Object> fromJsonList = getJsonManager().fromJsonParameteried(json, pt);
             acceptJsonRealForm(virtualActionForm, fromJsonList);
         } catch (RuntimeException e) {
             throwListJsonBodyParseFailureException(runtime, virtualActionForm, json, e);
@@ -357,7 +384,12 @@ public class ActionFormMapper {
         final int indexedIndex = name.indexOf(INDEXED_DELIM); // e.g. sea[0]
         final int mappedIndex = name.indexOf(MAPPED_DELIM); // e.g. sea(over)
         if (nestedIndex < 0 && indexedIndex < 0 && mappedIndex < 0) { // as simple
-            setSimpleProperty(bean, name, value, parentBean, parentName);
+            try {
+                setSimpleProperty(bean, name, value, parentBean, parentName);
+            } catch (BeanIllegalPropertyException e) {
+                handleSimpleBeanIllegalPropertyException(bean, name, value, e);
+            }
+
         } else {
             final int minIndex = minIndex(minIndex(nestedIndex, indexedIndex), mappedIndex);
             if (minIndex == nestedIndex) { // e.g. sea.mythica
@@ -384,6 +416,26 @@ public class ActionFormMapper {
                 setProperty(bean, front + "." + middle + rear, value, bean, front); // *recursive
             }
         }
+    }
+
+    protected void handleSimpleBeanIllegalPropertyException(Object bean, String name, Object value, BeanIllegalPropertyException e) {
+        if (!(e.getCause() instanceof NumberFormatException)) {
+            throw e;
+        }
+        // here: non-number GET or URL parameter but number type property
+        // suppress easy 500 error by non-number GET or URL parameter
+        //  (o): /edit/123/
+        //  (x): /edit/abc/ *this case
+        // you can accept ID on URL parameter as Long type in ActionForm
+        final Object dispValue;
+        if (value instanceof Object[]) {
+            dispValue = Arrays.asList((Object[]) value).toString();
+        } else {
+            dispValue = value;
+        }
+        String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case
+        String msg = "The property value cannot be number: " + beanExp + ", name=" + name + ", value=" + dispValue;
+        throwRequestPropertyMappingFailureException(msg, e);
     }
 
     protected static class IndexParsedResult {
@@ -432,30 +484,6 @@ public class ActionFormMapper {
     }
 
     protected void setSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
-        try {
-            doSetSimpleProperty(bean, name, value, parentBean, parentName);
-        } catch (BeanIllegalPropertyException e) {
-            if (!(e.getCause() instanceof NumberFormatException)) {
-                throw e;
-            }
-            // here: non-number GET or URL parameter but number type property
-            // suppress easy 500 error by non-number GET or URL parameter
-            //  (o): /edit/123/
-            //  (x): /edit/abc/ *this case
-            // you can accept ID on URL parameter as Long type in ActionForm
-            final Object dispValue;
-            if (value instanceof Object[]) {
-                dispValue = Arrays.asList((Object[]) value).toString();
-            } else {
-                dispValue = value;
-            }
-            String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case
-            String msg = "The property value cannot be number: " + beanExp + ", name=" + name + ", value=" + dispValue;
-            throwRequestPropertyMappingFailureException(msg, e);
-        }
-    }
-
-    protected void doSetSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
         if (bean instanceof Map) {
             @SuppressWarnings("unchecked")
             final Map<String, Object> map = (Map<String, Object>) bean;
@@ -473,37 +501,39 @@ public class ActionFormMapper {
             return;
         }
         final Class<?> propertyType = pd.getPropertyType();
+        final Object mappedValue;
         if (propertyType.isArray()) { // e.g. public String[] strArray;
-            pd.setValue(bean, prepareStringArray(value)); // plain mapping to array, e.g. JSON not supported
+            mappedValue = prepareStringArray(value); // plain mapping to array, e.g. JSON not supported
         } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
             if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
-                pd.setValue(bean, parseJsonParameter(bean, name, prepareStringScalar(value), pd));
+                final Object scalar = prepareObjectScalar(value);
+                mappedValue = parseJsonParameter(bean, name, prepareJsonString(scalar), pd);
             } else { // e.g. public List<String> strList;
-                pd.setValue(bean, prepareStringList(value, propertyType));
+                mappedValue = prepareStringList(value, propertyType);
             }
         } else { // not array or list, e.g. String, Object
-            final String exp = prepareStringScalar(value); // not null (empty if null)
+            final Object scalar = prepareObjectScalar(value);
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
-                pd.setValue(bean, parseJsonParameter(bean, name, exp, pd));
-            } else { // mainly here, e.g. String, Integer, LocalDate, CDef, ...
-                pd.setValue(bean, convertStringToPropertyNativeIfNeeds(bean, name, exp, pd));
+                mappedValue = parseJsonParameter(bean, name, prepareJsonString(scalar), pd);
+            } else if (isClassificationProperty(propertyType)) { // e.g. CDef
+                mappedValue = toVerifiedClassification(bean, name, scalar, pd); // null allowed
+            } else { // e.g. String, Integer, LocalDate, MultipartFormFile, ...
+                final Object converted = convertToPropertyNativeIfPossible(bean, name, scalar, pd);
+                if (converted != null) { // mainly here
+                    mappedValue = converted;
+                } else { // e.g. multipart form file
+                    mappedValue = scalar;
+                }
             }
         }
+        pd.setValue(bean, mappedValue);
     }
 
-    protected String[] prepareStringArray(Object value) {
+    protected String[] prepareStringArray(Object value) {// not null (empty if null)
         if (value != null && value instanceof String[]) {
             return (String[]) value;
         } else {
             return value != null ? new String[] { value.toString() } : EMPTY_STRING_ARRAY;
-        }
-    }
-
-    protected String prepareStringScalar(Object value) {
-        if (value != null && value instanceof String[] && ((String[]) value).length > 0) {
-            return ((String[]) value)[0];
-        } else {
-            return value != null ? value.toString() : "";
         }
     }
 
@@ -525,14 +555,36 @@ public class ActionFormMapper {
         return (List<String>) LdiClassUtil.newInstance(propertyType);
     }
 
-    protected Object convertStringToPropertyNativeIfNeeds(Object bean, String name, String exp, PropertyDesc pd) {
+    protected String prepareJsonString(Object value) { // not null (empty if null)
+        if (value != null) {
+            if (value instanceof String) {
+                return (String) value;
+            } else {
+                return value.toString();
+            }
+        } else {
+            return "";
+        }
+    }
+
+    protected Object prepareObjectScalar(Object value) { // null allowed
+        if (value != null && value instanceof String[] && ((String[]) value).length > 0) {
+            return ((String[]) value)[0];
+        } else {
+            return value;
+        }
+    }
+
+    protected Object convertToPropertyNativeIfPossible(Object bean, String name, Object exp, PropertyDesc pd) {
         // not to depend on conversion logic in BeanDesc
         final Class<?> propertyType = pd.getPropertyType();
-        final Object filtered;
+        final Object converted;
         if (propertyType.isPrimitive()) {
-            filtered = DfTypeUtil.toWrapper(exp, propertyType);
+            converted = DfTypeUtil.toWrapper(exp, propertyType);
+        } else if (String.class.isAssignableFrom(propertyType)) {
+            converted = exp != null ? exp : ""; // empty string as default 
         } else if (Number.class.isAssignableFrom(propertyType)) {
-            filtered = DfTypeUtil.toNumber(exp, propertyType);
+            converted = DfTypeUtil.toNumber(exp, propertyType);
             // old date types are unsupported for LocalDate invitation
             //} else if (Timestamp.class.isAssignableFrom(propertyType)) {
             //    filtered = DfTypeUtil.toTimestamp(exp);
@@ -541,19 +593,20 @@ public class ActionFormMapper {
             //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
             //    filtered = DfTypeUtil.toDate(exp);
         } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
-            filtered = DfTypeUtil.toLocalDate(exp);
+            converted = DfTypeUtil.toLocalDate(exp);
         } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
-            filtered = DfTypeUtil.toLocalDateTime(exp);
+            converted = DfTypeUtil.toLocalDateTime(exp);
         } else if (LocalTime.class.isAssignableFrom(propertyType)) {
-            filtered = DfTypeUtil.toLocalTime(exp);
+            converted = DfTypeUtil.toLocalTime(exp);
         } else if (Boolean.class.isAssignableFrom(propertyType)) {
-            filtered = DfTypeUtil.toBoolean(exp);
-        } else if (isClassificationProperty(propertyType)) { // means CDef
-            filtered = toVerifiedClassification(bean, name, exp, pd);
+            converted = DfTypeUtil.toBoolean(exp);
+            // already resolved here, because of null handling
+            //} else if (isClassificationProperty(propertyType)) { // means CDef
+            //    converted = toVerifiedClassification(bean, name, exp, pd);
         } else {
-            filtered = exp;
+            converted = null;
         }
-        return filtered;
+        return converted;
     }
 
     // -----------------------------------------------------
@@ -645,7 +698,7 @@ public class ActionFormMapper {
                 return null; // unreachable
             }
             try {
-                return jsonManager.fromJsonList(json, paramedType); // e.g. public List<SeaBean> beanList;
+                return jsonManager.fromJsonParameteried(json, paramedType); // e.g. public List<SeaBean> beanList;
             } catch (RuntimeException e) {
                 throwListJsonParameterParseFailureException(bean, name, json, paramedType, e);
                 return null; // unreachable
@@ -782,7 +835,7 @@ public class ActionFormMapper {
         return LaDBFluteUtil.isClassificationType(propertyType);
     }
 
-    protected Classification toVerifiedClassification(Object bean, String name, String code, PropertyDesc pd) {
+    protected Classification toVerifiedClassification(Object bean, String name, Object code, PropertyDesc pd) {
         final Class<?> propertyType = pd.getPropertyType();
         try {
             return LaDBFluteUtil.toVerifiedClassification(propertyType, code);
@@ -1095,8 +1148,8 @@ public class ActionFormMapper {
 
     protected List<Map<String, Object>> retryJsonListAsMapForDebug(String json) {
         try {
-            return getJsonManager().fromJsonList(json, new GenericTypeRef<List<Map<String, Object>>>() {
-            }.getParameterizedType());
+            return getJsonManager().fromJsonParameteried(json, new ParameterizedRef<List<Map<String, Object>>>() {
+            }.getType());
         } catch (RuntimeException ignored) {
             return Collections.emptyList();
         }
@@ -1110,12 +1163,18 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                        Client Error
     //                                                                        ============
-    protected void buildClientErrorHeader(StringBuilder sb, String title, Object bean, String name, String value, Type propertyType,
+    protected void buildClientErrorHeader(StringBuilder sb, String title, Object bean, String name, Object value, Type propertyType,
             String challengeDisp) {
         sb.append(LF).append(LF).append("[").append(title).append("]");
         sb.append(LF).append("Mapping To: ");
         sb.append(bean.getClass().getSimpleName()).append("#").append(name).append(" (").append(propertyType.getTypeName()).append(")");
-        sb.append(LF).append("Requested Value: ").append(value != null && value.contains(LF) ? LF : "").append(value);
+        sb.append(LF).append("Requested Value: ");
+        if (value != null) {
+            final String exp = value.toString();
+            sb.append(exp.contains(LF) ? LF : "").append(exp);
+        } else {
+            sb.append("null");
+        }
         if (challengeDisp != null && challengeDisp.length() > 0) {
             sb.append(LF).append(buildDebugChallengeTitle());
             sb.append(challengeDisp); // debugChallenge starts with LF

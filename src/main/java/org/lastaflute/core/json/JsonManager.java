@@ -16,7 +16,6 @@
 package org.lastaflute.core.json;
 
 import java.lang.reflect.ParameterizedType;
-import java.util.List;
 
 /**
  * @author jflute
@@ -33,28 +32,19 @@ public interface JsonManager {
     <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
 
     /**
-     * Convert from the JSON string to the list of specified bean. <br>
-     * You need to specify parameterized type for element type.
-     * <pre>
-     * ... = fromJsonList(json, new ParameterizedRef&lt;List&lt;SeaBean&gt;&gt;(){}.getType());
-     * </pre>
-     * @param <ELEMENT> The element type of JSON list.
-     * @param json The string of JSON to be parsed. (NotNull, EmptyAllowed: returns new-only)
-     * @param elementType The type of bean to convert, should have default constructor. (NotNull)
-     * @return The read-only list of new-created bean that has the JSON values. (NotNull, EmptyAllowed: if empty JSON)
-     */
-    <ELEMENT> List<ELEMENT> fromJsonList(String json, ParameterizedType elementType);
-
-    /**
      * Convert from the JSON string to the parameterized bean.
      * You need to specify parameterized type like this:
      * <pre>
-     * ... = fromJsonList(json, new ParameterizedRef&lt;MaihamaBean&lt;SeaBean&gt;&gt;(){}.getType());
+     * List&lt;SeaBean&gt; <span style="color: #553000">seaList</span> = fromJsonParameteried(<span style="color: #553000">json</span>, new ParameterizedRef<span style="color: #994747">&lt;List&lt;SeaBean&gt;&gt;</span>(){
+     * }.getType());
+     * 
+     * MaihamaBean&lt;SeaBean&gt; maihama = fromJsonParameteried(<span style="color: #553000">json</span>, new ParameterizedRef<span style="color: #994747">&lt;MaihamaBean&lt;SeaBean&gt;&gt;</span>() {
+     * }.getType());
      * </pre>
      * @param <BEAN> The type of JSON bean as root.
      * @param json The string of JSON to be parsed. (NotNull, EmptyAllowed: returns new-only)
      * @param parameterizedType The parameterized type of bean to convert, should have default constructor. (NotNull)
-     * @return The new-created bean that has the JSON values. (NotNull: if empty JSON, new-only)
+     * @return The new-created bean that has the JSON values, also List and Map. (NotNull: if empty JSON, new-only)
      */
     <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType);
 

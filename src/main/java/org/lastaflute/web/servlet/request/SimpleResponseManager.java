@@ -204,7 +204,7 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     protected String buildApiResponseDebugDisplay(String value) {
-        return Srl.cut(value, 300, "...");
+        return Srl.cut(value, 500, "..."); // you can basically confirm it at front side so cut it here
     }
 
     // -----------------------------------------------------

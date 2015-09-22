@@ -29,8 +29,9 @@ import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
-import org.lastaflute.web.servlet.filter.listener.FilterHook;
-import org.lastaflute.web.servlet.filter.listener.FilterHookServletAdapter;
+import org.lastaflute.web.servlet.filter.cors.CorsHook;
+import org.lastaflute.web.servlet.filter.hook.FilterHook;
+import org.lastaflute.web.servlet.filter.hook.FilterHookServletAdapter;
 import org.lastaflute.web.servlet.filter.mdc.MDCHook;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
 import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
@@ -151,12 +152,17 @@ public class FwWebDirection {
     }
 
     // -----------------------------------------------------
-    //                                       Filter Listener
-    //                                       ---------------
+    //                                           Filter Hook
+    //                                           -----------
     // independent per purpose
-    public void directMDC(MDCHook listener) {
-        assertArgumentNotNull("listener", listener);
-        getOutsideFilterHookList().add(listener); // for logging
+    public void directMDC(MDCHook hook) {
+        assertArgumentNotNull("hook", hook);
+        getOutsideFilterHookList().add(hook); // for logging
+    }
+
+    public void directCors(CorsHook hook) {
+        assertArgumentNotNull("hook", hook);
+        getOutsideFilterHookList().add(hook); // before routing
     }
 
     public void directServletFilter(Filter servletFilter, boolean inside) { // inside means after logging

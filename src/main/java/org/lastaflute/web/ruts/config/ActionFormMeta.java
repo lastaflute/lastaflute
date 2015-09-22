@@ -30,6 +30,7 @@ import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.Srl;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
@@ -223,12 +224,32 @@ public class ActionFormMeta {
         return propertyMap.values();
     }
 
+    /**
+     * Does the form have the property?
+     * @param propertyName The name of property to find, filtered about '.' and []. (NotNull)
+     * @return The determination, true or false.
+     */
     public boolean hasProperty(String propertyName) {
         return getProperty(propertyName) != null;
     }
 
+    /**
+     * @param propertyName The name of property to find, filtered about '.' and []. (NotNull)
+     * @return The property of action form. (NullAllowed: when not found)
+     */
     public ActionFormProperty getProperty(String propertyName) {
-        return propertyMap.get(propertyName);
+        return propertyMap.get(filterPropertyNameToFind(propertyName));
+    }
+
+    protected String filterPropertyNameToFind(String propertyName) {
+        final String firstName = Srl.substringFirstFront(propertyName, "."); // first element if dot chain
+        final String realName;
+        if (firstName.contains("[") && firstName.endsWith("]")) {
+            realName = Srl.substringFirstFront(firstName, "[");
+        } else {
+            realName = firstName;
+        }
+        return realName;
     }
 
     // ===================================================================================

@@ -21,6 +21,7 @@ import java.util.List;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfStringUtil;
@@ -31,6 +32,7 @@ import org.lastaflute.di.naming.NamingConvention;
 import org.lastaflute.di.util.LdiStringUtil;
 import org.lastaflute.web.UrlChain;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.exception.ActionClassPackageMismatchException;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.slf4j.Logger;
@@ -106,16 +108,16 @@ public class ActionPathResolver {
         assertArgumentNotNull("requestPath", requestPath);
         assertArgumentNotNull("handler", handler);
         final String customized = actionAdjustmentProvider.customizeActionMappingRequestPath(requestPath);
-        return actuallyHandleActionPath(customized != null ? customized : requestPath, handler);
+        return doHandleActionPath(customized != null ? customized : requestPath, handler);
     }
 
-    protected boolean actuallyHandleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
+    protected boolean doHandleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
         final String[] names = LdiStringUtil.split(requestPath, "/"); // e.g. [sea, land] if /sea/land/
         final LaContainer root = container.getRoot(); // because actions are in root
         if (names.length == 0) { // root action, / => rootAction
             final String rootAction = "rootAction";
-            if (root.hasComponentDef(rootAction)) {
-                if (doHandleActionPath(requestPath, handler, rootAction, null)) {
+            if (hasActionDef(root, rootAction)) {
+                if (actuallyHandleActionPath(requestPath, handler, rootAction, null)) {
                     return true;
                 }
             }
@@ -124,19 +126,22 @@ public class ActionPathResolver {
         List<String> previousList = null; // lazy loaded, (empty) => [sea] => [sea, land]
         for (int index = 0; index < names.length; index++) {
             final String currentName = names[index];
+            if (containsNotAllowedCharacterAsActionPath(currentName)) { // e.g. /Sea/land/, /sea/Land/
+                return false; // cannot use upper case in action path (while, allowed in param path)
+            }
             final int nextIndex = index + 1;
             if (index == 0) { // first loop
                 // /sea/ => seaAction
                 final String directAction = buildActionName(null, currentName);
-                if (root.hasComponentDef(directAction)) {
-                    if (doHandleActionPath(requestPath, handler, directAction, buildParamPath(names, nextIndex))) {
+                if (hasActionDef(root, directAction)) {
+                    if (actuallyHandleActionPath(requestPath, handler, directAction, buildParamPath(names, nextIndex))) {
                         return true;
                     }
                 }
                 // /sea/ => sea_seaAction
                 final String wholePkgAction = buildActionName(currentName + "_", currentName);
-                if (root.hasComponentDef(wholePkgAction)) {
-                    if (doHandleActionPath(requestPath, handler, wholePkgAction, buildParamPath(names, nextIndex))) {
+                if (hasActionDef(root, wholePkgAction)) {
+                    if (actuallyHandleActionPath(requestPath, handler, wholePkgAction, buildParamPath(names, nextIndex))) {
                         return true;
                     }
                 }
@@ -166,8 +171,8 @@ public class ActionPathResolver {
                 StringBuilder pkgSb = null; // lazy loaded
                 for (String previous : previousList) { // always one or more loop
                     final String actionName = buildActionName(pkgSb != null ? pkgSb.toString() : null, classPrefix);
-                    if (root.hasComponentDef(actionName)) {
-                        if (doHandleActionPath(requestPath, handler, actionName, buildParamPath(names, nextIndex))) {
+                    if (hasActionDef(root, actionName)) {
+                        if (actuallyHandleActionPath(requestPath, handler, actionName, buildParamPath(names, nextIndex))) {
                             return true;
                         }
                     }
@@ -175,15 +180,15 @@ public class ActionPathResolver {
                     pkgSb.append(previous).append("_");
                 }
                 final String morePkgActionName = buildActionName(pkgSb.toString(), classPrefix);
-                if (root.hasComponentDef(morePkgActionName)) {
-                    if (doHandleActionPath(requestPath, handler, morePkgActionName, buildParamPath(names, nextIndex))) {
+                if (hasActionDef(root, morePkgActionName)) {
+                    if (actuallyHandleActionPath(requestPath, handler, morePkgActionName, buildParamPath(names, nextIndex))) {
                         return true;
                     }
                 }
                 pkgSb.append(currentName).append("_"); // sea_land_, sea_land_iks_, ...
                 final String wholePkgActionName = buildActionName(pkgSb.toString(), classPrefix);
-                if (root.hasComponentDef(wholePkgActionName)) {
-                    if (doHandleActionPath(requestPath, handler, wholePkgActionName, buildParamPath(names, nextIndex))) {
+                if (hasActionDef(root, wholePkgActionName)) {
+                    if (actuallyHandleActionPath(requestPath, handler, wholePkgActionName, buildParamPath(names, nextIndex))) {
                         return true;
                     }
                 }
@@ -194,6 +199,39 @@ public class ActionPathResolver {
             previousList.add(currentName);
         }
         return false;
+    }
+
+    protected boolean hasActionDef(LaContainer root, String componentName) {
+        try {
+            return root.hasComponentDef(componentName);
+        } catch (NoClassDefFoundError e) { // basically only when HotDeploy
+            // e.g. /sealand/ => sealand.SeaLandAction
+            // /Sea/land/ has been already handled before (should be 404)
+            throwActionClassPackageMismatchException(componentName, e);
+            return false;
+        }
+    }
+
+    protected void throwActionClassPackageMismatchException(String componentName, NoClassDefFoundError e) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Mismatch between action class and package.");
+        br.addItem("Advice");
+        br.addElement("Make sure your action definition like this:");
+        br.addElement("  (x):");
+        br.addElement("    sealand.SeaLandAction");
+        br.addElement("  (o):");
+        br.addElement("    sealand.SealandAction  => /sealand/");
+        br.addElement("    sea.SeaLandAction      => /sea/land/");
+        br.addElement("    sea.land.SeaLandAction => /sea/land/");
+        br.addElement("    SeaLandAction          => /sea/land/");
+        br.addItem("Illegal Action");
+        br.addElement(componentName);
+        final String msg = br.buildExceptionMessage();
+        throw new ActionClassPackageMismatchException(msg, e);
+    }
+
+    protected boolean containsNotAllowedCharacterAsActionPath(String currentName) {
+        return Srl.isUpperCaseAny(currentName);
     }
 
     protected String buildActionName(String pkg, String classPrefix) {
@@ -215,7 +253,7 @@ public class ActionPathResolver {
         return sb.toString(); // e.g. 3 when /member/list/3/
     }
 
-    protected boolean doHandleActionPath(String requestPath, ActionFoundPathHandler handler, String actionName, String paramPath)
+    protected boolean actuallyHandleActionPath(String requestPath, ActionFoundPathHandler handler, String actionName, String paramPath)
             throws Exception {
         final boolean emptyParam = paramPath == null || paramPath.isEmpty();
         final ActionExecute execByParam = !emptyParam ? findExecuteConfig(actionName, paramPath).orElse(null) : null;
@@ -413,10 +451,22 @@ public class ActionPathResolver {
         sb.append("e.g. expected actions for ").append(requestPath).append("\n");
         final String customizedPath = actionAdjustmentProvider.customizeActionMappingRequestPath(requestPath);
         final List<String> nameList = buildExpectedRoutingActionList(customizedPath != null ? customizedPath : requestPath);
+        boolean exists = false;
         for (String name : nameList) {
-            sb.append("  web.").append(name).append("\n");
+            if (name.endsWith("@index()") && containsNotAllowedCharacterAsActionPath(requestPath)) { // e.g. /product/List/
+                continue;
+            }
+            final String packageExp = Srl.substringLastFront(name, ".");
+            if (!containsNotAllowedCharacterAsActionPath(packageExp)) {
+                sb.append("  web.").append(name).append("\n");
+                exists = true;
+            }
         }
-        sb.append("  (and so on...)\n");
+        if (exists) {
+            sb.append("  (and so on...)\n");
+        } else {
+            sb.append("  *no suggestion... e.g. cannot use upper case in action path\n");
+        }
         sb.append("= = = = = = = = = =/");
         return sb.toString();
     }
@@ -461,17 +511,17 @@ public class ActionPathResolver {
                 pkgPrefix.append(capElement);
             } else { // last action token here (last loop or next token is parameter)
                 // web.SeaAction#index() or web.sea.SeaLandAction#index()
-                namedActionSb.append(pkgPrefix).append(capElement).append("Action#index()");
+                namedActionSb.append(pkgPrefix).append(capElement).append("Action@index()");
 
                 if (index > 0) {
                     // web.sea.SeaAction#land()
-                    methodActionSb.append(pkgPrefix).append("Action#");
+                    methodActionSb.append(pkgPrefix).append("Action@");
                     methodActionSb.append(current).append("()");
                     existsMethodAction = true;
 
                     // web.land.sea.LandSeaAction#index()
                     pkgPrefix.append(capElement);
-                    wholePkgActionSb.append(current).append(".").append(pkgPrefix).append("Action#index()");
+                    wholePkgActionSb.append(current).append(".").append(pkgPrefix).append("Action@index()");
                     existsWholePkgAction = true;
                 }
                 break;

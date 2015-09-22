@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.filter.listener;
+package org.lastaflute.web.servlet.filter.hook;
 
 import java.io.IOException;
 
@@ -24,13 +24,19 @@ import javax.servlet.http.HttpServletResponse;
 
 /**
  * @author jflute
- * @since 0.6.0 (2015/05/30 Saturday)
+ * @since 0.6.2 (2015/09/18 Friday)
  */
-public interface FilterHook {
+public class FilterHookSimply implements FilterHook {
 
-    void init(FilterConfig filterConfig) throws ServletException;
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+    }
 
-    void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain) throws IOException, ServletException;
+    @Override
+    public void hook(HttpServletRequest request, HttpServletResponse response, FilterHookChain chain) throws IOException, ServletException {
+    }
 
-    void destroy();
+    @Override
+    public void destroy() {
+    }
 }

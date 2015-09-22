@@ -33,7 +33,6 @@ import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.callback.ActionHook;
 import org.lastaflute.web.callback.ActionRuntime;
-import org.lastaflute.web.callback.CrossOriginResourceSharing;
 import org.lastaflute.web.callback.TooManySqlOption;
 import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
 import org.lastaflute.web.callback.TypicalGodHandActionEpilogue;
@@ -113,13 +112,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
 
     protected TypicalGodHandPrologue createTypicalGodHandPrologue(ActionRuntime runtime) {
         final TypicalGodHandResource resource = createTypicalGodHandResource(runtime);
-        final OptionalThing<CrossOriginResourceSharing> sharing = createCrossOriginResourceSharing(runtime);
         final AccessContextArranger arranger = newAccessContextArranger();
-        return newTypicalGodHandPrologue(resource, sharing, arranger, () -> getUserBean(), () -> myAppType());
-    }
-
-    protected OptionalThing<CrossOriginResourceSharing> createCrossOriginResourceSharing(ActionRuntime runtime) { // application may override
-        return OptionalThing.empty(); // you can share by overriding
+        return newTypicalGodHandPrologue(resource, arranger, () -> getUserBean(), () -> myAppType());
     }
 
     /**
@@ -128,10 +122,9 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      */
     protected abstract AccessContextArranger newAccessContextArranger();
 
-    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource,
-            OptionalThing<CrossOriginResourceSharing> sharing, AccessContextArranger arranger,
+    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger arranger,
             Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier, Supplier<String> appTypeSupplier) {
-        return new TypicalGodHandPrologue(resource, sharing, arranger, userBeanSupplier, appTypeSupplier);
+        return new TypicalGodHandPrologue(resource, arranger, userBeanSupplier, appTypeSupplier);
     }
 
     @Override
