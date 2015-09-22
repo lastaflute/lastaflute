@@ -21,7 +21,7 @@ Typesafe Web Framework for LeAn STArtup with DBFlute and Java8
 
 ## Example Code
 ```java
-// e.g. ProductListAction, mapping to URL '/product/list/'
+// e.g. ProductListAction, mapping to URL '/product/list/3'
 
 @Execute
 public HtmlResponse index(OptionalThing<Integer> pageNumber, ProductSearchForm form) {
@@ -72,7 +72,7 @@ public class HarborBoot {
 <dependency>
     <groupId>org.lastaflute</groupId>
     <artifactId>lastaflute</artifactId>
-    <version>0.6.1</version>
+    <version>0.6.2</version>
 </dependency>
 ```
 
@@ -83,7 +83,7 @@ Apache License 2.0
 (English pages have a low count but are increscent...)
 http://dbflute.seasar.org/lastaflute/
 
-# Thanks, Framewoks
+# Thanks, Frameworks
 LastaFlute forks SAStruts, Struts and Commons utilities and (heavily) extends it.  
 And is influenced by SpringBoot, Play2.
 If the frameworks were not there, no LastaFlute here.
@@ -92,4 +92,7 @@ I appreciate every framework.
 
 # Thanks, Friends
 LastaFlute is used by:  
-comming soon...
+- Fess: https://github.com/codelibs/fess (from version10)
+
+Deeply Thanks!
+
