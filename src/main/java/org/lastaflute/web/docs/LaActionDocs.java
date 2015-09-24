@@ -37,11 +37,14 @@ public interface LaActionDocs {
      * &#064;Execute(<span style="color: #994747">urlPattern</span> = <span style="color: #2A00FF">"{}/ikspiary/{}"</span>)
      * <span style="color: #70226C">public</span> HtmlResponse index(String <span style="color: #553000">sea</span>, String <span style="color: #553000">land</span>) {
      * 
-     * <span style="font-size: 130%; color: #553000">[Action Form]</span> <span style="color: #3F7E5E">// for POST, GET parameter</span>
+     * <span style="font-size: 130%; color: #553000">[Action Form]</span> <span style="color: #3F7E5E">// for POST, GET parameter or JSON body</span>
      * <span style="color: #70226C">public</span> HtmlResponse doSignin(<span style="color: #994747">SinginForm form</span>) { <span style="color: #3F7E5E">// POST (or also GET)</span>
      * 
      * <span style="color: #3F7E5E">// e.g. /.../list/3?favoriteCode=sea&nextName=land</span>
      * <span style="color: #70226C">public</span> HtmlResponse list(<span style="color: #994747">Integer pageNumber, SinginForm form</span>) { <span style="color: #3F7E5E">// GET</span>
+     * 
+     * <span style="color: #3F7E5E">// e.g. /.../list/3 (with JSON in request body)</span>
+     * <span style="color: #70226C">public</span> JsonResponse list(<span style="color: #994747">Integer pageNumber, SinginBody body</span>) { <span style="color: #3F7E5E">// JSON Body</span>
      * 
      * <span style="font-size: 130%; color: #553000">[Action Response]</span>
      * <span style="color: #70226C">return</span> asHtml(path_MyPage_MyPageJsp); <span style="color: #3F7E5E">// HTML template</span>
