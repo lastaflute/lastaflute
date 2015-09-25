@@ -42,7 +42,7 @@ public HtmlResponse index(OptionalThing<Integer> pageNumber, ProductSearchForm f
 # Quick Trial
 Can boot it by example of LastaFlute:
 
-1. git clone https://github.com/dbflute-session/lastaflute-example-harbor.git
+1. git clone https://github.com/lastaflute/lastaflute-example-harbor.git
 2. prepare database by *ReplaceSchema at DBFlute client directory 'dbflute_maihamadb'  
 3. compile it by Java8, on e.g. Eclipse or IntelliJ or ... as Maven project
 4. execute the *main() method of (org.docksidestage.boot) HarborBoot
@@ -72,7 +72,7 @@ public class HarborBoot {
 <dependency>
     <groupId>org.lastaflute</groupId>
     <artifactId>lastaflute</artifactId>
-    <version>0.6.2</version>
+    <version>0.6.3</version>
 </dependency>
 ```
 

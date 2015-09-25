@@ -15,6 +15,10 @@
  */
 package org.lastaflute.web.validation;
 
+import java.lang.reflect.Array;
+import java.util.Collection;
+import java.util.Map;
+
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
@@ -30,8 +34,20 @@ public class RequiredValidator implements ConstraintValidator<Required, Object> 
 
     @Override
     public boolean isValid(Object value, ConstraintValidatorContext context) {
+        return determineValid(value);
+    }
+
+    protected boolean determineValid(Object value) {
         if (value instanceof String) {
-            return value != null && ((String) value).trim().length() > 0; // means not blank
+            return ((String) value).trim().length() > 0; // means not blank
+        } else if (value instanceof Collection<?>) {
+            return !((Collection<?>) value).isEmpty();
+        } else if (value instanceof Map<?, ?>) {
+            return !((Map<?, ?>) value).isEmpty();
+        } else if (value instanceof Object[]) {
+            return ((Object[]) value).length > 0;
+        } else if (value != null && value.getClass().isArray()) { // primitive array
+            return Array.getLength(value) > 0;
         } else { // e.g. Number, LocalDate
             return value != null;
         }

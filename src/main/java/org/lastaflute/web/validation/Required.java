@@ -30,6 +30,16 @@ import javax.validation.Constraint;
 import javax.validation.Payload;
 
 /**
+ * The validator annotation as required for general proeprty types.
+ * <pre>
+ * o String     : not null, not empty, not blank
+ * o Integer    : not null
+ * o LocalDate  : not null
+ * o Collection : not null, not empty
+ * o Map        : not null, not empty
+ * o Array      : not null, not empty
+ * o others     : not null
+ * </pre>
  * @author jflute
  * @since 0.6.0 (2015/08/08 Saturday at American Water Front)
  */
