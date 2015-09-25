@@ -256,7 +256,7 @@ public class ActionFormMapper {
         try {
             final String body = requestManager.getRequestBody();
             if (logger.isDebugEnabled()) {
-                logger.debug("#flow ...Parsing JSON from request body:\n{}", buildJsonBodyDebugDisplay(body));
+                logger.debug("#flow ...Parsing JSON from request body:{}", buildJsonBodyDebugDisplay(body));
             }
             return body;
         } catch (RuntimeException e) {
@@ -275,7 +275,8 @@ public class ActionFormMapper {
 
     protected String buildJsonBodyDebugDisplay(String value) {
         // want to show all as parameter, but limit just in case to avoid large logging
-        return Srl.cut(value.trim(), 800, "..."); // might have rear LF
+        final String trimmed = value.trim();
+        return !trimmed.isEmpty() ? "\n" + Srl.cut(trimmed, 800, "...") : " *empty body"; // might have rear LF
     }
 
     // -----------------------------------------------------
