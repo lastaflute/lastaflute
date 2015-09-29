@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
@@ -52,18 +53,21 @@ public class ActionFormMeta {
     protected final ActionExecute execute; // not null
     protected final String formKey; // not null
     protected final Class<?> formType; // not null
-    protected final OptionalThing<Parameter> listFormParameter; // not null
+    protected final OptionalThing<Parameter> listFormParameter; // not null, empty allowed
+    protected final OptionalThing<Consumer<Object>> formSetupper; // not null, empty allowed
     protected final Map<String, ActionFormProperty> propertyMap; // not null
     protected final boolean validatorAnnotated; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionFormMeta(ActionExecute execute, String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter) {
+    public ActionFormMeta(ActionExecute execute, String formKey, Class<?> formType // required
+    , OptionalThing<Parameter> listFormParameter, OptionalThing<Consumer<Object>> formSetupper) {
         this.execute = execute;
         this.formKey = formKey;
         this.formType = formType;
         this.listFormParameter = listFormParameter;
+        this.formSetupper = formSetupper;
         this.propertyMap = setupProperties(formType);
         this.validatorAnnotated = mightBeValidatorAnnotated();
         checkNestedBeanValidatorCalled();
@@ -267,7 +271,9 @@ public class ActionFormMeta {
         return () -> {
             try {
                 checkInstantiatedFormType();
-                return formType.newInstance();
+                final Object formInstance = formType.newInstance();
+                formSetupper.ifPresent(setupper -> setupper.accept(formInstance));
+                return formInstance;
             } catch (Exception e) {
                 throwActionFormCreateFailureException(e);
                 return null; // unreachable

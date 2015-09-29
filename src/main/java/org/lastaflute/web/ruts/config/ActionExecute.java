@@ -24,6 +24,7 @@ import java.time.temporal.TemporalAccessor;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
@@ -109,7 +110,7 @@ public class ActionExecute implements Serializable {
         executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
         this.urlParamTypeList = executeArgBox.getUrlParamTypeList(); // not null, empty allowed
         this.optionalGenericTypeList = executeArgBox.getOptionalGenericTypeMap();
-        this.formMeta = prepareFormMeta(executeArgBox.getFormType(), executeArgBox.getListFormParameter());
+        this.formMeta = analyzeFormMeta(executeMethod, executeArgBox);
 
         // URL pattern (using urlParamTypeList)
         final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
@@ -171,33 +172,42 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                           Action Form
     //                                           -----------
+    protected OptionalThing<ActionFormMeta> analyzeFormMeta(Method executeMethod, ExecuteArgBox executeArgBox) {
+        return prepareFormMeta(OptionalThing.ofNullable(executeArgBox.getFormType(), () -> {
+            throw new IllegalStateException("Not found the form type: " + executeMethod);
+        }), OptionalThing.ofNullable(executeArgBox.getListFormParameter(), () -> {
+            throw new IllegalStateException("Not found the parameter of list form: " + executeMethod);
+        }), OptionalThing.empty());
+    }
+
     // public for pushed form
     /**
-     * @param formType The type of action form. (NullAllowed: if null, no form for the method)
-     * @param listFormParameter The parameter of list form. (NullAllowed: normally null, for e.g. JSON list)
+     * @param formType The optional type of action form. (NotNull, EmptyAllowed: if empty, no form for the method)
+     * @param listFormParameter The optional parameter of list form. (NotNull, EmptyAllowed: normally empty, for e.g. JSON list)
+     * @param formSetupper The optional set-upper of new-created form. (NotNull, EmptyAllowed: normally empty, foro pushed form)
      * @return The optional form meta to be prepared. (NotNull)
      */
-    public OptionalThing<ActionFormMeta> prepareFormMeta(Class<?> formType, Parameter listFormParameter) {
-        final ActionFormMeta meta = formType != null ? createFormMeta(formType, listFormParameter) : null;
+    public OptionalThing<ActionFormMeta> prepareFormMeta(OptionalThing<Class<?>> formType, OptionalThing<Parameter> listFormParameter,
+            OptionalThing<Consumer<Object>> formSetupper) {
+        final ActionFormMeta meta = formType.map(tp -> createFormMeta(tp, listFormParameter, formSetupper)).orElse(null);
         return OptionalThing.ofNullable(meta, () -> {
             String msg = "Not found the form meta as parameter for the execute method: " + executeMethod;
             throw new ActionFormNotFoundException(msg);
         });
     }
 
-    protected ActionFormMeta createFormMeta(Class<?> formType, Parameter listFormParameter) {
-        return newActionFormMeta(buildFormKey(), formType, OptionalThing.ofNullable(listFormParameter, () -> {
-            String msg = "Not found the listFormGenericType: execute=" + toSimpleMethodExp() + " form=" + formType;
-            throw new IllegalStateException(msg);
-        }));
+    protected ActionFormMeta createFormMeta(Class<?> formType, OptionalThing<Parameter> listFormParameter,
+            OptionalThing<Consumer<Object>> formSetupper) {
+        return newActionFormMeta(buildFormKey(), formType, listFormParameter, formSetupper);
     }
 
     protected String buildFormKey() {
         return actionMapping.getActionDef().getComponentName() + "_" + executeMethod.getName() + "_Form";
     }
 
-    protected ActionFormMeta newActionFormMeta(String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter) {
-        return new ActionFormMeta(this, formKey, formType, listFormParameter);
+    protected ActionFormMeta newActionFormMeta(String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter,
+            OptionalThing<Consumer<Object>> formSetupper) {
+        return new ActionFormMeta(this, formKey, formType, listFormParameter, formSetupper);
     }
 
     // -----------------------------------------------------

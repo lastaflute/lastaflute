@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.lastaflute</groupId>
 	<artifactId>lastaflute</artifactId>
-	<version>0.6.4-A-SNAPSHOT</version>
+	<version>0.6.4-B-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>LastaFlute</name>
@@ -88,7 +88,8 @@
 						<updateReleaseInfo>true</updateReleaseInfo>
 					</configuration>
 				</plugin>
-				<!-- to avoid warning 'maven-enforcer-plugin (goal "enforce") is ignored by m2e' -->
+				<!-- to avoid warning 'maven-enforcer-plugin (goal "enforce") is ignored 
+					by m2e' -->
 				<plugin>
 					<groupId>org.eclipse.m2e</groupId>
 					<artifactId>lifecycle-mapping</artifactId>
@@ -99,18 +100,20 @@
 								<pluginExecution>
 									<pluginExecutionFilter>
 										<groupId>org.apache.maven.plugins</groupId>
-                        				<artifactId>maven-enforcer-plugin</artifactId>
-                        				<versionRange>[1.0.0,)</versionRange>
-                        				<goals>
-                           					<goal>enforce</goal>
-                        				</goals>
-                    				</pluginExecutionFilter>
-                    				<action><ignore /></action>
-                				</pluginExecution>
-                			</pluginExecutions>
-                		</lifecycleMappingMetadata>
-                	</configuration>
-                </plugin>
+										<artifactId>maven-enforcer-plugin</artifactId>
+										<versionRange>[1.0.0,)</versionRange>
+										<goals>
+											<goal>enforce</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 		<plugins>
@@ -154,24 +157,22 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!--
-			 'xxx.jar.asc' file can be created by this plug-in
-			 you can deploy by 'mvn -e clean deploy -Dgpg.keyname=xxx -Dgpg.passphrase="xxx"'
-			 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <version>1.5</version>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+			<!-- 'xxx.jar.asc' file can be created by this plug-in you can deploy 
+				by 'mvn -e clean deploy -Dgpg.keyname=xxx -Dgpg.passphrase="xxx"' -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
@@ -189,24 +190,25 @@
 	</repositories>
 
 	<dependencies>
-		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
-		<!--                                                                Main Framework -->
-		<!--                                                                 = = = = = = = -->
-        <!-- dbflute -->
+		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+			= = = = = = -->
+		<!-- Main Framework -->
+		<!-- = = = = = = = -->
+		<!-- dbflute -->
 		<dependency>
 			<groupId>org.dbflute</groupId>
 			<artifactId>dbflute-runtime</artifactId>
 			<version>${dbflute.version}</version>
 		</dependency>
 
-        <!-- lasta di -->
+		<!-- lasta di -->
 		<dependency>
 			<groupId>org.lastaflute</groupId>
-            <artifactId>lasta-di</artifactId>
-            <version>${lasta.di.version}</version>
+			<artifactId>lasta-di</artifactId>
+			<version>${lasta.di.version}</version>
 		</dependency>
 
-	    <!-- transaction -->
+		<!-- transaction -->
 		<dependency>
 			<groupId>javax.transaction</groupId>
 			<artifactId>javax.transaction-api</artifactId>
@@ -214,7 +216,7 @@
 			<scope>provided</scope>
 		</dependency>
 
-	    <!-- validator -->
+		<!-- validator -->
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-validator</artifactId>
@@ -229,9 +231,10 @@
 			<scope>provided</scope> <!-- servlet container provides -->
 		</dependency>
 
-		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
-		<!--                                                               Partner Library -->
-		<!--                                                               = = = = = = = = -->
+		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+			= = = = = = -->
+		<!-- Partner Library -->
+		<!-- = = = = = = = = -->
 		<!-- json -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
@@ -246,9 +249,10 @@
 			<version>${mailflute.version}</version>
 		</dependency>
 
-		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
-		<!--                                                                       Testing -->
-		<!--                                                                       = = = = -->
+		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+			= = = = = = -->
+		<!-- Testing -->
+		<!-- = = = = -->
 		<!-- junit -->
 		<dependency>
 			<groupId>junit</groupId>

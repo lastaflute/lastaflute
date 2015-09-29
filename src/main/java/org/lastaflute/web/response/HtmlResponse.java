@@ -28,6 +28,9 @@ import org.lastaflute.web.response.next.ForwardNext;
 import org.lastaflute.web.response.next.RedirectNext;
 import org.lastaflute.web.response.next.RedirectNext.RedirectPathStyle;
 import org.lastaflute.web.response.next.RoutingNext;
+import org.lastaflute.web.response.pushed.PushedFormInfo;
+import org.lastaflute.web.response.pushed.PushedFormOpCall;
+import org.lastaflute.web.response.pushed.PushedFormOption;
 import org.lastaflute.web.response.render.RenderDataRegistration;
 import org.lastaflute.web.servlet.request.Redirectable;
 
@@ -51,7 +54,7 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
     protected List<RenderDataRegistration> registrationList; // lazy loaded
-    protected Class<?> pushedFormType; // null allowed
+    protected PushedFormInfo pushedFormInfo; // null allowed
     protected boolean errorsToSession;
     protected ResponseHook afterTxCommitHook;
 
@@ -158,10 +161,10 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     //                                                                         Action Form
     //                                                                         ===========
     /**
-     * Set up the HTML response as using action form without initial value. <br>
+     * Set up the HTML response as using action form without requested initial value. <br>
      * And you can use the action form in your HTML template.
      * <pre>
-     * <span style="color: #3F7E5E">// case of no initial value, empty display, but needs form</span>
+     * <span style="color: #3F7E5E">// case of no requested initial value, empty display, but needs form</span>
      * &#064;Execute
      * <span style="color: #70226C">public</span> HtmlResponse index() {
      *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaJsp</span>).<span style="color: #CC4747">useForm</span>(SeaForm.<span style="color: #70226C">class</span>);
@@ -172,8 +175,43 @@ public class HtmlResponse implements ActionResponse, Redirectable {
      */
     public HtmlResponse useForm(Class<?> formType) {
         assertArgumentNotNull("formType", formType);
-        this.pushedFormType = formType;
+        this.pushedFormInfo = createPushedFormInfo(formType);
         return this;
+    }
+
+    protected PushedFormInfo createPushedFormInfo(Class<?> formType) {
+        return new PushedFormInfo(formType);
+    }
+
+    /**
+     * Set up the HTML response as using action form with internal initial value. <br>
+     * And you can use the action form in your HTML template.
+     * <pre>
+     * <span style="color: #3F7E5E">// case of internal initial value</span>
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaJsp</span>).<span style="color: #CC4747">useForm</span>(SeaForm.<span style="color: #70226C">class</span>, op <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> op.<span style="color: #994747">setup</span>(form <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> ...));
+     * }
+     * </pre>
+     * @param formType The type of action form. (NotNull)
+     * @param opLambda The callback for option of the form, provides new-created form instance, so you can setup it. (NotNull)
+     * @return this. (NotNull)
+     */
+    public <FORM> HtmlResponse useForm(Class<FORM> formType, PushedFormOpCall<FORM> opLambda) {
+        assertArgumentNotNull("formType", formType);
+        assertArgumentNotNull("opLambda", opLambda);
+        this.pushedFormInfo = createPushedFormInfo(formType, createPushedFormOption(opLambda));
+        return this;
+    }
+
+    protected <FORM> PushedFormOption<FORM> createPushedFormOption(PushedFormOpCall<FORM> opLambda) {
+        final PushedFormOption<FORM> formOption = new PushedFormOption<FORM>();
+        opLambda.callback(formOption);
+        return formOption;
+    }
+
+    protected <FORM> PushedFormInfo createPushedFormInfo(Class<FORM> formType, PushedFormOption<FORM> formOption) {
+        return new PushedFormInfo(formType, formOption);
     }
 
     // ===================================================================================
@@ -287,9 +325,9 @@ public class HtmlResponse implements ActionResponse, Redirectable {
         return registrationList != null ? registrationList : Collections.emptyList();
     }
 
-    public OptionalThing<Class<?>> getPushedFormType() {
-        return OptionalThing.ofNullable(pushedFormType, () -> {
-            throw new IllegalStateException("Not found the pushed form type in the HTML response: " + nextRouting);
+    public OptionalThing<PushedFormInfo> getPushedFormInfo() {
+        return OptionalThing.ofNullable(pushedFormInfo, () -> {
+            throw new IllegalStateException("Not found the pushed form info in the HTML response: " + nextRouting);
         });
     }
 

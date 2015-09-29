@@ -20,7 +20,7 @@ package org.lastaflute.web.ruts.config;
  */
 public class ExecuteOption {
 
-    protected final String specifiedUrlPattern;
+    protected final String specifiedUrlPattern; // null allowed
     protected final boolean suppressTransaction;
     protected final boolean suppressValidatorCallCheck;
     protected final int sqlExecutionCountLimit;
