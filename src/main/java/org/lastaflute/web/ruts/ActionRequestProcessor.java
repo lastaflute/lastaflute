@@ -33,6 +33,7 @@ import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.exception.RequestForwardFailureException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
+import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.process.ActionCoinHelper;
@@ -215,26 +216,28 @@ public class ActionRequestProcessor {
         if (journey.isRedirectTo()) {
             doRedirect(runtime, journey);
         } else {
-            exportFormPropertyToRequest(runtime); // for e.g. EL expression in JSP
-            doForward(runtime, journey);
+            handleHtmlTemplate(runtime, journey);
         }
     }
 
-    // -----------------------------------------------------
-    //                                              Redirect
-    //                                              --------
     protected void doRedirect(ActionRuntime runtime, NextJourney journey) throws IOException {
         getRequestManager().getResponseManager().redirect(journey);
     }
 
+    protected void handleHtmlTemplate(ActionRuntime runtime, NextJourney journey) throws IOException, ServletException {
+        exportFormPropertyToRequest(runtime); // for e.g. EL expression in JSP
+        doForward(runtime, journey);
+    }
+
     protected void exportFormPropertyToRequest(ActionRuntime runtime) {
-        runtime.getActionExecute().getFormMeta().ifPresent(meta -> {
+        runtime.getActionForm().ifPresent(virtualForm -> { // also contains pushed
+            final ActionFormMeta meta = virtualForm.getFormMeta();
             final Collection<ActionFormProperty> properties = meta.properties();
             if (properties.isEmpty()) {
                 return;
             }
             final RequestManager requestManager = getRequestManager();
-            final Object form = runtime.getActionForm().get().getRealForm();
+            final Object form = virtualForm.getRealForm();
             for (ActionFormProperty property : properties) {
                 if (isExportableProperty(property.getPropertyDesc())) {
                     final Object propertyValue = property.getPropertyValue(form);
@@ -250,9 +253,6 @@ public class ActionRequestProcessor {
         return !pd.getPropertyType().getName().startsWith("javax.servlet");
     }
 
-    // -----------------------------------------------------
-    //                                               Forward
-    //                                               -------
     protected void doForward(ActionRuntime runtime, NextJourney journey) throws IOException, ServletException {
         try {
             getRequestManager().getResponseManager().forward(journey);

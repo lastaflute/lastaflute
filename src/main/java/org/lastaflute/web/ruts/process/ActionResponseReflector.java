@@ -120,7 +120,9 @@ public class ActionResponseReflector {
     protected void setupPushedActionForm(HtmlResponse response) {
         response.getPushedFormInfo().ifPresent(formInfo -> {
             final String formKey = LastaWebKey.PUSHED_ACTION_FORM_KEY;
-            requestManager.setAttribute(formKey, createPushedActionForm(formInfo, formKey));
+            VirtualActionForm form = createPushedActionForm(formInfo, formKey);
+            requestManager.setAttribute(formKey, form);
+            runtime.setActionForm(OptionalThing.of(form)); // to export properties to request attribute
         });
     }
 
