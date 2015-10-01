@@ -190,10 +190,9 @@
 	</repositories>
 
 	<dependencies>
-		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
-			= = = = = = -->
-		<!-- Main Framework -->
-		<!-- = = = = = = = -->
+		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+		<!--                                                                Main Framework -->
+		<!--                                                                 = = = = = = = -->
 		<!-- dbflute -->
 		<dependency>
 			<groupId>org.dbflute</groupId>
@@ -231,10 +230,9 @@
 			<scope>provided</scope> <!-- servlet container provides -->
 		</dependency>
 
-		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
-			= = = = = = -->
-		<!-- Partner Library -->
-		<!-- = = = = = = = = -->
+		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+		<!--                                                               Partner Library -->
+		<!--                                                               = = = = = = = = -->
 		<!-- json -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
@@ -249,18 +247,16 @@
 			<version>${mailflute.version}</version>
 		</dependency>
 
-		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
-			= = = = = = -->
-		<!-- Testing -->
-		<!-- = = = = -->
-		<!-- junit -->
+		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
+		<!--                                                                       Testing -->
+		<!--                                                                       = = = = -->
+		<!-- unit test -->
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.8.2</version> <!-- is latest version without hamcrest -->
 			<scope>test</scope>
 		</dependency>
-		<!-- utflute -->
 		<dependency>
 			<groupId>org.dbflute.utflute</groupId>
 			<artifactId>utflute-lasta-di</artifactId>
