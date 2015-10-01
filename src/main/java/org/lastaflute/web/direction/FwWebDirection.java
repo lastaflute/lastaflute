@@ -27,6 +27,7 @@ import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
+import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
 import org.lastaflute.web.servlet.cookie.CookieResourceProvider;
 import org.lastaflute.web.servlet.filter.accesslog.AccessLogHandler;
 import org.lastaflute.web.servlet.filter.cors.CorsHook;
@@ -90,6 +91,11 @@ public class FwWebDirection {
     //                                             Multipart
     //                                             ---------
     protected MultipartResourceProvider multipartResourceProvider;
+
+    // -----------------------------------------------------
+    //                                         Html Renderer
+    //                                         -------------
+    protected HtmlRenderingProvider htmlRenderingProvider;
 
     // ===================================================================================
     //                                                                     Direct Property
@@ -212,6 +218,13 @@ public class FwWebDirection {
         this.multipartResourceProvider = multipartResourceProvider;
     }
 
+    // -----------------------------------------------------
+    //                                         Html Renderer
+    //                                         -------------
+    public void directHtmlRendering(HtmlRenderingProvider htmlRenderingProvider) {
+        this.htmlRenderingProvider = htmlRenderingProvider;
+    }
+
     // ===================================================================================
     //                                                                              Assist
     //                                                                              ======
@@ -295,6 +308,13 @@ public class FwWebDirection {
     //                                             ---------
     public MultipartResourceProvider assistMultipartResourceProvider() {
         return multipartResourceProvider; // not required, it's optional assist
+    }
+
+    // -----------------------------------------------------
+    //                                         Html Renderer
+    //                                         -------------
+    public HtmlRenderingProvider assistHtmlRenderingProvider() {
+        return htmlRenderingProvider; // not required, it's optional assist
     }
 
     // ===================================================================================

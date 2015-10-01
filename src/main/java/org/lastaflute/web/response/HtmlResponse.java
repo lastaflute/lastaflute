@@ -78,10 +78,24 @@ public class HtmlResponse implements ActionResponse, Redirectable {
         return new HtmlResponse(new ForwardNext(forwardPath));
     }
 
+    /**
+     * Create HTML response by plain text URL. <br>
+     * Basically for outer resources. e.g. http://dbflute.org <br>
+     * Or inner resources in same context. e.g. /product/list/ (actually to /harbor/product/list/)
+     * @param redirectPath The path for redirect. e.g. /product/list/, http://dbflute.org (NotNull)
+     * @return The new-created instance of HTML response. (NotNull)
+     */
     public static HtmlResponse fromRedirectPath(String redirectPath) {
         return new HtmlResponse(new RedirectNext(redirectPath, RedirectPathStyle.INNER));
     }
 
+    /**
+     * Create HTML response by plain text URL as is. <br>
+     * Basically for outer resources. e.g. http://dbflute.org <br>
+     * Or resources in same domain without context path adjustment. e.g. /harbor/product/list/
+     * @param redirectPath The path for redirect. e.g. /harbor/product/list/, http://dbflute.org (NotNull)
+     * @return The new-created instance of HTML response. (NotNull)
+     */
     public static HtmlResponse fromRedirectPathAsIs(String redirectPath) {
         return new HtmlResponse(new RedirectNext(redirectPath, RedirectPathStyle.AS_IS));
     }

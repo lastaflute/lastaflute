@@ -16,7 +16,6 @@
 package org.lastaflute.web.ruts;
 
 import java.io.IOException;
-import java.util.Collection;
 
 import javax.servlet.ServletException;
 
@@ -28,18 +27,16 @@ import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.NoneTransactionStage;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.db.jta.stage.VestibuleTxProvider;
-import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.web.callback.ActionRuntime;
-import org.lastaflute.web.exception.RequestForwardFailureException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.config.ActionFormMeta;
-import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.process.ActionCoinHelper;
 import org.lastaflute.web.ruts.process.ActionFormMapper;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.RequestUrlParam;
+import org.lastaflute.web.ruts.renderer.HtmlRenderer;
+import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
@@ -216,7 +213,8 @@ public class ActionRequestProcessor {
         if (journey.isRedirectTo()) {
             doRedirect(runtime, journey);
         } else {
-            handleHtmlTemplate(runtime, journey);
+            final HtmlRenderer renderer = prepareHtmlRenderer(runtime, journey);
+            renderer.render(getRequestManager(), runtime, journey);
         }
     }
 
@@ -224,54 +222,27 @@ public class ActionRequestProcessor {
         getRequestManager().getResponseManager().redirect(journey);
     }
 
-    protected void handleHtmlTemplate(ActionRuntime runtime, NextJourney journey) throws IOException, ServletException {
-        exportFormPropertyToRequest(runtime); // for e.g. EL expression in JSP
-        doForward(runtime, journey);
-    }
-
-    protected void exportFormPropertyToRequest(ActionRuntime runtime) {
-        runtime.getActionForm().ifPresent(virtualForm -> { // also contains pushed
-            final ActionFormMeta meta = virtualForm.getFormMeta();
-            final Collection<ActionFormProperty> properties = meta.properties();
-            if (properties.isEmpty()) {
-                return;
+    protected HtmlRenderer prepareHtmlRenderer(ActionRuntime runtime, NextJourney journey) {
+        final HtmlRenderingProvider provider = getAssistantDirector().assistWebDirection().assistHtmlRenderingProvider();
+        if (provider != null) {
+            final HtmlRenderer renderer = provider.provideRenderer(runtime, journey);
+            if (renderer == null) {
+                throwHtmlRenderingProviderReturnNullException(runtime, journey);
             }
-            final RequestManager requestManager = getRequestManager();
-            final Object form = virtualForm.getRealForm();
-            for (ActionFormProperty property : properties) {
-                if (isExportableProperty(property.getPropertyDesc())) {
-                    final Object propertyValue = property.getPropertyValue(form);
-                    if (propertyValue != null) {
-                        requestManager.setAttribute(property.getPropertyName(), propertyValue);
-                    }
-                }
-            }
-        });
-    }
-
-    protected boolean isExportableProperty(PropertyDesc pd) {
-        return !pd.getPropertyType().getName().startsWith("javax.servlet");
-    }
-
-    protected void doForward(ActionRuntime runtime, NextJourney journey) throws IOException, ServletException {
-        try {
-            getRequestManager().getResponseManager().forward(journey);
-        } catch (RuntimeException | IOException | ServletException e) { // because of e.g. compile error may be poor
-            throwRequestForwardFailureException(runtime, journey, e);
+            return renderer;
         }
+        return HtmlRenderingProvider.DEFAULT_RENDERER;
     }
 
-    protected void throwRequestForwardFailureException(ActionRuntime runtime, NextJourney journey, Exception e) {
+    protected void throwHtmlRenderingProviderReturnNullException(ActionRuntime runtime, NextJourney journey) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Failed to forward the request to the path.");
-        br.addItem("Advice");
-        br.addElement("Read the nested exception message.");
+        br.addNotice("The provideRenderer() returned null.");
         br.addItem("Action Runtime");
         br.addElement(runtime);
-        br.addItem("Forward Journey");
+        br.addItem("Next Journey");
         br.addElement(journey);
         final String msg = br.buildExceptionMessage();
-        throw new RequestForwardFailureException(msg, e);
+        throw new IllegalStateException(msg);
     }
 
     // ===================================================================================
