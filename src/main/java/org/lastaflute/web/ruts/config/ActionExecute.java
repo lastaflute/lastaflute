@@ -85,7 +85,7 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                           URL Pattern
     //                                           -----------
-    protected final String urlPattern; // not null e.g. [method] or [method]/{}
+    protected final String urlPattern; // not null, empty allowed e.g. [method] or [method]/{} or "" (when index())
     protected final Pattern urlPatternRegexp; // not null e.g. ^([^/]+)$ or ^([^/]+)/([^/]+)$ or ^sea/([^/]+)$
 
     // ===================================================================================
@@ -281,8 +281,8 @@ public class ActionExecute implements Serializable {
         } else { // urlPattern=[no definition]
             if (!urlParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
                 return adjustUrlPatternMethodPrefix(buildDerivedUrlPattern(urlParamTypeList), methodName);
-            } else { // e.g. sea() *no parameter
-                return methodName;
+            } else { // e.g. index(), sea() *no parameter
+                return adjustUrlPatternByMethodNameWithoutParam(methodName);
             }
         }
     }
@@ -301,6 +301,10 @@ public class ActionExecute implements Serializable {
             sb.append(i > 0 ? "/" : "").append("{}");
         }
         return sb.toString();
+    }
+
+    protected String adjustUrlPatternByMethodNameWithoutParam(final String methodName) {
+        return !methodName.equals("index") ? methodName : ""; // to avoid '/index/' hit
     }
 
     protected Pattern buildUrlPatternRegexp(String pattern) {
@@ -584,7 +588,10 @@ public class ActionExecute implements Serializable {
         if (!isParameterEmpty(paramPath)) {
             return handleOptionalParameterMapping(paramPath) || urlPatternRegexp.matcher(paramPath).find();
         } else {
-            return "index".equals(urlPattern);
+            // should not be called if param is empty, old code is like this:
+            //return "index".equals(urlPattern);
+            String msg = "The paramPath should not be null or empty: [" + paramPath + "], " + toSimpleMethodExp();
+            throw new IllegalStateException(msg);
         }
     }
 
