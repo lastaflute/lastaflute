@@ -519,12 +519,7 @@ public class ActionFormMapper {
             } else if (isClassificationProperty(propertyType)) { // e.g. CDef
                 mappedValue = toVerifiedClassification(bean, name, scalar, pd); // null allowed
             } else { // e.g. String, Integer, LocalDate, MultipartFormFile, ...
-                final Object converted = convertToPropertyNativeIfPossible(bean, name, scalar, pd);
-                if (converted != null) { // mainly here
-                    mappedValue = converted;
-                } else { // e.g. multipart form file
-                    mappedValue = scalar;
-                }
+                mappedValue = convertToPropertyNativeIfPossible(bean, name, scalar, pd);
             }
         }
         pd.setValue(bean, mappedValue);
@@ -581,7 +576,11 @@ public class ActionFormMapper {
         final Class<?> propertyType = pd.getPropertyType();
         final Object converted;
         if (propertyType.isPrimitive()) {
-            converted = DfTypeUtil.toWrapper(exp, propertyType);
+            if (propertyType == boolean.class && "on".equals(exp)) { // for checkbox
+                converted = true;
+            } else {
+                converted = DfTypeUtil.toWrapper(exp, propertyType);
+            }
         } else if (String.class.isAssignableFrom(propertyType)) {
             converted = exp != null ? exp : ""; // empty string as default 
         } else if (Number.class.isAssignableFrom(propertyType)) {
@@ -600,12 +599,16 @@ public class ActionFormMapper {
         } else if (LocalTime.class.isAssignableFrom(propertyType)) {
             converted = DfTypeUtil.toLocalTime(exp);
         } else if (Boolean.class.isAssignableFrom(propertyType)) {
-            converted = DfTypeUtil.toBoolean(exp);
+            if ("on".equals(exp)) { // for checkbox
+                converted = true;
+            } else {
+                converted = DfTypeUtil.toBoolean(exp);
+            }
             // already resolved here, because of null handling
             //} else if (isClassificationProperty(propertyType)) { // means CDef
             //    converted = toVerifiedClassification(bean, name, exp, pd);
-        } else {
-            converted = null;
+        } else { // e.g. multipart form file or unsupported type
+            converted = exp;
         }
         return converted;
     }
