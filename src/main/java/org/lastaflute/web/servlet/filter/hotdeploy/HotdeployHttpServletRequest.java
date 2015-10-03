@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.servlet.filter.hotdeploy;
 
+import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpSession;
@@ -27,7 +28,7 @@ import org.dbflute.util.Srl;
  */
 public class HotdeployHttpServletRequest extends HttpServletRequestWrapper {
 
-    protected final HttpServletRequest wrapped;
+    protected HttpServletRequest wrapped; // mutable, may be changed from setRequest()
     protected HttpSession session;
 
     public HotdeployHttpServletRequest(HttpServletRequest originalRequest) {
@@ -58,9 +59,19 @@ public class HotdeployHttpServletRequest extends HttpServletRequestWrapper {
     }
 
     @Override
+    public void setRequest(ServletRequest request) {
+        super.setRequest(request);
+        wrapped = (HttpServletRequest) request; // synchronize it with new request
+    }
+
+    @Override
     public String toString() {
         final String plain = wrapped.toString();
         final String firstLine = plain.contains("\n") ? Srl.substringFirstFront(plain, "\n") + "..." : plain; // might contain line so...
         return DfTypeUtil.toClassTitle(this) + "{" + firstLine + "}@" + Integer.toHexString(hashCode());
+    }
+
+    public HttpServletRequest getWrapped() {
+        return wrapped;
     }
 }
