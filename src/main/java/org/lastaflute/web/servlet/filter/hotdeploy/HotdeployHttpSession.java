@@ -31,7 +31,6 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionContext;
 
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
-import org.lastaflute.di.exception.IORuntimeException;
 import org.lastaflute.di.exception.SessionObjectNotSerializableRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,13 +41,22 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings("deprecation")
 public class HotdeployHttpSession implements HttpSession {
 
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(HotdeployHttpSession.class);
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
     protected final HotdeployHttpServletRequest request;
     protected final HttpSession originalSession;
     protected final Map<String, Object> attributes = new HashMap<String, Object>();
     protected boolean active = true;
 
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
     public HotdeployHttpSession(final HttpSession originalSession) {
         this(null, originalSession);
     }
@@ -58,13 +66,16 @@ public class HotdeployHttpSession implements HttpSession {
         this.originalSession = originalSession;
     }
 
+    // ===================================================================================
+    //                                                                               Flush
+    //                                                                               =====
     public void flush() {
         if (active) {
             for (Iterator<Entry<String, Object>> it = attributes.entrySet().iterator(); it.hasNext();) {
                 final Entry<String, Object> entry = (Entry<String, Object>) it.next();
                 final String key = (String) entry.getKey();
                 try {
-                    originalSession.setAttribute(key, new SerializedObjectHolder(entry.getValue()));
+                    originalSession.setAttribute(key, new SerializedObjectHolder(key, entry.getValue()));
                 } catch (final IllegalStateException e) {
                     return;
                 } catch (final Exception e) {
@@ -74,6 +85,9 @@ public class HotdeployHttpSession implements HttpSession {
         }
     }
 
+    // ===================================================================================
+    //                                                                  Attribute Handling
+    //                                                                  ==================
     public Object getAttribute(final String name) {
         assertActive();
         if (attributes.containsKey(name)) {
@@ -81,7 +95,7 @@ public class HotdeployHttpSession implements HttpSession {
         }
         Object value = originalSession.getAttribute(name);
         if (value instanceof SerializedObjectHolder) {
-            value = ((SerializedObjectHolder) value).getDeserializedObject(name);
+            value = ((SerializedObjectHolder) value).getDeserializedObject();
             if (value != null) {
                 attributes.put(name, value);
             } else {
@@ -114,6 +128,9 @@ public class HotdeployHttpSession implements HttpSession {
         return originalSession.getAttributeNames();
     }
 
+    // ===================================================================================
+    //                                                                           Delegator
+    //                                                                           =========
     public long getCreationTime() {
         return originalSession.getCreationTime();
     }
@@ -170,36 +187,49 @@ public class HotdeployHttpSession implements HttpSession {
         originalSession.setMaxInactiveInterval(interval);
     }
 
+    // ===================================================================================
+    //                                                                   Serialized Object
+    //                                                                   =================
     public static class SerializedObjectHolder implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        protected byte[] bytes;
+        protected final Object key;
+        protected final byte[] bytes;
 
-        public SerializedObjectHolder(final Object sessionObject) {
+        public SerializedObjectHolder(Object key, Object sessionObject) {
+            this.key = key;
             try {
                 final ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 final ObjectOutputStream oos = new ObjectOutputStream(baos);
                 oos.writeObject(sessionObject);
                 oos.close();
                 bytes = baos.toByteArray();
-            } catch (final NotSerializableException e) {
-                throw new SessionObjectNotSerializableRuntimeException(e);
-            } catch (final IOException e) {
-                throw new IORuntimeException(e);
+            } catch (NotSerializableException e) {
+                throw new IllegalStateException("Not serializable: " + sessionObject, e);
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to serialize: " + sessionObject, e);
             }
         }
 
-        public Object getDeserializedObject(final String name) {
+        public Object getDeserializedObject() {
             try {
                 return HotdeployUtil.deserializeInternal(bytes);
-            } catch (final Exception e) {
-                logger.info("Failed to get deserialized object as HotDeploy: " + name, e);
+            } catch (Exception e) {
+                logger.info("Failed to get deserialized object as HotDeploy: {}" + key, e);
                 return null;
             }
         }
+
+        @Override
+        public String toString() {
+            return "SerializedObjectHolder:{" + key + ", bytes=[" + bytes.length + "]}@" + Integer.toHexString(hashCode());
+        }
     }
 
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
     protected void assertActive() {
         if (!active) {
             throw new IllegalStateException("session invalidated");
