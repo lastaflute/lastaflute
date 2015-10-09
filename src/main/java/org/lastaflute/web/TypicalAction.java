@@ -35,7 +35,7 @@ import org.lastaflute.web.callback.ActionHook;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.callback.TooManySqlOption;
 import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
-import org.lastaflute.web.callback.TypicalGodHandActionEpilogue;
+import org.lastaflute.web.callback.TypicalGodHandEpilogue;
 import org.lastaflute.web.callback.TypicalGodHandMonologue;
 import org.lastaflute.web.callback.TypicalGodHandPrologue;
 import org.lastaflute.web.callback.TypicalGodHandResource;
@@ -191,12 +191,12 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     protected void setupHtmlData(ActionRuntime runtime) { // application may override
     }
 
-    protected TypicalGodHandActionEpilogue createTypicalGodHandEpilogue(ActionRuntime runtime) {
+    protected TypicalGodHandEpilogue createTypicalGodHandEpilogue(ActionRuntime runtime) {
         return newTypicalGodHandEpilogue(createTypicalGodHandResource(runtime), createTooManySqlOption(runtime));
     }
 
-    protected TypicalGodHandActionEpilogue newTypicalGodHandEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
-        return new TypicalGodHandActionEpilogue(resource, tooManySqlOption);
+    protected TypicalGodHandEpilogue newTypicalGodHandEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
+        return new TypicalGodHandEpilogue(resource, tooManySqlOption);
     }
 
     protected TooManySqlOption createTooManySqlOption(ActionRuntime runtime) {
