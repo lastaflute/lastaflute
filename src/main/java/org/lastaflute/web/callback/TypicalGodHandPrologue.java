@@ -280,7 +280,7 @@ public class TypicalGodHandPrologue {
     //                                                                       =============
     protected void handleDoubleSubmit(ActionRuntime runtime) {
         final TxToken txToken = runtime.getActionExecute().getTxToken();
-        if (!txToken.isProcess()) {
+        if (!txToken.needsProcess()) {
             return;
         }
         final Class<?> actionType = runtime.getActionType();
@@ -289,10 +289,10 @@ public class TypicalGodHandPrologue {
             doubleSubmitManager.saveToken(actionType);
         } else if (txToken.equals(TxToken.VALIDATE) || txToken.equals(TxToken.VALIDATE_KEEP)) {
             final boolean matched;
-            if (txToken.equals(TxToken.VALIDATE_KEEP)) {
-                matched = doubleSubmitManager.determineToken(actionType);
-            } else { // with reset
+            if (txToken.equals(TxToken.VALIDATE)) {
                 matched = doubleSubmitManager.determineTokenWithReset(actionType);
+            } else { // and keep (no reset)
+                matched = doubleSubmitManager.determineToken(actionType);
             }
             if (!matched) {
                 throwDoubleSubmitRequestException(runtime);

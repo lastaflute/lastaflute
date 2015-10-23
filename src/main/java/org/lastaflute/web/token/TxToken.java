@@ -29,7 +29,7 @@ public enum TxToken {
         this.process = process;
     }
 
-    public boolean isProcess() {
+    public boolean needsProcess() {
         return process;
     }
 }
