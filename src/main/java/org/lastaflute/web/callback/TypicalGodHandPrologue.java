@@ -69,6 +69,7 @@ public class TypicalGodHandPrologue {
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
     protected final DoubleSubmitManager doubleSubmitManager;
+    protected final TypicalEmbeddedKeySupplier keySupplier;
     protected final AccessContextArranger accessContextArranger;
     protected final Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier;
     protected final Supplier<String> appTypeSupplier;
@@ -76,14 +77,16 @@ public class TypicalGodHandPrologue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger accessContextArranger,
-            Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier, Supplier<String> appTypeSupplier) {
+    public TypicalGodHandPrologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier keySupplier,
+            AccessContextArranger accessContextArranger, Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier,
+            Supplier<String> appTypeSupplier) {
         this.messageManager = resource.getMessageManager();
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
         this.loginManager = resource.getLoginManager();
         this.apiManager = resource.getApiManager();
         this.doubleSubmitManager = resource.getDoubleSubmitManager();
+        this.keySupplier = keySupplier;
         this.accessContextArranger = accessContextArranger;
         this.userBeanSupplier = userBeanSupplier;
         this.appTypeSupplier = appTypeSupplier;
@@ -346,6 +349,6 @@ public class TypicalGodHandPrologue {
     }
 
     protected String getDoubleSubmitMessageKey() {
-        return "errors.app.double.submit.request";
+        return keySupplier.getErrorsAppDoubleSubmitRequestKey();
     }
 }

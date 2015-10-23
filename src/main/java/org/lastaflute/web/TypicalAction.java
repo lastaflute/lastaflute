@@ -122,8 +122,9 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
 
     protected TypicalGodHandPrologue createTypicalGodHandPrologue(ActionRuntime runtime) {
         final TypicalGodHandResource resource = createTypicalGodHandResource(runtime);
+        final TypicalEmbeddedKeySupplier supplier = newTypicalEmbeddedKeySupplier();
         final AccessContextArranger arranger = newAccessContextArranger();
-        return newTypicalGodHandPrologue(resource, arranger, () -> getUserBean(), () -> myAppType());
+        return newTypicalGodHandPrologue(resource, supplier, arranger, () -> getUserBean(), () -> myAppType());
     }
 
     /**
@@ -132,13 +133,14 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      */
     protected abstract AccessContextArranger newAccessContextArranger();
 
-    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger arranger,
-            Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier, Supplier<String> appTypeSupplier) {
-        return new TypicalGodHandPrologue(resource, arranger, userBeanSupplier, appTypeSupplier);
+    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier keySupplier,
+            AccessContextArranger arranger, Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier,
+            Supplier<String> appTypeSupplier) {
+        return new TypicalGodHandPrologue(resource, keySupplier, arranger, userBeanSupplier, appTypeSupplier);
     }
 
     @Override
-    public ActionResponse hookBefore(ActionRuntime runtimeMeta) { // application may override
+    public ActionResponse hookBefore(ActionRuntime runtime) { // application may override
         return ActionResponse.undefined();
     }
 
@@ -157,16 +159,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
         return newTypicalGodHandMonologue(resource, supplier, handler);
     }
 
-    protected TypicalEmbeddedKeySupplier newTypicalEmbeddedKeySupplier() {
-        return new TypicalSimpleEmbeddedKeySupplier();
-    }
-
     protected ActionApplicationExceptionHandler newActionApplicationExceptionHandler() {
-        return new ActionApplicationExceptionHandler() {
-            public ActionResponse handle(LaApplicationException appEx) {
-                return handleApplicationException(appEx);
-            }
-        };
+        return appEx -> handleApplicationException(appEx);
     }
 
     /**
@@ -224,6 +218,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
         final OptionalThing<LoginManager> loginManager = myLoginManager();
         return new TypicalGodHandResource(messageManager, exceptionTranslator, requestManager, responseManager, sessionManager,
                 loginManager, apiManager, doubleSubmitManager);
+    }
+
+    protected TypicalEmbeddedKeySupplier newTypicalEmbeddedKeySupplier() {
+        return new TypicalSimpleEmbeddedKeySupplier();
     }
 
     // ===================================================================================
