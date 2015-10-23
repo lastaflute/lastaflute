@@ -16,10 +16,12 @@
 package org.lastaflute.web.callback;
 
 import java.lang.reflect.Method;
+import java.util.Locale;
 import java.util.function.Supplier;
 
 import org.dbflute.bhv.proposal.callback.ExecutedSqlCounter;
 import org.dbflute.bhv.proposal.callback.TraceableSqlAdditionalInfoProvider;
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.hook.AccessContext;
 import org.dbflute.hook.CallbackContext;
 import org.dbflute.hook.SqlFireHook;
@@ -27,6 +29,7 @@ import org.dbflute.hook.SqlStringFilter;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextResource;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
@@ -40,6 +43,10 @@ import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.lastaflute.web.token.DoubleSubmitManager;
+import org.lastaflute.web.token.TxToken;
+import org.lastaflute.web.token.exception.DoubleSubmitMessageNotFoundException;
+import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,10 +63,12 @@ public class TypicalGodHandPrologue {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final MessageManager messageManager;
     protected final RequestManager requestManager;
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
+    protected final DoubleSubmitManager doubleSubmitManager;
     protected final AccessContextArranger accessContextArranger;
     protected final Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier;
     protected final Supplier<String> appTypeSupplier;
@@ -69,10 +78,12 @@ public class TypicalGodHandPrologue {
     //                                                                         ===========
     public TypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger accessContextArranger,
             Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier, Supplier<String> appTypeSupplier) {
+        this.messageManager = resource.getMessageManager();
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
         this.loginManager = resource.getLoginManager();
         this.apiManager = resource.getApiManager();
+        this.doubleSubmitManager = resource.getDoubleSubmitManager();
         this.accessContextArranger = accessContextArranger;
         this.userBeanSupplier = userBeanSupplier;
         this.appTypeSupplier = appTypeSupplier;
@@ -87,6 +98,7 @@ public class TypicalGodHandPrologue {
         arrangeCallbackContext(runtime); // should be after access-context (using access context's info)
         checkLoginRequired(runtime); // should be after access-context (may have update)
         arrangeThreadCacheContextLoginItem(runtime);
+        handleDoubleSubmit(runtime);
         return ActionResponse.undefined();
     }
 
@@ -246,7 +258,7 @@ public class TypicalGodHandPrologue {
     }
 
     // ===================================================================================
-    //                                                                      Login Handling
+    //                                                                      Login Required
     //                                                                      ==============
     /**
      * Check the login required for the requested action.
@@ -261,5 +273,79 @@ public class TypicalGodHandPrologue {
 
     protected LoginHandlingResource createLogingHandlingResource(ActionRuntime runtime) {
         return new LoginHandlingResource(runtime);
+    }
+
+    // ===================================================================================
+    //                                                                       Double Submit
+    //                                                                       =============
+    protected void handleDoubleSubmit(ActionRuntime runtime) {
+        final TxToken txToken = runtime.getActionExecute().getTxToken();
+        if (!txToken.isProcess()) {
+            return;
+        }
+        final Class<?> actionType = runtime.getActionType();
+        if (txToken.equals(TxToken.SAVE)) {
+            checkDoubleSubmitPreconditionExists(runtime);
+            doubleSubmitManager.saveToken(actionType);
+        } else if (txToken.equals(TxToken.VALIDATE) || txToken.equals(TxToken.VALIDATE_KEEP)) {
+            final boolean matched;
+            if (txToken.equals(TxToken.VALIDATE_KEEP)) {
+                matched = doubleSubmitManager.determineToken(actionType);
+            } else { // with reset
+                matched = doubleSubmitManager.determineTokenWithReset(actionType);
+            }
+            if (!matched) {
+                throwDoubleSubmitRequestException(runtime);
+            }
+        }
+    }
+
+    protected void checkDoubleSubmitPreconditionExists(ActionRuntime runtime) {
+        final Locale userLocale = requestManager.getUserLocale();
+        if (!messageManager.findMessage(userLocale, getDoubleSubmitMessageKey()).isPresent()) {
+            throwDoubleSubmitMessageNotFoundException(runtime, userLocale);
+        }
+    }
+
+    protected String throwDoubleSubmitMessageNotFoundException(ActionRuntime runtime, Locale userLocale) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the double submit message in message resource.");
+        br.addItem("Advice");
+        br.addElement("The message key should exist in your message resource,");
+        br.addElement("when you control double submit by transaction token.");
+        br.addElement("For example: (..._message.properties)");
+        br.addElement("  " + getDoubleSubmitMessageKey() + " = double submit requested");
+        br.addItem("Requested Action");
+        br.addElement(runtime);
+        br.addItem("User Locale");
+        br.addElement(userLocale);
+        br.addItem("NotFound MessageKey");
+        br.addElement(getDoubleSubmitMessageKey());
+        final String msg = br.buildExceptionMessage();
+        throw new DoubleSubmitMessageNotFoundException(msg);
+    }
+
+    protected String throwDoubleSubmitRequestException(ActionRuntime runtime) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The request was born from double submit.");
+        br.addItem("Advice");
+        br.addElement("Double submit by user operation");
+        br.addElement("or not saved token but validate it.");
+        br.addElement("Default scope of token is action type");
+        br.addElement("so SAVE and VALIDATE should be in same action.");
+        br.addItem("Requested Action");
+        br.addElement(runtime);
+        br.addItem("Requested Token");
+        br.addElement(doubleSubmitManager.getRequestedToken());
+        br.addItem("Saved Token");
+        br.addElement(doubleSubmitManager.getSessionTokenMap());
+        br.addItem("Token Group");
+        br.addElement(runtime.getActionType().getName());
+        final String msg = br.buildExceptionMessage();
+        throw new DoubleSubmitRequestException(msg, getDoubleSubmitMessageKey());
+    }
+
+    protected String getDoubleSubmitMessageKey() {
+        return "errors.app.double.submit.request";
     }
 }

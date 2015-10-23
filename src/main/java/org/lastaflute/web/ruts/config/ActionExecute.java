@@ -52,6 +52,7 @@ import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer.ExecuteArgBox;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternBox;
+import org.lastaflute.web.token.TxToken;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
 /**
@@ -73,6 +74,7 @@ public class ActionExecute implements Serializable {
     protected final TransactionGenre transactionGenre; // not null
     protected final boolean suppressValidatorCallCheck;
     protected final OptionalThing<Integer> sqlExecutionCountLimit;
+    protected final TxToken txToken;
 
     // -----------------------------------------------------
     //                                     Defined Parameter
@@ -103,6 +105,7 @@ public class ActionExecute implements Serializable {
         this.transactionGenre = chooseTransactionGenre(executeOption);
         this.suppressValidatorCallCheck = executeOption.isSuppressValidatorCallCheck();
         this.sqlExecutionCountLimit = createOptionalSqlExecutionCountLimit(executeOption);
+        this.txToken = executeOption.getTxToken();
 
         // defined parameter (needed in URL pattern analyzing)
         final ExecuteArgAnalyzer executeArgAnalyzer = newExecuteArgAnalyzer();
@@ -707,6 +710,10 @@ public class ActionExecute implements Serializable {
 
     public OptionalThing<Integer> getSqlExecutionCountLimit() {
         return sqlExecutionCountLimit;
+    }
+
+    public TxToken getTxToken() {
+        return txToken;
     }
 
     // -----------------------------------------------------

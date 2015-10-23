@@ -13,20 +13,23 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
+package org.lastaflute.web.token;
 
 /**
  * @author jflute
+ * @since 0.6.5 (2015/10/23 Friday)
  */
-public class ForcedIllegalTransitionApplicationException extends MessageKeyApplicationException {
+public enum TxToken {
 
-    private static final long serialVersionUID = 1L;
+    SAVE(true), VALIDATE(true), VALIDATE_KEEP(true), NONE(false);
 
-    public ForcedIllegalTransitionApplicationException(String msg, String transitionKey) {
-        super(msg, transitionKey);
+    private final boolean process;
+
+    private TxToken(boolean process) {
+        this.process = process;
     }
 
-    public ForcedIllegalTransitionApplicationException(String msg, String transitionKey, Throwable cause) {
-        super(msg, transitionKey, cause);
+    public boolean isProcess() {
+        return process;
     }
 }

@@ -26,6 +26,7 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
+import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
@@ -42,7 +43,7 @@ import org.lastaflute.web.callback.TypicalGodHandResource;
 import org.lastaflute.web.callback.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
 import org.lastaflute.web.docs.LaActionDocs;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
-import org.lastaflute.web.exception.ForcedIllegalTransitionApplicationException;
+import org.lastaflute.web.exception.ForcedIllegalTransitionException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
@@ -51,6 +52,7 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.lastaflute.web.token.DoubleSubmitManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +78,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     @Resource
     private TimeManager timeManager;
 
+    /** The manager of message. (NotNull) */
+    @Resource
+    private MessageManager messageManager;
+
     /** The translator of exception. (NotNull) */
     @Resource
     private ExceptionTranslator exceptionTranslator;
@@ -95,6 +101,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     /** The manager of API. (NotNull) */
     @Resource
     private ApiManager apiManager;
+
+    /** The manager of double submit using transaction token. (NotNull) */
+    @Resource
+    private DoubleSubmitManager doubleSubmitManager;
 
     // ===================================================================================
     //                                                                               Hook
@@ -212,7 +222,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                      ----------------
     protected TypicalGodHandResource createTypicalGodHandResource(ActionRuntime runtime) {
         final OptionalThing<LoginManager> loginManager = myLoginManager();
-        return new TypicalGodHandResource(requestManager, responseManager, sessionManager, loginManager, apiManager, exceptionTranslator);
+        return new TypicalGodHandResource(messageManager, exceptionTranslator, requestManager, responseManager, sessionManager,
+                loginManager, apiManager, doubleSubmitManager);
     }
 
     // ===================================================================================
@@ -343,10 +354,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * @param msg The debug message for developer (not user message). (NotNull)
      * @return The new-created exception of 404. (NotNull)
      */
-    protected ForcedIllegalTransitionApplicationException ofIllegalTransition(String msg) {
+    protected ForcedIllegalTransitionException ofIllegalTransition(String msg) {
         assertArgumentNotNull("msg for illegal transition", msg);
         final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
-        return new ForcedIllegalTransitionApplicationException(msg, transitionKey);
+        return new ForcedIllegalTransitionException(msg, transitionKey);
     }
 
     // ===================================================================================

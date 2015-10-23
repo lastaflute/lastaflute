@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.ruts.config;
 
+import org.lastaflute.web.token.TxToken;
+
 /**
  * @author jflute
  */
@@ -24,19 +26,22 @@ public class ExecuteOption {
     protected final boolean suppressTransaction;
     protected final boolean suppressValidatorCallCheck;
     protected final int sqlExecutionCountLimit;
+    protected final TxToken txToken;
 
     /**
      * @param specifiedUrlPattern The URL pattern specified by action. (NullAllowed)
      * @param suppressTransaction Does it suppress transaction for action?
      * @param sqlExecutionCountLimit The integer for limit of SQL execution count in one request. (MinusAllowed: use default limit)
      * @param suppressValidatorCallCheck Does it suppress validator call check?
+     * @param txToken The type of transaction token. (NotNull)
      */
     public ExecuteOption(String specifiedUrlPattern, boolean suppressTransaction, boolean suppressValidatorCallCheck,
-            int sqlExecutionCountLimit) {
+            int sqlExecutionCountLimit, TxToken txToken) {
         this.specifiedUrlPattern = specifiedUrlPattern;
         this.suppressTransaction = suppressTransaction;
         this.suppressValidatorCallCheck = suppressValidatorCallCheck;
         this.sqlExecutionCountLimit = sqlExecutionCountLimit;
+        this.txToken = txToken;
     }
 
     public String getSpecifiedUrlPattern() {
@@ -53,5 +58,9 @@ public class ExecuteOption {
 
     public int getSqlExecutionCountLimit() {
         return sqlExecutionCountLimit;
+    }
+
+    public TxToken getTxToken() {
+        return txToken;
     }
 }

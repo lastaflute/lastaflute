@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.token;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.LastaWebKey;
 
 /**
@@ -24,13 +25,50 @@ public interface DoubleSubmitManager {
 
     String TOKEN_KEY = LastaWebKey.TRANSACTION_TOKEN_KEY;
 
-    boolean determineToken(Class<?> groupType);
-
-    boolean determineTokenWithReset(Class<?> groupType);
-
+    // ===================================================================================
+    //                                                                  Token Manipulation
+    //                                                                  ==================
+    /**
+     * Save the transaction token to session.
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @return The generated token saved in session. (NotNull)
+     */
     String saveToken(Class<?> groupType);
 
+    /**
+     * Generate the transaction token. (generation only)
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @return The generated string as transaction token. (NotNull)
+     */
     String generateToken(Class<?> groupType);
 
+    // ===================================================================================
+    //                                                                 Token Determination
+    //                                                                 ===================
+    /**
+     * Is the requested token matched with the token saved in session? (determination only)
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @return The determination, true or false.
+     */
+    boolean determineToken(Class<?> groupType);
+
+    /**
+     * Is the requested token matched with the token saved in session? <br>
+     * And reset token after determination.
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @return The determination, true or false.
+     */
+    boolean determineTokenWithReset(Class<?> groupType);
+
+    // ===================================================================================
+    //                                                                       Token Closing
+    //                                                                       =============
     void resetToken(Class<?> groupType);
+
+    // ===================================================================================
+    //                                                                        Token Access
+    //                                                                        ============
+    OptionalThing<String> getRequestedToken();
+
+    OptionalThing<DoubleSubmitTokenMap> getSessionTokenMap();
 }

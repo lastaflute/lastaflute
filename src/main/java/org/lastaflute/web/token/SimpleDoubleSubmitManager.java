@@ -37,39 +37,13 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     protected long previous; // keep for unique token
 
     // ===================================================================================
-    //                                                                 Token Determination
-    //                                                                 ===================
-    @Override
-    public synchronized boolean determineToken(Class<?> groupType) {
-        return doDetermineTokenValid(groupType, false);
-    }
-
-    @Override
-    public synchronized boolean determineTokenWithReset(Class<?> groupType) {
-        return doDetermineTokenValid(groupType, true);
-    }
-
-    protected boolean doDetermineTokenValid(Class<?> groupType, boolean reset) {
-        final String tokenKey = getTokenKey();
-        return (boolean) getSessionTokenMap(tokenKey).map(tokenMap -> {
-            return tokenMap.get(groupType).map(saved -> {
-                if (reset) {
-                    resetToken(groupType);
-                }
-                return getRequestedToken(tokenKey).map(token -> token.equals(saved)).orElse(false);
-            }).orElse(false);
-        }).orElse(false);
-    }
-
-    // ===================================================================================
     //                                                                  Token Manipulation
     //                                                                  ==================
     @Override
     public synchronized String saveToken(Class<?> groupType) {
-        final String tokenKey = getTokenKey();
-        final DoubleSubmitTokenMap tokenMap = getSessionTokenMap(tokenKey).orElseGet(() -> {
+        final DoubleSubmitTokenMap tokenMap = getSessionTokenMap().orElseGet(() -> {
             final DoubleSubmitTokenMap firstMap = new DoubleSubmitTokenMap();
-            requestManager.getSessionManager().setAttribute(tokenKey, firstMap);
+            requestManager.getSessionManager().setAttribute(getTokenKey(), firstMap);
             return firstMap;
         });
         final String generated = generateToken(groupType);
@@ -111,28 +85,60 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         return sb.toString();
     }
 
+    // ===================================================================================
+    //                                                                 Token Determination
+    //                                                                 ===================
+    @Override
+    public synchronized boolean determineToken(Class<?> groupType) {
+        return doDetermineTokenValid(groupType, false);
+    }
+
+    @Override
+    public synchronized boolean determineTokenWithReset(Class<?> groupType) {
+        return doDetermineTokenValid(groupType, true);
+    }
+
+    protected boolean doDetermineTokenValid(Class<?> groupType, boolean reset) {
+        return (boolean) getSessionTokenMap().map(tokenMap -> {
+            return tokenMap.get(groupType).map(saved -> {
+                if (reset) {
+                    resetToken(groupType);
+                }
+                return getRequestedToken().map(token -> token.equals(saved)).orElse(false);
+            }).orElse(false);
+        }).orElse(false);
+    }
+
+    // ===================================================================================
+    //                                                                       Token Closing
+    //                                                                       =============
     @Override
     public synchronized void resetToken(Class<?> groupType) {
-        final String tokenKey = getTokenKey();
-        getSessionTokenMap(tokenKey).ifPresent(tokenMap -> {
+        getSessionTokenMap().ifPresent(tokenMap -> {
             tokenMap.remove(groupType);
             if (tokenMap.isEmpty()) {
-                requestManager.getSessionManager().removeAttribute(tokenKey);
+                removeTokenFromSession();
             }
         }).orElse(() -> {
-            requestManager.getSessionManager().removeAttribute(tokenKey);
+            removeTokenFromSession();
         });
+    }
+
+    protected void removeTokenFromSession() {
+        requestManager.getSessionManager().removeAttribute(getTokenKey());
     }
 
     // ===================================================================================
     //                                                                        Token Access
     //                                                                        ============
-    protected OptionalThing<DoubleSubmitTokenMap> getSessionTokenMap(String tokenKey) {
-        return requestManager.getSessionManager().getAttribute(tokenKey, DoubleSubmitTokenMap.class);
+    @Override
+    public OptionalThing<String> getRequestedToken() {
+        return requestManager.getParameter(getTokenKey());
     }
 
-    protected OptionalThing<String> getRequestedToken(String tokenKey) {
-        return requestManager.getParameter(tokenKey);
+    @Override
+    public OptionalThing<DoubleSubmitTokenMap> getSessionTokenMap() {
+        return requestManager.getSessionManager().getAttribute(getTokenKey(), DoubleSubmitTokenMap.class);
     }
 
     // ===================================================================================
