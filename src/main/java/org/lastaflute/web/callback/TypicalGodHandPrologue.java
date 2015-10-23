@@ -286,6 +286,7 @@ public class TypicalGodHandPrologue {
         if (!txToken.needsProcess()) {
             return;
         }
+        // default scope is same action for now, will implement flexible scope if it needs
         final Class<?> actionType = runtime.getActionType();
         if (txToken.equals(TxToken.SAVE)) {
             checkDoubleSubmitPreconditionExists(runtime);
