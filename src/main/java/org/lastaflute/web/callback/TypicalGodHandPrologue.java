@@ -314,7 +314,7 @@ public class TypicalGodHandPrologue {
         br.addElement("The message key should exist in your message resource,");
         br.addElement("when you control double submit by transaction token.");
         br.addElement("For example: (..._message.properties)");
-        br.addElement("  " + getDoubleSubmitMessageKey() + " = double submit requested");
+        br.addElement("  " + getDoubleSubmitMessageKey() + " = double submit might be requested");
         br.addItem("Requested Action");
         br.addElement(runtime);
         br.addItem("User Locale");
