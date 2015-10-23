@@ -96,7 +96,7 @@ public class LaParamWrapperUtil {
         if (Map.class.isAssignableFrom(clazz)) {
             return (WRAPPER) new MapWrapper<Object, Object>((Map<Object, Object>) value);
         }
-        if (clazz.getSuperclass().isEnum()) {
+        if (clazz.isEnum()) {
             return (WRAPPER) value;
         }
         return (WRAPPER) new BeanWrapper(value);
