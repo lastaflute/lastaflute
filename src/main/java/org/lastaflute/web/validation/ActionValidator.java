@@ -15,8 +15,10 @@
  */
 package org.lastaflute.web.validation;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,6 +29,8 @@ import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.validation.Configuration;
 import javax.validation.ConstraintViolation;
@@ -36,6 +40,7 @@ import javax.validation.Validator;
 import javax.validation.bootstrap.GenericBootstrap;
 import javax.validation.constraints.NotNull;
 import javax.validation.groups.Default;
+import javax.validation.metadata.ConstraintDescriptor;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
@@ -70,27 +75,41 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     public static final String JAVAX_CONSTRAINTS_PKG = NotNull.class.getPackage().getName();
     public static final String HIBERNATE_CONSTRAINTS_PKG = NotEmpty.class.getPackage().getName();
 
-    public static final Class<?>[] DEFAULT_GROUPS = new Class<?>[] { Default.class };
+    public static final Class<?> DEFAULT_GROUP_TYPE = Default.class;
+    public static final Class<?>[] DEFAULT_GROUPS = new Class<?>[] { DEFAULT_GROUP_TYPE };
+    public static final Class<?> CLIENT_ERROR_TYPE = ClientError.class;
+    public static final Class<?>[] CLIENT_ERROR_GROUPS = new Class<?>[] { CLIENT_ERROR_TYPE };
+
     protected static final String ITEM_VARIABLE = "{item}";
     protected static final String LABELS_PREFIX = "labels.";
+
+    protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     protected final RequestManager requestManager;
     protected final MessagesCreator<MESSAGES> messageCreator;
-    protected final Class<?>[] groups; // not null
+    protected final Class<?>[] runtimeGroups; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(RequestManager requestManager, MessagesCreator<MESSAGES> noArgInLambda, Class<?>... groups) {
+    public ActionValidator(RequestManager requestManager, MessagesCreator<MESSAGES> noArgInLambda, Class<?>... runtimeGroups) {
         assertArgumentNotNull("requestManager", requestManager);
         assertArgumentNotNull("noArgInLambda", noArgInLambda);
-        assertArgumentNotNull("groups", groups);
+        assertArgumentNotNull("runtimeGroups", runtimeGroups);
         this.requestManager = requestManager;
         this.messageCreator = noArgInLambda;
-        this.groups = groups;
+        this.runtimeGroups = runtimeGroups;
+        assertGroupsNotContainsClientError(runtimeGroups);
+    }
+
+    protected void assertGroupsNotContainsClientError(Class<?>... groups) {
+        Stream.of(groups).filter(tp -> tp.equals(CLIENT_ERROR_TYPE)).findAny().ifPresent(groupType -> {
+            String msg = "Cannot specify client error as group, you can use it only at annotation: ";
+            throw new IllegalStateException(msg + Arrays.asList(groups));
+        });
     }
 
     // ===================================================================================
@@ -108,8 +127,14 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         assertArgumentNotNull("doValidateLambda", doValidateLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
         markValidationCalled();
-        verifyClientError(form);
-        final Set<ConstraintViolation<Object>> vioSet = hibernateValidate(form);
+        final boolean implicitGroup = containsRuntimeGroup(runtimeGroups, DEFAULT_GROUP_TYPE);
+        if (implicitGroup) {
+            verifyDefaultGroupClientError(form);
+        }
+        final Set<ConstraintViolation<Object>> vioSet = hibernateValidate(form, runtimeGroups);
+        if (!implicitGroup) {
+            verifyExplicitGroupClientError(form, vioSet);
+        }
         @SuppressWarnings("unchecked")
         final MESSAGES messages = (MESSAGES) toActionMessages(form, vioSet);
         doValidateLambda.more(messages);
@@ -117,6 +142,10 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
             throwValidationErrorException(messages, validationErrorLambda);
         }
         return createValidationSuccess(messages);
+    }
+
+    protected boolean containsRuntimeGroup(Class<?>[] groups, Class<?> groupType) {
+        return Stream.of(groups).filter(tp -> tp.equals(groupType)).findAny().isPresent();
     }
 
     protected void markValidationCalled() {
@@ -130,7 +159,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     }
 
     protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
-        throw new ValidationErrorException(messages, validationErrorLambda);
+        throw new ValidationErrorException(runtimeGroups, messages, validationErrorLambda);
     }
 
     protected ValidationSuccess createValidationSuccess(MESSAGES messages) {
@@ -164,7 +193,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                 Hibernate Validator
     //                                                                 ===================
-    protected Set<ConstraintViolation<Object>> hibernateValidate(Object form) {
+    protected Set<ConstraintViolation<Object>> hibernateValidate(Object form, Class<?>[] groups) {
         return comeOnHibernateValidator().validate(form, groups);
     }
 
@@ -189,11 +218,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                       Resource Bundle
     //                                       ---------------
     protected ResourceBundleLocator newResourceBundleLocator() {
-        return new ResourceBundleLocator() {
-            public ResourceBundle getResourceBundle(Locale locale) {
-                return newHookedResourceBundle(locale);
-            }
-        };
+        return locale -> newHookedResourceBundle(locale);
     }
 
     protected ResourceBundle newHookedResourceBundle(Locale locale) {
@@ -343,7 +368,10 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     protected void registerActionMessage(ActionMessages messages, ConstraintViolation<Object> vio) {
         final String propertyPath = extractPropertyPath(vio);
         final String message = filterMessage(extractMessage(vio), propertyPath);
-        messages.add(propertyPath, newDirectActionMessage(message));
+        final ConstraintDescriptor<?> descriptor = vio.getConstraintDescriptor();
+        final Annotation annotation = descriptor.getAnnotation();
+        final Set<Class<?>> groups = descriptor.getGroups();
+        messages.add(propertyPath, newDirectActionMessage(message, annotation, groups.toArray(new Class<?>[groups.size()])));
     }
 
     protected String extractPropertyPath(ConstraintViolation<Object> vio) {
@@ -354,8 +382,8 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return vio.getMessage();
     }
 
-    protected ActionMessage newDirectActionMessage(String msg) {
-        return new ActionMessage(msg, false);
+    protected ActionMessage newDirectActionMessage(String msg, Annotation annotation, Class<?>[] groups) {
+        return ActionMessage.asDirectMessage(msg, annotation, groups);
     }
 
     protected String filterMessage(String message, String propertyPath) {
@@ -387,26 +415,44 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                        Client Error
     //                                                                        ============
-    protected void verifyClientError(Object form) {
-        final Set<ConstraintViolation<Object>> clientErrorSet = clientErrorHibernateValidate(form);
+    protected void verifyDefaultGroupClientError(Object form) {
+        // e.g. @Required(groups = { ClientError.class }) (when default group specified)
+        if (containsRuntimeGroup(runtimeGroups, DEFAULT_GROUP_TYPE)) {
+            final Set<ConstraintViolation<Object>> clientErrorSet = hibernateValidate(form, CLIENT_ERROR_GROUPS);
+            handleClientErrorViolation(form, clientErrorSet);
+        }
+    }
+
+    protected void verifyExplicitGroupClientError(Object form, Set<ConstraintViolation<Object>> vioSet) {
+        // e.g. @Required(groups = { Sea.class, ClientError.class }) (when Sea group specified)
+        final Set<ConstraintViolation<Object>> clientErrorSet = vioSet.stream().filter(vio -> {
+            return containsDefinedGroup(vio.getConstraintDescriptor().getGroups(), CLIENT_ERROR_TYPE);
+        }).collect(Collectors.toSet());
+        handleClientErrorViolation(form, clientErrorSet);
+    }
+
+    protected boolean containsDefinedGroup(Set<Class<?>> groups, Class<?> groupType) {
+        return groups.stream().filter(tp -> tp.equals(groupType)).findAny().isPresent();
+    }
+
+    protected void handleClientErrorViolation(Object form, Set<ConstraintViolation<Object>> clientErrorSet) {
         if (!clientErrorSet.isEmpty()) {
             throwClientErrorByValidatorException(form, clientErrorSet);
         }
     }
 
-    protected Set<ConstraintViolation<Object>> clientErrorHibernateValidate(Object form) {
-        return comeOnHibernateValidator().validate(form, ClientError.class);
-    }
-
     protected void throwClientErrorByValidatorException(Object form, Set<ConstraintViolation<Object>> clientErrorSet) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Client Error detected by validator:");
+        sb.append("Client Error detected by validator: runtimeGroups="); // similar to normal validation error logging
+        sb.append(Stream.of(runtimeGroups).map(tp -> {
+            return tp.getSimpleName() + ".class";
+        }).collect(Collectors.toList()));
         @SuppressWarnings("unchecked")
         final MESSAGES messages = (MESSAGES) toActionMessages(form, clientErrorSet);
         messages.toPropertySet().forEach(property -> {
-            final Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property);
-            while (ite.hasNext()) {
-                sb.append("\n ").append(property).append(" ").append((ActionMessage) ite.next());
+            sb.append(LF).append(" ").append(property);
+            for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                sb.append(LF).append("   ").append(ite.next());
             }
         });
         final String msg = sb.toString();

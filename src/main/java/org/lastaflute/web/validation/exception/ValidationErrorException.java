@@ -31,19 +31,24 @@ public class ValidationErrorException extends RuntimeException {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionMessages messages;
-    protected final VaErrorHook errorHandler;
+    protected final Class<?>[] runtimeGroups; // not null
+    protected final ActionMessages messages; // not null
+    protected final VaErrorHook errorHandler; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ValidationErrorException(ActionMessages messages, VaErrorHook errorHandler) {
+    public ValidationErrorException(Class<?>[] runtimeGroups, ActionMessages messages, VaErrorHook errorHandler) {
+        if (runtimeGroups == null) {
+            throw new IllegalArgumentException("The argument 'runtimeGroups' should not be null.");
+        }
         if (messages == null) {
             throw new IllegalArgumentException("The argument 'messages' should not be null.");
         }
         if (errorHandler == null) {
             throw new IllegalArgumentException("The argument 'errorHandler' should not be null.");
         }
+        this.runtimeGroups = runtimeGroups;
         this.messages = messages;
         this.errorHandler = errorHandler;
     }
@@ -59,6 +64,10 @@ public class ValidationErrorException extends RuntimeException {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    public Class<?>[] getRuntimeGroups() {
+        return runtimeGroups;
+    }
+
     public ActionMessages getMessages() {
         return messages;
     }
