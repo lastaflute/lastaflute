@@ -19,7 +19,6 @@ import java.lang.reflect.Parameter;
 import java.util.function.Consumer;
 
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
@@ -158,8 +157,12 @@ public class ActionResponseReflector {
         if (response.isReturnAsEmptyBody()) {
             return undefinedJourney();
         }
-        final JsonManager jsonManager = requestManager.getJsonManager();
-        final String json = jsonManager.toJson(response.getJsonBean());
+        final String json;
+        if (response.isReturnAsJsonDirectly()) {
+            json = response.getDirectJson().get();
+        } else { // mainly here
+            json = requestManager.getJsonManager().toJson(response.getJsonBean());
+        }
         response.getCallback().ifPresent(callback -> {
             final String script = callback + "(" + json + ")";
             responseManager.writeAsJavaScript(script);
