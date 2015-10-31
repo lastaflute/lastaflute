@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation;
+package org.lastaflute.web.validation.theme;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.CONSTRUCTOR;
@@ -30,26 +30,17 @@ import javax.validation.Constraint;
 import javax.validation.Payload;
 
 /**
- * The validator annotation as required for general proeprty types.
- * <pre>
- * o String     : not null, not empty, not blank
- * o Integer    : not null
- * o LocalDate  : not null
- * o Collection : not null, not empty
- * o Map        : not null, not empty
- * o Array      : not null, not empty
- * o others     : not null
- * </pre>
+ * The validator annotation as big decimal for string.
  * @author jflute
- * @since 0.6.0 (2015/08/08 Saturday at American Water Front)
+ * @since 0.6.5 (2015/10/31 Saturday)
  */
 @Target({ METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER })
 @Retention(RUNTIME)
 @Documented
-@Constraint(validatedBy = RequiredValidator.class)
-public @interface Required {
+@Constraint(validatedBy = BigDecimalTypeValidator.class)
+public @interface BigDecimalType {
 
-    String message() default "{org.lastaflute.validator.constraints.Required.message}";
+    String message() default "{org.lastaflute.validator.constraints.BigDecimalType.message}";
 
     Class<?>[] groups() default {};
 
