@@ -45,7 +45,7 @@ public abstract class NumberTypeValidator<NUMBER extends Annotation> implements 
                 return false;
             }
         } else {
-            return false;
+            return true;
         }
     }
 
