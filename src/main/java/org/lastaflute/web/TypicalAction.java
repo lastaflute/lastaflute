@@ -53,6 +53,8 @@ import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.token.DoubleSubmitManager;
+import org.lastaflute.web.token.TokenErrorHook;
+import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -250,6 +252,42 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * @return The optional instance of login manager. (NotNull, EmptyAllowed: if no login handling)
      */
     protected abstract OptionalThing<LoginManager> myLoginManager();
+
+    // ===================================================================================
+    //                                                                       Double Submit
+    //                                                                       =============
+    /**
+     * Save the transaction token to session, using this action as group type.
+     */
+    protected void saveToken() {
+        doubleSubmitManager.saveToken(myTokenGroupType());
+    }
+
+    /**
+     * Verify the request token (whether the request token is same as saved token) <br>
+     * And reset the saved token, it can be used only one-time. <br> 
+     * Using this action as group type.
+     * @param validationErrorLambda The hook to return action response when token error. (NotNull)
+     * @throws DoubleSubmitRequestException When the token is invalid.
+     */
+    protected void verifyToken(TokenErrorHook validationErrorLambda) {
+        doubleSubmitManager.verifyToken(myTokenGroupType(), validationErrorLambda);
+    }
+
+    /**
+     * Verify the request token (whether the request token is same as saved token) <br>
+     * Keep the saved token, so this method is basically for intermediate request. <br>
+     * Using this action as group type.
+     * @param validationErrorLambda The hook to return action response when token error. (NotNull)
+     * @throws DoubleSubmitRequestException When the token is invalid.
+     */
+    protected void verifyTokenKeep(TokenErrorHook validationErrorLambda) {
+        doubleSubmitManager.verifyTokenKeep(myTokenGroupType(), validationErrorLambda);
+    }
+
+    protected Class<?> myTokenGroupType() {
+        return LaActionRuntimeUtil.getActionRuntime().getActionType();
+    }
 
     // ===================================================================================
     //                                                                              Verify

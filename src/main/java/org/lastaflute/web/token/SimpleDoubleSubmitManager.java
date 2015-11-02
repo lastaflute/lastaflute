@@ -17,11 +17,18 @@ package org.lastaflute.web.token;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 
 import javax.annotation.Resource;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.token.exception.DoubleSubmitMessageNotFoundException;
+import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
+import org.lastaflute.web.util.LaActionRuntimeUtil;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -29,8 +36,15 @@ import org.lastaflute.web.servlet.request.RequestManager;
 public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
 
     // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    protected static final String ERRORS_APP_DOUBLE_SUBMIT_REQUEST = "errors.app.double.submit.request";
+
+    // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    @Resource
+    protected MessageManager messageManager;
     @Resource
     protected RequestManager requestManager;
 
@@ -39,8 +53,15 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     // ===================================================================================
     //                                                                  Token Manipulation
     //                                                                  ==================
+    // -----------------------------------------------------
+    //                                                 Save
+    //                                                ------
     @Override
     public synchronized String saveToken(Class<?> groupType) {
+        if (groupType == null) {
+            throw new IllegalArgumentException("The argument 'groupType' should not be null.");
+        }
+        checkDoubleSubmitPreconditionExists(groupType);
         final DoubleSubmitTokenMap tokenMap = getSessionTokenMap().orElseGet(() -> {
             final DoubleSubmitTokenMap firstMap = new DoubleSubmitTokenMap();
             requestManager.getSessionManager().setAttribute(getTokenKey(), firstMap);
@@ -51,8 +72,45 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         return generated;
     }
 
+    protected void checkDoubleSubmitPreconditionExists(Class<?> groupType) {
+        final Locale userLocale = requestManager.getUserLocale();
+        if (!messageManager.findMessage(userLocale, getDoubleSubmitMessageKey()).isPresent()) {
+            throwDoubleSubmitMessageNotFoundException(groupType, userLocale);
+        }
+    }
+
+    protected String throwDoubleSubmitMessageNotFoundException(Class<?> groupType, Locale userLocale) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the double submit message in message resource.");
+        br.addItem("Advice");
+        br.addElement("The message key should exist in your message resource,");
+        br.addElement("when you control double submit by transaction token.");
+        br.addElement("For example: (..._message.properties)");
+        br.addElement("  " + getDoubleSubmitMessageKey() + " = double submit might be requested");
+        br.addItem("Requested Action");
+        br.addElement(LaActionRuntimeUtil.hasActionRuntime() ? LaActionRuntimeUtil.getActionRuntime() : null);
+        br.addItem("Token Group");
+        br.addElement(groupType.getName());
+        br.addItem("User Locale");
+        br.addElement(userLocale);
+        br.addItem("NotFound MessageKey");
+        br.addElement(getDoubleSubmitMessageKey());
+        final String msg = br.buildExceptionMessage();
+        throw new DoubleSubmitMessageNotFoundException(msg);
+    }
+
+    protected String getDoubleSubmitMessageKey() {
+        return ERRORS_APP_DOUBLE_SUBMIT_REQUEST;
+    }
+
+    // -----------------------------------------------------
+    //                                              Generate
+    //                                              --------
     @Override
     public synchronized String generateToken(Class<?> groupType) {
+        if (groupType == null) {
+            throw new IllegalArgumentException("The argument 'groupType' should not be null.");
+        }
         final byte[] idBytes = requestManager.getSessionManager().getSessionId().getBytes();
         long current = System.currentTimeMillis();
         if (current == previous) {
@@ -107,6 +165,50 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
                 return getRequestedToken().map(token -> token.equals(saved)).orElse(false);
             }).orElse(false);
         }).orElse(false);
+    }
+
+    // ===================================================================================
+    //                                                                  Token Verification
+    //                                                                  ==================
+    public void verifyToken(Class<?> groupType, TokenErrorHook errorHook) {
+        doVerifyToken(groupType, errorHook, false);
+    }
+
+    public void verifyTokenKeep(Class<?> groupType, TokenErrorHook errorHook) {
+        doVerifyToken(groupType, errorHook, true);
+    }
+
+    protected <MESSAGES extends ActionMessages> void doVerifyToken(Class<?> groupType, TokenErrorHook errorHook, boolean keep) {
+        final boolean matched;
+        if (keep) { // no reset (intermediate request)
+            matched = determineToken(groupType);
+        } else { // mainly here (finish)
+            matched = determineTokenWithReset(groupType);
+        }
+        if (!matched) {
+            throwDoubleSubmitRequestException(groupType, errorHook);
+        }
+    }
+
+    protected <MESSAGES extends ActionMessages> String throwDoubleSubmitRequestException(Class<?> groupType, TokenErrorHook errorHook) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The request was born from double submit.");
+        br.addItem("Advice");
+        br.addElement("Double submit by user operation");
+        br.addElement("or not saved token but validate it.");
+        br.addElement("Default scope of token is action type");
+        br.addElement("so SAVE and VERIFY should be in same action.");
+        br.addItem("Requested Action");
+        br.addElement(LaActionRuntimeUtil.hasActionRuntime() ? LaActionRuntimeUtil.getActionRuntime() : null);
+        br.addItem("Token Group");
+        br.addElement(groupType.getName());
+        br.addItem("Requested Token");
+        br.addElement(getRequestedToken());
+        br.addItem("Saved Token");
+        br.addElement(getSessionTokenMap());
+        final String msg = br.buildExceptionMessage();
+        final String messageKey = getDoubleSubmitMessageKey();
+        throw new DoubleSubmitRequestException(msg, messageKey).response(() -> errorHook.hook());
     }
 
     // ===================================================================================

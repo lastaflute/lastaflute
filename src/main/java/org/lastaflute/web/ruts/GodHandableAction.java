@@ -421,10 +421,10 @@ public class GodHandableAction implements VirtualAction {
         requestManager.errors().save(messages); // also API can use it
         runtime.setValidationErrors(messages); // reflect to runtime
         runtime.setFailureCause(cause); // also cause
-        final VaErrorHook errorHandler = cause.getErrorHandler();
-        final ActionResponse response = errorHandler.hook(); // failure hook here if API
+        final VaErrorHook errorHook = cause.getErrorHook();
+        final ActionResponse response = errorHook.hook(); // failure hook here if API
         if (response == null) {
-            throw new IllegalStateException("The handler for validation error cannot return null: " + errorHandler, cause);
+            throw new IllegalStateException("The handler for validation error cannot return null: " + errorHook, cause);
         }
         response.getAfterTxCommitHook().ifPresent(hook -> {
             throw new IllegalStateException("Validation error always rollbacks transaction but tx-commit hook specified:" + hook);

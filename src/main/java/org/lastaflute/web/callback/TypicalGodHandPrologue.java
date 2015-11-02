@@ -16,12 +16,10 @@
 package org.lastaflute.web.callback;
 
 import java.lang.reflect.Method;
-import java.util.Locale;
 import java.util.function.Supplier;
 
 import org.dbflute.bhv.proposal.callback.ExecutedSqlCounter;
 import org.dbflute.bhv.proposal.callback.TraceableSqlAdditionalInfoProvider;
-import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.hook.AccessContext;
 import org.dbflute.hook.CallbackContext;
 import org.dbflute.hook.SqlFireHook;
@@ -44,9 +42,6 @@ import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.token.DoubleSubmitManager;
-import org.lastaflute.web.token.TxToken;
-import org.lastaflute.web.token.exception.DoubleSubmitMessageNotFoundException;
-import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +63,7 @@ public class TypicalGodHandPrologue {
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
+    // TODO jflute xxxxxxx (2015/11/02)
     protected final DoubleSubmitManager doubleSubmitManager;
     protected final TypicalEmbeddedKeySupplier keySupplier;
     protected final AccessContextArranger accessContextArranger;
@@ -101,7 +97,6 @@ public class TypicalGodHandPrologue {
         arrangeCallbackContext(runtime); // should be after access-context (using access context's info)
         checkLoginRequired(runtime); // should be after access-context (may have update)
         arrangeThreadCacheContextLoginItem(runtime);
-        handleDoubleSubmit(runtime);
         return ActionResponse.undefined();
     }
 
@@ -278,78 +273,79 @@ public class TypicalGodHandPrologue {
         return new LoginHandlingResource(runtime);
     }
 
-    // ===================================================================================
-    //                                                                       Double Submit
-    //                                                                       =============
-    protected void handleDoubleSubmit(ActionRuntime runtime) {
-        final TxToken txToken = runtime.getActionExecute().getTxToken();
-        if (!txToken.needsProcess()) {
-            return;
-        }
-        // default scope is same action for now, will implement flexible scope if it needs
-        final Class<?> actionType = runtime.getActionType();
-        if (txToken.equals(TxToken.SAVE)) {
-            checkDoubleSubmitPreconditionExists(runtime);
-            doubleSubmitManager.saveToken(actionType);
-        } else if (txToken.equals(TxToken.VALIDATE) || txToken.equals(TxToken.VALIDATE_KEEP)) {
-            final boolean matched;
-            if (txToken.equals(TxToken.VALIDATE)) {
-                matched = doubleSubmitManager.determineTokenWithReset(actionType);
-            } else { // and keep (no reset)
-                matched = doubleSubmitManager.determineToken(actionType);
-            }
-            if (!matched) {
-                throwDoubleSubmitRequestException(runtime);
-            }
-        }
-    }
-
-    protected void checkDoubleSubmitPreconditionExists(ActionRuntime runtime) {
-        final Locale userLocale = requestManager.getUserLocale();
-        if (!messageManager.findMessage(userLocale, getDoubleSubmitMessageKey()).isPresent()) {
-            throwDoubleSubmitMessageNotFoundException(runtime, userLocale);
-        }
-    }
-
-    protected String throwDoubleSubmitMessageNotFoundException(ActionRuntime runtime, Locale userLocale) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Not found the double submit message in message resource.");
-        br.addItem("Advice");
-        br.addElement("The message key should exist in your message resource,");
-        br.addElement("when you control double submit by transaction token.");
-        br.addElement("For example: (..._message.properties)");
-        br.addElement("  " + getDoubleSubmitMessageKey() + " = double submit might be requested");
-        br.addItem("Requested Action");
-        br.addElement(runtime);
-        br.addItem("User Locale");
-        br.addElement(userLocale);
-        br.addItem("NotFound MessageKey");
-        br.addElement(getDoubleSubmitMessageKey());
-        final String msg = br.buildExceptionMessage();
-        throw new DoubleSubmitMessageNotFoundException(msg);
-    }
-
-    protected String throwDoubleSubmitRequestException(ActionRuntime runtime) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("The request was born from double submit.");
-        br.addItem("Advice");
-        br.addElement("Double submit by user operation");
-        br.addElement("or not saved token but validate it.");
-        br.addElement("Default scope of token is action type");
-        br.addElement("so SAVE and VALIDATE should be in same action.");
-        br.addItem("Requested Action");
-        br.addElement(runtime);
-        br.addItem("Requested Token");
-        br.addElement(doubleSubmitManager.getRequestedToken());
-        br.addItem("Saved Token");
-        br.addElement(doubleSubmitManager.getSessionTokenMap());
-        br.addItem("Token Group");
-        br.addElement(runtime.getActionType().getName());
-        final String msg = br.buildExceptionMessage();
-        throw new DoubleSubmitRequestException(msg, getDoubleSubmitMessageKey());
-    }
-
-    protected String getDoubleSubmitMessageKey() {
-        return keySupplier.getErrorsAppDoubleSubmitRequestKey();
-    }
+    // TODO jflute xxxx (2015/11/02)
+    //// ===================================================================================
+    ////                                                                       Double Submit
+    ////                                                                       =============
+    //protected void handleDoubleSubmit(ActionRuntime runtime) {
+    //    final TxToken txToken = runtime.getActionExecute().getTxToken();
+    //    if (!txToken.needsProcess()) {
+    //        return;
+    //    }
+    //    // default scope is same action for now, will implement flexible scope if it needs
+    //    final Class<?> actionType = runtime.getActionType();
+    //    if (txToken.equals(TxToken.SAVE)) {
+    //        checkDoubleSubmitPreconditionExists(runtime);
+    //        doubleSubmitManager.saveToken(actionType);
+    //    } else if (txToken.equals(TxToken.VALIDATE) || txToken.equals(TxToken.VALIDATE_KEEP)) {
+    //        final boolean matched;
+    //        if (txToken.equals(TxToken.VALIDATE)) {
+    //            matched = doubleSubmitManager.determineTokenWithReset(actionType);
+    //        } else { // and keep (no reset)
+    //            matched = doubleSubmitManager.determineToken(actionType);
+    //        }
+    //        if (!matched) {
+    //            throwDoubleSubmitRequestException(runtime);
+    //        }
+    //    }
+    //}
+    //
+    //protected void checkDoubleSubmitPreconditionExists(ActionRuntime runtime) {
+    //    final Locale userLocale = requestManager.getUserLocale();
+    //    if (!messageManager.findMessage(userLocale, getDoubleSubmitMessageKey()).isPresent()) {
+    //        throwDoubleSubmitMessageNotFoundException(runtime, userLocale);
+    //    }
+    //}
+    //
+    //protected String throwDoubleSubmitMessageNotFoundException(ActionRuntime runtime, Locale userLocale) {
+    //    final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+    //    br.addNotice("Not found the double submit message in message resource.");
+    //    br.addItem("Advice");
+    //    br.addElement("The message key should exist in your message resource,");
+    //    br.addElement("when you control double submit by transaction token.");
+    //    br.addElement("For example: (..._message.properties)");
+    //    br.addElement("  " + getDoubleSubmitMessageKey() + " = double submit might be requested");
+    //    br.addItem("Requested Action");
+    //    br.addElement(runtime);
+    //    br.addItem("User Locale");
+    //    br.addElement(userLocale);
+    //    br.addItem("NotFound MessageKey");
+    //    br.addElement(getDoubleSubmitMessageKey());
+    //    final String msg = br.buildExceptionMessage();
+    //    throw new DoubleSubmitMessageNotFoundException(msg);
+    //}
+    //
+    //protected String throwDoubleSubmitRequestException(ActionRuntime runtime) {
+    //    final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+    //    br.addNotice("The request was born from double submit.");
+    //    br.addItem("Advice");
+    //    br.addElement("Double submit by user operation");
+    //    br.addElement("or not saved token but validate it.");
+    //    br.addElement("Default scope of token is action type");
+    //    br.addElement("so SAVE and VALIDATE should be in same action.");
+    //    br.addItem("Requested Action");
+    //    br.addElement(runtime);
+    //    br.addItem("Requested Token");
+    //    br.addElement(doubleSubmitManager.getRequestedToken());
+    //    br.addItem("Saved Token");
+    //    br.addElement(doubleSubmitManager.getSessionTokenMap());
+    //    br.addItem("Token Group");
+    //    br.addElement(runtime.getActionType().getName());
+    //    final String msg = br.buildExceptionMessage();
+    //    throw new DoubleSubmitRequestException(msg, getDoubleSubmitMessageKey());
+    //}
+    //
+    //protected String getDoubleSubmitMessageKey() {
+    //    return keySupplier.getErrorsAppDoubleSubmitRequestKey();
+    //}
 }

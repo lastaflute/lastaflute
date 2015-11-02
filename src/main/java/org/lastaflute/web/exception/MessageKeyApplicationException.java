@@ -15,15 +15,28 @@
  */
 package org.lastaflute.web.exception;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.exception.LaApplicationException;
+import org.lastaflute.web.response.ActionResponse;
 
 /**
  * @author jflute
  */
 public class MessageKeyApplicationException extends LaApplicationException {
 
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
     private static final long serialVersionUID = 1L;
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected MessageResponseHook responseHook;
+
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
     public MessageKeyApplicationException(String msg, String messageKey, Object... args) {
         super(msg + ": " + messageKey);
         saveErrors(messageKey, args);
@@ -32,5 +45,28 @@ public class MessageKeyApplicationException extends LaApplicationException {
     public MessageKeyApplicationException(String msg, Throwable cause, String messageKey, Object... args) {
         super(msg + ": " + messageKey, cause);
         saveErrors(messageKey, args);
+    }
+
+    // ===================================================================================
+    //                                                                       Response Hook
+    //                                                                       ====== =======
+    public MessageKeyApplicationException response(MessageResponseHook responseHook) {
+        this.responseHook = responseHook;
+        return this;
+    }
+
+    public OptionalThing<MessageResponseHook> getResponseHook() {
+        return OptionalThing.ofNullable(responseHook, () -> {
+            throw new IllegalStateException("Not found the response hook.");
+        });
+    }
+
+    @FunctionalInterface
+    public static interface MessageResponseHook {
+
+        /**
+         * @return The action response for application exception. (NotNull)
+         */
+        ActionResponse hook();
     }
 }
