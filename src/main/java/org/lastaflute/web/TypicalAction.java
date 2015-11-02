@@ -267,22 +267,22 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * Verify the request token (whether the request token is same as saved token) <br>
      * And reset the saved token, it can be used only one-time. <br> 
      * Using this action as group type.
-     * @param validationErrorLambda The hook to return action response when token error. (NotNull)
+     * @param errorResponseLambda The hook to return action response when token error. (NotNull)
      * @throws DoubleSubmitRequestException When the token is invalid.
      */
-    protected void verifyToken(TokenErrorHook validationErrorLambda) {
-        doubleSubmitManager.verifyToken(myTokenGroupType(), validationErrorLambda);
+    protected void verifyToken(TokenErrorHook errorResponseLambda) {
+        doubleSubmitManager.verifyToken(myTokenGroupType(), errorResponseLambda);
     }
 
     /**
      * Verify the request token (whether the request token is same as saved token) <br>
      * Keep the saved token, so this method is basically for intermediate request. <br>
      * Using this action as group type.
-     * @param validationErrorLambda The hook to return action response when token error. (NotNull)
+     * @param errorResponseLambda The hook to return action response when token error. (NotNull)
      * @throws DoubleSubmitRequestException When the token is invalid.
      */
-    protected void verifyTokenKeep(TokenErrorHook validationErrorLambda) {
-        doubleSubmitManager.verifyTokenKeep(myTokenGroupType(), validationErrorLambda);
+    protected void verifyTokenKeep(TokenErrorHook errorResponseLambda) {
+        doubleSubmitManager.verifyTokenKeep(myTokenGroupType(), errorResponseLambda);
     }
 
     protected Class<?> myTokenGroupType() {
