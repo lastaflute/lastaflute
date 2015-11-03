@@ -55,9 +55,14 @@ public class TransactionRomanticStringBuilder {
         doBuildUserBeanExp(sb, tx);
         doBuildTableCommandExp(sb, tx);
         doBuildRequestPathExp(sb, tx); // might have long query string so last
-        sb.append("}"); // SQL display has lines so close here
+        sb.append("}@").append(toHexHashExp(tx)).append("@").append(toHexHashExp(wrapper));
+        // SQL display has lines so close here
         doBuildCurrentSqlExp(sb, tx);
         return sb.toString();
+    }
+
+    protected String toHexHashExp(Object obj) {
+        return obj != null ? Integer.toHexString(obj.hashCode()) : "null";
     }
 
     // ===================================================================================

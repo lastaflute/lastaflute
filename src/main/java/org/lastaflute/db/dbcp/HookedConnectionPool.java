@@ -15,14 +15,19 @@
  */
 package org.lastaflute.db.dbcp;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+
+import javax.sql.XAConnection;
 import javax.transaction.Transaction;
 
 import org.lastaflute.db.jta.RomanticTransaction;
+import org.lastaflute.jta.dbcp.ConnectionPool;
 import org.lastaflute.jta.dbcp.ConnectionWrapper;
 import org.lastaflute.jta.dbcp.SimpleConnectionPool;
 
 /**
- * @author modified by jflute (originated in Seasar)
+ * @author jflute
  */
 public class HookedConnectionPool extends SimpleConnectionPool {
 
@@ -35,5 +40,11 @@ public class HookedConnectionPool extends SimpleConnectionPool {
             romantic = super.buildRomanticExp(tx, wrapper);
         }
         return romantic;
+    }
+
+    @Override
+    protected ConnectionWrapper createConnectionWrapper(XAConnection xaConnection, Connection physicalConnection,
+            ConnectionPool connectionPool, Transaction tx) throws SQLException {
+        return new HookedConnectionWrapper(xaConnection, physicalConnection, connectionPool, tx);
     }
 }
