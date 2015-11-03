@@ -42,11 +42,11 @@ public class HookedConnectionWrapper extends ConnectionWrapperImpl {
     //                                          Check Out/In
     //                                          ------------
     // all null allowed, overridden many times
-    protected String checkingOutRequestPath;
+    protected String checkingOutRequestPath; // key item
     protected String checkingOutEntryExp;
     protected String checkingOutUserExp;
     protected Long checkingOutMillis;
-    protected String checkingInRequestPath;
+    protected String checkingInRequestPath; // key item
     protected String checkingInEntryExp;
     protected String checkingInUserExp;
     protected Long checkingInMillis;
@@ -55,7 +55,7 @@ public class HookedConnectionWrapper extends ConnectionWrapperImpl {
     //                                          Close Really
     //                                          ------------
     // all null allowed, only once be set
-    protected String closingReallyRequestPath;
+    protected String closingReallyRequestPath; // key item
     protected String closingReallyEntryExp;
     protected String closingReallyUserExp;
     protected Long closingReallyMillis;
@@ -171,7 +171,7 @@ public class HookedConnectionWrapper extends ConnectionWrapperImpl {
         }
     }
 
-    protected String buildCallerExp(final int requestCallerLevel, final StackTraceElement caller) {
+    protected String buildCallerExp(int requestCallerLevel, StackTraceElement caller) {
         return "caller" + requestCallerLevel + "::" + caller.getClassName() + "@" + caller.getMethodName() + "()";
     }
 
@@ -193,7 +193,7 @@ public class HookedConnectionWrapper extends ConnectionWrapperImpl {
         if (ThreadCacheContext.exists()) { // e.g. in action
             br.addElement("requestPath: " + ThreadCacheContext.findRequestPath());
             br.addElement("entryMethod: " + convertMethodToMethodExp(ThreadCacheContext.findEntryMethod()));
-            br.addElement("userBean: " + ThreadCacheContext.findUserBean());
+            br.addElement("userBean: " + convertUserBeanToUserExp(ThreadCacheContext.findUserBean()));
             br.addElement("currentMillis: " + currentTimeMillis());
         } else {
             br.addElement("*no info");
