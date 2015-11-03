@@ -21,8 +21,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.lastaflute.web.token.TxToken;
-
 /**
  * @author modified by jflute (originated in Seasar)
  */
@@ -60,10 +58,4 @@ public @interface Execute {
      * @return The integer for limit of SQL execution count in one request. (MinusAllowed: use default limit)
      */
     int sqlExecutionCountLimit() default -1;
-
-    /**
-     * 
-     * @return The type of transaction token. (NotNull)
-     */
-    TxToken token() default TxToken.NONE;
 }

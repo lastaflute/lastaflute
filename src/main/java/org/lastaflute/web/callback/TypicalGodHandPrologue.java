@@ -41,7 +41,6 @@ import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
-import org.lastaflute.web.token.DoubleSubmitManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,8 +62,6 @@ public class TypicalGodHandPrologue {
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
-    // TODO jflute xxxxxxx (2015/11/02)
-    protected final DoubleSubmitManager doubleSubmitManager;
     protected final TypicalEmbeddedKeySupplier keySupplier;
     protected final AccessContextArranger accessContextArranger;
     protected final Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier;
@@ -81,7 +78,6 @@ public class TypicalGodHandPrologue {
         this.sessionManager = resource.getSessionManager();
         this.loginManager = resource.getLoginManager();
         this.apiManager = resource.getApiManager();
-        this.doubleSubmitManager = resource.getDoubleSubmitManager();
         this.keySupplier = keySupplier;
         this.accessContextArranger = accessContextArranger;
         this.userBeanSupplier = userBeanSupplier;
@@ -273,7 +269,6 @@ public class TypicalGodHandPrologue {
         return new LoginHandlingResource(runtime);
     }
 
-    // TODO jflute xxxx (2015/11/02)
     //// ===================================================================================
     ////                                                                       Double Submit
     ////                                                                       =============

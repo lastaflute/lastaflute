@@ -219,7 +219,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     protected TypicalGodHandResource createTypicalGodHandResource(ActionRuntime runtime) {
         final OptionalThing<LoginManager> loginManager = myLoginManager();
         return new TypicalGodHandResource(messageManager, exceptionTranslator, requestManager, responseManager, sessionManager,
-                loginManager, apiManager, doubleSubmitManager);
+                loginManager, apiManager);
     }
 
     protected TypicalEmbeddedKeySupplier newTypicalEmbeddedKeySupplier() {

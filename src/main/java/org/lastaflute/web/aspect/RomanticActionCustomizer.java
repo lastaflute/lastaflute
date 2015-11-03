@@ -34,7 +34,6 @@ import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.config.ExecuteOption;
-import org.lastaflute.web.token.TxToken;
 import org.lastaflute.web.util.LaModuleConfigUtil;
 
 /**
@@ -296,8 +295,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         final boolean suppressTransaction = anno.suppressTransaction();
         final boolean suppressValidatorCallCheck = anno.suppressValidatorCallCheck();
         final int sqlExecutionCountLimit = anno.sqlExecutionCountLimit();
-        final TxToken txToken = anno.token();
-        return new ExecuteOption(urlPattern, suppressTransaction, suppressValidatorCallCheck, sqlExecutionCountLimit, txToken);
+        return new ExecuteOption(urlPattern, suppressTransaction, suppressValidatorCallCheck, sqlExecutionCountLimit);
     }
 
     protected ActionExecute newActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {

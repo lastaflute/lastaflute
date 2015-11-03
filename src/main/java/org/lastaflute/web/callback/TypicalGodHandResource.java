@@ -23,7 +23,6 @@ import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
-import org.lastaflute.web.token.DoubleSubmitManager;
 
 /**
  * @author jflute
@@ -40,14 +39,13 @@ public class TypicalGodHandResource {
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
-    protected final DoubleSubmitManager doubleSubmitManager;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public TypicalGodHandResource(MessageManager messageManager, ExceptionTranslator exceptionTranslator, RequestManager requestManager,
-            ResponseManager responseManager, SessionManager sessionManager, OptionalThing<LoginManager> loginManager, ApiManager apiManager,
-            DoubleSubmitManager doubleSubmitManager) {
+            ResponseManager responseManager, SessionManager sessionManager, OptionalThing<LoginManager> loginManager,
+            ApiManager apiManager) {
         this.messageManager = messageManager;
         this.exceptionTranslator = exceptionTranslator;
         this.requestManager = requestManager;
@@ -55,7 +53,6 @@ public class TypicalGodHandResource {
         this.sessionManager = sessionManager;
         this.loginManager = loginManager;
         this.apiManager = apiManager;
-        this.doubleSubmitManager = doubleSubmitManager;
     }
 
     // ===================================================================================
@@ -87,9 +84,5 @@ public class TypicalGodHandResource {
 
     public ApiManager getApiManager() {
         return apiManager;
-    }
-
-    public DoubleSubmitManager getDoubleSubmitManager() {
-        return doubleSubmitManager;
     }
 }
