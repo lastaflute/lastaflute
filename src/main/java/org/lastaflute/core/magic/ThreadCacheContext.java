@@ -39,6 +39,7 @@ public class ThreadCacheContext {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    private static final Object MARK_OBJ = new Object();
 
     // -----------------------------------------------------
     //                                             Core Item
@@ -51,7 +52,7 @@ public class ThreadCacheContext {
     //                                               Marking
     //                                               -------
     public static final String FW_VALIDATOR_CALLED = "fw:validatorCalled";
-    private static final Object MARK_OBJ = new Object();
+    public static final String FW_VALIDATOR_TYPE_FAILURE = "fw:validatorTypeFailure";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -194,13 +195,21 @@ public class ThreadCacheContext {
     }
 
     // -----------------------------------------------------
-    //                                               Marking
-    //                                               -------
+    //                                             Validator
+    //                                             ---------
     public static boolean isValidatorCalled() {
         return exists() && getObject(FW_VALIDATOR_CALLED) != null;
     }
 
     public static void markValidatorCalled() {
         setObject(FW_VALIDATOR_CALLED, MARK_OBJ);
+    }
+
+    public static Object findValidatorTypeFailure() { // object not to depend on web
+        return exists() ? getObject(FW_VALIDATOR_TYPE_FAILURE) : null;
+    }
+
+    public static void registerValidatorTypeFailure(Object failureBean) {
+        setObject(FW_VALIDATOR_TYPE_FAILURE, failureBean);
     }
 }

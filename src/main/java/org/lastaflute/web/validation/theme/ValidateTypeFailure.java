@@ -15,37 +15,19 @@
  */
 package org.lastaflute.web.validation.theme;
 
-import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
-import static java.lang.annotation.ElementType.CONSTRUCTOR;
 import static java.lang.annotation.ElementType.FIELD;
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import javax.validation.Constraint;
-import javax.validation.Payload;
-
-import org.lastaflute.web.validation.LastaPresentsValidator;
-
 /**
- * The validator annotation as float for string.
  * @author jflute
- * @since 0.6.5 (2015/10/31 Saturday)
+ * @since 0.6.5 (2015/11/04 Wednesday)
  */
-@Target({ METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER })
+@Target({ FIELD })
 @Retention(RUNTIME)
 @Documented
-@Constraint(validatedBy = FloatTypeValidator.class)
-@LastaPresentsValidator
-public @interface FloatType {
-
-    String message() default "{org.lastaflute.validator.constraints.FloatType.message}";
-
-    Class<?>[] groups() default {};
-
-    Class<? extends Payload>[] payload() default {};
+public @interface ValidateTypeFailure {
 }

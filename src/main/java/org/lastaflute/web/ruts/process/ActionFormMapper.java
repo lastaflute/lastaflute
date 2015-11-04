@@ -44,9 +44,12 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.DfTypeUtil.ParseBooleanException;
+import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
+import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
@@ -83,6 +86,9 @@ import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureExcept
 import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.validation.theme.TypeFailureBean;
+import org.lastaflute.web.validation.theme.TypeFailureElement;
+import org.lastaflute.web.validation.theme.ValidateTypeFailure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -150,7 +156,7 @@ public class ActionFormMapper {
             final String name = entry.getKey();
             final Object value = entry.getValue();
             try {
-                setProperty(realForm, name, value, null, null);
+                setProperty(realForm, name, value, null, null, null);
             } catch (Throwable cause) {
                 handleIllegalPropertyPopulateException(realForm, name, value, runtime, cause); // adjustment here
             }
@@ -377,27 +383,39 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                        Property Set
     //                                                                        ============
-    protected void setProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
+    /**
+     * @param bean The bean instance that has properties for request parameters e.g. form (NullAllowed: if null, do nothing)
+     * @param name The name of property for the parameter. (NotNull)
+     * @param value The value of the request parameter (NullAllowed, EmptyAllowed)
+     * @param parentBean The parent bean of current property's bean (NullAllowed: if first level)
+     * @param parentName The parent property name of current property (NullAllowed: if first level)
+     * @param pathSb The property path that has nested structure info e.g. sea.land.iksName (NullAllowed: if first level)
+     */
+    protected void setProperty(Object bean, String name, Object value, Object parentBean, String parentName, StringBuilder pathSb) {
         if (bean == null) {
             return;
         }
+        doSetProperty(bean, name, value, parentBean, parentName, pathSb != null ? pathSb : new StringBuilder());
+    }
+
+    protected void doSetProperty(Object bean, String name, Object value, Object parentBean, String parentName, StringBuilder pathSb) {
         final int nestedIndex = name.indexOf(NESTED_DELIM); // e.g. sea.mythica
         final int indexedIndex = name.indexOf(INDEXED_DELIM); // e.g. sea[0]
         final int mappedIndex = name.indexOf(MAPPED_DELIM); // e.g. sea(over)
+        pathSb.append(pathSb.length() > 0 ? "." : "").append(name);
         if (nestedIndex < 0 && indexedIndex < 0 && mappedIndex < 0) { // as simple
             try {
-                setSimpleProperty(bean, name, value, parentBean, parentName);
+                setSimpleProperty(bean, name, value, parentBean, parentName, pathSb);
             } catch (BeanIllegalPropertyException e) {
                 handleSimpleBeanIllegalPropertyException(bean, name, value, e);
             }
-
         } else {
             final int minIndex = minIndex(minIndex(nestedIndex, indexedIndex), mappedIndex);
             if (minIndex == nestedIndex) { // e.g. sea.mythica
                 final String front = name.substring(0, minIndex);
                 final Object simpleProperty = prepareSimpleProperty(bean, front);
                 final String rear = name.substring(minIndex + 1);
-                setProperty(simpleProperty, rear, value, bean, front); // *recursive
+                setProperty(simpleProperty, rear, value, bean, front, pathSb); // *recursive
             } else if (minIndex == indexedIndex) { // e.g. sea[0]
                 final IndexParsedResult result = parseIndex(name.substring(indexedIndex + 1));
                 final int[] resultIndexes = result.indexes;
@@ -407,20 +425,20 @@ public class ActionFormMapper {
                     setIndexedProperty(bean, front, resultIndexes, value);
                 } else {
                     final Object indexedProperty = prepareIndexedProperty(bean, front, resultIndexes);
-                    setProperty(indexedProperty, resultName, value, bean, front); // *recursive
+                    setProperty(indexedProperty, resultName, value, bean, front, pathSb); // *recursive
                 }
             } else { // map e.g. sea(over)
                 final int endIndex = name.indexOf(MAPPED_DELIM2, mappedIndex); // sea(over)
                 final String front = name.substring(0, mappedIndex);
                 final String middle = name.substring(mappedIndex + 1, endIndex);
                 final String rear = name.substring(endIndex + 1);
-                setProperty(bean, front + "." + middle + rear, value, bean, front); // *recursive
+                setProperty(bean, front + "." + middle + rear, value, bean, front, pathSb); // *recursive
             }
         }
     }
 
     protected void handleSimpleBeanIllegalPropertyException(Object bean, String name, Object value, BeanIllegalPropertyException e) {
-        if (!(e.getCause() instanceof NumberFormatException)) {
+        if (!isBadRequestMappingFailureException(e)) {
             throw e;
         }
         // here: non-number GET or URL parameter but number type property
@@ -437,6 +455,11 @@ public class ActionFormMapper {
         String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case
         String msg = "The property value cannot be number: " + beanExp + ", name=" + name + ", value=" + dispValue;
         throwRequestPropertyMappingFailureException(msg, e);
+    }
+
+    protected boolean isBadRequestMappingFailureException(BeanIllegalPropertyException e) {
+        final Throwable cause = e.getCause(); // similar logic is in this class
+        return cause instanceof NumberFormatException || cause instanceof ParseDateException || cause instanceof ParseBooleanException;
     }
 
     protected static class IndexParsedResult {
@@ -484,7 +507,7 @@ public class ActionFormMapper {
         return value;
     }
 
-    protected void setSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName) {
+    protected void setSimpleProperty(Object bean, String name, Object value, Object parentBean, String parentName, StringBuilder pathSb) {
         if (bean instanceof Map) {
             @SuppressWarnings("unchecked")
             final Map<String, Object> map = (Map<String, Object>) bean;
@@ -519,7 +542,7 @@ public class ActionFormMapper {
             } else if (isClassificationProperty(propertyType)) { // e.g. CDef
                 mappedValue = toVerifiedClassification(bean, name, scalar, pd); // null allowed
             } else { // e.g. String, Integer, LocalDate, MultipartFormFile, ...
-                mappedValue = convertToPropertyNativeIfPossible(bean, name, scalar, pd);
+                mappedValue = convertToPropertyNativeIfPossible(bean, name, scalar, pd, pathSb);
             }
         }
         pd.setValue(bean, mappedValue);
@@ -571,7 +594,23 @@ public class ActionFormMapper {
         }
     }
 
-    protected Object convertToPropertyNativeIfPossible(Object bean, String name, Object exp, PropertyDesc pd) {
+    protected Object convertToPropertyNativeIfPossible(Object bean, String name, Object exp, PropertyDesc pd, StringBuilder pathSb) {
+        try {
+            return doConvertToPropertyNativeIfPossible(bean, name, exp, pd);
+        } catch (NumberFormatException | ParseDateException | ParseBooleanException e) { // similar logic is in this class
+            final ValidateTypeFailure annotation = extractValidateTypeFailureAnnotation(pd);
+            if (annotation != null) {
+                if (ThreadCacheContext.exists()) { // just in case
+                    return handleTypeFailureValidation(name, exp, pathSb, e);
+                } else { // basically no way
+                    logger.debug("*Not found the thread cache for validation of type failure: {}", pathSb, e);
+                }
+            }
+            return e;
+        }
+    }
+
+    protected Object doConvertToPropertyNativeIfPossible(Object bean, String name, Object exp, PropertyDesc pd) {
         // not to depend on conversion logic in BeanDesc
         final Class<?> propertyType = pd.getPropertyType();
         final Object converted;
@@ -611,6 +650,37 @@ public class ActionFormMapper {
             converted = exp;
         }
         return converted;
+    }
+
+    protected Object handleTypeFailureValidation(String name, Object exp, StringBuilder pathSb, RuntimeException cause) {
+        final String propertyPath = pathSb.toString();
+        final TypeFailureElement failureElement = new TypeFailureElement(propertyPath, exp, cause);
+        TypeFailureBean typeFailure = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
+        logger.debug("...Registering type failure as validation: property={}, value={}", propertyPath, exp);
+        if (typeFailure == null) {
+            typeFailure = new TypeFailureBean();
+            ThreadCacheContext.registerValidatorTypeFailure(typeFailure);
+        }
+        typeFailure.register(failureElement);
+        return null; // set null to form here, checked later by thread local
+    }
+
+    protected ValidateTypeFailure extractValidateTypeFailureAnnotation(PropertyDesc pd) {
+        Field field = pd.getField();
+        if (field != null) {
+            final ValidateTypeFailure annotation = field.getAnnotation(ValidateTypeFailure.class);
+            if (annotation != null) {
+                return annotation;
+            }
+        }
+        final Method readMethod = pd.getReadMethod();
+        if (readMethod != null) {
+            final ValidateTypeFailure annotation = readMethod.getAnnotation(ValidateTypeFailure.class);
+            if (annotation != null) {
+                return annotation;
+            }
+        }
+        return null;
     }
 
     // -----------------------------------------------------

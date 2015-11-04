@@ -47,6 +47,7 @@ import javax.validation.Payload;
 @Retention(RUNTIME)
 @Documented
 @Constraint(validatedBy = RequiredValidator.class)
+@LastaPresentsValidator
 public @interface Required {
 
     String message() default "{org.lastaflute.validator.constraints.Required.message}";

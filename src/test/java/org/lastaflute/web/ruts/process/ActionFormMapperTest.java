@@ -19,7 +19,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String[] value = new String[] { "a", "b" };
 
         // ## Act ##
-        mapper.setProperty(seaForm, "landMap.oneman", value, null, null);
+        mapper.setProperty(seaForm, "landMap.oneman", value, null, null, null);
 
         // ## Assert ##
         Object actual = seaForm.landMap.get("oneman");

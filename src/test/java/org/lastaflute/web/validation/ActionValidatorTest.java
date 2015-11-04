@@ -22,12 +22,18 @@ import java.util.List;
 import java.util.Set;
 
 import javax.validation.ConstraintViolation;
+import javax.validation.constraints.NotNull;
 
 import org.lastaflute.unit.UnitLastaFluteTestCase;
 import org.lastaflute.unit.mock.web.MockRequestManager;
 import org.lastaflute.unit.mock.web.validation.MockConstraintViolation;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.validation.theme.BigDecimalType;
+import org.lastaflute.web.validation.theme.DoubleType;
+import org.lastaflute.web.validation.theme.FloatType;
+import org.lastaflute.web.validation.theme.IntegerType;
+import org.lastaflute.web.validation.theme.LongType;
 
 /**
  * @author jflute
@@ -77,6 +83,22 @@ public class ActionValidatorTest extends UnitLastaFluteTestCase {
         return new MockConstraintViolation(propertyPath);
     }
 
+    // ===================================================================================
+    //                                                            Annotation Determination
+    //                                                            ========================
+    public void test_isLastaPresentsAnnotation() throws Exception {
+        assertFalse(ActionValidator.isLastaPresentsAnnotation(NotNull.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(Required.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(IntegerType.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(LongType.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(BigDecimalType.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(FloatType.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(DoubleType.class));
+    }
+
+    // ===================================================================================
+    //                                                                         Test Helper
+    //                                                                         ===========
     protected static class MockForm {
 
         public String sea;

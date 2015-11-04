@@ -29,6 +29,8 @@ import java.lang.annotation.Target;
 import javax.validation.Constraint;
 import javax.validation.Payload;
 
+import org.lastaflute.web.validation.LastaPresentsValidator;
+
 /**
  * The validator annotation as long for string.
  * @author jflute
@@ -38,6 +40,7 @@ import javax.validation.Payload;
 @Retention(RUNTIME)
 @Documented
 @Constraint(validatedBy = LongTypeValidator.class)
+@LastaPresentsValidator
 public @interface LongType {
 
     String message() default "{org.lastaflute.validator.constraints.LongType.message}";

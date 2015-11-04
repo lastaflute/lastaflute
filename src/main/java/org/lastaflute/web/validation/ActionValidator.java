@@ -460,13 +460,13 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     }
 
     // ===================================================================================
-    //                                                                        Assist Logic
-    //                                                                        ============
+    //                                                            Annotation Determination
+    //                                                            ========================
     public static boolean isValidatorAnnotation(Class<?> annoType) { // as utility
         final String annoName = annoType.getName();
         return Srl.startsWith(annoName, JAVAX_CONSTRAINTS_PKG, HIBERNATE_CONSTRAINTS_PKG) // normal annotations
                 || isNestedBeanAnnotation(annoType) // has validation nested bean
-                || isRequiredAnnotation(annoType); // LastaFlute provides
+                || isLastaPresentsAnnotation(annoType); // LastaFlute provides
     }
 
     public static boolean isNestedBeanAnnotation(Class<?> annoType) {
@@ -477,12 +477,9 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return field.getAnnotation(Valid.class) != null;
     }
 
-    public static boolean isRequiredAnnotation(Class<?> annoType) {
-        return annoType.equals(Required.class);
-    }
-
-    public static boolean hasRequiredAnnotation(Field field) {
-        return field.getAnnotation(Required.class) != null;
+    public static boolean isLastaPresentsAnnotation(Class<?> annoType) {
+        final Annotation[] annotations = annoType.getAnnotations(); // not null
+        return Stream.of(annotations).filter(anno -> anno instanceof LastaPresentsValidator).findAny().isPresent();
     }
 
     // ===================================================================================
