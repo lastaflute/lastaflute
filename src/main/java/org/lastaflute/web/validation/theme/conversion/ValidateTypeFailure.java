@@ -13,18 +13,21 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.theme;
+package org.lastaflute.web.validation.theme.conversion;
 
-import java.math.BigDecimal;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
 /**
  * @author jflute
- * @since 0.6.5 (2015/10/31 Saturday)
+ * @since 0.6.5 (2015/11/04 Wednesday)
  */
-public class BigDecimalTypeValidator extends NumberTypeValidator<BigDecimalType> {
-
-    @Override
-    protected void numberValueOf(String value) throws NumberFormatException {
-        new BigDecimal(value);
-    }
+@Target({ FIELD })
+@Retention(RUNTIME)
+@Documented
+public @interface ValidateTypeFailure {
 }

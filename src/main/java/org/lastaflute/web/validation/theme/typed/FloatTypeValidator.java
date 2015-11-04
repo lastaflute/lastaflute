@@ -13,13 +13,13 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.theme;
+package org.lastaflute.web.validation.theme.typed;
 
 /**
  * @author jflute
  * @since 0.6.5 (2015/10/31 Saturday)
  */
-public class FloatTypeValidator extends NumberTypeValidator<FloatType> {
+public class FloatTypeValidator extends NumberTypeValidator<TypeFloat> {
 
     @Override
     protected void numberValueOf(String value) throws NumberFormatException {

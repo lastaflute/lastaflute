@@ -86,9 +86,9 @@ import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureExcept
 import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
-import org.lastaflute.web.validation.theme.TypeFailureBean;
-import org.lastaflute.web.validation.theme.TypeFailureElement;
-import org.lastaflute.web.validation.theme.ValidateTypeFailure;
+import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
+import org.lastaflute.web.validation.theme.conversion.TypeFailureElement;
+import org.lastaflute.web.validation.theme.conversion.ValidateTypeFailure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -595,13 +595,14 @@ public class ActionFormMapper {
     }
 
     protected Object convertToPropertyNativeIfPossible(Object bean, String name, Object exp, PropertyDesc pd, StringBuilder pathSb) {
+        final Class<?> propertyType = pd.getPropertyType();
         try {
-            return doConvertToPropertyNativeIfPossible(bean, name, exp, pd);
+            return doConvertToPropertyNativeIfPossible(bean, name, exp, propertyType);
         } catch (NumberFormatException | ParseDateException | ParseBooleanException e) { // similar logic is in this class
             final ValidateTypeFailure annotation = extractValidateTypeFailureAnnotation(pd);
             if (annotation != null) {
                 if (ThreadCacheContext.exists()) { // just in case
-                    return handleTypeFailureValidation(name, exp, pathSb, e);
+                    return handleTypeFailureValidation(name, exp, pathSb, propertyType, e);
                 } else { // basically no way
                     logger.debug("*Not found the thread cache for validation of type failure: {}", pathSb, e);
                 }
@@ -610,9 +611,8 @@ public class ActionFormMapper {
         }
     }
 
-    protected Object doConvertToPropertyNativeIfPossible(Object bean, String name, Object exp, PropertyDesc pd) {
+    protected Object doConvertToPropertyNativeIfPossible(Object bean, String name, Object exp, Class<?> propertyType) {
         // not to depend on conversion logic in BeanDesc
-        final Class<?> propertyType = pd.getPropertyType();
         final Object converted;
         if (propertyType.isPrimitive()) {
             if (propertyType == boolean.class && "on".equals(exp)) { // for checkbox
@@ -652,9 +652,10 @@ public class ActionFormMapper {
         return converted;
     }
 
-    protected Object handleTypeFailureValidation(String name, Object exp, StringBuilder pathSb, RuntimeException cause) {
+    protected Object handleTypeFailureValidation(String name, Object exp, StringBuilder pathSb, Class<?> propertyType,
+            RuntimeException cause) {
         final String propertyPath = pathSb.toString();
-        final TypeFailureElement failureElement = new TypeFailureElement(propertyPath, exp, cause);
+        final TypeFailureElement failureElement = new TypeFailureElement(propertyPath, propertyType, exp, cause);
         TypeFailureBean typeFailure = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
         logger.debug("...Registering type failure as validation: property={}, value={}", propertyPath, exp);
         if (typeFailure == null) {

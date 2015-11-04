@@ -17,6 +17,7 @@ package org.lastaflute.web.validation;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -62,6 +63,13 @@ import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
+import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
+import org.lastaflute.web.validation.theme.conversion.TypeFailureElement;
+import org.lastaflute.web.validation.theme.typed.TypeBigDecimal;
+import org.lastaflute.web.validation.theme.typed.TypeDouble;
+import org.lastaflute.web.validation.theme.typed.TypeFloat;
+import org.lastaflute.web.validation.theme.typed.TypeInteger;
+import org.lastaflute.web.validation.theme.typed.TypeLong;
 
 /**
  * @param <MESSAGES> The type of action messages.
@@ -82,6 +90,25 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
 
     protected static final String ITEM_VARIABLE = "{item}";
     protected static final String LABELS_PREFIX = "labels.";
+
+    protected static final Map<Class<?>, String> typeMessageMap = new HashMap<>();
+
+    static {
+        typeMessageMap.put(Integer.class, TypeInteger.DEFAULT_MESSAGE);
+        typeMessageMap.put(int.class, TypeInteger.DEFAULT_MESSAGE);
+        typeMessageMap.put(Long.class, TypeLong.DEFAULT_MESSAGE);
+        typeMessageMap.put(long.class, TypeLong.DEFAULT_MESSAGE);
+        typeMessageMap.put(Float.class, TypeFloat.DEFAULT_MESSAGE);
+        typeMessageMap.put(float.class, TypeFloat.DEFAULT_MESSAGE);
+        typeMessageMap.put(Double.class, TypeDouble.DEFAULT_MESSAGE);
+        typeMessageMap.put(double.class, TypeDouble.DEFAULT_MESSAGE);
+        typeMessageMap.put(BigDecimal.class, TypeBigDecimal.DEFAULT_MESSAGE);
+        //aaa.put(LocalDate.class, TypeLocalDate.DEFAULT_MESSAGE);
+        //aaa.put(LocalDateTime.class, TypeLocalDateTime.DEFAULT_MESSAGE);
+        //aaa.put(LocalTime.class, TypeLocalTime.DEFAULT_MESSAGE);
+        //aaa.put(Boolean.class, TypeBoolean.DEFAULT_MESSAGE);
+        //aaa.put(boolean.class, TypeBoolean.DEFAULT_MESSAGE);
+    }
 
     protected static final String LF = "\n";
 
@@ -303,6 +330,54 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return messages;
     }
 
+    protected ActionMessages filterTypeFailure(ActionMessages messages) { // TODO jflute making (2015/11/05)
+        if (!ThreadCacheContext.exists()) { // basically no way, just in case
+            return messages;
+        }
+        final TypeFailureBean failureBean = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
+        if (failureBean == null || !failureBean.hasFailure()) {
+            return messages;
+        }
+        final Map<String, TypeFailureElement> elementMap = failureBean.getElementMap();
+        final MESSAGES newMsgs = prepareActionMessages();
+        for (String property : messages.toPropertySet()) {
+            final TypeFailureElement element = elementMap.get(property);
+            if (element != null) { // already exists except type failure
+                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    final ActionMessage current = ite.next();
+                    final Annotation anno = current.getValidatorAnnotation();
+                    if (anno instanceof NotNull || anno instanceof Required) {
+                        continue; // remove required annotations because they were born by type failure's null
+                    }
+                    newMsgs.add(property, current);
+                }
+                newMsgs.add(property, createTypeFailureActionMessage(element)); // add to existing property
+            } else { // properties not related with type failures
+                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    newMsgs.add(property, ite.next()); // add no-related property
+                }
+            }
+        }
+        for (TypeFailureElement element : elementMap.values()) {
+            final String property = element.getPropertyPath();
+            if (!messages.hasMessageOf(property)) { // no other validation error
+                newMsgs.add(property, createTypeFailureActionMessage(element)); // add as new message for the proeprty
+            }
+        }
+        return newMsgs;
+    }
+
+    protected ActionMessage createTypeFailureActionMessage(TypeFailureElement element) {
+        final Class<?> propertyType = element.getPropertyType();
+        final String messageKey = typeMessageMap.get(propertyType);
+        if (messageKey == null) { // no way, might be framework mistake
+            String msg = "Not found the message for the property type: " + propertyType;
+            throw new IllegalStateException(msg);
+        }
+        // TODO jflute item (2015/11/05)
+        return new ActionMessage(messageKey); // simple message for now
+    }
+
     // -----------------------------------------------------
     //                                           Ordered Map
     //                                           -----------
@@ -390,7 +465,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         final String itemVariable = getItemVariable(message, propertyPath);
         if (message.contains(itemVariable)) {
             final Locale userLocale = requestManager.getUserLocale();
-            final String labelKey = buildLabelKey(propertyPath);
+            final String labelKey = buildLabelKey(propertyPath); // TODO jflute nest properties (2015/11/05)
             final String itemName = requestManager.getMessageManager().findMessage(userLocale, labelKey).orElseGet(() -> {
                 return getDefaultItem(message, propertyPath);
             });

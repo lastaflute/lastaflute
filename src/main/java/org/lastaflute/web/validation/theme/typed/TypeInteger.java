@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.theme;
+package org.lastaflute.web.validation.theme.typed;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.CONSTRUCTOR;
@@ -32,18 +32,20 @@ import javax.validation.Payload;
 import org.lastaflute.web.validation.LastaPresentsValidator;
 
 /**
- * The validator annotation as double for string.
+ * The validator annotation as integer for string.
  * @author jflute
  * @since 0.6.5 (2015/10/31 Saturday)
  */
 @Target({ METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER })
 @Retention(RUNTIME)
 @Documented
-@Constraint(validatedBy = DoubleTypeValidator.class)
+@Constraint(validatedBy = IntegerTypeValidator.class)
 @LastaPresentsValidator
-public @interface DoubleType {
+public @interface TypeInteger {
 
-    String message() default "{org.lastaflute.validator.constraints.DoubleType.message}";
+    String DEFAULT_MESSAGE = "{org.lastaflute.validator.constraints.TypeInteger.message}";
+
+    String message() default DEFAULT_MESSAGE;
 
     Class<?>[] groups() default {};
 

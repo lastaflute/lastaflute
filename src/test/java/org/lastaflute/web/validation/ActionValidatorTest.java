@@ -29,11 +29,11 @@ import org.lastaflute.unit.mock.web.MockRequestManager;
 import org.lastaflute.unit.mock.web.validation.MockConstraintViolation;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.validation.theme.BigDecimalType;
-import org.lastaflute.web.validation.theme.DoubleType;
-import org.lastaflute.web.validation.theme.FloatType;
-import org.lastaflute.web.validation.theme.IntegerType;
-import org.lastaflute.web.validation.theme.LongType;
+import org.lastaflute.web.validation.theme.typed.TypeBigDecimal;
+import org.lastaflute.web.validation.theme.typed.TypeDouble;
+import org.lastaflute.web.validation.theme.typed.TypeFloat;
+import org.lastaflute.web.validation.theme.typed.TypeInteger;
+import org.lastaflute.web.validation.theme.typed.TypeLong;
 
 /**
  * @author jflute
@@ -89,11 +89,11 @@ public class ActionValidatorTest extends UnitLastaFluteTestCase {
     public void test_isLastaPresentsAnnotation() throws Exception {
         assertFalse(ActionValidator.isLastaPresentsAnnotation(NotNull.class));
         assertTrue(ActionValidator.isLastaPresentsAnnotation(Required.class));
-        assertTrue(ActionValidator.isLastaPresentsAnnotation(IntegerType.class));
-        assertTrue(ActionValidator.isLastaPresentsAnnotation(LongType.class));
-        assertTrue(ActionValidator.isLastaPresentsAnnotation(BigDecimalType.class));
-        assertTrue(ActionValidator.isLastaPresentsAnnotation(FloatType.class));
-        assertTrue(ActionValidator.isLastaPresentsAnnotation(DoubleType.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(TypeInteger.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(TypeLong.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(TypeBigDecimal.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(TypeFloat.class));
+        assertTrue(ActionValidator.isLastaPresentsAnnotation(TypeDouble.class));
     }
 
     // ===================================================================================

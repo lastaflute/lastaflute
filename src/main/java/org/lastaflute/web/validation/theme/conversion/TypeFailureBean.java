@@ -13,11 +13,11 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.theme;
+package org.lastaflute.web.validation.theme.conversion;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * @author jflute
@@ -25,21 +25,25 @@ import java.util.List;
  */
 public class TypeFailureBean {
 
-    protected final List<TypeFailureElement> elementList = new ArrayList<TypeFailureElement>();
+    protected final Map<String, TypeFailureElement> elementMap = new LinkedHashMap<String, TypeFailureElement>();
 
     public void register(TypeFailureElement element) {
         if (element == null) {
             throw new IllegalArgumentException("The argument 'element' should not be null.");
         }
-        elementList.add(element);
+        elementMap.put(element.getPropertyPath(), element);
+    }
+
+    public boolean hasFailure() {
+        return !elementMap.isEmpty();
     }
 
     @Override
     public String toString() {
-        return "typeFailure:{" + elementList + "}@" + Integer.toHexString(hashCode());
+        return "typeFailure:{" + elementMap + "}@" + Integer.toHexString(hashCode());
     }
 
-    public List<TypeFailureElement> getElementList() {
-        return Collections.unmodifiableList(elementList);
+    public Map<String, TypeFailureElement> getElementMap() {
+        return Collections.unmodifiableMap(elementMap);
     }
 }

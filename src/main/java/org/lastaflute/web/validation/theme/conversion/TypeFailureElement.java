@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.theme;
+package org.lastaflute.web.validation.theme.conversion;
 
 /**
  * @author jflute
@@ -22,11 +22,13 @@ package org.lastaflute.web.validation.theme;
 public class TypeFailureElement {
 
     protected final String propertyPath;
+    protected final Class<?> propertyType;
     protected final Object failureValue;
     protected final RuntimeException cause;
 
-    public TypeFailureElement(String propertyPath, Object failureValue, RuntimeException cause) {
+    public TypeFailureElement(String propertyPath, Class<?> propertyType, Object failureValue, RuntimeException cause) {
         this.propertyPath = propertyPath;
+        this.propertyType = propertyType;
         this.failureValue = failureValue;
         this.cause = cause;
     }
@@ -38,6 +40,10 @@ public class TypeFailureElement {
 
     public String getPropertyPath() {
         return propertyPath;
+    }
+
+    public Class<?> getPropertyType() {
+        return propertyType;
     }
 
     public Object getFailureValue() {

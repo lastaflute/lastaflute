@@ -13,16 +13,18 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.theme;
+package org.lastaflute.web.validation.theme.typed;
+
+import java.math.BigInteger;
 
 /**
  * @author jflute
- * @since 0.6.5 (2015/10/31 Saturday)
+ * @since 0.6.5 (2015/11/04 Wednesday)
  */
-public class LongTypeValidator extends NumberTypeValidator<LongType> {
+public class BigIntegerTypeValidator extends NumberTypeValidator<TypeBigInteger> {
 
     @Override
     protected void numberValueOf(String value) throws NumberFormatException {
-        Long.valueOf(value);
+        new BigInteger(value);
     }
 }
