@@ -66,6 +66,7 @@ import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.web.api.JsonParameter;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
 import org.lastaflute.web.exception.IndexedPropertyNonParameterizedListException;
 import org.lastaflute.web.exception.IndexedPropertyNotListArrayException;
 import org.lastaflute.web.exception.JsonBodyCannotReadFromRequestException;
@@ -453,12 +454,12 @@ public class ActionFormMapper {
             dispValue = value;
         }
         String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case
-        String msg = "The property value cannot be number: " + beanExp + ", name=" + name + ", value=" + dispValue;
+        String msg = "Failed to map the value to the property: " + beanExp + ", name=" + name + ", value=" + dispValue;
         throwRequestPropertyMappingFailureException(msg, e);
     }
 
     protected boolean isBadRequestMappingFailureException(BeanIllegalPropertyException e) {
-        final Throwable cause = e.getCause(); // similar logic is in this class
+        final Throwable cause = e.getCause(); // similar logic in this class, but classification's exception is already bad request
         return cause instanceof NumberFormatException || cause instanceof ParseDateException || cause instanceof ParseBooleanException;
     }
 
@@ -539,10 +540,22 @@ public class ActionFormMapper {
             final Object scalar = prepareObjectScalar(value);
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
                 mappedValue = parseJsonParameter(bean, name, prepareJsonString(scalar), pd);
-            } else if (isClassificationProperty(propertyType)) { // e.g. CDef
-                mappedValue = toVerifiedClassification(bean, name, scalar, pd); // null allowed
-            } else { // e.g. String, Integer, LocalDate, MultipartFormFile, ...
-                mappedValue = convertToPropertyNativeIfPossible(bean, name, scalar, pd, pathSb);
+            } else {
+                if (isClassificationProperty(propertyType)) { // e.g. CDef
+                    try {
+                        mappedValue = toVerifiedClassification(bean, name, scalar, pd); // null allowed
+                    } catch (RequestClassifiationConvertFailureException e) {
+                        handleTypeFailure(bean, name, pathSb, pd, propertyType, scalar, e);
+                        return;
+                    }
+                } else { // e.g. String, Integer, LocalDate, MultipartFormFile, ...
+                    try {
+                        mappedValue = convertToPropertyNativeIfPossible(bean, name, scalar, pd, pathSb);
+                    } catch (NumberFormatException | ParseDateException | ParseBooleanException e) { // similar logic in this class
+                        handleTypeFailure(bean, name, pathSb, pd, propertyType, scalar, e);
+                        return;
+                    }
+                }
             }
         }
         pd.setValue(bean, mappedValue);
@@ -592,110 +605,6 @@ public class ActionFormMapper {
         } else {
             return value;
         }
-    }
-
-    protected Object convertToPropertyNativeIfPossible(Object bean, String name, Object exp, PropertyDesc pd, StringBuilder pathSb) {
-        final Class<?> propertyType = pd.getPropertyType();
-        try {
-            return doConvertToPropertyNativeIfPossible(bean, name, exp, propertyType);
-        } catch (NumberFormatException | ParseDateException | ParseBooleanException e) { // similar logic is in this class
-            final ValidateTypeFailure annotation = extractValidateTypeFailureAnnotation(pd);
-            if (annotation != null) {
-                if (ThreadCacheContext.exists()) { // just in case
-                    return handleTypeFailureValidation(bean, name, exp, pathSb, propertyType, annotation, e);
-                } else { // basically no way
-                    logger.debug("*Not found the thread cache for validation of type failure: {}", pathSb, e);
-                }
-            }
-            return e;
-        }
-    }
-
-    protected Object doConvertToPropertyNativeIfPossible(Object bean, String name, Object exp, Class<?> propertyType) {
-        // not to depend on conversion logic in BeanDesc
-        final Object converted;
-        if (propertyType.isPrimitive()) {
-            if (propertyType == boolean.class && "on".equals(exp)) { // for checkbox
-                converted = true;
-            } else {
-                converted = DfTypeUtil.toWrapper(exp, propertyType);
-            }
-        } else if (String.class.isAssignableFrom(propertyType)) {
-            converted = exp != null ? exp : ""; // empty string as default 
-        } else if (Number.class.isAssignableFrom(propertyType)) {
-            converted = DfTypeUtil.toNumber(exp, propertyType);
-            // old date types are unsupported for LocalDate invitation
-            //} else if (Timestamp.class.isAssignableFrom(propertyType)) {
-            //    filtered = DfTypeUtil.toTimestamp(exp);
-            //} else if (Time.class.isAssignableFrom(propertyType)) {
-            //    filtered = DfTypeUtil.toTime(exp);
-            //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
-            //    filtered = DfTypeUtil.toDate(exp);
-        } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
-            converted = DfTypeUtil.toLocalDate(exp);
-        } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
-            converted = DfTypeUtil.toLocalDateTime(exp);
-        } else if (LocalTime.class.isAssignableFrom(propertyType)) {
-            converted = DfTypeUtil.toLocalTime(exp);
-        } else if (Boolean.class.isAssignableFrom(propertyType)) {
-            if ("on".equals(exp)) { // for checkbox
-                converted = true;
-            } else {
-                converted = DfTypeUtil.toBoolean(exp);
-            }
-            // already resolved here, because of null handling
-            //} else if (isClassificationProperty(propertyType)) { // means CDef
-            //    converted = toVerifiedClassification(bean, name, exp, pd);
-        } else { // e.g. multipart form file or unsupported type
-            converted = exp;
-        }
-        return converted;
-    }
-
-    protected ValidateTypeFailure extractValidateTypeFailureAnnotation(PropertyDesc pd) {
-        final Field field = pd.getField();
-        if (field != null) {
-            final ValidateTypeFailure annotation = field.getAnnotation(ValidateTypeFailure.class);
-            if (annotation != null) {
-                return annotation;
-            }
-        }
-        final Method readMethod = pd.getReadMethod();
-        if (readMethod != null) {
-            final ValidateTypeFailure annotation = readMethod.getAnnotation(ValidateTypeFailure.class);
-            if (annotation != null) {
-                return annotation;
-            }
-        }
-        return null;
-    }
-
-    protected Object handleTypeFailureValidation(Object bean, String name, Object exp, StringBuilder pathSb, Class<?> propertyType,
-            ValidateTypeFailure annotation, RuntimeException cause) {
-        final String propertyPath = pathSb.toString();
-        logger.debug("...Registering type failure as validation: property={}, value={}", propertyPath, exp);
-        prepareTypeFailureBean().register(createTypeFailureElement(bean, propertyPath, propertyType, exp, annotation, cause));
-        return null; // set null to form here, checked later by thread local
-    }
-
-    protected TypeFailureBean prepareTypeFailureBean() { // thread cache already checked here
-        TypeFailureBean typeFailure = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
-        if (typeFailure == null) {
-            typeFailure = new TypeFailureBean();
-            ThreadCacheContext.registerValidatorTypeFailure(typeFailure);
-        }
-        return typeFailure;
-    }
-
-    protected TypeFailureElement createTypeFailureElement(Object bean, String propertyPath, Class<?> propertyType, Object exp,
-            ValidateTypeFailure annotation, RuntimeException cause) {
-        return new TypeFailureElement(propertyPath, propertyType, exp, annotation, cause, () -> {
-            final StringBuilder sb = new StringBuilder();
-            sb.append("The property cannot be the type: property=");
-            sb.append(bean != null ? bean.getClass().getSimpleName() : null);
-            sb.append("#").append(propertyPath).append("(").append(propertyType.getSimpleName()).append(") value=").append(exp);
-            throwRequestPropertyMappingFailureException(sb.toString(), cause);
-        });
     }
 
     // -----------------------------------------------------
@@ -935,6 +844,125 @@ public class ActionFormMapper {
             throwRequestClassifiationConvertFailureException(sb.toString(), e);
             return null; // unreachable
         }
+    }
+
+    // -----------------------------------------------------
+    //                                       Property Native
+    //                                       ---------------
+    protected Object convertToPropertyNativeIfPossible(Object bean, String name, Object exp, PropertyDesc pd, StringBuilder pathSb) {
+        return doConvertToPropertyNativeIfPossible(bean, name, exp, pd.getPropertyType());
+    }
+
+    protected Object doConvertToPropertyNativeIfPossible(Object bean, String name, Object exp, Class<?> propertyType) {
+        // not to depend on conversion logic in BeanDesc
+        final Object converted;
+        if (propertyType.isPrimitive()) {
+            if (propertyType == boolean.class && "on".equals(exp)) { // for checkbox
+                converted = true;
+            } else {
+                converted = DfTypeUtil.toWrapper(exp, propertyType);
+            }
+        } else if (String.class.isAssignableFrom(propertyType)) {
+            converted = exp != null ? exp : ""; // empty string as default 
+        } else if (Number.class.isAssignableFrom(propertyType)) {
+            converted = DfTypeUtil.toNumber(exp, propertyType);
+            // old date types are unsupported for LocalDate invitation
+            //} else if (Timestamp.class.isAssignableFrom(propertyType)) {
+            //    filtered = DfTypeUtil.toTimestamp(exp);
+            //} else if (Time.class.isAssignableFrom(propertyType)) {
+            //    filtered = DfTypeUtil.toTime(exp);
+            //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
+            //    filtered = DfTypeUtil.toDate(exp);
+        } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
+            converted = DfTypeUtil.toLocalDate(exp);
+        } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
+            converted = DfTypeUtil.toLocalDateTime(exp);
+        } else if (LocalTime.class.isAssignableFrom(propertyType)) {
+            converted = DfTypeUtil.toLocalTime(exp);
+        } else if (Boolean.class.isAssignableFrom(propertyType)) {
+            if ("on".equals(exp)) { // for checkbox
+                converted = true;
+            } else {
+                converted = DfTypeUtil.toBoolean(exp);
+            }
+            // already resolved here, because of null handling
+            //} else if (isClassificationProperty(propertyType)) { // means CDef
+            //    converted = toVerifiedClassification(bean, name, exp, pd);
+        } else { // e.g. multipart form file or unsupported type
+            converted = exp;
+        }
+        return converted;
+    }
+
+    // -----------------------------------------------------
+    //                                          Type Failure
+    //                                          ------------
+    protected void handleTypeFailure(Object bean, String name, StringBuilder pathSb, PropertyDesc pd, Class<?> propertyType, Object scalar,
+            RuntimeException cause) {
+        final ValidateTypeFailure annotation = extractTypeFailureAnnotation(pd);
+        if (annotation != null) {
+            if (ThreadCacheContext.exists()) { // just in case
+                saveTypeFailureBean(bean, name, scalar, pathSb, propertyType, annotation, cause);
+            } else { // basically no way
+                logger.debug("*Not found the thread cache for validation of type failure: {}", pathSb, cause);
+            }
+            return;
+        } else {
+            throw cause;
+        }
+    }
+
+    protected ValidateTypeFailure extractTypeFailureAnnotation(PropertyDesc pd) {
+        final Field field = pd.getField();
+        if (field != null) {
+            final ValidateTypeFailure annotation = field.getAnnotation(ValidateTypeFailure.class);
+            if (annotation != null) {
+                return annotation;
+            }
+        }
+        final Method readMethod = pd.getReadMethod();
+        if (readMethod != null) {
+            final ValidateTypeFailure annotation = readMethod.getAnnotation(ValidateTypeFailure.class);
+            if (annotation != null) {
+                return annotation;
+            }
+        }
+        return null;
+    }
+
+    protected Object saveTypeFailureBean(Object bean, String name, Object exp, StringBuilder pathSb, Class<?> propertyType,
+            ValidateTypeFailure annotation, RuntimeException cause) {
+        final String propertyPath = pathSb.toString();
+        logger.debug("...Registering type failure as validation: property={}, value={}", propertyPath, exp);
+        prepareTypeFailureBean().register(createTypeFailureElement(bean, propertyPath, propertyType, exp, annotation, cause));
+        return null; // set null to form here, checked later by thread local
+    }
+
+    protected TypeFailureBean prepareTypeFailureBean() { // thread cache already checked here
+        TypeFailureBean typeFailure = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
+        if (typeFailure == null) {
+            typeFailure = new TypeFailureBean();
+            ThreadCacheContext.registerValidatorTypeFailure(typeFailure);
+        }
+        return typeFailure;
+    }
+
+    protected TypeFailureElement createTypeFailureElement(Object bean, String propertyPath, Class<?> propertyType, Object exp,
+            ValidateTypeFailure annotation, RuntimeException cause) {
+        return new TypeFailureElement(propertyPath, propertyType, exp, annotation, cause, () -> {
+            throwTypeFailureBadRequest(bean, propertyPath, propertyType, exp, cause);
+        });
+    }
+
+    protected void throwTypeFailureBadRequest(Object bean, String propertyPath, Class<?> propertyType, Object exp, RuntimeException cause) {
+        if (cause instanceof ForcedRequest400BadRequestException) { // already bad request so no need to new
+            throw cause; // e.g. classification's exception
+        }
+        final StringBuilder sb = new StringBuilder();
+        sb.append("The property cannot be the type: property=");
+        sb.append(bean != null ? bean.getClass().getSimpleName() : null);
+        sb.append("#").append(propertyPath).append("(").append(propertyType.getSimpleName()).append(") value=").append(exp);
+        throwRequestPropertyMappingFailureException(sb.toString(), cause); // though bad request
     }
 
     // ===================================================================================

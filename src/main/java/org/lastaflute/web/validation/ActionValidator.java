@@ -578,6 +578,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         for (TypeFailureElement element : elementMap.values()) {
             final String property = element.getPropertyPath();
             if (!messages.hasMessageOf(property)) { // no other validation error
+                handleTypeFailureGroups(element); // may be bad request
                 newMsgs.add(property, createTypeFailureActionMessage(element)); // add as new message for the proeprty
             }
         }
