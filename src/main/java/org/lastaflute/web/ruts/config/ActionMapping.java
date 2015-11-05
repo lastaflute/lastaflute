@@ -124,11 +124,11 @@ public class ActionMapping {
                 path = filterHtmlPath(path);
             }
         }
-        return newNextJourney(path, redirectTo, response.isAsIs(), response.getPreparedView());
+        return newNextJourney(path, redirectTo, response.isAsIs(), response.getViewObject());
     }
 
-    protected NextJourney newNextJourney(String routingPath, boolean redirectTo, boolean asIs, OptionalThing<Object> preparedView) {
-        return new NextJourney(routingPath, redirectTo, asIs, preparedView);
+    protected NextJourney newNextJourney(String routingPath, boolean redirectTo, boolean asIs, OptionalThing<Object> viewObject) {
+        return new NextJourney(routingPath, redirectTo, asIs, viewObject);
     }
 
     protected String buildActionPath(String componentName) {

@@ -39,17 +39,17 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     protected final boolean redirectTo;
     protected final boolean asIs; // when redirect
     protected final boolean undefined;
-    protected final OptionalThing<Object> preparedView; // not null, empty allowed, for e.g. mixer2
+    protected final OptionalThing<Object> viewObject; // not null, empty allowed, for e.g. mixer2
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public NextJourney(String routingPath, boolean redirectTo, boolean asIs, OptionalThing<Object> preparedView) {
+    public NextJourney(String routingPath, boolean redirectTo, boolean asIs, OptionalThing<Object> viewObject) {
         this.routingPath = routingPath;
         this.redirectTo = redirectTo;
         this.asIs = asIs;
         this.undefined = false;
-        this.preparedView = preparedView;
+        this.viewObject = viewObject;
     }
 
     protected NextJourney() {
@@ -57,7 +57,7 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
         this.redirectTo = false;
         this.asIs = false;
         this.undefined = true;
-        this.preparedView = OptionalThing.empty();
+        this.viewObject = OptionalThing.empty();
     }
 
     public static NextJourney undefined() {
@@ -110,7 +110,7 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
         return undefined;
     }
 
-    public OptionalThing<Object> getPreparedView() {
-        return preparedView;
+    public OptionalThing<Object> getViewObject() {
+        return viewObject;
     }
 }

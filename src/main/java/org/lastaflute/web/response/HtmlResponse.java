@@ -70,9 +70,9 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     protected ResponseHook afterTxCommitHook; // null allowed
 
     // -----------------------------------------------------
-    //                                         View Instance
-    //                                         -------------
-    protected Object preparedView; // null allowed, for e.g. mixer2
+    //                                           View Object
+    //                                           -----------
+    protected Object viewObject; // null allowed, for e.g. mixer2
 
     // ===================================================================================
     //                                                                         Constructor
@@ -299,8 +299,8 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     }
 
     // ===================================================================================
-    //                                                                       View Instance
-    //                                                                       =============
+    //                                                                         View Object
+    //                                                                         ===========
     /**
      * Render with view class. <br>
      * for framework that has view class e.g. Mixer2.
@@ -310,12 +310,12 @@ public class HtmlResponse implements ActionResponse, Redirectable {
      *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaHtml</span>).<span style="color: #CC4747">withView</span>(new SeaView(beans));
      * }
      * </pre>
-     * @param view The prepared instance of view class, which has rendering data. (NotNull)
+     * @param viewObject The prepared instance of view class, which has rendering data. (NotNull)
      * @return this. (NotNull)
      */
-    public HtmlResponse withView(Object view) {
-        assertArgumentNotNull("view", view);
-        this.preparedView = view;
+    public HtmlResponse withView(Object viewObject) {
+        assertArgumentNotNull("viewObject", viewObject);
+        this.viewObject = viewObject;
         return this;
     }
 
@@ -405,10 +405,10 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     }
 
     // -----------------------------------------------------
-    //                                         View Instance
-    //                                         -------------
-    public OptionalThing<Object> getPreparedView() {
-        return OptionalThing.ofNullable(preparedView, () -> {
+    //                                           View Object
+    //                                           -----------
+    public OptionalThing<Object> getViewObject() {
+        return OptionalThing.ofNullable(viewObject, () -> {
             String msg = "Not found the prepared view: " + HtmlResponse.this.toString();
             throw new IllegalStateException(msg);
         });
