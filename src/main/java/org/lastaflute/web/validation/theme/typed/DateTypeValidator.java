@@ -20,15 +20,17 @@ import java.lang.annotation.Annotation;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
+import org.dbflute.util.DfTypeUtil.ParseDateException;
+
 /**
- * @param <NUMBER> The type of number annotation.
+ * @param <DATE> The type of date annotation.
  * @author jflute
- * @since 0.6.5 (2015/10/31 Saturday)
+ * @since 0.6.5 (2015/11/05 Thursday)
  */
-public abstract class NumberTypeValidator<NUMBER extends Annotation> implements ConstraintValidator<NUMBER, String> {
+public abstract class DateTypeValidator<DATE extends Annotation> implements ConstraintValidator<DATE, String> {
 
     @Override
-    public void initialize(NUMBER constraintAnnotation) {
+    public void initialize(DATE constraintAnnotation) {
     }
 
     @Override
@@ -39,9 +41,9 @@ public abstract class NumberTypeValidator<NUMBER extends Annotation> implements 
     protected boolean determineValid(String value) {
         if (value != null && !value.isEmpty()) {
             try {
-                numberValueOf(value);
+                dateValueOf(value);
                 return true;
-            } catch (NumberFormatException ignored) {
+            } catch (ParseDateException ignored) {
                 return false;
             }
         } else {
@@ -49,5 +51,5 @@ public abstract class NumberTypeValidator<NUMBER extends Annotation> implements 
         }
     }
 
-    protected abstract void numberValueOf(String value) throws NumberFormatException;
+    protected abstract void dateValueOf(String value) throws ParseDateException;
 }

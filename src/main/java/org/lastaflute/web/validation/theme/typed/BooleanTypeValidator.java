@@ -15,20 +15,20 @@
  */
 package org.lastaflute.web.validation.theme.typed;
 
-import java.lang.annotation.Annotation;
-
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
+import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.DfTypeUtil.ParseBooleanException;
+
 /**
- * @param <NUMBER> The type of number annotation.
  * @author jflute
  * @since 0.6.5 (2015/10/31 Saturday)
  */
-public abstract class NumberTypeValidator<NUMBER extends Annotation> implements ConstraintValidator<NUMBER, String> {
+public abstract class BooleanTypeValidator implements ConstraintValidator<TypeBoolean, String> {
 
     @Override
-    public void initialize(NUMBER constraintAnnotation) {
+    public void initialize(TypeBoolean constraintAnnotation) {
     }
 
     @Override
@@ -39,15 +39,13 @@ public abstract class NumberTypeValidator<NUMBER extends Annotation> implements 
     protected boolean determineValid(String value) {
         if (value != null && !value.isEmpty()) {
             try {
-                numberValueOf(value);
+                DfTypeUtil.toBoolean(value);
                 return true;
-            } catch (NumberFormatException ignored) {
+            } catch (ParseBooleanException ignored) {
                 return false;
             }
         } else {
             return true;
         }
     }
-
-    protected abstract void numberValueOf(String value) throws NumberFormatException;
 }

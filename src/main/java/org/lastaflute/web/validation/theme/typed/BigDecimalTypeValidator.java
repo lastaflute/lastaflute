@@ -15,7 +15,7 @@
  */
 package org.lastaflute.web.validation.theme.typed;
 
-import java.math.BigDecimal;
+import org.dbflute.util.DfTypeUtil;
 
 /**
  * @author jflute
@@ -25,6 +25,6 @@ public class BigDecimalTypeValidator extends NumberTypeValidator<TypeBigDecimal>
 
     @Override
     protected void numberValueOf(String value) throws NumberFormatException {
-        new BigDecimal(value);
+        DfTypeUtil.toBigDecimal(value);
     }
 }

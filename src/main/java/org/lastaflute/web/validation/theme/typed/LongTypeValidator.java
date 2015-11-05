@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.validation.theme.typed;
 
+import org.dbflute.util.DfTypeUtil;
+
 /**
  * @author jflute
  * @since 0.6.5 (2015/10/31 Saturday)
@@ -23,6 +25,6 @@ public class LongTypeValidator extends NumberTypeValidator<TypeLong> {
 
     @Override
     protected void numberValueOf(String value) throws NumberFormatException {
-        Long.valueOf(value);
+        DfTypeUtil.toLong(value);
     }
 }

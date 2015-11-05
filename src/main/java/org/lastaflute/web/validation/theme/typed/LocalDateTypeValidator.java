@@ -16,15 +16,16 @@
 package org.lastaflute.web.validation.theme.typed;
 
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.DfTypeUtil.ParseDateException;
 
 /**
  * @author jflute
- * @since 0.6.5 (2015/10/31 Saturday)
+ * @since 0.6.5 (2015/11/05 Thursday)
  */
-public class IntegerTypeValidator extends NumberTypeValidator<TypeInteger> {
+public class LocalDateTypeValidator extends DateTypeValidator<TypeLocalDate> {
 
     @Override
-    protected void numberValueOf(String value) throws NumberFormatException {
-        DfTypeUtil.toInteger(value);
+    protected void dateValueOf(String value) throws ParseDateException {
+        DfTypeUtil.toLocalDate(value);
     }
 }

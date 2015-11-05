@@ -18,8 +18,12 @@ package org.lastaflute.web.validation;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -30,6 +34,7 @@ import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -44,6 +49,7 @@ import javax.validation.groups.Default;
 import javax.validation.metadata.ConstraintDescriptor;
 
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator;
@@ -67,9 +73,13 @@ import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureElement;
 import org.lastaflute.web.validation.theme.conversion.ValidateTypeFailure;
 import org.lastaflute.web.validation.theme.typed.TypeBigDecimal;
+import org.lastaflute.web.validation.theme.typed.TypeBoolean;
 import org.lastaflute.web.validation.theme.typed.TypeDouble;
 import org.lastaflute.web.validation.theme.typed.TypeFloat;
 import org.lastaflute.web.validation.theme.typed.TypeInteger;
+import org.lastaflute.web.validation.theme.typed.TypeLocalDate;
+import org.lastaflute.web.validation.theme.typed.TypeLocalDateTime;
+import org.lastaflute.web.validation.theme.typed.TypeLocalTime;
 import org.lastaflute.web.validation.theme.typed.TypeLong;
 
 /**
@@ -99,29 +109,32 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                            Item Label
     //                                            ----------
     protected static final String ITEM_VARIABLE = "{item}";
+    protected static final String ITEM_LABEL_DELIMITER = "/";
     protected static final String PROPERTY_TYPE_VARIABLE = "{propertyType}";
     protected static final String LABELS_PREFIX = "labels.";
 
     // -----------------------------------------------------
     //                                          Type Message
     //                                          ------------
-    protected static final Map<Class<?>, String> typeMessageMap = new HashMap<>();
+    protected static final Map<Class<?>, String> typeMessageMap;
 
     static {
-        typeMessageMap.put(Integer.class, TypeInteger.DEFAULT_MESSAGE);
-        typeMessageMap.put(int.class, TypeInteger.DEFAULT_MESSAGE);
-        typeMessageMap.put(Long.class, TypeLong.DEFAULT_MESSAGE);
-        typeMessageMap.put(long.class, TypeLong.DEFAULT_MESSAGE);
-        typeMessageMap.put(Float.class, TypeFloat.DEFAULT_MESSAGE);
-        typeMessageMap.put(float.class, TypeFloat.DEFAULT_MESSAGE);
-        typeMessageMap.put(Double.class, TypeDouble.DEFAULT_MESSAGE);
-        typeMessageMap.put(double.class, TypeDouble.DEFAULT_MESSAGE);
-        typeMessageMap.put(BigDecimal.class, TypeBigDecimal.DEFAULT_MESSAGE);
-        //aaa.put(LocalDate.class, TypeLocalDate.DEFAULT_MESSAGE);
-        //aaa.put(LocalDateTime.class, TypeLocalDateTime.DEFAULT_MESSAGE);
-        //aaa.put(LocalTime.class, TypeLocalTime.DEFAULT_MESSAGE);
-        //aaa.put(Boolean.class, TypeBoolean.DEFAULT_MESSAGE);
-        //aaa.put(boolean.class, TypeBoolean.DEFAULT_MESSAGE);
+        final Map<Class<?>, String> readyMap = new HashMap<Class<?>, String>();
+        readyMap.put(Integer.class, TypeInteger.DEFAULT_MESSAGE);
+        readyMap.put(int.class, TypeInteger.DEFAULT_MESSAGE);
+        readyMap.put(Long.class, TypeLong.DEFAULT_MESSAGE);
+        readyMap.put(long.class, TypeLong.DEFAULT_MESSAGE);
+        readyMap.put(Float.class, TypeFloat.DEFAULT_MESSAGE);
+        readyMap.put(float.class, TypeFloat.DEFAULT_MESSAGE);
+        readyMap.put(Double.class, TypeDouble.DEFAULT_MESSAGE);
+        readyMap.put(double.class, TypeDouble.DEFAULT_MESSAGE);
+        readyMap.put(BigDecimal.class, TypeBigDecimal.DEFAULT_MESSAGE);
+        readyMap.put(LocalDate.class, TypeLocalDate.DEFAULT_MESSAGE);
+        readyMap.put(LocalDateTime.class, TypeLocalDateTime.DEFAULT_MESSAGE);
+        readyMap.put(LocalTime.class, TypeLocalTime.DEFAULT_MESSAGE);
+        readyMap.put(Boolean.class, TypeBoolean.DEFAULT_MESSAGE);
+        readyMap.put(boolean.class, TypeBoolean.DEFAULT_MESSAGE);
+        typeMessageMap = Collections.unmodifiableMap(readyMap);
     }
 
     // -----------------------------------------------------
@@ -427,19 +440,53 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
 
     protected String filterMessageItem(String message, String propertyPath) {
         final String itemVariable = getItemVariable(message, propertyPath);
-        if (message.contains(itemVariable)) {
-            final String labelKey = buildItemLabelKey(propertyPath); // TODO jflute nest properties (2015/11/05)
-            final String itemName = findMessage(labelKey).orElseGet(() -> {
-                return buildDefaultItemName(propertyPath);
-            });
-            return Srl.replace(message, itemVariable, itemName);
-        } else {
-            return message;
+        return message.contains(itemVariable) ? Srl.replace(message, itemVariable, deriveItemValue(propertyPath)) : message;
+    }
+
+    protected String deriveItemValue(String propertyPath) {
+        final List<String> elementList = Srl.splitList(propertyPath, ".");
+        final List<String> fullList = new ArrayList<String>();
+        final List<Supplier<String>> individualList = new ArrayList<Supplier<String>>();
+        for (String element : elementList) {
+            final String resolvedKey; // e.g. seaList[]
+            final String withoutIndex; // e.g. seaList
+            final String rowNumberExp; // e.g. (1) or (a) or ""
+            if (element.contains("[") && element.endsWith("]")) { // e.g. seaList[0]
+                final String front = Srl.substringLastFront(element, "[");
+                final String index = Srl.rtrim(Srl.substringLastRear(element, "["), "]");
+                resolvedKey = buildItemListKeyExp(front);
+                withoutIndex = front; // e.g. seaList
+                rowNumberExp = buildRowNumberExp(index); // e.g. seaList(1) or seaList(a)
+            } else {
+                resolvedKey = element;
+                withoutIndex = element;
+                rowNumberExp = "";
+            }
+            fullList.add(resolvedKey);
+            individualList.add(() -> findMessage(buildItemLabelKey(resolvedKey)).orElse(withoutIndex) + rowNumberExp);
         }
+        final String fullPath = fullList.stream().collect(Collectors.joining(".")); // e.g. seaList[].land
+        return findMessage(buildItemLabelKey(fullPath)).orElseGet(() -> {
+            return individualList.stream().map(detail -> detail.get()).collect(Collectors.joining(getItemLabelDelimiter()));
+        });
     }
 
     protected String getItemVariable(String message, String propertyPath) {
         return ITEM_VARIABLE; // as default
+    }
+
+    protected String buildItemListKeyExp(String front) {
+        // not use "[]" for now, may be no problem so simply
+        //return front + "[]"; // e.g. seaList[]
+        return front; // no filter e.g. seaList
+    }
+
+    protected String getItemLabelDelimiter() {
+        return ITEM_LABEL_DELIMITER;
+    }
+
+    protected String buildRowNumberExp(String index) {
+        return "(" + (Srl.isNumberHarfAll(index) ? String.valueOf(DfTypeUtil.toInteger(index) + 1) : index) + ")";
     }
 
     protected String buildItemLabelKey(String propertyPath) {
