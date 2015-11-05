@@ -602,7 +602,7 @@ public class ActionFormMapper {
             final ValidateTypeFailure annotation = extractValidateTypeFailureAnnotation(pd);
             if (annotation != null) {
                 if (ThreadCacheContext.exists()) { // just in case
-                    return handleTypeFailureValidation(name, exp, pathSb, propertyType, e);
+                    return handleTypeFailureValidation(bean, name, exp, pathSb, propertyType, annotation, e);
                 } else { // basically no way
                     logger.debug("*Not found the thread cache for validation of type failure: {}", pathSb, e);
                 }
@@ -652,22 +652,8 @@ public class ActionFormMapper {
         return converted;
     }
 
-    protected Object handleTypeFailureValidation(String name, Object exp, StringBuilder pathSb, Class<?> propertyType,
-            RuntimeException cause) {
-        final String propertyPath = pathSb.toString();
-        final TypeFailureElement failureElement = new TypeFailureElement(propertyPath, propertyType, exp, cause);
-        TypeFailureBean typeFailure = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
-        logger.debug("...Registering type failure as validation: property={}, value={}", propertyPath, exp);
-        if (typeFailure == null) {
-            typeFailure = new TypeFailureBean();
-            ThreadCacheContext.registerValidatorTypeFailure(typeFailure);
-        }
-        typeFailure.register(failureElement);
-        return null; // set null to form here, checked later by thread local
-    }
-
     protected ValidateTypeFailure extractValidateTypeFailureAnnotation(PropertyDesc pd) {
-        Field field = pd.getField();
+        final Field field = pd.getField();
         if (field != null) {
             final ValidateTypeFailure annotation = field.getAnnotation(ValidateTypeFailure.class);
             if (annotation != null) {
@@ -682,6 +668,34 @@ public class ActionFormMapper {
             }
         }
         return null;
+    }
+
+    protected Object handleTypeFailureValidation(Object bean, String name, Object exp, StringBuilder pathSb, Class<?> propertyType,
+            ValidateTypeFailure annotation, RuntimeException cause) {
+        final String propertyPath = pathSb.toString();
+        logger.debug("...Registering type failure as validation: property={}, value={}", propertyPath, exp);
+        prepareTypeFailureBean().register(createTypeFailureElement(bean, propertyPath, propertyType, exp, annotation, cause));
+        return null; // set null to form here, checked later by thread local
+    }
+
+    protected TypeFailureBean prepareTypeFailureBean() { // thread cache already checked here
+        TypeFailureBean typeFailure = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
+        if (typeFailure == null) {
+            typeFailure = new TypeFailureBean();
+            ThreadCacheContext.registerValidatorTypeFailure(typeFailure);
+        }
+        return typeFailure;
+    }
+
+    protected TypeFailureElement createTypeFailureElement(Object bean, String propertyPath, Class<?> propertyType, Object exp,
+            ValidateTypeFailure annotation, RuntimeException cause) {
+        return new TypeFailureElement(propertyPath, propertyType, exp, annotation, cause, () -> {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("The property cannot be the type: property=");
+            sb.append(bean != null ? bean.getClass().getSimpleName() : null);
+            sb.append("#").append(propertyPath).append("(").append(propertyType.getSimpleName()).append(") value=").append(exp);
+            throwRequestPropertyMappingFailureException(sb.toString(), cause);
+        });
     }
 
     // -----------------------------------------------------

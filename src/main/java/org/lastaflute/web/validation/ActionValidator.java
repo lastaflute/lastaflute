@@ -65,6 +65,7 @@ import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureElement;
+import org.lastaflute.web.validation.theme.conversion.ValidateTypeFailure;
 import org.lastaflute.web.validation.theme.typed.TypeBigDecimal;
 import org.lastaflute.web.validation.theme.typed.TypeDouble;
 import org.lastaflute.web.validation.theme.typed.TypeFloat;
@@ -80,17 +81,30 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    // -----------------------------------------------------
+    //                                       Javax/Hibernate
+    //                                       ---------------
     public static final String JAVAX_CONSTRAINTS_PKG = NotNull.class.getPackage().getName();
     public static final String HIBERNATE_CONSTRAINTS_PKG = NotEmpty.class.getPackage().getName();
 
+    // -----------------------------------------------------
+    //                                                Groups
+    //                                                ------
     public static final Class<?> DEFAULT_GROUP_TYPE = Default.class;
     public static final Class<?>[] DEFAULT_GROUPS = new Class<?>[] { DEFAULT_GROUP_TYPE };
     public static final Class<?> CLIENT_ERROR_TYPE = ClientError.class;
     public static final Class<?>[] CLIENT_ERROR_GROUPS = new Class<?>[] { CLIENT_ERROR_TYPE };
 
+    // -----------------------------------------------------
+    //                                            Item Label
+    //                                            ----------
     protected static final String ITEM_VARIABLE = "{item}";
+    protected static final String PROPERTY_TYPE_VARIABLE = "{propertyType}";
     protected static final String LABELS_PREFIX = "labels.";
 
+    // -----------------------------------------------------
+    //                                          Type Message
+    //                                          ------------
     protected static final Map<Class<?>, String> typeMessageMap = new HashMap<>();
 
     static {
@@ -110,6 +124,9 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         //aaa.put(boolean.class, TypeBoolean.DEFAULT_MESSAGE);
     }
 
+    // -----------------------------------------------------
+    //                                               Various
+    //                                               -------
     protected static final String LF = "\n";
 
     // ===================================================================================
@@ -162,8 +179,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         if (!implicitGroup) {
             verifyExplicitGroupClientError(form, vioSet);
         }
-        @SuppressWarnings("unchecked")
-        final MESSAGES messages = (MESSAGES) toActionMessages(form, vioSet);
+        final MESSAGES messages = resolveTypeFailure(toActionMessages(form, vioSet));
         doValidateLambda.more(messages);
         if (!messages.isEmpty()) {
             throwValidationErrorException(messages, validationErrorLambda);
@@ -308,9 +324,9 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                     Action Messages
     //                                                                     ===============
-    protected ActionMessages toActionMessages(Object form, Set<ConstraintViolation<Object>> vioSet) {
+    protected MESSAGES toActionMessages(Object form, Set<ConstraintViolation<Object>> vioSet) {
         final TreeMap<String, Object> orderedMap = prepareOrderedMap(form, vioSet);
-        final ActionMessages messages = prepareActionMessages();
+        final MESSAGES messages = prepareActionMessages();
         for (Entry<String, Object> entry : orderedMap.entrySet()) {
             final Object holder = entry.getValue();
             if (holder instanceof ConstraintViolation) {
@@ -328,54 +344,6 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
             }
         }
         return messages;
-    }
-
-    protected ActionMessages filterTypeFailure(ActionMessages messages) { // TODO jflute making (2015/11/05)
-        if (!ThreadCacheContext.exists()) { // basically no way, just in case
-            return messages;
-        }
-        final TypeFailureBean failureBean = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
-        if (failureBean == null || !failureBean.hasFailure()) {
-            return messages;
-        }
-        final Map<String, TypeFailureElement> elementMap = failureBean.getElementMap();
-        final MESSAGES newMsgs = prepareActionMessages();
-        for (String property : messages.toPropertySet()) {
-            final TypeFailureElement element = elementMap.get(property);
-            if (element != null) { // already exists except type failure
-                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
-                    final ActionMessage current = ite.next();
-                    final Annotation anno = current.getValidatorAnnotation();
-                    if (anno instanceof NotNull || anno instanceof Required) {
-                        continue; // remove required annotations because they were born by type failure's null
-                    }
-                    newMsgs.add(property, current);
-                }
-                newMsgs.add(property, createTypeFailureActionMessage(element)); // add to existing property
-            } else { // properties not related with type failures
-                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
-                    newMsgs.add(property, ite.next()); // add no-related property
-                }
-            }
-        }
-        for (TypeFailureElement element : elementMap.values()) {
-            final String property = element.getPropertyPath();
-            if (!messages.hasMessageOf(property)) { // no other validation error
-                newMsgs.add(property, createTypeFailureActionMessage(element)); // add as new message for the proeprty
-            }
-        }
-        return newMsgs;
-    }
-
-    protected ActionMessage createTypeFailureActionMessage(TypeFailureElement element) {
-        final Class<?> propertyType = element.getPropertyType();
-        final String messageKey = typeMessageMap.get(propertyType);
-        if (messageKey == null) { // no way, might be framework mistake
-            String msg = "Not found the message for the property type: " + propertyType;
-            throw new IllegalStateException(msg);
-        }
-        // TODO jflute item (2015/11/05)
-        return new ActionMessage(messageKey); // simple message for now
     }
 
     // -----------------------------------------------------
@@ -442,7 +410,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
 
     protected void registerActionMessage(ActionMessages messages, ConstraintViolation<Object> vio) {
         final String propertyPath = extractPropertyPath(vio);
-        final String message = filterMessage(extractMessage(vio), propertyPath);
+        final String message = filterMessageItem(extractMessage(vio), propertyPath);
         final ConstraintDescriptor<?> descriptor = vio.getConstraintDescriptor();
         final Annotation annotation = descriptor.getAnnotation();
         final Set<Class<?>> groups = descriptor.getGroups();
@@ -457,17 +425,12 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return vio.getMessage();
     }
 
-    protected ActionMessage newDirectActionMessage(String msg, Annotation annotation, Class<?>[] groups) {
-        return ActionMessage.asDirectMessage(msg, annotation, groups);
-    }
-
-    protected String filterMessage(String message, String propertyPath) {
+    protected String filterMessageItem(String message, String propertyPath) {
         final String itemVariable = getItemVariable(message, propertyPath);
         if (message.contains(itemVariable)) {
-            final Locale userLocale = requestManager.getUserLocale();
-            final String labelKey = buildLabelKey(propertyPath); // TODO jflute nest properties (2015/11/05)
-            final String itemName = requestManager.getMessageManager().findMessage(userLocale, labelKey).orElseGet(() -> {
-                return getDefaultItem(message, propertyPath);
+            final String labelKey = buildItemLabelKey(propertyPath); // TODO jflute nest properties (2015/11/05)
+            final String itemName = findMessage(labelKey).orElseGet(() -> {
+                return buildDefaultItemName(propertyPath);
             });
             return Srl.replace(message, itemVariable, itemName);
         } else {
@@ -479,12 +442,12 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return ITEM_VARIABLE; // as default
     }
 
-    protected String getDefaultItem(String message, String propertyPath) {
-        return propertyPath; // as default
+    protected String buildItemLabelKey(String propertyPath) {
+        return convertToLabelKey(propertyPath); // as default
     }
 
-    protected String buildLabelKey(String propertyPath) {
-        return LABELS_PREFIX + propertyPath; // as default
+    protected String buildDefaultItemName(String propertyPath) {
+        return propertyPath; // as default
     }
 
     // ===================================================================================
@@ -522,8 +485,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         sb.append(Stream.of(runtimeGroups).map(tp -> {
             return tp.getSimpleName() + ".class";
         }).collect(Collectors.toList()));
-        @SuppressWarnings("unchecked")
-        final MESSAGES messages = (MESSAGES) toActionMessages(form, clientErrorSet);
+        final MESSAGES messages = toActionMessages(form, clientErrorSet);
         messages.toPropertySet().forEach(property -> {
             sb.append(LF).append(" ").append(property);
             for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
@@ -532,6 +494,132 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         });
         final String msg = sb.toString();
         throw new ClientErrorByValidatorException(msg, messages);
+    }
+
+    // ===================================================================================
+    //                                                                        Type Failure
+    //                                                                        ============
+    protected MESSAGES resolveTypeFailure(MESSAGES messages) {
+        if (!ThreadCacheContext.exists()) { // basically no way, just in case
+            return messages;
+        }
+        final TypeFailureBean failureBean = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
+        if (failureBean == null || !failureBean.hasFailure()) {
+            return messages;
+        }
+        final Map<String, TypeFailureElement> elementMap = failureBean.getElementMap();
+        final MESSAGES newMsgs = prepareActionMessages();
+        for (String property : messages.toPropertySet()) {
+            final TypeFailureElement element = elementMap.get(property);
+            if (element != null) { // already exists except type failure
+                handleTypeFailureGroups(element); // may be bad request
+                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    final ActionMessage current = ite.next();
+                    final Annotation anno = current.getValidatorAnnotation();
+                    if (anno instanceof NotNull || anno instanceof Required) {
+                        continue; // remove required annotations because they were born by type failure's null
+                    }
+                    newMsgs.add(property, current);
+                }
+                newMsgs.add(property, createTypeFailureActionMessage(element)); // add to existing property
+            } else { // properties not related with type failures
+                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    newMsgs.add(property, ite.next()); // add no-related property
+                }
+            }
+        }
+        for (TypeFailureElement element : elementMap.values()) {
+            final String property = element.getPropertyPath();
+            if (!messages.hasMessageOf(property)) { // no other validation error
+                newMsgs.add(property, createTypeFailureActionMessage(element)); // add as new message for the proeprty
+            }
+        }
+        return newMsgs;
+    }
+
+    protected void handleTypeFailureGroups(TypeFailureElement element) {
+        final Class<?>[] annotatedGroups = element.getAnnotation().groups();
+        if (annotatedGroups == null || annotatedGroups.length == 0) { // means default group
+            if (!Stream.of(runtimeGroups).anyMatch(tp -> Default.class.equals(tp))) { // but no default
+                element.getBadRequestThrower().throwBadRequest();
+            }
+        } else {
+            if (!Stream.of(runtimeGroups).anyMatch(runType -> {
+                return Stream.of(annotatedGroups).anyMatch(annoType -> annoType.equals(runType));
+            })) {
+                element.getBadRequestThrower().throwBadRequest();
+            }
+        }
+    }
+
+    protected ActionMessage createTypeFailureActionMessage(TypeFailureElement element) {
+        final String propertyPath = element.getPropertyPath();
+        final Class<?> propertyType = element.getPropertyType();
+        final String messageKey = typeMessageMap.get(propertyType);
+        final String completeMsg;
+        if (messageKey != null) {
+            completeMsg = findMessage(messageKey).map(message -> {
+                return filterTypeFailureMessage(message, propertyPath, propertyType);
+            }).orElseGet(() -> {
+                return buildDefaultTypeMessage(propertyPath, propertyType);
+            });
+        } else {
+            completeMsg = buildDefaultTypeMessage(propertyPath, propertyType);
+        }
+        final ValidateTypeFailure annotation = element.getAnnotation();
+        return newDirectActionMessage(completeMsg, annotation, annotation.groups());
+    }
+
+    protected String buildDefaultTypeMessage(String propertyPath, Class<?> propertyType) {
+        return findMessage(ValidateTypeFailure.DEFAULT_MESSAGE).map(message -> {
+            return filterTypeFailureMessage(message, propertyPath, propertyType);
+        }).orElseGet(() -> {
+            return "Cannot convert as " + propertyType.getSimpleName();
+        });
+    }
+
+    protected String filterTypeFailureMessage(String message, String propertyPath, Class<?> propertyType) {
+        return filterMessageItem(filterMessagePropertyType(message, propertyPath, propertyType), propertyPath);
+    }
+
+    protected String filterMessagePropertyType(String message, String propertyPath, Class<?> propertyType) {
+        final String propertyTypeVariable = getPropertyTypeVariable();
+        if (message.contains(propertyTypeVariable)) {
+            final String labelKey = buildPropertyTypeLabelKey(propertyPath, propertyType);
+            final String typeName = findMessage(labelKey).orElseGet(() -> {
+                return buildDefaultPropertyTypeName(propertyPath, propertyType);
+            });
+            return Srl.replace(message, propertyTypeVariable, typeName);
+        } else {
+            return message;
+        }
+    }
+
+    protected String getPropertyTypeVariable() {
+        return PROPERTY_TYPE_VARIABLE; // as default
+    }
+
+    protected String buildPropertyTypeLabelKey(String propertyPath, Class<?> propertyType) {
+        return convertToLabelKey(propertyType.getSimpleName()); // as default
+    }
+
+    protected String buildDefaultPropertyTypeName(String propertyPath, Class<?> propertyType) {
+        return propertyType.getSimpleName(); // as default
+    }
+
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    protected String convertToLabelKey(String name) {
+        return LABELS_PREFIX + name;
+    }
+
+    protected OptionalThing<String> findMessage(String messageKey) {
+        return requestManager.getMessageManager().findMessage(requestManager.getUserLocale(), messageKey);
+    }
+
+    protected ActionMessage newDirectActionMessage(String msg, Annotation annotation, Class<?>[] groups) {
+        return ActionMessage.asDirectMessage(msg, annotation, groups);
     }
 
     // ===================================================================================

@@ -30,4 +30,8 @@ import java.lang.annotation.Target;
 @Retention(RUNTIME)
 @Documented
 public @interface ValidateTypeFailure {
+
+    String DEFAULT_MESSAGE = "{org.lastaflute.validator.constraints.TypeAny.message}";
+
+    Class<?>[] groups() default {};
 }

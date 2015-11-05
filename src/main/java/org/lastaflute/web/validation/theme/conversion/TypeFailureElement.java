@@ -21,21 +21,33 @@ package org.lastaflute.web.validation.theme.conversion;
  */
 public class TypeFailureElement {
 
+    // all not null
     protected final String propertyPath;
     protected final Class<?> propertyType;
     protected final Object failureValue;
+    protected final ValidateTypeFailure annotation;
     protected final RuntimeException cause;
+    protected final TypeFailureBadRequestThrower badRequestThrower;
 
-    public TypeFailureElement(String propertyPath, Class<?> propertyType, Object failureValue, RuntimeException cause) {
+    public TypeFailureElement(String propertyPath, Class<?> propertyType, Object failureValue, ValidateTypeFailure annotation,
+            RuntimeException cause, TypeFailureBadRequestThrower badRequestThrower) {
         this.propertyPath = propertyPath;
         this.propertyType = propertyType;
         this.failureValue = failureValue;
+        this.annotation = annotation;
         this.cause = cause;
+        this.badRequestThrower = badRequestThrower;
+    }
+
+    @FunctionalInterface
+    public static interface TypeFailureBadRequestThrower {
+        void throwBadRequest();
     }
 
     @Override
     public String toString() {
-        return "failureElement:{" + propertyPath + ", " + failureValue + ", " + (cause != null ? cause.getClass() : null) + "}";
+        String causeExp = cause != null ? cause.getClass().getSimpleName() : null; // just in case
+        return "failureElement:{" + propertyPath + ", " + failureValue + ", " + annotation + ", " + causeExp + "}";
     }
 
     public String getPropertyPath() {
@@ -50,7 +62,15 @@ public class TypeFailureElement {
         return failureValue;
     }
 
+    public ValidateTypeFailure getAnnotation() {
+        return annotation;
+    }
+
     public RuntimeException getCause() {
         return cause;
+    }
+
+    public TypeFailureBadRequestThrower getBadRequestThrower() {
+        return badRequestThrower;
     }
 }
