@@ -897,12 +897,12 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                          Type Failure
     //                                          ------------
-    protected void handleTypeFailure(Object bean, String name, StringBuilder pathSb, PropertyDesc pd, Class<?> propertyType, Object scalar,
+    protected void handleTypeFailure(Object bean, String name, StringBuilder pathSb, PropertyDesc pd, Class<?> propertyType, Object exp,
             RuntimeException cause) {
         final ValidateTypeFailure annotation = extractTypeFailureAnnotation(pd);
         if (annotation != null) {
             if (ThreadCacheContext.exists()) { // just in case
-                saveTypeFailureBean(bean, name, scalar, pathSb, propertyType, annotation, cause);
+                saveTypeFailureBean(bean, name, exp, pathSb, propertyType, annotation, cause);
             } else { // basically no way
                 logger.debug("*Not found the thread cache for validation of type failure: {}", pathSb, cause);
             }
@@ -933,9 +933,14 @@ public class ActionFormMapper {
     protected Object saveTypeFailureBean(Object bean, String name, Object exp, StringBuilder pathSb, Class<?> propertyType,
             ValidateTypeFailure annotation, RuntimeException cause) {
         final String propertyPath = pathSb.toString();
-        logger.debug("...Registering type failure as validation: property={}, value={}", propertyPath, exp);
+        showTypeFailure(propertyPath, propertyType, exp, cause);
         prepareTypeFailureBean().register(createTypeFailureElement(bean, propertyPath, propertyType, exp, annotation, cause));
         return null; // set null to form here, checked later by thread local
+    }
+
+    protected void showTypeFailure(String propertyPath, Class<?> propertyType, Object exp, RuntimeException cause) {
+        final String causeExp = cause.getClass().getSimpleName();
+        logger.debug("...Registering type failure as validation: {}({}) '{}' {}", propertyPath, propertyType, exp, causeExp);
     }
 
     protected TypeFailureBean prepareTypeFailureBean() { // thread cache already checked here
