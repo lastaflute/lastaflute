@@ -108,8 +108,10 @@ public class XmlResponse implements ApiResponse {
     }
 
     @Override
-    public Integer getHttpStatus() {
-        return httpStatus;
+    public OptionalThing<Integer> getHttpStatus() {
+        return OptionalThing.ofNullable(httpStatus, () -> {
+            throw new IllegalStateException("Not found the http status in the response: " + XmlResponse.this.toString());
+        });
     }
 
     // ===================================================================================

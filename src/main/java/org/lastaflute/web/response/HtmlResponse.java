@@ -48,15 +48,31 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                               Routing
+    //                                               -------
     protected final RoutingNext nextRouting;
     protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
+
+    // -----------------------------------------------------
+    //                                        Rendering Data
+    //                                        --------------
     protected List<RenderDataRegistration> registrationList; // lazy loaded
     protected PushedFormInfo pushedFormInfo; // null allowed
     protected boolean errorsToSession;
-    protected ResponseHook afterTxCommitHook;
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    protected ResponseHook afterTxCommitHook; // null allowed
+
+    // -----------------------------------------------------
+    //                                         View Instance
+    //                                         -------------
+    protected Object preparedView; // null allowed, for e.g. mixer2
 
     // ===================================================================================
     //                                                                         Constructor
@@ -139,8 +155,10 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     }
 
     @Override
-    public Integer getHttpStatus() {
-        return httpStatus;
+    public OptionalThing<Integer> getHttpStatus() {
+        return OptionalThing.ofNullable(httpStatus, () -> {
+            throw new IllegalStateException("Not found the http status in the response: " + HtmlResponse.this.toString());
+        });
     }
 
     // ===================================================================================
@@ -281,6 +299,27 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     }
 
     // ===================================================================================
+    //                                                                       View Instance
+    //                                                                       =============
+    /**
+     * Render with view class. <br>
+     * for framework that has view class e.g. Mixer2.
+     * <pre>
+     * &#064;Execute
+     * <span style="color: #70226C">public</span> HtmlResponse index() {
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaHtml</span>).<span style="color: #CC4747">withView</span>(new SeaView(beans));
+     * }
+     * </pre>
+     * @param view The prepared instance of view class, which has rendering data. (NotNull)
+     * @return this. (NotNull)
+     */
+    public HtmlResponse withView(Object view) {
+        assertArgumentNotNull("view", view);
+        this.preparedView = view;
+        return this;
+    }
+
+    // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
     protected void assertArgumentNotNull(String title, Object value) {
@@ -309,6 +348,9 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                               Routing
+    //                                               -------
     public RoutingNext getNextRouting() {
         return nextRouting;
     }
@@ -335,6 +377,9 @@ public class HtmlResponse implements ActionResponse, Redirectable {
         return undefined;
     }
 
+    // -----------------------------------------------------
+    //                                        Rendering Data
+    //                                        --------------
     public List<RenderDataRegistration> getRegistrationList() {
         return registrationList != null ? registrationList : Collections.emptyList();
     }
@@ -355,6 +400,16 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     public OptionalThing<ResponseHook> getAfterTxCommitHook() {
         return OptionalThing.ofNullable(afterTxCommitHook, () -> {
             String msg = "Not found the response hook: " + HtmlResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                         View Instance
+    //                                         -------------
+    public OptionalThing<Object> getPreparedView() {
+        return OptionalThing.ofNullable(preparedView, () -> {
+            String msg = "Not found the prepared view: " + HtmlResponse.this.toString();
             throw new IllegalStateException(msg);
         });
     }

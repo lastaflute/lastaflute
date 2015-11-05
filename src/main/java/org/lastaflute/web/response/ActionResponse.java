@@ -51,9 +51,9 @@ public interface ActionResponse {
     ActionResponse httpStatus(int httpStatus);
 
     /**
-     * @return The specified HTTP status. (NullAllowed: if null, no specified)
+     * @return The specified HTTP status. (NotNull, EmptyAllowed: no specified)
      */
-    Integer getHttpStatus();
+    OptionalThing<Integer> getHttpStatus();
 
     // ===================================================================================
     //                                                                       Determination

@@ -223,10 +223,7 @@ public class ActionResponseReflector {
     }
 
     protected void setupActionResponseHttpStatus(ResponseManager responseManager, ActionResponse response) {
-        final Integer httpStatus = response.getHttpStatus();
-        if (httpStatus != null) {
-            responseManager.setResponseStatus(httpStatus);
-        }
+        response.getHttpStatus().ifPresent(status -> responseManager.setResponseStatus(status));
     }
 
     // ===================================================================================

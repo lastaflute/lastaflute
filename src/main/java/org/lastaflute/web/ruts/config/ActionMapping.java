@@ -20,6 +20,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.helper.beans.BeanDesc;
@@ -123,11 +124,11 @@ public class ActionMapping {
                 path = filterHtmlPath(path);
             }
         }
-        return newNextJourney(path, redirectTo, response.isAsIs());
+        return newNextJourney(path, redirectTo, response.isAsIs(), response.getPreparedView());
     }
 
-    protected NextJourney newNextJourney(String routingPath, boolean redirectTo, boolean asIs) {
-        return new NextJourney(routingPath, redirectTo, asIs);
+    protected NextJourney newNextJourney(String routingPath, boolean redirectTo, boolean asIs, OptionalThing<Object> preparedView) {
+        return new NextJourney(routingPath, redirectTo, asIs, preparedView);
     }
 
     protected String buildActionPath(String componentName) {
