@@ -3,6 +3,7 @@ package org.lastaflute.web.ruts.process;
 import java.util.Map;
 
 import org.lastaflute.unit.UnitLastaFluteTestCase;
+import org.lastaflute.web.path.FormMappingOption;
 
 /**
  * @author jflute
@@ -19,7 +20,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String[] value = new String[] { "a", "b" };
 
         // ## Act ##
-        mapper.setProperty(seaForm, "landMap.oneman", value, null, null, null);
+        mapper.setProperty(seaForm, "landMap.oneman", value, null, new FormMappingOption(), null, null);
 
         // ## Assert ##
         Object actual = seaForm.landMap.get("oneman");
@@ -37,7 +38,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String[] value = new String[] { "a", "b" };
 
         // ## Act ##
-        mapper.setMapProperty(map, "oneman", value, seaForm, "landMap");
+        mapper.setMapProperty(map, "oneman", value, new FormMappingOption(), seaForm, "landMap");
 
         // ## Assert ##
         Object actual = map.get("oneman");
@@ -52,7 +53,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String value = "a";
 
         // ## Act ##
-        mapper.setMapProperty(map, "oneman", value, seaForm, "landMap");
+        mapper.setMapProperty(map, "oneman", value, new FormMappingOption(), seaForm, "landMap");
 
         // ## Assert ##
         String[] actual = (String[]) map.get("oneman");
@@ -68,7 +69,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String[] value = new String[] { "a", "b" };
 
         // ## Act ##
-        mapper.setMapProperty(map, "dstore", value, seaForm, "iksMap");
+        mapper.setMapProperty(map, "dstore", value, new FormMappingOption(), seaForm, "iksMap");
 
         // ## Assert ##
         Object actual = map.get("dstore");
@@ -83,7 +84,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String value = "a";
 
         // ## Act ##
-        mapper.setMapProperty(map, "dstore", value, seaForm, "iksMap");
+        mapper.setMapProperty(map, "dstore", value, new FormMappingOption(), seaForm, "iksMap");
 
         // ## Assert ##
         Object actual = map.get("dstore");
