@@ -9,24 +9,29 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
+package org.lastaflute.web.response.pushed;
+
+import java.util.function.Consumer;
 
 /**
+ * @param <FORM> The tye of pushed form.
  * @author jflute
+ * @since 0.6.4 (2015/09/30 Wednesday)
  */
-public class ForcedIllegalTransitionApplicationException extends MessageKeyApplicationException {
+public class PushedFormOption<FORM> {
 
-    private static final long serialVersionUID = 1L;
+    protected Consumer<FORM> formSetupper; // null allowed
 
-    public ForcedIllegalTransitionApplicationException(String msg, String transitionKey) {
-        super(msg, transitionKey);
+    public PushedFormOption<FORM> setup(Consumer<FORM> oneArgInLambda) {
+        this.formSetupper = oneArgInLambda;
+        return this;
     }
 
-    public ForcedIllegalTransitionApplicationException(String msg, String transitionKey, Throwable cause) {
-        super(msg, transitionKey, cause);
+    public Consumer<FORM> getFormSetupper() {
+        return formSetupper;
     }
 }

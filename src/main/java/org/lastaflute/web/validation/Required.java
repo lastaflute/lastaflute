@@ -47,11 +47,12 @@ import javax.validation.Payload;
 @Retention(RUNTIME)
 @Documented
 @Constraint(validatedBy = RequiredValidator.class)
+@LastaPresentsValidator
 public @interface Required {
 
     String message() default "{org.lastaflute.validator.constraints.Required.message}";
 
-    Class<?>[]groups() default {};
+    Class<?>[] groups() default {};
 
-    Class<? extends Payload>[]payload() default {};
+    Class<? extends Payload>[] payload() default {};
 }

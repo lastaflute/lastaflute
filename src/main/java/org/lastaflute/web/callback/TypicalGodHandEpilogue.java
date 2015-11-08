@@ -27,12 +27,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jflute
  */
-public class TypicalGodHandActionEpilogue {
+public class TypicalGodHandEpilogue {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandActionEpilogue.class);
+    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandEpilogue.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -44,7 +44,7 @@ public class TypicalGodHandActionEpilogue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandActionEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
+    public TypicalGodHandEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
         this.requestManager = resource.getRequestManager();
         this.responseManager = resource.getResponseManager();
         this.tooManySqlOption = tooManySqlOption;

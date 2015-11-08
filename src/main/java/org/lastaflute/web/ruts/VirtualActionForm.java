@@ -41,8 +41,8 @@ public class VirtualActionForm implements Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final RealFormSupplier formSupplier;
-    protected final ActionFormMeta formMeta;
+    protected final RealFormSupplier formSupplier; // not null
+    protected final ActionFormMeta formMeta; // not null
     protected Object realForm; // lazy loaded
 
     // ===================================================================================

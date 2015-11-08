@@ -17,6 +17,7 @@ package org.lastaflute.web.callback;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.exception.ExceptionTranslator;
+import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -31,29 +32,40 @@ public class TypicalGodHandResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final MessageManager messageManager;
+    protected final ExceptionTranslator exceptionTranslator;
     protected final RequestManager requestManager;
     protected final ResponseManager responseManager;
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
-    protected final ExceptionTranslator exceptionTranslator;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandResource(RequestManager requestManager, ResponseManager responseManager, SessionManager sessionManager,
-            OptionalThing<LoginManager> loginManager, ApiManager apiManager, ExceptionTranslator exceptionTranslator) {
+    public TypicalGodHandResource(MessageManager messageManager, ExceptionTranslator exceptionTranslator, RequestManager requestManager,
+            ResponseManager responseManager, SessionManager sessionManager, OptionalThing<LoginManager> loginManager,
+            ApiManager apiManager) {
+        this.messageManager = messageManager;
+        this.exceptionTranslator = exceptionTranslator;
         this.requestManager = requestManager;
         this.responseManager = responseManager;
         this.sessionManager = sessionManager;
         this.loginManager = loginManager;
         this.apiManager = apiManager;
-        this.exceptionTranslator = exceptionTranslator;
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    public MessageManager getMessageManager() {
+        return messageManager;
+    }
+
+    public ExceptionTranslator getExceptionTranslator() {
+        return exceptionTranslator;
+    }
+
     public RequestManager getRequestManager() {
         return requestManager;
     }
@@ -72,9 +84,5 @@ public class TypicalGodHandResource {
 
     public ApiManager getApiManager() {
         return apiManager;
-    }
-
-    public ExceptionTranslator getExceptionTranslator() {
-        return exceptionTranslator;
     }
 }

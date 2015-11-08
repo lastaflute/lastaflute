@@ -33,8 +33,11 @@ import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.exception.SessionAttributeCannotCastException;
 import org.lastaflute.web.exception.SessionAttributeNotFoundException;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpSession;
 import org.lastaflute.web.servlet.request.scoped.ScopedMessageHandler;
 import org.lastaflute.web.util.LaRequestUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The simple implementation of session manager. <br>
@@ -42,6 +45,11 @@ import org.lastaflute.web.util.LaRequestUtil;
  * @author jflute
  */
 public class SimpleSessionManager implements SessionManager {
+
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(SimpleSessionManager.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -69,6 +77,11 @@ public class SimpleSessionManager implements SessionManager {
         assertArgumentNotNull("key", key);
         final HttpSession session = getSessionExisting();
         final Object original = session != null ? session.getAttribute(key) : null;
+        if (original instanceof HotdeployHttpSession.SerializedObjectHolder) { // e.g. hot to cool in Tomcat
+            logger.debug("...Removing relic session of hot deploy: {}", original);
+            removeAttribute(key); // treated as no-existing
+            return OptionalThing.empty();
+        }
         final ATTRIBUTE attribute;
         if (original != null) {
             try {

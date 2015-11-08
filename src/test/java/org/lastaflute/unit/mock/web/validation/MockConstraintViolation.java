@@ -15,11 +15,23 @@
  */
 package org.lastaflute.unit.mock.web.validation;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.validation.ConstraintTarget;
+import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintViolation;
 import javax.validation.Path;
+import javax.validation.Payload;
 import javax.validation.metadata.ConstraintDescriptor;
 
+import org.dbflute.util.DfCollectionUtil;
 import org.hibernate.validator.internal.engine.path.PathImpl;
+import org.lastaflute.web.validation.ClientError;
+import org.lastaflute.web.validation.Required;
 
 /**
  * @author jflute
@@ -77,9 +89,64 @@ public class MockConstraintViolation implements ConstraintViolation<Object> {
         return null;
     }
 
+    @Required
     @Override
     public ConstraintDescriptor<?> getConstraintDescriptor() {
-        return null;
+        String methodName = "getConstraintDescriptor";
+        Method method;
+        try {
+            method = MockConstraintViolation.class.getMethod(methodName, new Class<?>[] {});
+        } catch (NoSuchMethodException | SecurityException e) {
+            throw new IllegalStateException("Failed to get the method: " + methodName, e);
+        }
+        Required annotation = method.getAnnotation(Required.class);
+        return new ConstraintDescriptor<Annotation>() {
+
+            @Override
+            public Annotation getAnnotation() {
+                return annotation;
+            }
+
+            @Override
+            public String getMessageTemplate() {
+                return null;
+            }
+
+            @Override
+            public Set<Class<?>> getGroups() {
+                return DfCollectionUtil.newHashSet(ClientError.class);
+            }
+
+            @Override
+            public Set<Class<? extends Payload>> getPayload() {
+                return null;
+            }
+
+            @Override
+            public ConstraintTarget getValidationAppliesTo() {
+                return null;
+            }
+
+            @Override
+            public List<Class<? extends ConstraintValidator<Annotation, ?>>> getConstraintValidatorClasses() {
+                return null;
+            }
+
+            @Override
+            public Map<String, Object> getAttributes() {
+                return null;
+            }
+
+            @Override
+            public Set<ConstraintDescriptor<?>> getComposingConstraints() {
+                return null;
+            }
+
+            @Override
+            public boolean isReportAsSingleViolation() {
+                return false;
+            }
+        };
     }
 
     @Override

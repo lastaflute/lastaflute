@@ -15,7 +15,9 @@
  */
 package org.lastaflute.web.token;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -24,13 +26,71 @@ public interface DoubleSubmitManager {
 
     String TOKEN_KEY = LastaWebKey.TRANSACTION_TOKEN_KEY;
 
-    boolean determineToken(Class<?> groupType);
-
-    boolean determineTokenWithReset(Class<?> groupType);
-
+    // ===================================================================================
+    //                                                                  Token Manipulation
+    //                                                                  ==================
+    /**
+     * Save the transaction token to session.
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @return The generated token saved in session. (NotNull)
+     */
     String saveToken(Class<?> groupType);
 
+    /**
+     * Generate the transaction token. (generation only)
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @return The generated string as transaction token. (NotNull)
+     */
     String generateToken(Class<?> groupType);
 
+    // ===================================================================================
+    //                                                                 Token Determination
+    //                                                                 ===================
+    /**
+     * Is the requested token matched with the token saved in session? (determination only)
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @return The determination, true or false.
+     */
+    boolean determineToken(Class<?> groupType);
+
+    /**
+     * Is the requested token matched with the token saved in session? <br>
+     * And reset token after determination.
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @return The determination, true or false.
+     */
+    boolean determineTokenWithReset(Class<?> groupType);
+
+    // ===================================================================================
+    //                                                                  Token Verification
+    //                                                                  ==================
+    /**
+     * Verify the request token (whether the request token is same as saved token) <br>
+     * And reset the saved token, it can be used only one-time.
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @param errorHook The hook to return action response when token error. (NotNull)
+     * @throws DoubleSubmitRequestException When the token is invalid.
+     */
+    void verifyToken(Class<?> groupType, TokenErrorHook errorHook);
+
+    /**
+     * Verify the request token (whether the request token is same as saved token) <br>
+     * Keep the saved token, so this method is basically for intermediate request.
+     * @param groupType The class type to identify group of transaction. (NotNull)
+     * @param errorHook The hook to return action response when token error. (NotNull)
+     * @throws DoubleSubmitRequestException When the token is invalid.
+     */
+    void verifyTokenKeep(Class<?> groupType, TokenErrorHook errorHook);
+
+    // ===================================================================================
+    //                                                                       Token Closing
+    //                                                                       =============
     void resetToken(Class<?> groupType);
+
+    // ===================================================================================
+    //                                                                        Token Access
+    //                                                                        ============
+    OptionalThing<String> getRequestedToken();
+
+    OptionalThing<DoubleSubmitTokenMap> getSessionTokenMap();
 }

@@ -90,14 +90,14 @@ public class LastaFilter implements Filter {
     //                                                                             =======
     @Override
     public void destroy() {
-        if (lastaPrepareFilter != null) {
-            lastaPrepareFilter.destroy();
+        if (lastaToActionFilter != null) {
+            lastaToActionFilter.destroy();
         }
         if (lastaShowbaseFilter != null) {
             lastaShowbaseFilter.destroy();
         }
-        if (lastaToActionFilter != null) {
-            lastaToActionFilter.destroy();
+        if (lastaPrepareFilter != null) {
+            lastaPrepareFilter.destroy(); // Lasta Di is destroyed
         }
     }
 }

@@ -15,7 +15,10 @@
  */
 package org.lastaflute.web.ruts.process;
 
-import org.lastaflute.core.json.JsonManager;
+import java.lang.reflect.Parameter;
+import java.util.function.Consumer;
+
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
@@ -24,6 +27,7 @@ import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.response.StreamResponse;
 import org.lastaflute.web.response.XmlResponse;
+import org.lastaflute.web.response.pushed.PushedFormInfo;
 import org.lastaflute.web.response.render.RenderData;
 import org.lastaflute.web.ruts.NextJourney;
 import org.lastaflute.web.ruts.VirtualActionForm;
@@ -113,15 +117,23 @@ public class ActionResponseReflector {
     }
 
     protected void setupPushedActionForm(HtmlResponse response) {
-        response.getPushedFormType().ifPresent(formType -> {
+        response.getPushedFormInfo().ifPresent(formInfo -> {
             final String formKey = LastaWebKey.PUSHED_ACTION_FORM_KEY;
-            final VirtualActionForm form = createPushedActionForm(formType, formKey);
+            VirtualActionForm form = createPushedActionForm(formInfo, formKey);
             requestManager.setAttribute(formKey, form);
+            runtime.setActionForm(OptionalThing.of(form)); // to export properties to request attribute
         });
     }
 
-    protected VirtualActionForm createPushedActionForm(Class<?> formType, String formKey) {
-        return execute.prepareFormMeta(formType, null).get().createActionForm();
+    protected VirtualActionForm createPushedActionForm(PushedFormInfo formInfo, String formKey) {
+        final OptionalThing<Class<?>> formType = OptionalThing.of(formInfo.getFormType());
+        final OptionalThing<Parameter> listFormParameter = OptionalThing.empty();
+        final OptionalThing<Consumer<Object>> formSetupper = formInfo.getFormOption().map(op -> {
+            @SuppressWarnings("unchecked")
+            final Consumer<Object> setupper = (Consumer<Object>) op.getFormSetupper();
+            return setupper;
+        });
+        return execute.prepareFormMeta(formType, listFormParameter, formSetupper).get().createActionForm();
     }
 
     protected NextJourney createActionNext(HtmlResponse response) {
@@ -145,8 +157,12 @@ public class ActionResponseReflector {
         if (response.isReturnAsEmptyBody()) {
             return undefinedJourney();
         }
-        final JsonManager jsonManager = requestManager.getJsonManager();
-        final String json = jsonManager.toJson(response.getJsonBean());
+        final String json;
+        if (response.isReturnAsJsonDirectly()) {
+            json = response.getDirectJson().get();
+        } else { // mainly here
+            json = requestManager.getJsonManager().toJson(response.getJsonBean());
+        }
         response.getCallback().ifPresent(callback -> {
             final String script = callback + "(" + json + ")";
             responseManager.writeAsJavaScript(script);
@@ -207,10 +223,7 @@ public class ActionResponseReflector {
     }
 
     protected void setupActionResponseHttpStatus(ResponseManager responseManager, ActionResponse response) {
-        final Integer httpStatus = response.getHttpStatus();
-        if (httpStatus != null) {
-            responseManager.setResponseStatus(httpStatus);
-        }
+        response.getHttpStatus().ifPresent(status -> responseManager.setResponseStatus(status));
     }
 
     // ===================================================================================

@@ -98,10 +98,6 @@ public class SimpleMessageManager implements MessageManager {
         });
     }
 
-    protected String filterMessageKey(String key) {
-        return Srl.isQuotedAnything(key, "{", "}") ? Srl.unquoteAnything(key, "{", "}") : key;
-    }
-
     protected void throwMessageKeyNotFoundException(Locale locale, String key, String filtered) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the message by the key.");
@@ -148,6 +144,34 @@ public class SimpleMessageManager implements MessageManager {
         br.addElement(messageResourcesHolder);
         final String msg = br.buildExceptionMessage();
         throw new MessageKeyNotFoundException(msg);
+    }
+
+    // -----------------------------------------------------
+    //                                            Key Filter
+    //                                            ----------
+    protected String filterMessageKey(String key) { // basically for hibernate validator
+        return filterEmbeddedDomain(filterBrace(key));
+    }
+
+    protected String filterBrace(String key) {
+        return Srl.isQuotedAnything(key, "{", "}") ? Srl.unquoteAnything(key, "{", "}") : key;
+    }
+
+    protected String filterEmbeddedDomain(String key) {
+        final String javaxPackage = "javax.validation.";
+        final String hibernatePackage = "org.hibernate.validator.";
+        final String lastaflutePackage = "org.lastaflute.validator.";
+        final String realKey;
+        if (key.startsWith(javaxPackage)) {
+            realKey = Srl.substringFirstRear(key, javaxPackage);
+        } else if (key.startsWith(hibernatePackage)) {
+            realKey = Srl.substringFirstRear(key, hibernatePackage);
+        } else if (key.startsWith(lastaflutePackage)) {
+            realKey = Srl.substringFirstRear(key, lastaflutePackage);
+        } else {
+            realKey = key;
+        }
+        return realKey;
     }
 
     // ===================================================================================

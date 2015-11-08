@@ -31,21 +31,26 @@ public class ValidationErrorException extends RuntimeException {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionMessages messages;
-    protected final VaErrorHook errorHandler;
+    protected final Class<?>[] runtimeGroups; // not null
+    protected final ActionMessages messages; // not null
+    protected final VaErrorHook errorHook; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ValidationErrorException(ActionMessages messages, VaErrorHook errorHandler) {
+    public ValidationErrorException(Class<?>[] runtimeGroups, ActionMessages messages, VaErrorHook errorHook) {
+        if (runtimeGroups == null) {
+            throw new IllegalArgumentException("The argument 'runtimeGroups' should not be null.");
+        }
         if (messages == null) {
             throw new IllegalArgumentException("The argument 'messages' should not be null.");
         }
-        if (errorHandler == null) {
+        if (errorHook == null) {
             throw new IllegalArgumentException("The argument 'errorHandler' should not be null.");
         }
+        this.runtimeGroups = runtimeGroups;
         this.messages = messages;
-        this.errorHandler = errorHandler;
+        this.errorHook = errorHook;
     }
 
     // ===================================================================================
@@ -53,17 +58,21 @@ public class ValidationErrorException extends RuntimeException {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "validationError:{messages=" + messages + ", handler=" + errorHandler + "}";
+        return "validationError:{messages=" + messages + ", errorHook=" + errorHook + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    public Class<?>[] getRuntimeGroups() {
+        return runtimeGroups;
+    }
+
     public ActionMessages getMessages() {
         return messages;
     }
 
-    public VaErrorHook getErrorHandler() {
-        return errorHandler;
+    public VaErrorHook getErrorHook() {
+        return errorHook;
     }
 }

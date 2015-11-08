@@ -89,7 +89,7 @@ public class ActionCoinHelper {
     protected void dispatchApiClientException(ActionRuntime runtime, ActionResponseReflector reflector, RequestClientErrorException cause) {
         if (canHandleApiException(runtime)) { // check API action just in case
             getApiManager().handleClientException(createApiFailureResource(runtime), cause).ifPresent(apiRes -> {
-                if (apiRes.getHttpStatus() == null) { // no specified
+                if (!apiRes.getHttpStatus().isPresent()) { // no specified
                     apiRes.httpStatus(cause.getErrorStatus()); // use thrown status
                 }
                 reflector.reflect(apiRes); // empty journey so ignore return
@@ -112,7 +112,7 @@ public class ActionCoinHelper {
     protected void dispatchApiServerException(ActionRuntime runtime, ActionResponseReflector reflector, Throwable cause) {
         if (canHandleApiException(runtime)) { // check API action just in case
             getApiManager().handleServerException(createApiFailureResource(runtime), cause).ifPresent(apiRes -> {
-                if (apiRes.getHttpStatus() == null) { // no specified
+                if (!apiRes.getHttpStatus().isPresent()) { // no specified
                     apiRes.httpStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // use fixed status
                 }
                 reflector.reflect(apiRes); // empty journey so ignore return

@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
@@ -398,28 +400,31 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected ActionResponse handleValidationErrorException(ValidationErrorException cause) {
-        final ActionMessages errors = cause.getMessages();
-        assertValidationErrorMessagesExists(errors, cause);
+        final ActionMessages messages = cause.getMessages();
+        assertValidationErrorMessagesExists(messages, cause);
         if (logger.isDebugEnabled()) {
             final StringBuilder sb = new StringBuilder();
             sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
-            sb.append(LF).append("[Validation Error]");
-            for (String property : errors.toPropertySet()) {
-                sb.append(LF).append(property);
-                for (Iterator<ActionMessage> ite = errors.nonAccessByIteratorOf(property); ite.hasNext();) {
-                    sb.append(LF).append("  ").append(ite.next());
+            sb.append(LF).append("[Validation Error]: runtimeGroups=");
+            sb.append(Stream.of(cause.getRuntimeGroups()).map(tp -> {
+                return tp.getSimpleName() + ".class";
+            }).collect(Collectors.toList()));
+            messages.toPropertySet().forEach(property -> {
+                sb.append(LF).append(" ").append(property);
+                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    sb.append(LF).append("   ").append(ite.next());
                 }
-            }
+            });
             sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/");
             logger.debug(sb.toString());
         }
-        requestManager.errors().save(errors); // also API can use it
-        runtime.setValidationErrors(errors); // reflect to runtime
+        requestManager.errors().save(messages); // also API can use it
+        runtime.setValidationErrors(messages); // reflect to runtime
         runtime.setFailureCause(cause); // also cause
-        final VaErrorHook errorHandler = cause.getErrorHandler();
-        final ActionResponse response = errorHandler.hook(); // failure hook here if API
+        final VaErrorHook errorHook = cause.getErrorHook();
+        final ActionResponse response = errorHook.hook(); // failure hook here if API
         if (response == null) {
-            throw new IllegalStateException("The handler for validation error cannot return null: " + errorHandler, cause);
+            throw new IllegalStateException("The handler for validation error cannot return null: " + errorHook, cause);
         }
         response.getAfterTxCommitHook().ifPresent(hook -> {
             throw new IllegalStateException("Validation error always rollbacks transaction but tx-commit hook specified:" + hook);

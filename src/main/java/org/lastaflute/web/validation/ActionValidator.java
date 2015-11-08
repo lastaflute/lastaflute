@@ -15,8 +15,15 @@
  */
 package org.lastaflute.web.validation;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,6 +34,9 @@ import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.validation.Configuration;
 import javax.validation.ConstraintViolation;
@@ -36,8 +46,10 @@ import javax.validation.Validator;
 import javax.validation.bootstrap.GenericBootstrap;
 import javax.validation.constraints.NotNull;
 import javax.validation.groups.Default;
+import javax.validation.metadata.ConstraintDescriptor;
 
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator;
@@ -57,6 +69,18 @@ import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
+import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
+import org.lastaflute.web.validation.theme.conversion.TypeFailureElement;
+import org.lastaflute.web.validation.theme.conversion.ValidateTypeFailure;
+import org.lastaflute.web.validation.theme.typed.TypeBigDecimal;
+import org.lastaflute.web.validation.theme.typed.TypeBoolean;
+import org.lastaflute.web.validation.theme.typed.TypeDouble;
+import org.lastaflute.web.validation.theme.typed.TypeFloat;
+import org.lastaflute.web.validation.theme.typed.TypeInteger;
+import org.lastaflute.web.validation.theme.typed.TypeLocalDate;
+import org.lastaflute.web.validation.theme.typed.TypeLocalDateTime;
+import org.lastaflute.web.validation.theme.typed.TypeLocalTime;
+import org.lastaflute.web.validation.theme.typed.TypeLong;
 
 /**
  * @param <MESSAGES> The type of action messages.
@@ -67,30 +91,82 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    // -----------------------------------------------------
+    //                                       Javax/Hibernate
+    //                                       ---------------
     public static final String JAVAX_CONSTRAINTS_PKG = NotNull.class.getPackage().getName();
     public static final String HIBERNATE_CONSTRAINTS_PKG = NotEmpty.class.getPackage().getName();
 
-    public static final Class<?>[] DEFAULT_GROUPS = new Class<?>[] { Default.class };
+    // -----------------------------------------------------
+    //                                                Groups
+    //                                                ------
+    public static final Class<?> DEFAULT_GROUP_TYPE = Default.class;
+    public static final Class<?>[] DEFAULT_GROUPS = new Class<?>[] { DEFAULT_GROUP_TYPE };
+    public static final Class<?> CLIENT_ERROR_TYPE = ClientError.class;
+    public static final Class<?>[] CLIENT_ERROR_GROUPS = new Class<?>[] { CLIENT_ERROR_TYPE };
+
+    // -----------------------------------------------------
+    //                                            Item Label
+    //                                            ----------
     protected static final String ITEM_VARIABLE = "{item}";
+    protected static final String ITEM_LABEL_DELIMITER = "/";
+    protected static final String PROPERTY_TYPE_VARIABLE = "{propertyType}";
     protected static final String LABELS_PREFIX = "labels.";
+
+    // -----------------------------------------------------
+    //                                          Type Message
+    //                                          ------------
+    protected static final Map<Class<?>, String> typeMessageMap;
+
+    static {
+        final Map<Class<?>, String> readyMap = new HashMap<Class<?>, String>();
+        readyMap.put(Integer.class, TypeInteger.DEFAULT_MESSAGE);
+        readyMap.put(int.class, TypeInteger.DEFAULT_MESSAGE);
+        readyMap.put(Long.class, TypeLong.DEFAULT_MESSAGE);
+        readyMap.put(long.class, TypeLong.DEFAULT_MESSAGE);
+        readyMap.put(Float.class, TypeFloat.DEFAULT_MESSAGE);
+        readyMap.put(float.class, TypeFloat.DEFAULT_MESSAGE);
+        readyMap.put(Double.class, TypeDouble.DEFAULT_MESSAGE);
+        readyMap.put(double.class, TypeDouble.DEFAULT_MESSAGE);
+        readyMap.put(BigDecimal.class, TypeBigDecimal.DEFAULT_MESSAGE);
+        readyMap.put(LocalDate.class, TypeLocalDate.DEFAULT_MESSAGE);
+        readyMap.put(LocalDateTime.class, TypeLocalDateTime.DEFAULT_MESSAGE);
+        readyMap.put(LocalTime.class, TypeLocalTime.DEFAULT_MESSAGE);
+        readyMap.put(Boolean.class, TypeBoolean.DEFAULT_MESSAGE);
+        readyMap.put(boolean.class, TypeBoolean.DEFAULT_MESSAGE);
+        typeMessageMap = Collections.unmodifiableMap(readyMap);
+    }
+
+    // -----------------------------------------------------
+    //                                               Various
+    //                                               -------
+    protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     protected final RequestManager requestManager;
     protected final MessagesCreator<MESSAGES> messageCreator;
-    protected final Class<?>[] groups; // not null
+    protected final Class<?>[] runtimeGroups; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(RequestManager requestManager, MessagesCreator<MESSAGES> noArgInLambda, Class<?>... groups) {
+    public ActionValidator(RequestManager requestManager, MessagesCreator<MESSAGES> noArgInLambda, Class<?>... runtimeGroups) {
         assertArgumentNotNull("requestManager", requestManager);
         assertArgumentNotNull("noArgInLambda", noArgInLambda);
-        assertArgumentNotNull("groups", groups);
+        assertArgumentNotNull("runtimeGroups", runtimeGroups);
         this.requestManager = requestManager;
         this.messageCreator = noArgInLambda;
-        this.groups = groups;
+        this.runtimeGroups = runtimeGroups;
+        assertGroupsNotContainsClientError(runtimeGroups);
+    }
+
+    protected void assertGroupsNotContainsClientError(Class<?>... groups) {
+        Stream.of(groups).filter(tp -> tp.equals(CLIENT_ERROR_TYPE)).findAny().ifPresent(groupType -> {
+            String msg = "Cannot specify client error as group, you can use it only at annotation: ";
+            throw new IllegalStateException(msg + Arrays.asList(groups));
+        });
     }
 
     // ===================================================================================
@@ -108,15 +184,24 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         assertArgumentNotNull("doValidateLambda", doValidateLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
         markValidationCalled();
-        verifyClientError(form);
-        final Set<ConstraintViolation<Object>> vioSet = hibernateValidate(form);
-        @SuppressWarnings("unchecked")
-        final MESSAGES messages = (MESSAGES) toActionMessages(form, vioSet);
+        final boolean implicitGroup = containsRuntimeGroup(runtimeGroups, DEFAULT_GROUP_TYPE);
+        if (implicitGroup) {
+            verifyDefaultGroupClientError(form);
+        }
+        final Set<ConstraintViolation<Object>> vioSet = hibernateValidate(form, runtimeGroups);
+        if (!implicitGroup) {
+            verifyExplicitGroupClientError(form, vioSet);
+        }
+        final MESSAGES messages = resolveTypeFailure(toActionMessages(form, vioSet));
         doValidateLambda.more(messages);
         if (!messages.isEmpty()) {
             throwValidationErrorException(messages, validationErrorLambda);
         }
         return createValidationSuccess(messages);
+    }
+
+    protected boolean containsRuntimeGroup(Class<?>[] groups, Class<?> groupType) {
+        return Stream.of(groups).filter(tp -> tp.equals(groupType)).findAny().isPresent();
     }
 
     protected void markValidationCalled() {
@@ -130,7 +215,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     }
 
     protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
-        throw new ValidationErrorException(messages, validationErrorLambda);
+        throw new ValidationErrorException(runtimeGroups, messages, validationErrorLambda);
     }
 
     protected ValidationSuccess createValidationSuccess(MESSAGES messages) {
@@ -164,7 +249,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                 Hibernate Validator
     //                                                                 ===================
-    protected Set<ConstraintViolation<Object>> hibernateValidate(Object form) {
+    protected Set<ConstraintViolation<Object>> hibernateValidate(Object form, Class<?>[] groups) {
         return comeOnHibernateValidator().validate(form, groups);
     }
 
@@ -189,11 +274,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                       Resource Bundle
     //                                       ---------------
     protected ResourceBundleLocator newResourceBundleLocator() {
-        return new ResourceBundleLocator() {
-            public ResourceBundle getResourceBundle(Locale locale) {
-                return newHookedResourceBundle(locale);
-            }
-        };
+        return locale -> newHookedResourceBundle(locale);
     }
 
     protected ResourceBundle newHookedResourceBundle(Locale locale) {
@@ -212,29 +293,15 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
 
         @Override
         protected Object handleGetObject(String key) {
+            // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
             // if null (and token), find it from annotation attributes
             // (at heart, want to know whether token or not)
-            final String realKey = filterMessageKey(key);
-            final OptionalThing<String> opt = messageManager.findMessage(locale, realKey);
+            // _/_/_/_/_/_/_/_/_/_/
+            // *move filtering embedded domain to message manager
+            //final String realKey = filterMessageKey(key);
+            final OptionalThing<String> opt = messageManager.findMessage(locale, key);
             checkMainMessageNotFound(opt, key);
             return opt.orElse(null);
-        }
-
-        protected String filterMessageKey(String key) {
-            final String javaxPackage = "javax.validation.";
-            final String hibernatePackage = "org.hibernate.validator.";
-            final String lastaflutePackage = "org.lastaflute.validator.";
-            final String realKey;
-            if (key.startsWith(javaxPackage)) {
-                realKey = Srl.substringFirstRear(key, javaxPackage);
-            } else if (key.startsWith(hibernatePackage)) {
-                realKey = Srl.substringFirstRear(key, hibernatePackage);
-            } else if (key.startsWith(lastaflutePackage)) {
-                realKey = Srl.substringFirstRear(key, lastaflutePackage);
-            } else {
-                realKey = key;
-            }
-            return realKey;
         }
 
         protected void checkMainMessageNotFound(OptionalThing<String> opt, String key) {
@@ -256,9 +323,9 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                     Action Messages
     //                                                                     ===============
-    protected ActionMessages toActionMessages(Object form, Set<ConstraintViolation<Object>> vioSet) {
+    protected MESSAGES toActionMessages(Object form, Set<ConstraintViolation<Object>> vioSet) {
         final TreeMap<String, Object> orderedMap = prepareOrderedMap(form, vioSet);
-        final ActionMessages messages = prepareActionMessages();
+        final MESSAGES messages = prepareActionMessages();
         for (Entry<String, Object> entry : orderedMap.entrySet()) {
             final Object holder = entry.getValue();
             if (holder instanceof ConstraintViolation) {
@@ -342,8 +409,11 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
 
     protected void registerActionMessage(ActionMessages messages, ConstraintViolation<Object> vio) {
         final String propertyPath = extractPropertyPath(vio);
-        final String message = filterMessage(extractMessage(vio), propertyPath);
-        messages.add(propertyPath, newDirectActionMessage(message));
+        final String message = filterMessageItem(extractMessage(vio), propertyPath);
+        final ConstraintDescriptor<?> descriptor = vio.getConstraintDescriptor();
+        final Annotation annotation = descriptor.getAnnotation();
+        final Set<Class<?>> groups = descriptor.getGroups();
+        messages.add(propertyPath, newDirectActionMessage(message, annotation, groups.toArray(new Class<?>[groups.size()])));
     }
 
     protected String extractPropertyPath(ConstraintViolation<Object> vio) {
@@ -354,59 +424,105 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return vio.getMessage();
     }
 
-    protected ActionMessage newDirectActionMessage(String msg) {
-        return new ActionMessage(msg, false);
+    protected String filterMessageItem(String message, String propertyPath) {
+        final String itemVariable = getItemVariable(message, propertyPath);
+        return message.contains(itemVariable) ? Srl.replace(message, itemVariable, deriveItemValue(propertyPath)) : message;
     }
 
-    protected String filterMessage(String message, String propertyPath) {
-        final String itemVariable = getItemVariable(message, propertyPath);
-        if (message.contains(itemVariable)) {
-            final Locale userLocale = requestManager.getUserLocale();
-            final String labelKey = buildLabelKey(propertyPath);
-            final String itemName = requestManager.getMessageManager().findMessage(userLocale, labelKey).orElseGet(() -> {
-                return getDefaultItem(message, propertyPath);
-            });
-            return Srl.replace(message, itemVariable, itemName);
-        } else {
-            return message;
+    protected String deriveItemValue(String propertyPath) {
+        final List<String> elementList = Srl.splitList(propertyPath, ".");
+        final List<String> fullList = new ArrayList<String>();
+        final List<Supplier<String>> individualList = new ArrayList<Supplier<String>>();
+        for (String element : elementList) {
+            final String resolvedKey; // e.g. seaList[]
+            final String withoutIndex; // e.g. seaList
+            final String rowNumberExp; // e.g. (1) or (a) or ""
+            if (element.contains("[") && element.endsWith("]")) { // e.g. seaList[0]
+                final String front = Srl.substringLastFront(element, "[");
+                final String index = Srl.rtrim(Srl.substringLastRear(element, "["), "]");
+                resolvedKey = buildItemListKeyExp(front);
+                withoutIndex = front; // e.g. seaList
+                rowNumberExp = buildRowNumberExp(index); // e.g. seaList(1) or seaList(a)
+            } else {
+                resolvedKey = element;
+                withoutIndex = element;
+                rowNumberExp = "";
+            }
+            fullList.add(resolvedKey);
+            individualList.add(() -> findMessage(buildItemLabelKey(resolvedKey)).orElse(withoutIndex) + rowNumberExp);
         }
+        final String fullPath = fullList.stream().collect(Collectors.joining(".")); // e.g. seaList[].land
+        return findMessage(buildItemLabelKey(fullPath)).orElseGet(() -> {
+            return individualList.stream().map(detail -> detail.get()).collect(Collectors.joining(getItemLabelDelimiter()));
+        });
     }
 
     protected String getItemVariable(String message, String propertyPath) {
         return ITEM_VARIABLE; // as default
     }
 
-    protected String getDefaultItem(String message, String propertyPath) {
-        return propertyPath; // as default
+    protected String buildItemListKeyExp(String front) {
+        // not use "[]" for now, may be no problem so simply
+        //return front + "[]"; // e.g. seaList[]
+        return front; // no filter e.g. seaList
     }
 
-    protected String buildLabelKey(String propertyPath) {
-        return LABELS_PREFIX + propertyPath; // as default
+    protected String getItemLabelDelimiter() {
+        return ITEM_LABEL_DELIMITER;
+    }
+
+    protected String buildRowNumberExp(String index) {
+        return "(" + (Srl.isNumberHarfAll(index) ? String.valueOf(DfTypeUtil.toInteger(index) + 1) : index) + ")";
+    }
+
+    protected String buildItemLabelKey(String propertyPath) {
+        return convertToLabelKey(propertyPath); // as default
+    }
+
+    protected String buildDefaultItemName(String propertyPath) {
+        return propertyPath; // as default
     }
 
     // ===================================================================================
     //                                                                        Client Error
     //                                                                        ============
-    protected void verifyClientError(Object form) {
-        final Set<ConstraintViolation<Object>> clientErrorSet = clientErrorHibernateValidate(form);
+    protected void verifyDefaultGroupClientError(Object form) {
+        // e.g. @Required(groups = { ClientError.class }) (when default group specified)
+        if (containsRuntimeGroup(runtimeGroups, DEFAULT_GROUP_TYPE)) {
+            final Set<ConstraintViolation<Object>> clientErrorSet = hibernateValidate(form, CLIENT_ERROR_GROUPS);
+            handleClientErrorViolation(form, clientErrorSet);
+        }
+    }
+
+    protected void verifyExplicitGroupClientError(Object form, Set<ConstraintViolation<Object>> vioSet) {
+        // e.g. @Required(groups = { Sea.class, ClientError.class }) (when Sea group specified)
+        final Set<ConstraintViolation<Object>> clientErrorSet = vioSet.stream().filter(vio -> {
+            return containsDefinedGroup(vio.getConstraintDescriptor().getGroups(), CLIENT_ERROR_TYPE);
+        }).collect(Collectors.toSet());
+        handleClientErrorViolation(form, clientErrorSet);
+    }
+
+    protected boolean containsDefinedGroup(Set<Class<?>> groups, Class<?> groupType) {
+        return groups.stream().filter(tp -> tp.equals(groupType)).findAny().isPresent();
+    }
+
+    protected void handleClientErrorViolation(Object form, Set<ConstraintViolation<Object>> clientErrorSet) {
         if (!clientErrorSet.isEmpty()) {
             throwClientErrorByValidatorException(form, clientErrorSet);
         }
     }
 
-    protected Set<ConstraintViolation<Object>> clientErrorHibernateValidate(Object form) {
-        return comeOnHibernateValidator().validate(form, ClientError.class);
-    }
-
     protected void throwClientErrorByValidatorException(Object form, Set<ConstraintViolation<Object>> clientErrorSet) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Client Error detected by validator:");
-        @SuppressWarnings("unchecked")
-        final MESSAGES messages = (MESSAGES) toActionMessages(form, clientErrorSet);
+        sb.append("Client Error detected by validator: runtimeGroups="); // similar to normal validation error logging
+        sb.append(Stream.of(runtimeGroups).map(tp -> {
+            return tp.getSimpleName() + ".class";
+        }).collect(Collectors.toList()));
+        final MESSAGES messages = toActionMessages(form, clientErrorSet);
         messages.toPropertySet().forEach(property -> {
-            final Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property);
-            while (ite.hasNext()) {
-                sb.append("\n ").append(property).append(" ").append((ActionMessage) ite.next());
+            sb.append(LF).append(" ").append(property);
+            for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                sb.append(LF).append("   ").append(ite.next());
             }
         });
         final String msg = sb.toString();
@@ -414,13 +530,140 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     }
 
     // ===================================================================================
+    //                                                                        Type Failure
+    //                                                                        ============
+    protected MESSAGES resolveTypeFailure(MESSAGES messages) {
+        if (!ThreadCacheContext.exists()) { // basically no way, just in case
+            return messages;
+        }
+        final TypeFailureBean failureBean = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
+        if (failureBean == null || !failureBean.hasFailure()) {
+            return messages;
+        }
+        final Map<String, TypeFailureElement> elementMap = failureBean.getElementMap();
+        final MESSAGES newMsgs = prepareActionMessages();
+        for (String property : messages.toPropertySet()) {
+            final TypeFailureElement element = elementMap.get(property);
+            if (element != null) { // already exists except type failure
+                handleTypeFailureGroups(element); // may be bad request
+                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    final ActionMessage current = ite.next();
+                    final Annotation anno = current.getValidatorAnnotation();
+                    if (anno instanceof NotNull || anno instanceof Required) {
+                        continue; // remove required annotations because they were born by type failure's null
+                    }
+                    newMsgs.add(property, current);
+                }
+                newMsgs.add(property, createTypeFailureActionMessage(element)); // add to existing property
+            } else { // properties not related with type failures
+                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    newMsgs.add(property, ite.next()); // add no-related property
+                }
+            }
+        }
+        for (TypeFailureElement element : elementMap.values()) {
+            final String property = element.getPropertyPath();
+            if (!messages.hasMessageOf(property)) { // no other validation error
+                handleTypeFailureGroups(element); // may be bad request
+                newMsgs.add(property, createTypeFailureActionMessage(element)); // add as new message for the proeprty
+            }
+        }
+        return newMsgs;
+    }
+
+    protected void handleTypeFailureGroups(TypeFailureElement element) {
+        final Class<?>[] annotatedGroups = element.getAnnotation().groups();
+        if (annotatedGroups == null || annotatedGroups.length == 0) { // means default group
+            if (!Stream.of(runtimeGroups).anyMatch(tp -> Default.class.equals(tp))) { // but no default
+                element.getBadRequestThrower().throwBadRequest();
+            }
+        } else {
+            if (!Stream.of(runtimeGroups).anyMatch(runType -> {
+                return Stream.of(annotatedGroups).anyMatch(annoType -> annoType.equals(runType));
+            })) {
+                element.getBadRequestThrower().throwBadRequest();
+            }
+        }
+    }
+
+    protected ActionMessage createTypeFailureActionMessage(TypeFailureElement element) {
+        final String propertyPath = element.getPropertyPath();
+        final Class<?> propertyType = element.getPropertyType();
+        final String messageKey = typeMessageMap.get(propertyType);
+        final String completeMsg;
+        if (messageKey != null) {
+            completeMsg = findMessage(messageKey).map(message -> {
+                return filterTypeFailureMessage(message, propertyPath, propertyType);
+            }).orElseGet(() -> {
+                return buildDefaultTypeMessage(propertyPath, propertyType);
+            });
+        } else {
+            completeMsg = buildDefaultTypeMessage(propertyPath, propertyType);
+        }
+        final ValidateTypeFailure annotation = element.getAnnotation();
+        return newDirectActionMessage(completeMsg, annotation, annotation.groups());
+    }
+
+    protected String buildDefaultTypeMessage(String propertyPath, Class<?> propertyType) {
+        return findMessage(ValidateTypeFailure.DEFAULT_MESSAGE).map(message -> {
+            return filterTypeFailureMessage(message, propertyPath, propertyType);
+        }).orElseGet(() -> {
+            return "Cannot convert as " + propertyType.getSimpleName();
+        });
+    }
+
+    protected String filterTypeFailureMessage(String message, String propertyPath, Class<?> propertyType) {
+        return filterMessageItem(filterMessagePropertyType(message, propertyPath, propertyType), propertyPath);
+    }
+
+    protected String filterMessagePropertyType(String message, String propertyPath, Class<?> propertyType) {
+        final String propertyTypeVariable = getPropertyTypeVariable();
+        if (message.contains(propertyTypeVariable)) {
+            final String labelKey = buildPropertyTypeLabelKey(propertyPath, propertyType);
+            final String typeName = findMessage(labelKey).orElseGet(() -> {
+                return buildDefaultPropertyTypeName(propertyPath, propertyType);
+            });
+            return Srl.replace(message, propertyTypeVariable, typeName);
+        } else {
+            return message;
+        }
+    }
+
+    protected String getPropertyTypeVariable() {
+        return PROPERTY_TYPE_VARIABLE; // as default
+    }
+
+    protected String buildPropertyTypeLabelKey(String propertyPath, Class<?> propertyType) {
+        return convertToLabelKey(propertyType.getSimpleName()); // as default
+    }
+
+    protected String buildDefaultPropertyTypeName(String propertyPath, Class<?> propertyType) {
+        return propertyType.getSimpleName(); // as default
+    }
+
+    // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
+    protected String convertToLabelKey(String name) {
+        return LABELS_PREFIX + name;
+    }
+
+    protected OptionalThing<String> findMessage(String messageKey) {
+        return requestManager.getMessageManager().findMessage(requestManager.getUserLocale(), messageKey);
+    }
+
+    protected ActionMessage newDirectActionMessage(String msg, Annotation annotation, Class<?>[] groups) {
+        return ActionMessage.asDirectMessage(msg, annotation, groups);
+    }
+
+    // ===================================================================================
+    //                                                            Annotation Determination
+    //                                                            ========================
     public static boolean isValidatorAnnotation(Class<?> annoType) { // as utility
         final String annoName = annoType.getName();
         return Srl.startsWith(annoName, JAVAX_CONSTRAINTS_PKG, HIBERNATE_CONSTRAINTS_PKG) // normal annotations
                 || isNestedBeanAnnotation(annoType) // has validation nested bean
-                || isRequiredAnnotation(annoType); // LastaFlute provides
+                || isLastaPresentsAnnotation(annoType); // LastaFlute provides
     }
 
     public static boolean isNestedBeanAnnotation(Class<?> annoType) {
@@ -431,12 +674,9 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return field.getAnnotation(Valid.class) != null;
     }
 
-    public static boolean isRequiredAnnotation(Class<?> annoType) {
-        return annoType.equals(Required.class);
-    }
-
-    public static boolean hasRequiredAnnotation(Field field) {
-        return field.getAnnotation(Required.class) != null;
+    public static boolean isLastaPresentsAnnotation(Class<?> annoType) {
+        final Annotation[] annotations = annoType.getAnnotations(); // not null
+        return Stream.of(annotations).filter(anno -> anno instanceof LastaPresentsValidator).findAny().isPresent();
     }
 
     // ===================================================================================

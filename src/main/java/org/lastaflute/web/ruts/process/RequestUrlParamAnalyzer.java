@@ -31,6 +31,7 @@ import java.util.regex.Matcher;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.DfTypeUtil.ParseBooleanException;
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.util.LaDBFluteUtil;
@@ -196,7 +197,14 @@ public class RequestUrlParamAnalyzer {
         final String decoded = urlDecode(plainValue);
         try {
             return doFilterUrlParam(execute, index, paramType, optGenTypeMap, decoded);
-        } catch (NumberFormatException | ParseDateException e) { // conversion failures
+        } catch (NumberFormatException | ParseDateException | ParseBooleanException e) { // conversion failures
+            // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+            // suppress easy 500 error by e.g. non-number URL parameter
+            //  (o): /edit/123/
+            //  (x): /edit/abc/ *this case
+            // 
+            // classification's failure is already handled as 404 here
+            // _/_/_/_/_/_/_/_/_/_/
             handleParameterConversionFailureException(execute, index, paramType, plainValue, decoded, e);
             return null; // unreachable
         }

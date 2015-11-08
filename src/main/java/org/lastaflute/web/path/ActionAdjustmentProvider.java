@@ -86,7 +86,7 @@ public interface ActionAdjustmentProvider {
     /**
      * Customize the request path for action mapping. <br>
      * This method is called many times so you should care the performance.
-     * @param requestPath The path of request to search action. (NotNull)
+     * @param requestPath The path of request to search action, e.g. '/product/list/'. (NotNull)
      * @return The customized request path. (NullAllowed: if null, search by the plain request path)
      */
     default String customizeActionMappingRequestPath(String requestPath) {

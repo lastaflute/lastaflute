@@ -47,16 +47,12 @@ public class UndefinedResponse implements ActionResponse {
     }
 
     @Override
-    public Integer getHttpStatus() {
-        return null;
+    public OptionalThing<Integer> getHttpStatus() {
+        return OptionalThing.empty();
     }
 
     public boolean isUndefined() {
         return true;
-    }
-
-    public boolean isDefined() {
-        return false;
     }
 
     public boolean isReturnAsEmptyBody() {

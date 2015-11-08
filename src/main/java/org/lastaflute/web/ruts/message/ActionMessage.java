@@ -16,6 +16,9 @@
 package org.lastaflute.web.ruts.message;
 
 import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.dbflute.util.Srl;
 
@@ -35,26 +38,41 @@ public class ActionMessage implements Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final String key;
-    protected final Object[] values;
+    protected final String key; // not null, message key or direct message
+    protected final Object[] values; // null allowed when direct message
     protected final boolean resource;
+
+    // supplemental information
+    protected final Annotation validatorAnnotation; // null allowed
+    protected final Class<?>[] annotatedGroups; // null allowed
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionMessage(String key, Object... values) {
+    public ActionMessage(String key, Object... values) { // for e.g. typesafe messages
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("values", values);
         this.key = filterKey(key);
         this.values = filterValues(values);
         this.resource = true;
+        this.validatorAnnotation = null;
+        this.annotatedGroups = null;
     }
 
-    public ActionMessage(String key, boolean resource) { // basically for direct message
+    protected ActionMessage(String key, Annotation validatorAnnotation, Class<?>[] annotatedGroups) { // for e.g. hibernate validator
         assertArgumentNotNull("key", key);
-        this.key = resource ? filterKey(key) : key;
+        assertArgumentNotNull("validatorAnnotation", validatorAnnotation);
+        assertArgumentNotNull("annotationGroups", annotatedGroups);
+        this.key = key;
         this.values = null;
-        this.resource = resource;
+        this.resource = false;
+        this.validatorAnnotation = validatorAnnotation;
+        this.annotatedGroups = annotatedGroups;
+    }
+
+    // factory method to avoid argument mistake
+    public static ActionMessage asDirectMessage(String key, Annotation validatorAnnotation, Class<?>[] annotatedGroups) {
+        return new ActionMessage(key, validatorAnnotation, annotatedGroups);
     }
 
     protected String filterKey(String key) {
@@ -109,6 +127,14 @@ public class ActionMessage implements Serializable {
             }
         }
         sb.append("]");
+        if (validatorAnnotation != null) { // because of option
+            sb.append(" by @").append(validatorAnnotation.annotationType().getSimpleName());
+            if (annotatedGroups != null) { // just in case
+                sb.append(Stream.of(annotatedGroups).map(tp -> {
+                    return tp.getSimpleName() + ".class";
+                }).collect(Collectors.toList()));
+            }
+        }
         return sb.toString();
     }
 
@@ -125,5 +151,13 @@ public class ActionMessage implements Serializable {
 
     public boolean isResource() {
         return resource;
+    }
+
+    public Annotation getValidatorAnnotation() {
+        return validatorAnnotation;
+    }
+
+    public Class<?>[] getAnnotatedGroups() {
+        return annotatedGroups;
     }
 }

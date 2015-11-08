@@ -281,7 +281,7 @@ public class TypicalGodHandMonologue {
     protected ActionResponse handleMessageKeyApplicationException(MessageKeyApplicationException appEx) {
         // no save here because of saved as embedded message later
         //saveErrors(appEx.getErrors());
-        return getErrorMessageForward();
+        return appEx.getResponseHook().map(hook -> hook.hook()).orElseGet(() -> getErrorMessageForward());
     }
 
     protected HtmlResponse getErrorMessageForward() {

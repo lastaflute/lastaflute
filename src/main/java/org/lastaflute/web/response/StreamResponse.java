@@ -128,8 +128,10 @@ public class StreamResponse implements ActionResponse {
     }
 
     @Override
-    public Integer getHttpStatus() {
-        return httpStatus;
+    public OptionalThing<Integer> getHttpStatus() {
+        return OptionalThing.ofNullable(httpStatus, () -> {
+            throw new IllegalStateException("Not found the http status in the response: " + StreamResponse.this.toString());
+        });
     }
 
     // ===================================================================================

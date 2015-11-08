@@ -26,6 +26,7 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
+import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
@@ -35,14 +36,14 @@ import org.lastaflute.web.callback.ActionHook;
 import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.callback.TooManySqlOption;
 import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
-import org.lastaflute.web.callback.TypicalGodHandActionEpilogue;
+import org.lastaflute.web.callback.TypicalGodHandEpilogue;
 import org.lastaflute.web.callback.TypicalGodHandMonologue;
 import org.lastaflute.web.callback.TypicalGodHandPrologue;
 import org.lastaflute.web.callback.TypicalGodHandResource;
 import org.lastaflute.web.callback.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
 import org.lastaflute.web.docs.LaActionDocs;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
-import org.lastaflute.web.exception.ForcedIllegalTransitionApplicationException;
+import org.lastaflute.web.exception.ForcedIllegalTransitionException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
@@ -51,6 +52,9 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.lastaflute.web.token.DoubleSubmitManager;
+import org.lastaflute.web.token.TokenErrorHook;
+import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +80,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     @Resource
     private TimeManager timeManager;
 
+    /** The manager of message. (NotNull) */
+    @Resource
+    private MessageManager messageManager;
+
     /** The translator of exception. (NotNull) */
     @Resource
     private ExceptionTranslator exceptionTranslator;
@@ -96,6 +104,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     @Resource
     private ApiManager apiManager;
 
+    /** The manager of double submit using transaction token. (NotNull) */
+    @Resource
+    private DoubleSubmitManager doubleSubmitManager;
+
     // ===================================================================================
     //                                                                               Hook
     //                                                                              ======
@@ -112,8 +124,9 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
 
     protected TypicalGodHandPrologue createTypicalGodHandPrologue(ActionRuntime runtime) {
         final TypicalGodHandResource resource = createTypicalGodHandResource(runtime);
+        final TypicalEmbeddedKeySupplier supplier = newTypicalEmbeddedKeySupplier();
         final AccessContextArranger arranger = newAccessContextArranger();
-        return newTypicalGodHandPrologue(resource, arranger, () -> getUserBean(), () -> myAppType());
+        return newTypicalGodHandPrologue(resource, supplier, arranger, () -> getUserBean(), () -> myAppType());
     }
 
     /**
@@ -122,13 +135,14 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      */
     protected abstract AccessContextArranger newAccessContextArranger();
 
-    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource, AccessContextArranger arranger,
-            Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier, Supplier<String> appTypeSupplier) {
-        return new TypicalGodHandPrologue(resource, arranger, userBeanSupplier, appTypeSupplier);
+    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier keySupplier,
+            AccessContextArranger arranger, Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier,
+            Supplier<String> appTypeSupplier) {
+        return new TypicalGodHandPrologue(resource, keySupplier, arranger, userBeanSupplier, appTypeSupplier);
     }
 
     @Override
-    public ActionResponse hookBefore(ActionRuntime runtimeMeta) { // application may override
+    public ActionResponse hookBefore(ActionRuntime runtime) { // application may override
         return ActionResponse.undefined();
     }
 
@@ -147,16 +161,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
         return newTypicalGodHandMonologue(resource, supplier, handler);
     }
 
-    protected TypicalEmbeddedKeySupplier newTypicalEmbeddedKeySupplier() {
-        return new TypicalSimpleEmbeddedKeySupplier();
-    }
-
     protected ActionApplicationExceptionHandler newActionApplicationExceptionHandler() {
-        return new ActionApplicationExceptionHandler() {
-            public ActionResponse handle(LaApplicationException appEx) {
-                return handleApplicationException(appEx);
-            }
-        };
+        return appEx -> handleApplicationException(appEx);
     }
 
     /**
@@ -191,12 +197,12 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     protected void setupHtmlData(ActionRuntime runtime) { // application may override
     }
 
-    protected TypicalGodHandActionEpilogue createTypicalGodHandEpilogue(ActionRuntime runtime) {
+    protected TypicalGodHandEpilogue createTypicalGodHandEpilogue(ActionRuntime runtime) {
         return newTypicalGodHandEpilogue(createTypicalGodHandResource(runtime), createTooManySqlOption(runtime));
     }
 
-    protected TypicalGodHandActionEpilogue newTypicalGodHandEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
-        return new TypicalGodHandActionEpilogue(resource, tooManySqlOption);
+    protected TypicalGodHandEpilogue newTypicalGodHandEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
+        return new TypicalGodHandEpilogue(resource, tooManySqlOption);
     }
 
     protected TooManySqlOption createTooManySqlOption(ActionRuntime runtime) {
@@ -212,7 +218,12 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                      ----------------
     protected TypicalGodHandResource createTypicalGodHandResource(ActionRuntime runtime) {
         final OptionalThing<LoginManager> loginManager = myLoginManager();
-        return new TypicalGodHandResource(requestManager, responseManager, sessionManager, loginManager, apiManager, exceptionTranslator);
+        return new TypicalGodHandResource(messageManager, exceptionTranslator, requestManager, responseManager, sessionManager,
+                loginManager, apiManager);
+    }
+
+    protected TypicalEmbeddedKeySupplier newTypicalEmbeddedKeySupplier() {
+        return new TypicalSimpleEmbeddedKeySupplier();
     }
 
     // ===================================================================================
@@ -241,6 +252,42 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * @return The optional instance of login manager. (NotNull, EmptyAllowed: if no login handling)
      */
     protected abstract OptionalThing<LoginManager> myLoginManager();
+
+    // ===================================================================================
+    //                                                                       Double Submit
+    //                                                                       =============
+    /**
+     * Save the transaction token to session, using this action as group type.
+     */
+    protected void saveToken() {
+        doubleSubmitManager.saveToken(myTokenGroupType());
+    }
+
+    /**
+     * Verify the request token (whether the request token is same as saved token) <br>
+     * And reset the saved token, it can be used only one-time. <br> 
+     * Using this action as group type.
+     * @param errorResponseLambda The hook to return action response when token error. (NotNull)
+     * @throws DoubleSubmitRequestException When the token is invalid.
+     */
+    protected void verifyToken(TokenErrorHook errorResponseLambda) {
+        doubleSubmitManager.verifyToken(myTokenGroupType(), errorResponseLambda);
+    }
+
+    /**
+     * Verify the request token (whether the request token is same as saved token) <br>
+     * Keep the saved token, so this method is basically for intermediate request. <br>
+     * Using this action as group type.
+     * @param errorResponseLambda The hook to return action response when token error. (NotNull)
+     * @throws DoubleSubmitRequestException When the token is invalid.
+     */
+    protected void verifyTokenKeep(TokenErrorHook errorResponseLambda) {
+        doubleSubmitManager.verifyTokenKeep(myTokenGroupType(), errorResponseLambda);
+    }
+
+    protected Class<?> myTokenGroupType() {
+        return LaActionRuntimeUtil.getActionRuntime().getActionType();
+    }
 
     // ===================================================================================
     //                                                                              Verify
@@ -343,10 +390,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * @param msg The debug message for developer (not user message). (NotNull)
      * @return The new-created exception of 404. (NotNull)
      */
-    protected ForcedIllegalTransitionApplicationException ofIllegalTransition(String msg) {
+    protected ForcedIllegalTransitionException ofIllegalTransition(String msg) {
         assertArgumentNotNull("msg for illegal transition", msg);
         final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
-        return new ForcedIllegalTransitionApplicationException(msg, transitionKey);
+        return new ForcedIllegalTransitionException(msg, transitionKey);
     }
 
     // ===================================================================================

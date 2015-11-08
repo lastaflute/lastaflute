@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.LastaWebKey;
 
 /**
@@ -27,8 +28,20 @@ import org.lastaflute.web.LastaWebKey;
  */
 public class FormMappingOption {
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected boolean keepEmptyStringParameter;
     protected boolean undefinedParameterError;
     protected Set<String> indefinableParameterSet;
+
+    // ===================================================================================
+    //                                                                              Facade
+    //                                                                              ======
+    public FormMappingOption asKeepEmptyStringParameter() {
+        keepEmptyStringParameter = true;
+        return this;
+    }
 
     public FormMappingOption asUndefinedParameterError() {
         undefinedParameterError = true;
@@ -48,6 +61,22 @@ public class FormMappingOption {
 
     protected void setupDefaultIndefinableParameter(Set<String> specifiedSet) {
         specifiedSet.add(LastaWebKey.TRANSACTION_TOKEN_KEY);
+    }
+
+    // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        final String title = DfTypeUtil.toClassTitle(this);
+        return title + ":{" + keepEmptyStringParameter + ", " + undefinedParameterError + ", " + indefinableParameterSet + "}";
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public boolean isKeepEmptyStringParameter() {
+        return keepEmptyStringParameter;
     }
 
     public boolean isUndefinedParameterError() {

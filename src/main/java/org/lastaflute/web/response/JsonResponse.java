@@ -44,8 +44,10 @@ public class JsonResponse<BEAN> implements ApiResponse {
     protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
     protected boolean forcedlyJavaScript;
-    protected boolean undefined;
     protected boolean returnAsEmptyBody;
+    protected boolean returnAsJsonDirectly;
+    protected String directJson;
+    protected boolean undefined;
     protected ResponseHook afterTxCommitHook;
 
     // ===================================================================================
@@ -107,8 +109,10 @@ public class JsonResponse<BEAN> implements ApiResponse {
     }
 
     @Override
-    public Integer getHttpStatus() {
-        return httpStatus;
+    public OptionalThing<Integer> getHttpStatus() {
+        return OptionalThing.ofNullable(httpStatus, () -> {
+            throw new IllegalStateException("Not found the http status in the response: " + JsonResponse.this.toString());
+        });
     }
 
     // ===================================================================================
@@ -140,6 +144,20 @@ public class JsonResponse<BEAN> implements ApiResponse {
 
     protected JsonResponse<BEAN> ofEmptyBody() { // internal use
         returnAsEmptyBody = true;
+        return this;
+    }
+
+    // -----------------------------------------------------
+    //                                         Json Directly
+    //                                         -------------
+    @SuppressWarnings("unchecked")
+    public static <OBJ> JsonResponse<OBJ> asJsonDirectly(String json) { // user interface
+        return (JsonResponse<OBJ>) new JsonResponse<Object>(DUMMY).ofJsonDirectly(json);
+    }
+
+    protected JsonResponse<BEAN> ofJsonDirectly(String json) { // internal use
+        returnAsJsonDirectly = true; // for quick determination
+        directJson = json;
         return this;
     }
 
@@ -190,13 +208,17 @@ public class JsonResponse<BEAN> implements ApiResponse {
         final String callbackExp = callback != null ? ", callback=" + callback : "";
         final String forcedlyJSExp = forcedlyJavaScript ? ", JavaScript" : "";
         final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
+        final String directExp = returnAsJsonDirectly ? ", directly" : "";
         final String undefinedExp = undefined ? ", undefined" : "";
-        return classTitle + ":{" + jsonExp + callbackExp + forcedlyJSExp + emptyExp + undefinedExp + "}";
+        return classTitle + ":{" + jsonExp + callbackExp + forcedlyJSExp + emptyExp + directExp + undefinedExp + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                                 Basic
+    //                                                 -----
     public BEAN getJsonBean() {
         return jsonBean;
     }
@@ -212,11 +234,31 @@ public class JsonResponse<BEAN> implements ApiResponse {
         return forcedlyJavaScript;
     }
 
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
     @Override
     public boolean isReturnAsEmptyBody() {
         return returnAsEmptyBody;
     }
 
+    // -----------------------------------------------------
+    //                                         Json Directly
+    //                                         -------------
+    public boolean isReturnAsJsonDirectly() { // quick determination
+        return returnAsJsonDirectly;
+    }
+
+    public OptionalThing<String> getDirectJson() {
+        return OptionalThing.ofNullable(directJson, () -> {
+            String msg = "Not found the direct json: " + JsonResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
     @Override
     public boolean isUndefined() {
         return undefined;
