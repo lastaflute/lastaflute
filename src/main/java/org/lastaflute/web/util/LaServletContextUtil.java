@@ -32,10 +32,10 @@ public final class LaServletContextUtil {
     }
 
     public static String getHtmlViewPrefix() {
-        return "/WEB-INF/view"; // fixedly
+        return "/WEB-INF/view"; // fixedly #for_now, same as JSP
     }
 
     public static String getJspViewPrefix() {
-        return "/WEB-INF/view"; // fixedly, same as html
+        return "/WEB-INF/view";
     }
 }
