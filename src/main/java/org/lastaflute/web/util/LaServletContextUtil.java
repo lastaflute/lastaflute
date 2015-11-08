@@ -31,7 +31,11 @@ public final class LaServletContextUtil {
         return (ServletContext) ContainerUtil.retrieveExternalContext().getApplication();
     }
 
-    public static String getJspViewPrefix() {
+    public static String getHtmlViewPrefix() {
         return "/WEB-INF/view"; // fixedly
+    }
+
+    public static String getJspViewPrefix() {
+        return "/WEB-INF/view"; // fixedly, same as html
     }
 }
