@@ -293,29 +293,15 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
 
         @Override
         protected Object handleGetObject(String key) {
+            // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
             // if null (and token), find it from annotation attributes
             // (at heart, want to know whether token or not)
-            final String realKey = filterMessageKey(key);
-            final OptionalThing<String> opt = messageManager.findMessage(locale, realKey);
+            // _/_/_/_/_/_/_/_/_/_/
+            // *move filtering embedded domain to message manager
+            //final String realKey = filterMessageKey(key);
+            final OptionalThing<String> opt = messageManager.findMessage(locale, key);
             checkMainMessageNotFound(opt, key);
             return opt.orElse(null);
-        }
-
-        protected String filterMessageKey(String key) {
-            final String javaxPackage = "javax.validation.";
-            final String hibernatePackage = "org.hibernate.validator.";
-            final String lastaflutePackage = "org.lastaflute.validator.";
-            final String realKey;
-            if (key.startsWith(javaxPackage)) {
-                realKey = Srl.substringFirstRear(key, javaxPackage);
-            } else if (key.startsWith(hibernatePackage)) {
-                realKey = Srl.substringFirstRear(key, hibernatePackage);
-            } else if (key.startsWith(lastaflutePackage)) {
-                realKey = Srl.substringFirstRear(key, lastaflutePackage);
-            } else {
-                realKey = key;
-            }
-            return realKey;
         }
 
         protected void checkMainMessageNotFound(OptionalThing<String> opt, String key) {
