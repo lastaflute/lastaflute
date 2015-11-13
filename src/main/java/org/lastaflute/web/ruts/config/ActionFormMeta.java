@@ -206,7 +206,7 @@ public class ActionFormMeta {
     protected String buildFieldExp(Field field) {
         final StringBuilder sb = new StringBuilder();
         sb.append(field.getDeclaringClass().getSimpleName());
-        sb.append("#").append(field.getName()).append(": ").append(field.getType().getSimpleName());
+        sb.append("@").append(field.getName()).append(": ").append(field.getType().getSimpleName());
         final Class<?> genericBeanType = getGenericType(field);
         sb.append(genericBeanType != null ? "<" + genericBeanType.getSimpleName() + ">" : "");
         return sb.toString();
