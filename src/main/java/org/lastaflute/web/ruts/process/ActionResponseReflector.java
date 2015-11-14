@@ -20,7 +20,6 @@ import java.util.function.Consumer;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.LastaWebKey;
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;

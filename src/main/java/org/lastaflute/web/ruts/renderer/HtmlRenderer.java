@@ -19,8 +19,8 @@ import java.io.IOException;
 
 import javax.servlet.ServletException;
 
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.NextJourney;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**

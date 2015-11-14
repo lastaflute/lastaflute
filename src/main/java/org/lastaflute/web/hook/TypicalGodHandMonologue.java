@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.callback;
+package org.lastaflute.web.hook;
 
 import java.util.function.Supplier;
 
@@ -21,6 +21,7 @@ import org.dbflute.exception.EntityAlreadyDeletedException;
 import org.dbflute.exception.EntityAlreadyExistsException;
 import org.dbflute.exception.EntityAlreadyUpdatedException;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.web.api.ApiFailureResource;
@@ -33,6 +34,8 @@ import org.lastaflute.web.login.exception.LoginUnauthorizedException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
+import org.lastaflute.web.ruts.process.ActionRuntime;
+import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.slf4j.Logger;
@@ -47,11 +50,13 @@ public class TypicalGodHandMonologue {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandMonologue.class);
+    protected static final HtmlResponse DEFAULT_SHOW_ERRORS_FORWARD = HtmlResponse.fromForwardPath("/error/show_errors.jsp");
     protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final FwAssistantDirector assistantDirector;
     protected final RequestManager requestManager;
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
@@ -65,6 +70,7 @@ public class TypicalGodHandMonologue {
     //                                                                         ===========
     public TypicalGodHandMonologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier typicalKeySupplier,
             ActionApplicationExceptionHandler applicationExceptionHandler) {
+        this.assistantDirector = resource.getAssistantDirector();
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
         this.loginManager = resource.getLoginManager();
@@ -116,14 +122,14 @@ public class TypicalGodHandMonologue {
         final ActionResponse response;
         if (cause instanceof LaApplicationException) {
             final LaApplicationException appEx = (LaApplicationException) cause;
-            final ActionResponse specified = asSpecifiedApplicationException(appEx);
-            response = specified.isDefined() ? specified : asEmbeddedApplicationException(appEx);
-            reflectEmbeddedApplicationMessagesIfExists(appEx); // override existing messages if exists
+            final ActionResponse specified = asSpecifiedApplicationException(runtime, appEx);
+            response = specified.isDefined() ? specified : asEmbeddedApplicationException(runtime, appEx);
+            reflectEmbeddedApplicationMessagesIfExists(runtime, appEx); // override existing messages if exists
         } else { // e.g. framework exception
-            response = asDBFluteApplicationException(cause);
+            response = asDBFluteApplicationException(runtime, cause);
         }
         if (response.isDefined()) {
-            showApplicationExceptionHandling(cause, response);
+            showApplicationExceptionHandling(runtime, cause, response);
             if (needsApplicationExceptionApiDispatch(runtime, cause, response)) {
                 return dispatchApiApplicationException(runtime, cause, response);
             }
@@ -131,16 +137,16 @@ public class TypicalGodHandMonologue {
         return response;
     }
 
-    protected ActionResponse asSpecifiedApplicationException(LaApplicationException appEx) {
+    protected ActionResponse asSpecifiedApplicationException(ActionRuntime runtime, LaApplicationException appEx) {
         return applicationExceptionHandler.handle(appEx);
     }
 
-    protected ActionResponse asEmbeddedApplicationException(LaApplicationException appEx) {
+    protected ActionResponse asEmbeddedApplicationException(ActionRuntime runtime, LaApplicationException appEx) {
         ActionResponse response = ActionResponse.undefined();
         if (appEx instanceof LoginUnauthorizedException) {
-            response = handleLoginUnauthorizedException((LoginUnauthorizedException) appEx);
+            response = handleLoginUnauthorizedException(runtime, (LoginUnauthorizedException) appEx);
         } else if (appEx instanceof MessageKeyApplicationException) {
-            response = handleMessageKeyApplicationException((MessageKeyApplicationException) appEx);
+            response = handleMessageKeyApplicationException(runtime, (MessageKeyApplicationException) appEx);
         }
         if (response.isUndefined()) {
             response = handleUnknownApplicationException(appEx);
@@ -148,7 +154,7 @@ public class TypicalGodHandMonologue {
         return response;
     }
 
-    protected void reflectEmbeddedApplicationMessagesIfExists(LaApplicationException appEx) {
+    protected void reflectEmbeddedApplicationMessagesIfExists(ActionRuntime runtime, LaApplicationException appEx) {
         final String errorsKey = appEx.getErrorKey();
         if (errorsKey != null) {
             logger.debug("...Saving embedded application message as action error: {}", errorsKey);
@@ -156,14 +162,14 @@ public class TypicalGodHandMonologue {
         }
     }
 
-    protected ActionResponse asDBFluteApplicationException(RuntimeException cause) {
+    protected ActionResponse asDBFluteApplicationException(ActionRuntime runtime, RuntimeException cause) {
         ActionResponse response = ActionResponse.undefined();
         if (cause instanceof EntityAlreadyDeletedException) {
-            response = handleEntityAlreadyDeletedException((EntityAlreadyDeletedException) cause);
+            response = handleEntityAlreadyDeletedException(runtime, (EntityAlreadyDeletedException) cause);
         } else if (cause instanceof EntityAlreadyUpdatedException) {
-            response = handleEntityAlreadyUpdatedException((EntityAlreadyUpdatedException) cause);
+            response = handleEntityAlreadyUpdatedException(runtime, (EntityAlreadyUpdatedException) cause);
         } else if (cause instanceof EntityAlreadyExistsException) {
-            response = handleEntityAlreadyExistsException((EntityAlreadyExistsException) cause);
+            response = handleEntityAlreadyExistsException(runtime, (EntityAlreadyExistsException) cause);
         }
         return response;
     }
@@ -171,13 +177,14 @@ public class TypicalGodHandMonologue {
     // -----------------------------------------------------
     //                                         Show Handling
     //                                         -------------
-    protected void showApplicationExceptionHandling(RuntimeException cause, ActionResponse response) {
+    protected void showApplicationExceptionHandling(ActionRuntime runtime, RuntimeException cause, ActionResponse response) {
         showAppEx(cause, () -> {
             // not show forwardTo because of forwarding log later
             final StringBuilder sb = new StringBuilder();
             sb.append("...Handling application exception:");
             sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
             sb.append("\n[Application Exception]");
+            sb.append("\n action   : ").append(runtime);
             sb.append("\n response : ").append(response);
             sessionManager.errors().get().ifPresent(errors -> {
                 sb.append("\n messages : ").append(errors.toString());
@@ -255,7 +262,7 @@ public class TypicalGodHandMonologue {
     // -----------------------------------------------------
     //                                    Login Unauthorized
     //                                    ------------------
-    protected ActionResponse handleLoginUnauthorizedException(LoginUnauthorizedException appEx) {
+    protected ActionResponse handleLoginUnauthorizedException(ActionRuntime runtime, LoginUnauthorizedException appEx) {
         assertLoginManagerPresent();
         if (appEx instanceof LoginFailureException) {
             saveErrors(getErrorsLoginFailureKey()); // needs to show message for user
@@ -278,14 +285,34 @@ public class TypicalGodHandMonologue {
     // -----------------------------------------------------
     //                                           Message Key
     //                                           -----------
-    protected ActionResponse handleMessageKeyApplicationException(MessageKeyApplicationException appEx) {
+    protected ActionResponse handleMessageKeyApplicationException(ActionRuntime runtime, MessageKeyApplicationException appEx) {
         // no save here because of saved as embedded message later
         //saveErrors(appEx.getErrors());
-        return appEx.getResponseHook().map(hook -> hook.hook()).orElseGet(() -> getErrorMessageForward());
+        return appEx.getResponseHook().map(hook -> hook.hook()).orElseGet(() -> prepareShowErrorsForward(runtime));
     }
 
-    protected HtmlResponse getErrorMessageForward() {
-        return HtmlResponse.fromForwardPath(typicalKeySupplier.getErrorMessageForwardPath());
+    protected HtmlResponse prepareShowErrorsForward(ActionRuntime runtime) {
+        final HtmlRenderingProvider renderingProvider = assistantDirector.assistWebDirection().assistHtmlRenderingProvider();
+        if (renderingProvider != null) { // e.g. thymeleaf, mixer2
+            final HtmlResponse response = renderingProvider.provideShowErrorsResponse(runtime);
+            assertShowErrorsDefined(renderingProvider, response);
+            return response;
+        } else { // e.g. jsp
+            return getDefaultShowErrorsForward();
+        }
+    }
+
+    protected void assertShowErrorsDefined(HtmlRenderingProvider renderingProvider, HtmlResponse response) {
+        if (response == null) {
+            throw new IllegalStateException("Not provided the response to show errors: provider=" + renderingProvider);
+        }
+        if (response.isUndefined()) {
+            throw new IllegalStateException("Cannot return undefined response to show errors: provider=" + renderingProvider);
+        }
+    }
+
+    protected HtmlResponse getDefaultShowErrorsForward() {
+        return DEFAULT_SHOW_ERRORS_FORWARD;
     }
 
     // -----------------------------------------------------
@@ -303,49 +330,49 @@ public class TypicalGodHandMonologue {
     // -----------------------------------------------------
     //                             (DBFlute) Already Deleted
     //                             -------------------------
-    protected ActionResponse handleEntityAlreadyDeletedException(EntityAlreadyDeletedException cause) {
+    protected ActionResponse handleEntityAlreadyDeletedException(ActionRuntime runtime, EntityAlreadyDeletedException cause) {
         saveErrors(getErrorsAppAlreadyDeletedKey());
-        return getErrorMessageAlreadyDeletedJsp();
+        return getErrorMessageAlreadyDeletedJsp(runtime);
     }
 
     protected String getErrorsAppAlreadyDeletedKey() {
         return typicalKeySupplier.getErrorsAppDbAlreadyDeletedKey();
     }
 
-    protected ActionResponse getErrorMessageAlreadyDeletedJsp() {
-        return getErrorMessageForward(); // as default
+    protected ActionResponse getErrorMessageAlreadyDeletedJsp(ActionRuntime runtime) {
+        return prepareShowErrorsForward(runtime); // as default
     }
 
     // -----------------------------------------------------
     //                              (DBFlute) Already Update
     //                              ------------------------
-    protected ActionResponse handleEntityAlreadyUpdatedException(EntityAlreadyUpdatedException cause) {
+    protected ActionResponse handleEntityAlreadyUpdatedException(ActionRuntime runtime, EntityAlreadyUpdatedException cause) {
         saveErrors(getErrorsAppAlreadyUpdatedKey());
-        return getErrorMessageAlreadyUpdatedJsp();
+        return getErrorMessageAlreadyUpdatedJsp(runtime);
     }
 
     protected String getErrorsAppAlreadyUpdatedKey() {
         return typicalKeySupplier.getErrorsAppDbAlreadyUpdatedKey();
     }
 
-    protected ActionResponse getErrorMessageAlreadyUpdatedJsp() {
-        return getErrorMessageForward(); // as default
+    protected ActionResponse getErrorMessageAlreadyUpdatedJsp(ActionRuntime runtime) {
+        return prepareShowErrorsForward(runtime); // as default
     }
 
     // -----------------------------------------------------
     //                              (DBFlute) Already Exists
     //                              ------------------------
-    protected ActionResponse handleEntityAlreadyExistsException(EntityAlreadyExistsException cause) {
+    protected ActionResponse handleEntityAlreadyExistsException(ActionRuntime runtime, EntityAlreadyExistsException cause) {
         saveErrors(getErrorsAppAlreadyExistsKey());
-        return getErrorMessageAlreadyExistsJsp();
+        return getErrorMessageAlreadyExistsJsp(runtime);
     }
 
     protected String getErrorsAppAlreadyExistsKey() {
         return TypicalKey.ERRORS_APP_DB_ALREADY_EXISTS;
     };
 
-    protected ActionResponse getErrorMessageAlreadyExistsJsp() {
-        return getErrorMessageForward(); // as default
+    protected ActionResponse getErrorMessageAlreadyExistsJsp(ActionRuntime runtime) {
+        return prepareShowErrorsForward(runtime); // as default
     }
 
     // ===================================================================================

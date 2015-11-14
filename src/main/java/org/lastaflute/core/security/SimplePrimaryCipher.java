@@ -37,7 +37,7 @@ public class SimplePrimaryCipher implements PrimaryCipher {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    /** The assistant directory (AD) for framework. (NotNull: after initialization) */
+    /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
     protected FwAssistantDirector assistantDirector;
 

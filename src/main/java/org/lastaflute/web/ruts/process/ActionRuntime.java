@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.callback;
+package org.lastaflute.web.ruts.process;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -28,7 +28,6 @@ import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.ruts.process.RequestUrlParam;
 import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**

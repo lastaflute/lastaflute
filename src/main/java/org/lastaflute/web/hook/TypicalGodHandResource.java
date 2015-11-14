@@ -13,11 +13,13 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.callback;
+package org.lastaflute.web.hook;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -32,6 +34,8 @@ public class TypicalGodHandResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final FwAssistantDirector assistantDirector;
+    protected final TimeManager timeManager;
     protected final MessageManager messageManager;
     protected final ExceptionTranslator exceptionTranslator;
     protected final RequestManager requestManager;
@@ -43,9 +47,11 @@ public class TypicalGodHandResource {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandResource(MessageManager messageManager, ExceptionTranslator exceptionTranslator, RequestManager requestManager,
-            ResponseManager responseManager, SessionManager sessionManager, OptionalThing<LoginManager> loginManager,
-            ApiManager apiManager) {
+    public TypicalGodHandResource(FwAssistantDirector assistantDirector, TimeManager timeManager, MessageManager messageManager,
+            ExceptionTranslator exceptionTranslator, RequestManager requestManager, ResponseManager responseManager,
+            SessionManager sessionManager, OptionalThing<LoginManager> loginManager, ApiManager apiManager) {
+        this.assistantDirector = assistantDirector;
+        this.timeManager = timeManager;
         this.messageManager = messageManager;
         this.exceptionTranslator = exceptionTranslator;
         this.requestManager = requestManager;
@@ -58,6 +64,14 @@ public class TypicalGodHandResource {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    public FwAssistantDirector getAssistantDirector() {
+        return assistantDirector;
+    }
+
+    public TimeManager getTimeManager() {
+        return timeManager;
+    }
+
     public MessageManager getMessageManager() {
         return messageManager;
     }

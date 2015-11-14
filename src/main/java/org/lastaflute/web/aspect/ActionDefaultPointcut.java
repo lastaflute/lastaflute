@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.lastaflute.core.interceptor.PublicBasisPointcut;
-import org.lastaflute.web.callback.ActionHook;
+import org.lastaflute.web.hook.ActionHook;
 
 /**
  * @author jflute

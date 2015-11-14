@@ -20,8 +20,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**

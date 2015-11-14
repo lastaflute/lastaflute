@@ -56,10 +56,6 @@ public class ActionMessages implements Serializable {
     public ActionMessages() {
     }
 
-    public ActionMessages(ActionMessages messages) {
-        add(messages);
-    }
-
     // ===================================================================================
     //                                                                         Add Message
     //                                                                         ===========

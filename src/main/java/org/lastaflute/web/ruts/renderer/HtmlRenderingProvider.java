@@ -15,8 +15,9 @@
  */
 package org.lastaflute.web.ruts.renderer;
 
-import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.NextJourney;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 
 /**
  * @author jflute
@@ -32,4 +33,10 @@ public interface HtmlRenderingProvider {
      * @return The renderer to render HTML. (NotNull)
      */
     HtmlRenderer provideRenderer(ActionRuntime runtime, NextJourney journey);
+
+    /**
+     * @param runtime The runtime of current requested action. (NotNull)
+     * @return The response for show errors HTML. (NotNull, ShouldBeDefined)
+     */
+    HtmlResponse provideShowErrorsResponse(ActionRuntime runtime);
 }
