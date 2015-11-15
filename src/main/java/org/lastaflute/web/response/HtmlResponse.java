@@ -182,6 +182,10 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     public HtmlResponse renderWith(RenderDataRegistration dataLambda) {
         assertArgumentNotNull("dataLambda", dataLambda);
         assertDefinedState("renderWith");
+        if (viewObject != null) {
+            String msg = "Cannot call renderWith() with withView(): viewObject=" + viewObject;
+            throw new IllegalStateException(msg);
+        }
         if (registrationList == null) {
             registrationList = new ArrayList<RenderDataRegistration>(4);
         }
@@ -315,6 +319,10 @@ public class HtmlResponse implements ActionResponse, Redirectable {
      */
     public HtmlResponse withView(Object viewObject) {
         assertArgumentNotNull("viewObject", viewObject);
+        if (!getRegistrationList().isEmpty()) {
+            String msg = "Cannot call withView() with renderWith(): registrationList=" + getRegistrationList();
+            throw new IllegalStateException(msg);
+        }
         this.viewObject = viewObject;
         return this;
     }
