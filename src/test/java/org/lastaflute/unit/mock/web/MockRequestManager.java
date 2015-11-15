@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
@@ -59,6 +60,10 @@ public class MockRequestManager implements RequestManager {
 
     @Override
     public HttpServletRequest getRequest() {
+        return null;
+    }
+
+    public ServletContext getServletContext() {
         return null;
     }
 

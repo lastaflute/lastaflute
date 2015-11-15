@@ -27,6 +27,7 @@ import java.util.TimeZone;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import javax.servlet.ServletContext;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 
@@ -146,6 +147,11 @@ public class SimpleRequestManager implements RequestManager {
             throw new IllegalStateException("Not found the request, not web environment?");
         }
         return request;
+    }
+
+    @Override
+    public ServletContext getServletContext() {
+        return getRequest().getServletContext();
     }
 
     @Override
