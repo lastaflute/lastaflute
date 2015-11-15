@@ -106,7 +106,7 @@ public class ActionRequestProcessor {
     }
 
     protected ActionRuntime createActionRuntime(ActionExecute execute, RequestUrlParam urlParam) {
-        return new ActionRuntime(execute, urlParam);
+        return new ActionRuntime(getRequestManager().getRequestPath(), execute, urlParam);
     }
 
     // ===================================================================================
