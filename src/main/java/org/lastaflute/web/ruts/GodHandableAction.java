@@ -29,7 +29,8 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
-import org.lastaflute.web.exception.ActionCallbackReturnNullException;
+import org.lastaflute.di.core.smart.hot.HotdeployUtil;
+import org.lastaflute.web.exception.ActionHookReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
 import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
 import org.lastaflute.web.exception.ExecuteMethodReturnNullException;
@@ -40,6 +41,8 @@ import org.lastaflute.web.hook.ActionHook;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
+import org.lastaflute.web.ruts.error.RebootAfterFreeGenError;
+import org.lastaflute.web.ruts.error.RebootAfterGenerateError;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
@@ -124,6 +127,9 @@ public class GodHandableAction implements VirtualAction {
         } catch (RuntimeException e) {
             final ActionResponse monologue = tellExceptionMonologue(hook, e);
             return reflect(monologue);
+        } catch (Error e) {
+            translateToAdvicedErrorIfPossible(e);
+            throw e;
         } finally {
             processHookFinally(hook);
         }
@@ -284,12 +290,12 @@ public class GodHandableAction implements VirtualAction {
     //                                    Undefined Response
     //                                    ------------------
     protected boolean isUndefined(ActionResponse response) {
-        assertCallbackReturnNotNull(response);
+        assertHookReturnNotNull(response);
         return response.isUndefined();
     }
 
     protected boolean isDefined(ActionResponse response) {
-        assertCallbackReturnNotNull(response);
+        assertHookReturnNotNull(response);
         return response.isDefined();
     }
 
@@ -544,19 +550,105 @@ public class GodHandableAction implements VirtualAction {
     }
 
     // ===================================================================================
-    //                                                                       Assert Helper
+    //                                                                       Adviced Error
     //                                                                       =============
-    protected void assertCallbackReturnNotNull(ActionResponse response) {
-        if (response == null) {
-            throwActionCallbackReturnNullException();
+    protected void translateToAdvicedErrorIfPossible(Error e) { // to notice reboot timing
+        if (!HotdeployUtil.isHotdeploy()) {
+            return;
+        }
+        final String msg = e.getMessage();
+        if (msg == null) {
+            return;
+        }
+        // only frequent patterns
+        if (e instanceof NoSuchFieldError) {
+            if (isNoSuchFieldOfHtmlPath(msg)) {
+                throwRebootAfterFreeGenError(e);
+            }
+        }
+        if (e instanceof NoSuchMethodError) {
+            if (isNoSuchMethodOfMessages(msg) || isNoSuchMethodOfConfig(msg)) {
+                throwRebootAfterFreeGenError(e);
+            }
+            if (isNoSuchMethodOfDBFlute(msg)) {
+                throwRebootAfterGenerateError(e);
+            }
         }
     }
 
-    protected void throwActionCallbackReturnNullException() {
+    protected boolean isNoSuchFieldOfHtmlPath(String msg) {
+        return msg.contains("path_");
+    }
+
+    protected boolean isNoSuchMethodOfMessages(String msg) {
+        return msg.contains("Messages.add") || msg.contains("Lables.add");
+    }
+
+    protected boolean isNoSuchMethodOfConfig(String msg) {
+        return msg.contains("Config.get") || msg.contains("Env.get");
+    }
+
+    protected void throwRebootAfterFreeGenError(Error e) throws RebootAfterFreeGenError {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Reboot after FreeGen.");
+        br.addItem("Advice");
+        br.addElement("Sorry...");
+        br.addElement("Auto-generated classes (e.g. HtmlPath, Messages, Config)");
+        br.addElement(" are not HotDeploy target.");
+        br.addElement("so please reboot your application.");
+        br.addElement("");
+        br.addElement("Execute your main() of the boot class like this:");
+        br.addElement("  public static void main(String[] args) {");
+        br.addElement("      new JettyBoot(8090, \"/harbor\").asDevelopment(isNoneEnv()).bootAwait();");
+        br.addElement("  }");
+        br.addItem("Occurred Error");
+        br.addElement(e.getClass());
+        br.addElement(e.getMessage());
+        final String msg = br.buildExceptionMessage();
+        throw new RebootAfterFreeGenError(msg, e);
+    }
+
+    protected boolean isNoSuchMethodOfDBFlute(String msg) {
+        return msg.contains(".allcommon.") // e.g. CDef
+                || msg.contains(".bsbhv.") || msg.contains(".exbhv.") // Behavior
+                || msg.contains(".cbean.") // ConditionBean, ConditionQuery
+                || msg.contains(".bsentity.") || msg.contains(".exentity."); // Entity, DBMeta
+    }
+
+    protected void throwRebootAfterGenerateError(Error e) throws RebootAfterFreeGenError {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Reboot after DBFlute Generate.");
+        br.addItem("Advice");
+        br.addElement("Sorry...");
+        br.addElement("Auto-generated classes (e.g. Behavior, ConditionBean)");
+        br.addElement(" are not HotDeploy target.");
+        br.addElement("so please reboot your application.");
+        br.addElement("");
+        br.addElement("Execute your main() of the boot class like this:");
+        br.addElement("  public static void main(String[] args) {");
+        br.addElement("      new JettyBoot(8090, \"/harbor\").asDevelopment(isNoneEnv()).bootAwait();");
+        br.addElement("  }");
+        br.addItem("Occurred Error");
+        br.addElement(e.getClass());
+        br.addElement(e.getMessage());
+        final String msg = br.buildExceptionMessage();
+        throw new RebootAfterGenerateError(msg, e);
+    }
+
+    // ===================================================================================
+    //                                                                       Assert Helper
+    //                                                                       =============
+    protected void assertHookReturnNotNull(ActionResponse response) {
+        if (response == null) {
+            throwActionHookReturnNullException();
+        }
+    }
+
+    protected void throwActionHookReturnNullException() {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not allowed to return null from ActionCallback methods.");
         br.addItem("Advice");
-        br.addElement("ActionCallback methods should return response instance.");
+        br.addElement("ActionHook methods should return response instance.");
         br.addElement("For example, if callbackBefore():");
         br.addElement("  (x):");
         br.addElement("    public ActionResponse callbackBefore(...) {");
@@ -574,7 +666,7 @@ public class GodHandableAction implements VirtualAction {
         br.addItem("Action Object");
         br.addElement(action);
         final String msg = br.buildExceptionMessage();
-        throw new ActionCallbackReturnNullException(msg);
+        throw new ActionHookReturnNullException(msg);
     }
 
     protected void assertExecuteReturnNotNull(Object[] requestArgs, Object result) {
