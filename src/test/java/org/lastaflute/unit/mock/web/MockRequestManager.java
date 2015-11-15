@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
@@ -27,7 +28,7 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
@@ -59,6 +60,10 @@ public class MockRequestManager implements RequestManager {
 
     @Override
     public HttpServletRequest getRequest() {
+        return null;
+    }
+
+    public ServletContext getServletContext() {
         return null;
     }
 

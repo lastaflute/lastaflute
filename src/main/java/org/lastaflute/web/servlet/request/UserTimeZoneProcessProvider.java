@@ -18,7 +18,7 @@ package org.lastaflute.web.servlet.request;
 import java.util.TimeZone;
 
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 
 /**
  * The provider of user time-zone process for current request.

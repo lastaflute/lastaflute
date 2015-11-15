@@ -13,15 +13,14 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.callback;
+package org.lastaflute.web.hook;
 
 /**
  * @author jflute
  */
 public interface TypicalKey {
 
-    String ERROR_MESSAGE_FORWARD_PATH = "/error/error_message.jsp";
-    String ERRORS_LOGIN_FAILURE_KEY = "errors.login.failure";
+    String ERRORS_LOGIN_FAILURE_KEY = "errors.login.failure"; // business but embedded
     String ERRORS_APP_ILLEGAL_TRANSITION = "errors.app.illegal.transition";
     String ERRORS_APP_DB_ALREADY_DELETED = "errors.app.db.already.deleted";
     String ERRORS_APP_DB_ALREADY_UPDATED = "errors.app.db.already.updated";
@@ -29,10 +28,6 @@ public interface TypicalKey {
     String ERRORS_APP_DOUBLE_SUBMIT_REQUEST = "errors.app.double.submit.request";
 
     public static class TypicalSimpleEmbeddedKeySupplier implements TypicalEmbeddedKeySupplier {
-
-        public String getErrorMessageForwardPath() {
-            return ERROR_MESSAGE_FORWARD_PATH;
-        }
 
         public String getErrorsLoginFailureKey() {
             return ERRORS_LOGIN_FAILURE_KEY;

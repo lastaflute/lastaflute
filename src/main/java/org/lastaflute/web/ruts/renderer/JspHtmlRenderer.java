@@ -22,11 +22,11 @@ import javax.servlet.ServletException;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.di.helper.beans.PropertyDesc;
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.exception.RequestForwardFailureException;
 import org.lastaflute.web.ruts.NextJourney;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**

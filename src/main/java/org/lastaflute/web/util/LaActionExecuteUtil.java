@@ -90,7 +90,7 @@ public class LaActionExecuteUtil {
         final Class<?> returnType = executeMethod.getReturnType();
         sb.append(returnType.getSimpleName()).append(" ");
         sb.append(executeMethod.getDeclaringClass().getSimpleName());
-        sb.append("#").append(executeMethod.getName()).append("(");
+        sb.append("@").append(executeMethod.getName()).append("(");
         final Class<?>[] parameterTypes = executeMethod.getParameterTypes();
         int index = 0;
         for (Class<?> parameterType : parameterTypes) {

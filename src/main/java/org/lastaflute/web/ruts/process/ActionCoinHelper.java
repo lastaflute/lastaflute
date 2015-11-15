@@ -27,7 +27,6 @@ import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;

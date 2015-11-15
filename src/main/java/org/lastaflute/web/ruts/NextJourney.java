@@ -70,7 +70,7 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("transition:{");
+        sb.append("journey:{");
         sb.append("path=").append(routingPath);
         sb.append(redirectTo ? ", redirect" : ", forward");
         sb.append(asIs ? ", asIs" : "");

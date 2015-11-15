@@ -24,6 +24,7 @@ import javax.annotation.Resource;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.message.MessageManager;
@@ -32,23 +33,23 @@ import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.callback.ActionHook;
-import org.lastaflute.web.callback.ActionRuntime;
-import org.lastaflute.web.callback.TooManySqlOption;
-import org.lastaflute.web.callback.TypicalEmbeddedKeySupplier;
-import org.lastaflute.web.callback.TypicalGodHandEpilogue;
-import org.lastaflute.web.callback.TypicalGodHandMonologue;
-import org.lastaflute.web.callback.TypicalGodHandPrologue;
-import org.lastaflute.web.callback.TypicalGodHandResource;
-import org.lastaflute.web.callback.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
 import org.lastaflute.web.docs.LaActionDocs;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
 import org.lastaflute.web.exception.ForcedIllegalTransitionException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
+import org.lastaflute.web.hook.ActionHook;
+import org.lastaflute.web.hook.TooManySqlOption;
+import org.lastaflute.web.hook.TypicalEmbeddedKeySupplier;
+import org.lastaflute.web.hook.TypicalGodHandEpilogue;
+import org.lastaflute.web.hook.TypicalGodHandMonologue;
+import org.lastaflute.web.hook.TypicalGodHandPrologue;
+import org.lastaflute.web.hook.TypicalGodHandResource;
+import org.lastaflute.web.hook.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
@@ -76,6 +77,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    /** The assistant director (AD) for framework. (NotNull) */
+    @Resource
+    private FwAssistantDirector assistantDirector;
+
     /** The manager of time. (NotNull) */
     @Resource
     private TimeManager timeManager;
@@ -217,9 +222,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                      Resource Factory
     //                                      ----------------
     protected TypicalGodHandResource createTypicalGodHandResource(ActionRuntime runtime) {
-        final OptionalThing<LoginManager> loginManager = myLoginManager();
-        return new TypicalGodHandResource(messageManager, exceptionTranslator, requestManager, responseManager, sessionManager,
-                loginManager, apiManager);
+        return new TypicalGodHandResource(assistantDirector, timeManager, messageManager, exceptionTranslator, requestManager,
+                responseManager, sessionManager, myLoginManager(), apiManager);
     }
 
     protected TypicalEmbeddedKeySupplier newTypicalEmbeddedKeySupplier() {

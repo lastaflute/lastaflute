@@ -13,14 +13,12 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.callback;
+package org.lastaflute.web.hook;
 
 /**
  * @author jflute
  */
 public interface TypicalEmbeddedKeySupplier {
-
-    String getErrorMessageForwardPath();
 
     String getErrorsLoginFailureKey();
 

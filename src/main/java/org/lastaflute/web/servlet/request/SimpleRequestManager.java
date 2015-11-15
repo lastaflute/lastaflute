@@ -27,6 +27,7 @@ import java.util.TimeZone;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import javax.servlet.ServletContext;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 
@@ -40,13 +41,13 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.RequestAttributeCannotCastException;
 import org.lastaflute.web.exception.RequestAttributeNotFoundException;
 import org.lastaflute.web.exception.RequestInfoNotFoundException;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.scoped.ScopedMessageHandler;
 import org.lastaflute.web.servlet.session.SessionManager;
@@ -68,7 +69,7 @@ public class SimpleRequestManager implements RequestManager {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    /** The assistant directory (AD) for framework. (NotNull: after initialization) */
+    /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
     protected FwAssistantDirector assistantDirector;
 
@@ -146,6 +147,11 @@ public class SimpleRequestManager implements RequestManager {
             throw new IllegalStateException("Not found the request, not web environment?");
         }
         return request;
+    }
+
+    @Override
+    public ServletContext getServletContext() {
+        return getRequest().getServletContext();
     }
 
     @Override

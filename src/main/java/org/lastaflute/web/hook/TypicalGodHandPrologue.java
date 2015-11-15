@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.callback;
+package org.lastaflute.web.hook;
 
 import java.lang.reflect.Method;
 import java.util.function.Supplier;
@@ -39,6 +39,7 @@ import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.response.ActionResponse;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.slf4j.Logger;

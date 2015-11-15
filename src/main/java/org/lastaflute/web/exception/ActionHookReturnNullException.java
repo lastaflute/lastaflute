@@ -9,25 +9,26 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.renderer;
+package org.lastaflute.web.exception;
 
-import java.io.IOException;
-
-import javax.servlet.ServletException;
-
-import org.lastaflute.web.ruts.NextJourney;
-import org.lastaflute.web.ruts.process.ActionRuntime;
-import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
- * @since 0.6.4 (2015/10/01 Thursday)
  */
-public interface HtmlRenderer {
+public class ActionHookReturnNullException extends LaSystemException {
 
-    void render(RequestManager requestManager, ActionRuntime runtime, NextJourney journey) throws IOException, ServletException;
+    private static final long serialVersionUID = 1L;
+
+    public ActionHookReturnNullException(String msg) {
+        super(msg);
+    }
+
+    public ActionHookReturnNullException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

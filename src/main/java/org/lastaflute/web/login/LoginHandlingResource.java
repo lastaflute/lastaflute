@@ -17,8 +17,8 @@ package org.lastaflute.web.login;
 
 import java.lang.reflect.Method;
 
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 
 /**
  * @author jflute

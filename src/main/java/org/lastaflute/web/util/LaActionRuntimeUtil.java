@@ -16,7 +16,7 @@
 package org.lastaflute.web.util;
 
 import org.lastaflute.web.LastaWebKey;
-import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 
 /**
  * @author jflute

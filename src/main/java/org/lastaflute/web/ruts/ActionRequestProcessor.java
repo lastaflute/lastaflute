@@ -27,13 +27,13 @@ import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.NoneTransactionStage;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.db.jta.stage.VestibuleTxProvider;
-import org.lastaflute.web.callback.ActionRuntime;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.process.ActionCoinHelper;
 import org.lastaflute.web.ruts.process.ActionFormMapper;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.ruts.process.RequestUrlParam;
 import org.lastaflute.web.ruts.renderer.HtmlRenderer;
 import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
@@ -106,7 +106,7 @@ public class ActionRequestProcessor {
     }
 
     protected ActionRuntime createActionRuntime(ActionExecute execute, RequestUrlParam urlParam) {
-        return new ActionRuntime(execute, urlParam);
+        return new ActionRuntime(getRequestManager().getRequestPath(), execute, urlParam);
     }
 
     // ===================================================================================

@@ -134,7 +134,7 @@ public class TransactionRomanticStringBuilder {
         if (entryMethod != null) {
             final String appPkg = getApplicationPackageKeyword();
             final String classExp = Srl.substringFirstRear(entryMethod.getDeclaringClass().getName(), appPkg);
-            sb.append(", ").append(classExp).append("#").append(entryMethod.getName()).append("()");
+            sb.append(", ").append(classExp).append("@").append(entryMethod.getName()).append("()");
         }
     }
 
@@ -195,7 +195,7 @@ public class TransactionRomanticStringBuilder {
             final String currentSql = currentSqlBuilder.buildSql();
             sb.append("\n/- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
             sb.append(" (SQL now: ");
-            sb.append(tx.getCurrentTableName()).append("#").append(tx.getCurrentCommand());
+            sb.append(tx.getCurrentTableName()).append("@").append(tx.getCurrentCommand());
             final Long currentSqlBeginMillis = tx.getCurrentSqlBeginMillis();
             if (currentSqlBeginMillis != null) {
                 sb.append(" [").append(tx.buildElapsedTimeExp(currentSqlBeginMillis)).append("]");

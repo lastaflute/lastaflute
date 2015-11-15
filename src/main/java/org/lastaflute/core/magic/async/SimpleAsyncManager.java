@@ -71,7 +71,7 @@ public class SimpleAsyncManager implements AsyncManager {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    /** The assistant directory (AD) for framework. (NotNull: after initialization) */
+    /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
     protected FwAssistantDirector assistantDirector;
 
@@ -493,7 +493,7 @@ public class SimpleAsyncManager implements AsyncManager {
         if (entryMethod != null) {
             sb.append(LF).append(IND);
             final Class<?> declaringClass = entryMethod.getDeclaringClass();
-            sb.append(", entryMethod=").append(declaringClass.getName()).append("#").append(entryMethod.getName()).append("()");
+            sb.append(", entryMethod=").append(declaringClass.getName()).append("@").append(entryMethod.getName()).append("()");
         }
         if (userBean != null) {
             sb.append(LF).append(IND);

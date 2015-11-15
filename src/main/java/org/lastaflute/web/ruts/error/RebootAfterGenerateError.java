@@ -13,21 +13,20 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.renderer;
-
-import java.io.IOException;
-
-import javax.servlet.ServletException;
-
-import org.lastaflute.web.ruts.NextJourney;
-import org.lastaflute.web.ruts.process.ActionRuntime;
-import org.lastaflute.web.servlet.request.RequestManager;
+package org.lastaflute.web.ruts.error;
 
 /**
  * @author jflute
- * @since 0.6.4 (2015/10/01 Thursday)
  */
-public interface HtmlRenderer {
+public class RebootAfterGenerateError extends Error {
 
-    void render(RequestManager requestManager, ActionRuntime runtime, NextJourney journey) throws IOException, ServletException;
+    private static final long serialVersionUID = 1L;
+
+    public RebootAfterGenerateError(String msg) {
+        super(msg);
+    }
+
+    public RebootAfterGenerateError(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

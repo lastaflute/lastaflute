@@ -24,5 +24,8 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 @FunctionalInterface
 public interface VaMore<MESSAGES extends ActionMessages> {
 
+    /**
+     * @param messages The messages for more validation, already may have errors by annotations. (NotNull)
+     */
     void more(MESSAGES messages);
 }

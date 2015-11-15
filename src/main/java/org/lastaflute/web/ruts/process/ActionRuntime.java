@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.callback;
+package org.lastaflute.web.ruts.process;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -28,7 +28,6 @@ import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.VirtualActionForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.ruts.process.RequestUrlParam;
 import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**
@@ -42,6 +41,7 @@ public class ActionRuntime {
     // -----------------------------------------------------
     //                                      Request Resource
     //                                      ----------------
+    protected final String requestPath; // current request info
     protected final ActionExecute execute; // fixed meta data
     protected final RequestUrlParam urlParam; // of current request
 
@@ -57,7 +57,8 @@ public class ActionRuntime {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionRuntime(ActionExecute execute, RequestUrlParam urlParam) {
+    public ActionRuntime(String requestPath, ActionExecute execute, RequestUrlParam urlParam) {
+        this.requestPath = requestPath;
         this.execute = execute;
         this.urlParam = urlParam;
     }
@@ -190,7 +191,9 @@ public class ActionRuntime {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("runtime:{").append(execute.toSimpleMethodExp());
+        sb.append("runtime:{");
+        sb.append(requestPath);
+        sb.append(", ").append(execute.toSimpleMethodExp());
         sb.append(", urlParam=").append(urlParam);
         if (actionResponse != null) {
             sb.append(", response=").append(actionResponse);
@@ -214,6 +217,15 @@ public class ActionRuntime {
     // -----------------------------------------------------
     //                                      Request Resource
     //                                      ----------------
+    /**
+     * Get the request path (without query) of the current request. e.g. /member/list/ <br>
+     * Not contains context path and escaped slash remains.
+     * @return The path as string. (NotNull)
+     */
+    public String getRequestPath() {
+        return requestPath;
+    }
+
     /**
      * Get the definition of the requested action execute.
      * @return The object that has definition info of action execute. (NotNull)

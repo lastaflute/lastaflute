@@ -18,6 +18,7 @@ package org.lastaflute.web.servlet.request;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
@@ -26,7 +27,7 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.callback.ActionRuntime;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.scoped.ScopedAttributeHolder;
 import org.lastaflute.web.servlet.request.scoped.ScopedMessageHandler;
@@ -74,6 +75,13 @@ public interface RequestManager extends ScopedAttributeHolder {
      * @throws IllegalStateException When the request is not found.
      */
     HttpServletRequest getRequest();
+
+    /**
+     * Get the servlet context from the current request.
+     * @return The context of servlet. (NotNull)
+     * @throws IllegalStateException When the request is not found.
+     */
+    ServletContext getServletContext();
 
     /**
      * Get the character encoding of the request.
