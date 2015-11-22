@@ -83,6 +83,10 @@ public class JsonDebugChallenge {
                     if (((double) plainDouble.intValue()) == plainDouble.doubleValue()) { // no digits
                         return Integer.valueOf(plainDouble.intValue());
                     }
+                } else if (Long.class.isAssignableFrom(propertyType)) {
+                    if (((double) plainDouble.longValue()) == plainDouble.doubleValue()) { // no digits
+                        return Long.valueOf(plainDouble.longValue());
+                    }
                 } else if (BigDecimal.class.isAssignableFrom(propertyType)) {
                     try {
                         return new BigDecimal(plainDouble.toString()); // to avoid long digits
