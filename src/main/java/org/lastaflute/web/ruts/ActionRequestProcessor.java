@@ -224,14 +224,11 @@ public class ActionRequestProcessor {
 
     protected HtmlRenderer prepareHtmlRenderer(ActionRuntime runtime, NextJourney journey) {
         final HtmlRenderingProvider provider = getAssistantDirector().assistWebDirection().assistHtmlRenderingProvider();
-        if (provider != null) {
-            final HtmlRenderer renderer = provider.provideRenderer(runtime, journey);
-            if (renderer == null) {
-                throwHtmlRenderingProviderReturnNullException(runtime, journey);
-            }
-            return renderer;
+        final HtmlRenderer renderer = provider.provideRenderer(runtime, journey);
+        if (renderer == null) {
+            throwHtmlRenderingProviderReturnNullException(runtime, journey);
         }
-        return HtmlRenderingProvider.DEFAULT_RENDERER;
+        return renderer;
     }
 
     protected void throwHtmlRenderingProviderReturnNullException(ActionRuntime runtime, NextJourney journey) {

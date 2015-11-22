@@ -293,13 +293,9 @@ public class TypicalGodHandMonologue {
 
     protected HtmlResponse prepareShowErrorsForward(ActionRuntime runtime) {
         final HtmlRenderingProvider renderingProvider = assistantDirector.assistWebDirection().assistHtmlRenderingProvider();
-        if (renderingProvider != null) { // e.g. thymeleaf, mixer2
-            final HtmlResponse response = renderingProvider.provideShowErrorsResponse(runtime);
-            assertShowErrorsDefined(renderingProvider, response);
-            return response;
-        } else { // e.g. jsp
-            return getDefaultShowErrorsForward();
-        }
+        final HtmlResponse response = renderingProvider.provideShowErrorsResponse(runtime);
+        assertShowErrorsDefined(renderingProvider, response);
+        return response;
     }
 
     protected void assertShowErrorsDefined(HtmlRenderingProvider renderingProvider, HtmlResponse response) {
@@ -311,8 +307,8 @@ public class TypicalGodHandMonologue {
         }
     }
 
-    protected HtmlResponse getDefaultShowErrorsForward() {
-        return DEFAULT_SHOW_ERRORS_FORWARD;
+    protected HtmlResponse getShowErrorsDefaultForward() {
+        return HtmlResponse.fromForwardPath(typicalKeySupplier.getShowErrorsDefaultPath());
     }
 
     // -----------------------------------------------------

@@ -26,6 +26,18 @@ import org.lastaflute.web.ruts.process.ActionRuntime;
 public interface HtmlRenderingProvider {
 
     HtmlRenderer DEFAULT_RENDERER = new JspHtmlRenderer();
+    HtmlRenderingProvider DEFAULT_RENDERING_PROVIDER = new HtmlRenderingProvider() {
+
+        @Override
+        public HtmlRenderer provideRenderer(ActionRuntime runtime, NextJourney journey) {
+            return DEFAULT_RENDERER;
+        }
+
+        @Override
+        public HtmlResponse provideShowErrorsResponse(ActionRuntime runtime) {
+            return HtmlResponse.fromForwardPath("/error/show_errors.jsp");
+        }
+    };
 
     /**
      * @param runtime The runtime of current requested action. (NotNull)
