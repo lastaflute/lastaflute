@@ -630,7 +630,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         logger.debug("...Checking login status for login required");
         if (tryAlreadyLoginOrRememberMe(resource)) {
             checkPermission(resource); // throws if denied
-            return; // OK
+            return; // Good
         }
         if (needsSavingRequestedLoginRedirect(resource)) {
             saveRequestedLoginRedirectInfo();
@@ -775,7 +775,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             logger.debug("...Checking login status for non login required");
             if (tryAlreadyLoginOrRememberMe(resource)) {
                 checkPermission(resource); // throws if denied
-                return; // OK
+                return; // Good
             }
         }
         if (isLoginRedirectBeanKeptAction(resource)) {

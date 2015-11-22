@@ -86,7 +86,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement("Cannot use upper case in action package.");
         br.addElement("Lower cases are only allowed like this:");
         br.addElement("  (x):");
-        br.addElement("    seaLand.SeaLandAction // *NG: sea[L]and");
+        br.addElement("    seaLand.SeaLandAction // *Bad: sea[L]and");
         br.addElement("  (o):");
         br.addElement("    sealand.SealandAction  => /sealand/");
         br.addElement("    sea.SeaLandAction      => /sea/land/");

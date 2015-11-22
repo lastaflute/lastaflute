@@ -108,10 +108,10 @@ public interface DBFluteGsonAdaptable {
             br.addElement("For example:");
             br.addElement("  (x)");
             br.addElement("    public String memberName;");
-            br.addElement("    public Classification memberStatus;    // *NG");
+            br.addElement("    public Classification memberStatus;    // *Bad");
             br.addElement("  (o)");
             br.addElement("    public String memberName;");
-            br.addElement("    public CDef.MemberStatus memberStatus; // OK");
+            br.addElement("    public CDef.MemberStatus memberStatus; // Good");
             br.addItem("Classification");
             br.addElement(clsType);
             br.addItem("Specified Code");

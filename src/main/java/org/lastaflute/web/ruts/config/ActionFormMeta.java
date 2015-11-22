@@ -176,7 +176,7 @@ public class ActionFormMeta {
         br.addElement("For example:");
         br.addElement("  (x):");
         br.addElement("    public class SeaForm {");
-        br.addElement("        public LandBean land; // *NG: no annotation");
+        br.addElement("        public LandBean land; // *Bad: no annotation");
         br.addElement("");
         br.addElement("        public static class LandBean {");
         br.addElement("            @Required");
@@ -185,7 +185,7 @@ public class ActionFormMeta {
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    public class SeaForm {");
-        br.addElement("        @Valid                // OK: javax.validation");
+        br.addElement("        @Valid                // Good: javax.validation");
         br.addElement("        public LandBean land;");
         br.addElement("");
         br.addElement("        public static class LandBean {");

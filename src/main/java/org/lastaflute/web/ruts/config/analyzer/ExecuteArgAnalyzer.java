@@ -128,9 +128,9 @@ public class ExecuteArgAnalyzer {
         br.addElement("ActionForm should be defined at last parameter");
         br.addElement("at @Execute method.");
         br.addElement("  (x):");
-        br.addElement("    public HtmlResponse index(SeaForm form, int pageNumber) { // *NG");
+        br.addElement("    public HtmlResponse index(SeaForm form, int pageNumber) { // *Bad");
         br.addElement("  (o):");
-        br.addElement("    public HtmlResponse index(int pageNumber, SeaForm form) { // OK");
+        br.addElement("    public HtmlResponse index(int pageNumber, SeaForm form) { // Good");
         br.addItem("Execute Method");
         br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
         final String msg = br.buildExceptionMessage();
@@ -201,13 +201,13 @@ public class ExecuteArgAnalyzer {
         br.addItem("Advice");
         br.addElement("Optional generic type should be scalar type e.g. Integer, String");
         br.addElement("  (x):");
-        br.addElement("    public HtmlResponse index(OptionalThing<?> opt) { // *NG");
+        br.addElement("    public HtmlResponse index(OptionalThing<?> opt) { // *Bad");
         br.addElement("  (x):");
-        br.addElement("    public HtmlResponse index(OptionalThing<Object> opt) { // *NG");
+        br.addElement("    public HtmlResponse index(OptionalThing<Object> opt) { // *Bad");
         br.addElement("  (x):");
-        br.addElement("    public HtmlResponse index(OptionalThing<SeaBean> opt) { // *NG");
+        br.addElement("    public HtmlResponse index(OptionalThing<SeaBean> opt) { // *Bad");
         br.addElement("  (o):");
-        br.addElement("    public HtmlResponse index(OptionalThing<Integer> opt) { // OK");
+        br.addElement("    public HtmlResponse index(OptionalThing<Integer> opt) { // Good");
         br.addItem("Execute Method");
         br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
         if (paramedType != null) {
@@ -251,9 +251,9 @@ public class ExecuteArgAnalyzer {
         br.addElement("Add explicit generic type to the collection type");
         br.addElement("of the @Execute method parameter.");
         br.addElement("  (x):");
-        br.addElement("    public HtmlResponse index(List<?> formList) { // *NG");
+        br.addElement("    public HtmlResponse index(List<?> formList) { // *Bad");
         br.addElement("  (o):");
-        br.addElement("    public HtmlResponse index(List<SeaForm> formList) { // OK");
+        br.addElement("    public HtmlResponse index(List<SeaForm> formList) { // Good");
         br.addItem("Execute Method");
         br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
         br.addItem("WildcardOnly Parameter");
@@ -269,9 +269,9 @@ public class ExecuteArgAnalyzer {
         br.addElement("Add explicit generic type to the collection type");
         br.addElement("of the @Execute method parameter.");
         br.addElement("  (x):");
-        br.addElement("    public HtmlResponse index(List formList) { // *NG");
+        br.addElement("    public HtmlResponse index(List formList) { // *Bad");
         br.addElement("  (o):");
-        br.addElement("    public HtmlResponse index(List<SeaForm> formList) { // OK");
+        br.addElement("    public HtmlResponse index(List<SeaForm> formList) { // Good");
         br.addItem("Execute Method");
         br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
         br.addItem("NonGeneric Parameter");

@@ -1345,13 +1345,13 @@ public class ActionFormMapper {
         br.addElement("Request parameters should be related to any property of form.");
         br.addElement("For example:");
         br.addElement("  (x): ?sea=mystic&land=oneman");
-        br.addElement("    public class MaihamaForm { // *NG: 'land' is undefined");
+        br.addElement("    public class MaihamaForm { // *Bad: 'land' is undefined");
         br.addElement("        public String sea;");
         br.addElement("    }");
         br.addElement("  (o): ?sea=mystic&land=oneman");
         br.addElement("    public class MaihamaForm {");
         br.addElement("        public String sea;");
-        br.addElement("        public String land; // OK");
+        br.addElement("        public String land; // Good");
         br.addElement("    }");
         br.addElement("");
         br.addElement("If you want to ignore the parameter from this check,");
