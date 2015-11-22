@@ -32,6 +32,10 @@ public class JspHtmlRenderingProvider implements HtmlRenderingProvider {
 
     @Override
     public HtmlResponse provideShowErrorsResponse(ActionRuntime runtime) {
-        return HtmlResponse.fromForwardPath("/error/show_errors.jsp");
+        return HtmlResponse.fromForwardPath(getShowErrorsForwardPath());
+    }
+
+    protected String getShowErrorsForwardPath() {
+        return "/error/show_errors.jsp";
     }
 }
