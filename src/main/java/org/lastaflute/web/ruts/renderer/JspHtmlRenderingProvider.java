@@ -21,23 +21,17 @@ import org.lastaflute.web.ruts.process.ActionRuntime;
 
 /**
  * @author jflute
- * @since 0.6.4 (2015/10/01 Thursday)
+ * @since 0.6.7 (2015/11/22 Sunday)
  */
-public interface HtmlRenderingProvider {
+public class JspHtmlRenderingProvider implements HtmlRenderingProvider {
 
-    HtmlRenderer DEFAULT_RENDERER = new JspHtmlRenderer();
-    HtmlRenderingProvider DEFAULT_RENDERING_PROVIDER = new JspHtmlRenderingProvider();
+    @Override
+    public HtmlRenderer provideRenderer(ActionRuntime runtime, NextJourney journey) {
+        return DEFAULT_RENDERER;
+    }
 
-    /**
-     * @param runtime The runtime of current requested action. (NotNull)
-     * @param journey The journey to next stage. (NotNull)
-     * @return The renderer to render HTML. (NotNull)
-     */
-    HtmlRenderer provideRenderer(ActionRuntime runtime, NextJourney journey);
-
-    /**
-     * @param runtime The runtime of current requested action. (NotNull)
-     * @return The response for show errors HTML. (NotNull, ShouldBeDefined)
-     */
-    HtmlResponse provideShowErrorsResponse(ActionRuntime runtime);
+    @Override
+    public HtmlResponse provideShowErrorsResponse(ActionRuntime runtime) {
+        return HtmlResponse.fromForwardPath("/error/show_errors.jsp");
+    }
 }
