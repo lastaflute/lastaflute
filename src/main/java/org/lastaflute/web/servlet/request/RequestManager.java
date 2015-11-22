@@ -105,9 +105,10 @@ public interface RequestManager extends ScopedAttributeHolder {
     //                                                                  Parameter Handling
     //                                                                  ==================
     /**
-     * Get the request parameter by the key.
+     * Get the request parameter by the key. <br>
+     * It returns empty optional when not only null but also empty string.
      * @param key The key of the parameter. (NotNull)
-     * @return The optional value of the parameter as string. (NotNull, EmptyAllowed: when not found)
+     * @return The optional value of the parameter as string. (NotNull, EmptyAllowed: when not found, empty value)
      */
     OptionalThing<String> getParameter(String key);
 

@@ -179,7 +179,8 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public OptionalThing<String> getParameter(String key) {
         assertArgumentNotNull("key", key);
-        return OptionalThing.ofNullable(getRequest().getParameter(key), () -> {
+        final String param = getRequest().getParameter(key);
+        return OptionalThing.ofNullable(param != null && !param.isEmpty() ? param : null, () -> {
             throw new IllegalStateException("Not found the request parameter for the key: " + key);
         });
     }
@@ -189,8 +190,8 @@ public class SimpleRequestManager implements RequestManager {
         final BufferedReader reader = prepareRequestBodyReader();
         final StringBuilder sb = new StringBuilder();
         try {
+            String line;
             while (true) {
-                String line;
                 line = reader.readLine();
                 if (line == null) {
                     break;
