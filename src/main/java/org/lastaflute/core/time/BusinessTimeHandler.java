@@ -15,6 +15,7 @@
  */
 package org.lastaflute.core.time;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -34,19 +35,19 @@ public interface BusinessTimeHandler {
 
     /**
      * Is the target date business day?
-     * @param targetDate The date for determination. (NotNull)
+     * @param targetDate The local date for determination. (NotNull)
      * @return The determination, true or false.
      */
-    boolean isBusinessDate(Date targetDate);
+    boolean isBusinessDate(LocalDate targetDate);
 
     /**
      * Get the next (added) date as business day. <br>
-     * The determination logic uses {@link #isBusinessDate(Date)}.
-     * @param baseDate The base date for calculation. (NotNull)
+     * The determination logic uses {@link #isBusinessDate(LocalDate)}.
+     * @param baseDate The base local date for calculation. (NotNull)
      * @param addedDay The count of added days.
      * @return The new-created instance of the next business date. (NotNull)
      */
-    Date getNextBusinessDate(Date baseDate, int addedDay);
+    Date getNextBusinessDate(LocalDate baseDate, int addedDay);
 
     /**
      * Get the time-zone for the business.

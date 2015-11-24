@@ -173,7 +173,7 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
-    public Locale resolveUserLocale(ActionRuntime runtimeMeta) {
+    public Locale resolveUserLocale(ActionRuntime runtime) {
         return null;
     }
 
@@ -191,7 +191,7 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
-    public TimeZone resolveUserTimeZone(ActionRuntime runtimeMeta) {
+    public TimeZone resolveUserTimeZone(ActionRuntime runtime) {
         return null;
     }
 

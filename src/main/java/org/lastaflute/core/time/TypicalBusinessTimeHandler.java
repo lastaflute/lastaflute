@@ -15,6 +15,7 @@
  */
 package org.lastaflute.core.time;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -58,12 +59,12 @@ public class TypicalBusinessTimeHandler implements BusinessTimeHandler {
     //                                                                       Business Date
     //                                                                       =============
     /** {@inheritDoc} */
-    public boolean isBusinessDate(Date targetDate) {
+    public boolean isBusinessDate(LocalDate targetDate) {
         throw new UnsupportedOperationException("not implemented yet");
     }
 
     /** {@inheritDoc} */
-    public Date getNextBusinessDate(Date baseDate, int addedDay) {
+    public Date getNextBusinessDate(LocalDate baseDate, int addedDay) {
         throw new UnsupportedOperationException("not implemented yet");
     }
 

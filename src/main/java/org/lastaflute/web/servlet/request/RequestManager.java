@@ -241,10 +241,10 @@ public interface RequestManager extends ScopedAttributeHolder {
      * Resolve the locale for user of current request. <br>
      * Basically this is called before action execution in request processor. <br>
      * So use {@link #getUserLocale()} if you find locale.
-     * @param runtimeMeta The runtime meta of action execution which you can get the calling method. (NotNull)
+     * @param runtime The runtime meta of action execution which you can get the calling method. (NotNull)
      * @return The selected locale for the current request. (NotNull)
      */
-    Locale resolveUserLocale(ActionRuntime runtimeMeta);
+    Locale resolveUserLocale(ActionRuntime runtime);
 
     /**
      * Save the locale for user of current request to cookie. <br>
@@ -275,10 +275,10 @@ public interface RequestManager extends ScopedAttributeHolder {
      * Resolve the time-zone for user of current request. <br>
      * Basically this is called before action execution in request processor. <br>
      * So use {@link #getUserTimeZone()} if you find time-zone.
-     * @param runtimeMeta The runtime meta of action execution which you can get the calling method. (NotNull)
+     * @param runtime The runtime meta of action execution which you can get the calling method. (NotNull)
      * @return The object that specifies request time-zone. (NotNull)
      */
-    TimeZone resolveUserTimeZone(ActionRuntime runtimeMeta);
+    TimeZone resolveUserTimeZone(ActionRuntime runtime);
 
     /**
      * Save the time-zone for user of current request to cookie. <br>

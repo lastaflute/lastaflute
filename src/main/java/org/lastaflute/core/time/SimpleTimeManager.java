@@ -196,18 +196,14 @@ public class SimpleTimeManager implements TimeManager {
     // ===================================================================================
     //                                                                       Business Date
     //                                                                       =============
-    /**
-     * {@inheritDoc}
-     */
-    public boolean isBusinessDate(Date targetDate) {
+    /** {@inheritDoc} */
+    public boolean isBusinessDate(LocalDate targetDate) {
         assertBusinessTimeHandler();
         return businessTimeHandler.isBusinessDate(targetDate);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public Date getNextBusinessDate(Date baseDate, int addedDay) {
+    /** {@inheritDoc} */
+    public Date getNextBusinessDate(LocalDate baseDate, int addedDay) {
         assertBusinessTimeHandler();
         return businessTimeHandler.getNextBusinessDate(baseDate, addedDay);
     }
@@ -215,9 +211,7 @@ public class SimpleTimeManager implements TimeManager {
     // ===================================================================================
     //                                                                   Business TimeZone
     //                                                                   =================
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public TimeZone getBusinessTimeZone() {
         return businessTimeHandler.getBusinessTimeZone();
     }
