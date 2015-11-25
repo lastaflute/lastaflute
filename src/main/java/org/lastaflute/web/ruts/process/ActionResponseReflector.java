@@ -99,10 +99,18 @@ public class ActionResponseReflector {
         if (response.isReturnAsEmptyBody()) {
             return undefinedJourney();
         }
+        if (response.isReturnAsHtmlDirectly()) {
+            writeHtmlDirectly(response);
+            return undefinedJourney();
+        }
         setupForwardRenderData(response);
         setupPushedActionForm(response);
         setupSavingErrorsToSession(response);
         return createActionNext(response);
+    }
+
+    protected void writeHtmlDirectly(HtmlResponse response) {
+        requestManager.getResponseManager().write(response.getDirectHtml().get(), "text/html");
     }
 
     protected void setupForwardRenderData(HtmlResponse htmlResponse) {
