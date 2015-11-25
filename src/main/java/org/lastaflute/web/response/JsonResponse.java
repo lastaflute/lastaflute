@@ -142,12 +142,6 @@ public class JsonResponse<BEAN> implements ApiResponse {
         return (JsonResponse<OBJ>) new JsonResponse<Object>(DUMMY).ofEmptyBody();
     }
 
-    @SuppressWarnings("unchecked")
-    public static JsonResponse<Void> asVoidBody() { // user interface
-        // for generic problem to void type with afterTxCommit()
-        return (JsonResponse<Void>) (Object) new JsonResponse<Object>(DUMMY).ofEmptyBody();
-    }
-
     protected JsonResponse<BEAN> ofEmptyBody() { // internal use
         returnAsEmptyBody = true;
         return this;
