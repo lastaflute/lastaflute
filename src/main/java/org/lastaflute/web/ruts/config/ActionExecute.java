@@ -596,19 +596,45 @@ public class ActionExecute implements Serializable {
     }
 
     protected boolean handleOptionalParameterMapping(String paramPath) {
-        if (!indexMethod && hasOptionalUrlParameter()) { // e.g. sea() and any parameters are optional
-            // required parameter may not be specified but checked later as 404
-            final String firstElement = Srl.substringFirstFront(paramPath, "/"); // e.g. sea from sea or sea/3/
-            return firstElement.equals(getExecuteMethod().getName());
+        if (hasOptionalUrlParameter()) { // e.g. any parameters are optional type
+            if (indexMethod) { // e.g. index(String first, OptionalThing<String> second) with 'sea' or 'sea/land'
+                final int paramCount = Srl.count(Srl.trim(paramPath, "/"), "/") + 1; // e.g. sea/land => 2
+                return matchesParameterCount(paramCount);
+            } else { // e.g. sea(String first, OptionalThing<String> second) with 'sea/dockside' or 'sea/dockside/hangar'
+                // required parameter may not be specified but checked later as 404
+                final String firstElement = Srl.substringFirstFront(paramPath, "/"); // e.g. sea (from sea/dockside)
+                if (firstElement.equals(getExecuteMethod().getName())) { // e.g. sea(first) with sea/dockside
+                    final int paramCount = Srl.count(Srl.trim(paramPath, "/"), "/"); // e.g. sea/dockside => 1
+                    return matchesParameterCount(paramCount);
+                }
+                return false;
+            }
         } else {
             return false;
         }
     }
 
     protected boolean hasOptionalUrlParameter() {
+        // already checked here that optional parameters are defined at rear arguments
         return urlParamArgs.map(args -> {
             return args.getUrlParamTypeList().stream().anyMatch(tp -> isOptionalParameterType(tp));
         }).orElse(false);
+    }
+
+    protected boolean matchesParameterCount(int paramCount) {
+        return paramCount >= countRequiredParameter() && paramCount <= countAllParameter();
+    }
+
+    protected int countAllParameter() {
+        return urlParamArgs.map(args -> args.getUrlParamTypeList().size()).orElse(0);
+    }
+
+    protected int countRequiredParameter() {
+        return urlParamArgs.map(args -> {
+            return args.getUrlParamTypeList().stream().filter(tp -> {
+                return !isOptionalParameterType(tp);
+            }).count();
+        }).orElse(0L).intValue();
     }
 
     // -----------------------------------------------------
