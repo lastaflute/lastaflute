@@ -263,7 +263,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     /**
      * Save the transaction token to session, using this action as group type.
      */
-    protected void saveToken() {
+    protected void saveToken() { // no return because automatically output by template framework
         doubleSubmitManager.saveToken(myTokenGroupType());
     }
 
