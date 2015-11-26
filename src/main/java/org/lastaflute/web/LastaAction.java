@@ -291,10 +291,10 @@ public abstract class LastaAction {
     /**
      * Redirect to the action with the more URL parts and the the parameters on GET.
      * <pre>
-     * <span style="color: #3F7E5E">// e.g. /member/edit/3/ *same as {@link #redirectById()}</span>
+     * <span style="color: #3F7E5E">// e.g. /member/edit/3/ *same as redirectById()</span>
      * return redirectWith(MemberEditAction.class, <span style="color: #FD4747">moreUrl</span>(memberId));
      * 
-     * <span style="color: #3F7E5E">// e.g. /member/edit/?memberId=3 *same as {@link #redirectByParam()}</span>
+     * <span style="color: #3F7E5E">// e.g. /member/edit/?memberId=3 *same as redirectByParam()</span>
      * return redirectWith(MemberEditAction.class, <span style="color: #FD4747">params</span>("memberId", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/</span>
@@ -420,10 +420,10 @@ public abstract class LastaAction {
     /**
      * Forward to the action with the more URL parts and the the parameters on GET.
      * <pre>
-     * <span style="color: #3F7E5E">// e.g. /member/edit/3/ *same as {@link #forwardById()}</span>
+     * <span style="color: #3F7E5E">// e.g. /member/edit/3/ *same as forwardById()</span>
      * return forwardWith(MemberEditAction.class, <span style="color: #FD4747">moreUrl</span>(memberId));
      *
-     * <span style="color: #3F7E5E">// e.g. /member/edit/?memberId=3 *same as {@link #forwardByParam()}</span>
+     * <span style="color: #3F7E5E">// e.g. /member/edit/?memberId=3 *same as forwardByParam()</span>
      * return forwardWith(MemberEditAction.class, <span style="color: #FD4747">params</span>("memberId", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/</span>
@@ -467,7 +467,7 @@ public abstract class LastaAction {
     //                                          ------------
     /**
      * Set up more URL parts as URL chain. <br>
-     * The name and specification of this method is synchronized with {@link UrlChain#moreUrl()}.
+     * The name and specification of this method is synchronized with UrlChain#moreUrl().
      * @param urlParts The varying array of URL parts. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */
@@ -478,7 +478,7 @@ public abstract class LastaAction {
 
     /**
      * Set up parameters on GET as URL chain. <br>
-     * The name and specification of this method is synchronized with {@link UrlChain#params()}.
+     * The name and specification of this method is synchronized with UrlChain#params().
      * @param paramsOnGet The varying array of parameters on GET. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */
@@ -489,7 +489,7 @@ public abstract class LastaAction {
 
     /**
      * Set up hash on URL as URL chain. <br>
-     * The name and specification of this method is synchronized with {@link UrlChain#hash()}.
+     * The name and specification of this method is synchronized with UrlChain#hash().
      * @param hashOnUrl The value of hash on URL. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */

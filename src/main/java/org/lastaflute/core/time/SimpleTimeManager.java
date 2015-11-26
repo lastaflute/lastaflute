@@ -59,10 +59,10 @@ public class SimpleTimeManager implements TimeManager {
     /** Does it ignore transaction time when the time manager returns current date? (not used if development) */
     protected boolean currentIgnoreTransaction;
 
-    /** if {@link adjustAbsoluteMode} is true, absolute milliseconds, else relative milliseconds. (not used if development) */
+    /** if adjustAbsoluteMode is true, absolute milliseconds, else relative milliseconds. (not used if development) */
     protected long adjustTimeMillis;
 
-    /** Is it absolute time mode when using {@link adjustTimeMillis}? (not used if development) */
+    /** Is it absolute time mode when using adjustTimeMillis? (not used if development) */
     protected boolean adjustAbsoluteMode;
 
     /** The provider of current time as real time. (NullAllowed: option, so normally null) */

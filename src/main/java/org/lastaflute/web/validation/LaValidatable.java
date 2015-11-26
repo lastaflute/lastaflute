@@ -105,7 +105,6 @@ public interface LaValidatable<MESSAGES extends ActionMessages> {
      * }
      * </pre>
      * @param validationMessagesLambda The callback for setting of validation error messages. (NotNull)
-     * @param validationErrorLambda The callback for response when validation error. (NotNull)
      */
     default void throwValidationErrorApi(VaMessenger<MESSAGES> validationMessagesLambda) {
         createValidator().throwValidationErrorApi(() -> {
