@@ -45,4 +45,12 @@ public class RequestLoggingFilterTest extends PlainTestCase {
         String linedMsg = linedSb.toString();
         assertEquals(linedMsg + "...", filter.filterAttributeDisp(mixMsg));
     }
+
+    public void test_convertToCutDisp_null() throws Exception {
+        assertNull(new RequestLoggingFilter().convertToCutDisp(null));
+    }
+
+    public void test_convertToOneLinerDisp_null() throws Exception {
+        assertNull(new RequestLoggingFilter().convertToOneLinerDisp(null));
+    }
 }
