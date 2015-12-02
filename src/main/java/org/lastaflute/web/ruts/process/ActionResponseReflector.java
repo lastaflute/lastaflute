@@ -29,7 +29,7 @@ import org.lastaflute.web.response.XmlResponse;
 import org.lastaflute.web.response.pushed.PushedFormInfo;
 import org.lastaflute.web.response.render.RenderData;
 import org.lastaflute.web.ruts.NextJourney;
-import org.lastaflute.web.ruts.VirtualActionForm;
+import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
@@ -126,13 +126,13 @@ public class ActionResponseReflector {
     protected void setupPushedActionForm(HtmlResponse response) {
         response.getPushedFormInfo().ifPresent(formInfo -> {
             final String formKey = LastaWebKey.PUSHED_ACTION_FORM_KEY;
-            VirtualActionForm form = createPushedActionForm(formInfo, formKey);
+            VirtualForm form = createPushedActionForm(formInfo, formKey);
             requestManager.setAttribute(formKey, form);
             runtime.setActionForm(OptionalThing.of(form)); // to export properties to request attribute
         });
     }
 
-    protected VirtualActionForm createPushedActionForm(PushedFormInfo formInfo, String formKey) {
+    protected VirtualForm createPushedActionForm(PushedFormInfo formInfo, String formKey) {
         final OptionalThing<Class<?>> formType = OptionalThing.of(formInfo.getFormType());
         final OptionalThing<Parameter> listFormParameter = OptionalThing.empty();
         final OptionalThing<Consumer<Object>> formSetupper = formInfo.getFormOption().map(op -> {

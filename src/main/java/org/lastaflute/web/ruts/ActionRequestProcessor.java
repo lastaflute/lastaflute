@@ -122,7 +122,7 @@ public class ActionRequestProcessor {
         final ActionResponseReflector reflector = createResponseReflector(runtime);
         ready(runtime, reflector);
 
-        final OptionalThing<VirtualActionForm> form = prepareActionForm(runtime);
+        final OptionalThing<VirtualForm> form = prepareActionForm(runtime);
         populateParameter(runtime, form);
 
         final VirtualAction action = createAction(runtime, reflector);
@@ -150,19 +150,19 @@ public class ActionRequestProcessor {
     // ===================================================================================
     //                                                                         Action Form
     //                                                                         ===========
-    public OptionalThing<VirtualActionForm> prepareActionForm(ActionRuntime runtime) {
+    public OptionalThing<VirtualForm> prepareActionForm(ActionRuntime runtime) {
         final ActionExecute execute = runtime.getActionExecute();
-        final OptionalThing<VirtualActionForm> optForm = execute.createActionForm();
+        final OptionalThing<VirtualForm> optForm = execute.createActionForm();
         optForm.ifPresent(form -> saveFormToRequest(execute, form)); // to use form tag
         runtime.setActionForm(optForm); // to use in action hook
         return optForm;
     }
 
-    protected void saveFormToRequest(ActionExecute execute, VirtualActionForm value) {
+    protected void saveFormToRequest(ActionExecute execute, VirtualForm value) {
         getRequestManager().setAttribute(execute.getFormMeta().get().getFormKey(), value);
     }
 
-    protected void populateParameter(ActionRuntime runtime, OptionalThing<VirtualActionForm> form) throws IOException, ServletException {
+    protected void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> form) throws IOException, ServletException {
         actionFormMapper.populateParameter(runtime, form);
     }
 
@@ -187,7 +187,7 @@ public class ActionRequestProcessor {
         return new GodHandableAction(runtime, reflector, stage, requestManager);
     }
 
-    protected NextJourney performAction(VirtualAction action, OptionalThing<VirtualActionForm> form, ActionRuntime runtime)
+    protected NextJourney performAction(VirtualAction action, OptionalThing<VirtualForm> form, ActionRuntime runtime)
             throws IOException, ServletException {
         try {
             return action.execute(form); // #to_action
@@ -198,7 +198,7 @@ public class ActionRequestProcessor {
         }
     }
 
-    protected NextJourney handleActionFailureException(VirtualAction action, OptionalThing<VirtualActionForm> optForm,
+    protected NextJourney handleActionFailureException(VirtualAction action, OptionalThing<VirtualForm> optForm,
             ActionRuntime runtime, RuntimeException cause) throws IOException, ServletException {
         throw new ServletException(cause);
     }

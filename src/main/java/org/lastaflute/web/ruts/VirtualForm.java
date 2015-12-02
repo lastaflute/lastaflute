@@ -16,6 +16,8 @@
 package org.lastaflute.web.ruts;
 
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,11 +32,12 @@ import org.lastaflute.web.exception.FormPropertyNotFoundException;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.wrapper.BeanWrapper;
+import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**
  * @author modified by jflute (originated in Struts and Seasar)
  */
-public class VirtualActionForm implements Serializable {
+public class VirtualForm implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -43,12 +46,13 @@ public class VirtualActionForm implements Serializable {
     //                                                                           =========
     protected final RealFormSupplier formSupplier; // not null
     protected final ActionFormMeta formMeta; // not null
-    protected Object realForm; // lazy loaded
+    protected Object realForm; // lazy loaded if exists
+    protected Map<String, Object> typeFailureMap; // lazy loaded if exists
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public VirtualActionForm(RealFormSupplier formSupplier, ActionFormMeta formMeta) {
+    public VirtualForm(RealFormSupplier formSupplier, ActionFormMeta formMeta) {
         this.formSupplier = formSupplier;
         this.formMeta = formMeta;
     }
@@ -86,33 +90,46 @@ public class VirtualActionForm implements Serializable {
     }
 
     // ===================================================================================
-    //                                                                        Dynamic Bean
-    //                                                                        ============
+    //                                                                      Property Value
+    //                                                                      ==============
     /**
      * @param propertyName The name of the property of the action form. (NotNull)
-     * @return The property value from the form. (NullAllowed)
+     * @return The property value from the form. (NullAllowed: if the property value is null)
+     * @throws FormPropertyNotFoundException When the property is not found by the name.
      */
     public Object getPropertyValue(String propertyName) {
         if (propertyName.contains(".")) {
-            return getChainedPropertyValue(propertyName);
+            return traceChainedPropertyValue(propertyName);
         } else { // mainly here
-            return getFormProperty(propertyName).getPropertyValue(getRealForm());
+            return getPropertyValue(findProperty(propertyName));
         }
+    }
+
+    /**
+     * @param property The property of the form. (NotNull)
+     * @return The property value from the form. (NullAllowed: if the property value is null)
+     */
+    public Object getPropertyValue(ActionFormProperty property) {
+        return findPropertyValue(property, getRealForm());
     }
 
     // -----------------------------------------------------
     //                                      Chained Property
     //                                      ----------------
-    protected Object getChainedPropertyValue(String chainedName) {
+    protected Object traceChainedPropertyValue(String chainedName) {
+        final Object failureValue = getTypeFailureMap().get(chainedName);
+        if (failureValue != null) {
+            return failureValue;
+        }
         final String firstName = Srl.substringFirstFront(chainedName, ".");
         final String nestedChain = Srl.substringFirstRear(chainedName, ".");
         // trace by only defined type,
         // instance of properties are created as (almost) defined type by framework
         // and you can check definition of nested property
-        final ActionFormProperty formProperty = getFormProperty(firstName);
+        final ActionFormProperty property = findProperty(firstName);
         final List<String> nestedList = Srl.splitList(nestedChain, ".");
-        Object currentObj = formProperty.getPropertyValue(getRealForm());
-        Class<?> currentType = formProperty.getPropertyDesc().getPropertyType();
+        Object currentObj = getPropertyValue(property);
+        Class<?> currentType = property.getPropertyDesc().getPropertyType();
         Integer arrayIndex = extractArrayIndexIfExists(firstName);
         for (String nested : nestedList) {
             // no quit if value is null to check definition of nested property
@@ -180,10 +197,10 @@ public class VirtualActionForm implements Serializable {
         throw new FormPropertyNotFoundException(msg, cause);
     }
 
-    // -----------------------------------------------------
-    //                                         Form Property
-    //                                         -------------
-    protected ActionFormProperty getFormProperty(String propertyName) {
+    // ===================================================================================
+    //                                                                       Find Property
+    //                                                                       =============
+    protected ActionFormProperty findProperty(String propertyName) {
         final ActionFormProperty property = formMeta.getProperty(propertyName);
         if (property == null) {
             throwFormPropertyNotFoundException(propertyName);
@@ -202,6 +219,51 @@ public class VirtualActionForm implements Serializable {
         br.addElement(propertyName);
         final String msg = br.buildExceptionMessage();
         throw new FormPropertyNotFoundException(msg);
+    }
+
+    /**
+     * @param property The property of form. (NotNull)
+     * @param bean The instance of the action form. (NotNull)
+     * @return The property value from the form. (NullAllowed)
+     */
+    protected Object findPropertyValue(ActionFormProperty property, Object bean) {
+        assertArgumentNotNull("property", property);
+        final Object failureValue = getTypeFailureMap().get(property.getPropertyName());
+        if (failureValue != null) {
+            return failureValue;
+        }
+        return LaParamWrapperUtil.convert(property.getPropertyDesc().getValue(bean));
+    }
+
+    // ===================================================================================
+    //                                                                        Type Failure
+    //                                                                        ============
+    /**
+     * @param propertyName The name of property as saving key, may be chained. (NotNull)
+     * @param failureValue The value as type failure. (NullAllowed: but basically no way)
+     */
+    public void acceptTypeFailure(String propertyName, Object failureValue) {
+        assertArgumentNotNull("propertyName", failureValue);
+        initializeTypeFailureMapIfNeeds();
+        typeFailureMap.put(propertyName, failureValue);
+    }
+
+    protected void initializeTypeFailureMapIfNeeds() {
+        if (typeFailureMap == null) {
+            typeFailureMap = new LinkedHashMap<String, Object>();
+        }
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 
     // ===================================================================================
@@ -225,10 +287,14 @@ public class VirtualActionForm implements Serializable {
         return formMeta;
     }
 
-    public Object getRealForm() {
+    public Object getRealForm() { // not null
         if (realForm == null) {
             instantiateRealForm(); // on demand here
         }
         return realForm;
+    }
+
+    public Map<String, Object> getTypeFailureMap() { // not null
+        return typeFailureMap != null ? Collections.unmodifiableMap(typeFailureMap) : Collections.emptyMap();
     }
 }

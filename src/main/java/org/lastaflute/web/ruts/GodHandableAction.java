@@ -105,7 +105,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                             Execute
     //                                                                             =======
     @Override
-    public NextJourney execute(OptionalThing<VirtualActionForm> form) {
+    public NextJourney execute(OptionalThing<VirtualForm> form) {
         final NextJourney journey = godHandyExecute(form);
         setupDisplayData(journey);
         showTransition(journey);
@@ -115,7 +115,7 @@ public class GodHandableAction implements VirtualAction {
     // -----------------------------------------------------
     //                                             God Handy
     //                                             ---------
-    protected NextJourney godHandyExecute(OptionalThing<VirtualActionForm> form) {
+    protected NextJourney godHandyExecute(OptionalThing<VirtualForm> form) {
         final ActionHook hook = prepareActionHook();
         try {
             final ActionResponse before = processHookBefore(hook);
@@ -139,7 +139,7 @@ public class GodHandableAction implements VirtualAction {
         return action instanceof ActionHook ? (ActionHook) action : null;
     }
 
-    protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
+    protected NextJourney transactionalExecute(OptionalThing<VirtualForm> form, ActionHook hook) {
         final ExecuteTransactionResult result = (ExecuteTransactionResult) stage.selectable(tx -> {
             final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
             assertExecuteMethodResponseDefined(response);
@@ -325,7 +325,7 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                    Actually Execute
     //                                                                    ================
-    protected ActionResponse actuallyExecute(OptionalThing<VirtualActionForm> optForm, ActionHook hook) {
+    protected ActionResponse actuallyExecute(OptionalThing<VirtualForm> optForm, ActionHook hook) {
         showAction(runtime);
         final Object[] requestArgs = toRequestArgs(optForm);
         final Object result = invokeExecuteMethod(execute.getExecuteMethod(), requestArgs); // #to_action
@@ -336,7 +336,7 @@ public class GodHandableAction implements VirtualAction {
         return response;
     }
 
-    protected Object[] toRequestArgs(OptionalThing<VirtualActionForm> optForm) {
+    protected Object[] toRequestArgs(OptionalThing<VirtualForm> optForm) {
         final List<Object> paramList = new ArrayList<Object>(4);
         execute.getUrlParamArgs().ifPresent(args -> {
             paramList.addAll(runtime.getRequestUrlParam().getUrlParamValueMap().values());

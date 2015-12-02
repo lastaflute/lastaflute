@@ -47,7 +47,7 @@ import org.lastaflute.web.exception.UrlParamArgsNotFoundException;
 import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
-import org.lastaflute.web.ruts.VirtualActionForm;
+import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer.ExecuteArgBox;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
@@ -673,7 +673,7 @@ public class ActionExecute implements Serializable {
     // ===================================================================================
     //                                                                         Action Form
     //                                                                         ===========
-    public OptionalThing<VirtualActionForm> createActionForm() {
+    public OptionalThing<VirtualForm> createActionForm() {
         return formMeta.map(meta -> meta.createActionForm());
     }
 

@@ -18,7 +18,6 @@ package org.lastaflute.web.ruts.config;
 import java.io.Serializable;
 
 import org.lastaflute.di.helper.beans.PropertyDesc;
-import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**
  * @author modified by jflute (originated in Seasar)
@@ -47,14 +46,6 @@ public class ActionFormProperty implements Serializable {
     //                                                                   =================
     public String getPropertyName() {
         return propertyDesc.getPropertyName();
-    }
-
-    /**
-     * @param bean The instance of the action form. (NotNull)
-     * @return The property value from the form. (NullAllowed)
-     */
-    public Object getPropertyValue(Object bean) {
-        return LaParamWrapperUtil.convert(propertyDesc.getValue(bean));
     }
 
     // ===================================================================================

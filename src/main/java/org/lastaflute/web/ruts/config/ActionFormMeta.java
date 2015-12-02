@@ -37,8 +37,8 @@ import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.exception.ActionFormCreateFailureException;
 import org.lastaflute.web.exception.LonelyValidatorAnnotationException;
-import org.lastaflute.web.ruts.VirtualActionForm;
-import org.lastaflute.web.ruts.VirtualActionForm.RealFormSupplier;
+import org.lastaflute.web.ruts.VirtualForm;
+import org.lastaflute.web.ruts.VirtualForm.RealFormSupplier;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.validation.ActionValidator;
 
@@ -259,12 +259,12 @@ public class ActionFormMeta {
     // ===================================================================================
     //                                                                        Virtual Form
     //                                                                        ============
-    public VirtualActionForm createActionForm() {
+    public VirtualForm createActionForm() {
         return newVirtualActionForm(getActionFormSupplier(), this);
     }
 
-    protected VirtualActionForm newVirtualActionForm(RealFormSupplier formSupplier, ActionFormMeta formMeta) {
-        return new VirtualActionForm(formSupplier, formMeta);
+    protected VirtualForm newVirtualActionForm(RealFormSupplier formSupplier, ActionFormMeta formMeta) {
+        return new VirtualForm(formSupplier, formMeta);
     }
 
     protected RealFormSupplier getActionFormSupplier() {
