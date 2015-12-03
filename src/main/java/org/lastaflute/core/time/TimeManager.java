@@ -97,19 +97,19 @@ public interface TimeManager {
      * Is the target date business day? <br>
      * The determination accuracy is depends on logic of implementation class. <br>
      * You can adjust it by FwAssistantDirector.
-     * @param targetDate The date for determination. (NotNull)
+     * @param targetDate The local date for determination. (NotNull)
      * @return The determination, true or false.
      */
-    boolean isBusinessDate(Date targetDate);
+    boolean isBusinessDate(LocalDate targetDate);
 
     /**
      * Get the next (added) date as business day. <br>
      * The determination logic uses isBusinessDate(Date).
-     * @param baseDate The base date for calculation. (NotNull)
+     * @param baseDate The base local date for calculation. (NotNull)
      * @param addedDay The count of added days.
      * @return The new-created instance of the next business date. (NotNull)
      */
-    Date getNextBusinessDate(Date baseDate, int addedDay);
+    Date getNextBusinessDate(LocalDate baseDate, int addedDay);
 
     /**
      * Get the time-zone for the business.

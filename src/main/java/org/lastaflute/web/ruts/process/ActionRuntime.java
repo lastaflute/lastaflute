@@ -25,7 +25,7 @@ import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
-import org.lastaflute.web.ruts.VirtualActionForm;
+import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.util.LaParamWrapperUtil;
@@ -48,7 +48,7 @@ public class ActionRuntime {
     // -----------------------------------------------------
     //                                         Runtime State
     //                                         -------------
-    protected OptionalThing<VirtualActionForm> form;
+    protected OptionalThing<VirtualForm> form;
     protected ActionResponse actionResponse;
     protected RuntimeException failureCause;
     protected ActionMessages validationErrors;
@@ -249,11 +249,11 @@ public class ActionRuntime {
      * Get the action form mapped from request parameter.
      * @return The optional action form. (NotNull, EmptyAllowed: when no form or before form creation)
      */
-    public OptionalThing<VirtualActionForm> getActionForm() {
+    public OptionalThing<VirtualForm> getActionForm() {
         return form != null ? form : OptionalThing.empty();
     }
 
-    public void setActionForm(OptionalThing<VirtualActionForm> form) {
+    public void setActionForm(OptionalThing<VirtualForm> form) {
         this.form = form;
     }
 

@@ -179,7 +179,8 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public OptionalThing<String> getParameter(String key) {
         assertArgumentNotNull("key", key);
-        return OptionalThing.ofNullable(getRequest().getParameter(key), () -> {
+        final String param = getRequest().getParameter(key);
+        return OptionalThing.ofNullable(param != null && !param.isEmpty() ? param : null, () -> {
             throw new IllegalStateException("Not found the request parameter for the key: " + key);
         });
     }
@@ -189,8 +190,8 @@ public class SimpleRequestManager implements RequestManager {
         final BufferedReader reader = prepareRequestBodyReader();
         final StringBuilder sb = new StringBuilder();
         try {
+            String line;
             while (true) {
-                String line;
                 line = reader.readLine();
                 if (line == null) {
                     break;
@@ -485,10 +486,10 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public Locale resolveUserLocale(ActionRuntime runtimeMeta) {
+    public Locale resolveUserLocale(ActionRuntime runtime) {
         Locale locale = findCachedLocale();
         if (locale == null) {
-            locale = findBusinessLocale(runtimeMeta);
+            locale = findBusinessLocale(runtime);
         }
         if (locale == null) {
             locale = findCookieLocale(); // before session
@@ -508,8 +509,8 @@ public class SimpleRequestManager implements RequestManager {
         return getAttribute(getReqeustUserLocaleKey(), Locale.class).orElse(null);
     }
 
-    protected Locale findBusinessLocale(ActionRuntime runtimeMeta) { // null allowed because of internal handling
-        return localeHandler.findBusinessLocale(runtimeMeta, this).orElse(null);
+    protected Locale findBusinessLocale(ActionRuntime runtime) { // null allowed because of internal handling
+        return localeHandler.findBusinessLocale(runtime, this).orElse(null);
     }
 
     protected Locale findCookieLocale() { // null allowed because of internal handling
@@ -598,13 +599,13 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public TimeZone resolveUserTimeZone(ActionRuntime runtimeMeta) {
+    public TimeZone resolveUserTimeZone(ActionRuntime runtime) {
         if (!timeZoneProvider.isUseTimeZoneHandling()) {
             return null;
         }
         TimeZone timeZone = findCachedTimeZone();
         if (timeZone == null) {
-            timeZone = findBusinessTimeZone(runtimeMeta);
+            timeZone = findBusinessTimeZone(runtime);
         }
         if (timeZone == null) {
             timeZone = findCookieTimeZone(); // before session
@@ -624,8 +625,8 @@ public class SimpleRequestManager implements RequestManager {
         return getAttribute(getReqeustUserTimeZoneKey(), TimeZone.class).orElse(null);
     }
 
-    protected TimeZone findBusinessTimeZone(ActionRuntime runtimeMeta) { // null allowed because of internal handling
-        return timeZoneProvider.findBusinessTimeZone(runtimeMeta, this).orElse(null);
+    protected TimeZone findBusinessTimeZone(ActionRuntime runtime) { // null allowed because of internal handling
+        return timeZoneProvider.findBusinessTimeZone(runtime, this).orElse(null);
     }
 
     protected TimeZone findCookieTimeZone() { // null allowed because of internal handling

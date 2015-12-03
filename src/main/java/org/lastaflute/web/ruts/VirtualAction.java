@@ -22,5 +22,5 @@ import org.dbflute.optional.OptionalThing;
  */
 public interface VirtualAction {
 
-    NextJourney execute(OptionalThing<VirtualActionForm> form);
+    NextJourney execute(OptionalThing<VirtualForm> form);
 }

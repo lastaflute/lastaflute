@@ -31,4 +31,6 @@ public interface TypicalEmbeddedKeySupplier {
     String getErrorsAppDbAlreadyExistsKey();
 
     String getErrorsAppDoubleSubmitRequestKey();
+
+    String getShowErrorsDefaultPath();
 }

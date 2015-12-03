@@ -26,6 +26,7 @@ public interface TypicalKey {
     String ERRORS_APP_DB_ALREADY_UPDATED = "errors.app.db.already.updated";
     String ERRORS_APP_DB_ALREADY_EXISTS = "errors.app.db.already.exists";
     String ERRORS_APP_DOUBLE_SUBMIT_REQUEST = "errors.app.double.submit.request";
+    String SHOW_ERRORS_DEFAULT_PATH = "/error/show_errors.jsp";
 
     public static class TypicalSimpleEmbeddedKeySupplier implements TypicalEmbeddedKeySupplier {
 
@@ -51,6 +52,10 @@ public interface TypicalKey {
 
         public String getErrorsAppDoubleSubmitRequestKey() {
             return ERRORS_APP_DOUBLE_SUBMIT_REQUEST;
+        }
+
+        public String getShowErrorsDefaultPath() {
+            return SHOW_ERRORS_DEFAULT_PATH;
         }
     }
 }

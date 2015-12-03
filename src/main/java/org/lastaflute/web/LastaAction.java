@@ -291,10 +291,10 @@ public abstract class LastaAction {
     /**
      * Redirect to the action with the more URL parts and the the parameters on GET.
      * <pre>
-     * <span style="color: #3F7E5E">// e.g. /member/edit/3/ *same as {@link #redirectById()}</span>
+     * <span style="color: #3F7E5E">// e.g. /member/edit/3/ *same as redirectById()</span>
      * return redirectWith(MemberEditAction.class, <span style="color: #FD4747">moreUrl</span>(memberId));
      * 
-     * <span style="color: #3F7E5E">// e.g. /member/edit/?memberId=3 *same as {@link #redirectByParam()}</span>
+     * <span style="color: #3F7E5E">// e.g. /member/edit/?memberId=3 *same as redirectByParam()</span>
      * return redirectWith(MemberEditAction.class, <span style="color: #FD4747">params</span>("memberId", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/</span>
@@ -420,10 +420,10 @@ public abstract class LastaAction {
     /**
      * Forward to the action with the more URL parts and the the parameters on GET.
      * <pre>
-     * <span style="color: #3F7E5E">// e.g. /member/edit/3/ *same as {@link #forwardById()}</span>
+     * <span style="color: #3F7E5E">// e.g. /member/edit/3/ *same as forwardById()</span>
      * return forwardWith(MemberEditAction.class, <span style="color: #FD4747">moreUrl</span>(memberId));
      *
-     * <span style="color: #3F7E5E">// e.g. /member/edit/?memberId=3 *same as {@link #forwardByParam()}</span>
+     * <span style="color: #3F7E5E">// e.g. /member/edit/?memberId=3 *same as forwardByParam()</span>
      * return forwardWith(MemberEditAction.class, <span style="color: #FD4747">params</span>("memberId", memberId));
      *
      * <span style="color: #3F7E5E">// e.g. /member/edit/3/</span>
@@ -467,7 +467,7 @@ public abstract class LastaAction {
     //                                          ------------
     /**
      * Set up more URL parts as URL chain. <br>
-     * The name and specification of this method is synchronized with {@link UrlChain#moreUrl()}.
+     * The name and specification of this method is synchronized with UrlChain#moreUrl().
      * @param urlParts The varying array of URL parts. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */
@@ -478,7 +478,7 @@ public abstract class LastaAction {
 
     /**
      * Set up parameters on GET as URL chain. <br>
-     * The name and specification of this method is synchronized with {@link UrlChain#params()}.
+     * The name and specification of this method is synchronized with UrlChain#params().
      * @param paramsOnGet The varying array of parameters on GET. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */
@@ -489,7 +489,7 @@ public abstract class LastaAction {
 
     /**
      * Set up hash on URL as URL chain. <br>
-     * The name and specification of this method is synchronized with {@link UrlChain#hash()}.
+     * The name and specification of this method is synchronized with UrlChain#hash().
      * @param hashOnUrl The value of hash on URL. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */
@@ -541,8 +541,15 @@ public abstract class LastaAction {
     /**
      * Execute asynchronous process by other thread. <br>
      * <pre>
-     * async(() <span style="font-size: 120%">-</span>&gt;</span> {
+     * <span style="color: #CC4747">async</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
      *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
+     * });
+     * 
+     * <span style="color: #3F7E5E">// begin asynchronous process after action transaction finished</span>
+     * return asHtml(...).<span style="color: #994747">afterTxCommit</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *     async(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *         ...
+     *     });
      * });
      * </pre>
      * You can inherit...
@@ -561,10 +568,33 @@ public abstract class LastaAction {
     }
 
     /**
+     * Perform the show in transaction (new or inherited transaction), roll-backed if exception.
+     * <pre>
+     * <span style="color: #3F7E5E">// if no return</span> 
+     * <span style="color: #CC4747">required</span>(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...); <span style="color: #3F7E5E">// already in transaction</span>
+     *     insert(...); <span style="color: #3F7E5E">// also here</span>
+     * });
+     * 
+     * <span style="color: #3F7E5E">// if returns anything to caller</span> 
+     * <span style="color: #994747">Member member</span> = (Member)required(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...);
+     *     Member member = select(...);
+     *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
+     * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
+     * </pre>
+     * @param txLambda The callback for your transaction show on the stage. (NotNull)
+     * @return The result of the transaction show. (NotNull, EmptyAllowed: when no result)
+     */
+    protected <RESULT> OptionalThing<RESULT> required(TransactionShow<RESULT> txLambda) {
+        return transactionStage.required(txLambda);
+    }
+
+    /**
      * Perform the show in transaction (always new transaction), roll-backed if exception.
      * <pre>
      * <span style="color: #3F7E5E">// if no return</span> 
-     * requiresNew(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     * <span style="color: #CC4747">requiresNew</span>(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
      *     update(...); <span style="color: #3F7E5E">// already in transaction</span>
      *     insert(...); <span style="color: #3F7E5E">// also here</span>
      * });

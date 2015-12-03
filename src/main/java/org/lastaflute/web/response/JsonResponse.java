@@ -156,6 +156,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     }
 
     protected JsonResponse<BEAN> ofJsonDirectly(String json) { // internal use
+        assertArgumentNotNull("json", json);
         returnAsJsonDirectly = true; // for quick determination
         directJson = json;
         return this;

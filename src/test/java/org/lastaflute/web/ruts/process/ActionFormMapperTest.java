@@ -4,6 +4,8 @@ import java.util.Map;
 
 import org.lastaflute.unit.UnitLastaFluteTestCase;
 import org.lastaflute.web.path.FormMappingOption;
+import org.lastaflute.web.ruts.VirtualForm;
+import org.lastaflute.web.ruts.config.ActionFormMeta;
 
 /**
  * @author jflute
@@ -16,11 +18,12 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
     public void test_setProperty_map_genericArray_array() throws Exception {
         // ## Arrange ##
         ActionFormMapper mapper = createMapper();
+        VirtualForm virtualForm = new VirtualForm(() -> "", (ActionFormMeta) null); // dummy
         SeaForm seaForm = new SeaForm();
         String[] value = new String[] { "a", "b" };
 
         // ## Act ##
-        mapper.setProperty(seaForm, "landMap.oneman", value, null, new FormMappingOption(), null, null);
+        mapper.setProperty(virtualForm, seaForm, "landMap.oneman", value, null, new FormMappingOption(), null, null);
 
         // ## Assert ##
         Object actual = seaForm.landMap.get("oneman");

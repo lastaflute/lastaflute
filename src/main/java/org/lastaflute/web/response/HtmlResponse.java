@@ -56,6 +56,8 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     protected Integer httpStatus;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
+    protected boolean returnAsHtmlDirectly;
+    protected String directHtml;
 
     // -----------------------------------------------------
     //                                        Rendering Data
@@ -266,6 +268,20 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     }
 
     // -----------------------------------------------------
+    //                                         Json Directly
+    //                                         -------------
+    public static HtmlResponse asHtmlDirectly(String html) { // user interface
+        return new HtmlResponse(DUMMY).ofHtmlDirectly(html);
+    }
+
+    protected HtmlResponse ofHtmlDirectly(String html) { // internal use
+        assertArgumentNotNull("html", html);
+        returnAsHtmlDirectly = true; // for quick determination
+        directHtml = html;
+        return this;
+    }
+
+    // -----------------------------------------------------
     //                                     Undefined Control
     //                                     -----------------
     public static HtmlResponse undefined() { // user interface
@@ -350,7 +366,8 @@ public class HtmlResponse implements ActionResponse, Redirectable {
         final String classTitle = DfTypeUtil.toClassTitle(this);
         final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
         final String undefinedExp = undefined ? ", undefined" : "";
-        return classTitle + ":{" + nextRouting + emptyExp + undefinedExp + "}";
+        final String directExp = returnAsHtmlDirectly ? ", directly" : "";
+        return classTitle + ":{" + nextRouting + emptyExp + directExp + undefinedExp + "}";
     }
 
     // ===================================================================================
@@ -375,11 +392,31 @@ public class HtmlResponse implements ActionResponse, Redirectable {
         return getNextRouting().isAsIs();
     }
 
+    // -----------------------------------------------------
+    //                                            Empty Body
+    //                                            ----------
     @Override
     public boolean isReturnAsEmptyBody() {
         return returnAsEmptyBody;
     }
 
+    // -----------------------------------------------------
+    //                                         Html Directly
+    //                                         -------------
+    public boolean isReturnAsHtmlDirectly() { // quick determination
+        return returnAsHtmlDirectly;
+    }
+
+    public OptionalThing<String> getDirectHtml() {
+        return OptionalThing.ofNullable(directHtml, () -> {
+            String msg = "Not found the direct html: " + HtmlResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                     Undefined Control
+    //                                     -----------------
     @Override
     public boolean isUndefined() {
         return undefined;

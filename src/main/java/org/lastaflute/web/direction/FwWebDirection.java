@@ -313,8 +313,8 @@ public class FwWebDirection {
     // -----------------------------------------------------
     //                                         Html Renderer
     //                                         -------------
-    public HtmlRenderingProvider assistHtmlRenderingProvider() {
-        return htmlRenderingProvider; // not required, it's optional assist
+    public HtmlRenderingProvider assistHtmlRenderingProvider() { // not null, default is prepared
+        return htmlRenderingProvider != null ? htmlRenderingProvider : HtmlRenderingProvider.DEFAULT_RENDERING_PROVIDER;
     }
 
     // ===================================================================================

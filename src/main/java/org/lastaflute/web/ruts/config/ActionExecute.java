@@ -47,7 +47,7 @@ import org.lastaflute.web.exception.UrlParamArgsNotFoundException;
 import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
-import org.lastaflute.web.ruts.VirtualActionForm;
+import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer.ExecuteArgBox;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
@@ -230,16 +230,16 @@ public class ActionExecute implements Serializable {
         br.addElement("You can abbreviate the urlPattern attribute");
         br.addElement("because it is very simple pattern.");
         br.addElement("  (x):");
-        br.addElement("    @Execute(urlPattern = \"{}\") // *NG");
+        br.addElement("    @Execute(urlPattern = \"{}\") // *Bad");
         br.addElement("    public void index(int pageNumber) {");
         br.addElement("  (o):");
-        br.addElement("    @Execute // OK: abbreviate it");
+        br.addElement("    @Execute // Good: abbreviate it");
         br.addElement("    public void index(int pageNumber) {");
         br.addElement("  (x):");
-        br.addElement("    @Execute(urlPattern = \"{}/{}\") // *NG");
+        br.addElement("    @Execute(urlPattern = \"{}/{}\") // *Bad");
         br.addElement("    public void index(int pageNumber, String keyword) {");
         br.addElement("  (o):");
-        br.addElement("    @Execute // OK: abbreviate it");
+        br.addElement("    @Execute // Good: abbreviate it");
         br.addElement("    public void index(int pageNumber, String keyword) {");
         br.addItem("Execute Method");
         br.addElement(toSimpleMethodExp());
@@ -324,10 +324,10 @@ public class ActionExecute implements Serializable {
         br.addElement("Make sure your urlPattern or arguments.");
         br.addElement("  (x):");
         br.addElement("    @Execute(\"{}/sea/{}\")");
-        br.addElement("    public HtmlResponse index(int land) { // *NG");
+        br.addElement("    public HtmlResponse index(int land) { // *Bad");
         br.addElement("  (o):");
         br.addElement("    @Execute(\"{}/sea/{}\")");
-        br.addElement("    public HtmlResponse index(int land, String ikspiary) { // OK");
+        br.addElement("    public HtmlResponse index(int land, String ikspiary) { // Good");
         br.addItem("Execute Method");
         br.addElement(toSimpleMethodExp());
         br.addItem("urlPattern Variable List");
@@ -367,13 +367,13 @@ public class ActionExecute implements Serializable {
         br.addItem("Advice");
         br.addElement("Execute method should be return action response.");
         br.addElement("  (x):");
-        br.addElement("    public String index(SeaForm form) { // *NG");
+        br.addElement("    public String index(SeaForm form) { // *Bad");
         br.addElement("  (o):");
-        br.addElement("    public HtmlResponse index(SeaForm form) { // OK");
+        br.addElement("    public HtmlResponse index(SeaForm form) { // Good");
         br.addElement("  (o):");
-        br.addElement("    public JsonResponse index(SeaForm form) { // OK");
+        br.addElement("    public JsonResponse index(SeaForm form) { // Good");
         br.addElement("  (o):");
-        br.addElement("    public StreamResponse index(SeaForm form) { // OK");
+        br.addElement("    public StreamResponse index(SeaForm form) { // Good");
         br.addItem("Execute Method");
         br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
         final String msg = br.buildExceptionMessage();
@@ -404,13 +404,13 @@ public class ActionExecute implements Serializable {
         br.addElement("    public String index(SeaForm form) {");
         br.addElement("    ...");
         br.addElement("    public class SeaForm {");
-        br.addElement("        public Integer index; // *NG");
+        br.addElement("        public Integer index; // *Bad");
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    public String index(SeaForm form) {");
         br.addElement("    ...");
         br.addElement("    public class SeaForm {");
-        br.addElement("        public Integer dataIndex; // OK");
+        br.addElement("        public Integer dataIndex; // Good");
         br.addElement("    }");
         br.addItem("Execute Method");
         br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
@@ -496,15 +496,15 @@ public class ActionExecute implements Serializable {
         br.addElement("For example:");
         br.addElement("  (x):");
         br.addElement("    @NotNull");
-        br.addElement("    public String memberName; // *NG: use @NotEmpty or @NotBlank");
+        br.addElement("    public String memberName; // *Bad: use @NotEmpty or @NotBlank");
         br.addElement("    @NotNull");
-        br.addElement("    public List<SeaBean> seaList; // *NG: use @NotEmpty");
+        br.addElement("    public List<SeaBean> seaList; // *Bad: use @NotEmpty");
         br.addElement("    @NotEmpty");
-        br.addElement("    public Integer memberAge; // *NG: use @NotNull");
+        br.addElement("    public Integer memberAge; // *Bad: use @NotNull");
         br.addElement("    @NotBlank");
-        br.addElement("    public LocalDate birthdate; // *NG: use @NotNull");
+        br.addElement("    public LocalDate birthdate; // *Bad: use @NotNull");
         br.addElement("    @NotEmpty");
-        br.addElement("    public CDef.MemberStatus statusList; // *NG: use @NotNull");
+        br.addElement("    public CDef.MemberStatus statusList; // *Bad: use @NotNull");
         br.addElement("  (o):");
         br.addElement("    @NotBlank");
         br.addElement("    public String memberName;");
@@ -560,15 +560,15 @@ public class ActionExecute implements Serializable {
         br.addItem("Advice");
         br.addElement("Arguments after optional argument should be optional parameter.");
         br.addElement("  (x):");
-        br.addElement("    public String index(OptionalThing<Integer> pageNumber, String keyword) { // *NG");
+        br.addElement("    public String index(OptionalThing<Integer> pageNumber, String keyword) { // *Bad");
         br.addElement("  (o):");
-        br.addElement("    public String index(OptionalThing<Integer> pageNumber, OptionalThing<String> keyword) { // OK");
+        br.addElement("    public String index(OptionalThing<Integer> pageNumber, OptionalThing<String> keyword) { // Good");
         br.addElement("  (o):");
-        br.addElement("    public String index(Integer pageNumber, OptionalThing<String> keyword) { // OK");
+        br.addElement("    public String index(Integer pageNumber, OptionalThing<String> keyword) { // Good");
         br.addElement("  (o):");
-        br.addElement("    public String index(Integer pageNumber, String keyword) { // OK");
+        br.addElement("    public String index(Integer pageNumber, String keyword) { // Good");
         br.addElement("  (o):");
-        br.addElement("    public String index(OptionalThing<Integer> pageNumber, SeaForm form) { // OK");
+        br.addElement("    public String index(OptionalThing<Integer> pageNumber, SeaForm form) { // Good");
         br.addItem("Execute Method");
         br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
         br.addItem("Not Continued Parameter");
@@ -596,19 +596,45 @@ public class ActionExecute implements Serializable {
     }
 
     protected boolean handleOptionalParameterMapping(String paramPath) {
-        if (!indexMethod && hasOptionalUrlParameter()) { // e.g. sea() and any parameters are optional
-            // required parameter may not be specified but checked later as 404
-            final String firstElement = Srl.substringFirstFront(paramPath, "/"); // e.g. sea from sea or sea/3/
-            return firstElement.equals(getExecuteMethod().getName());
+        if (hasOptionalUrlParameter()) { // e.g. any parameters are optional type
+            if (indexMethod) { // e.g. index(String first, OptionalThing<String> second) with 'sea' or 'sea/land'
+                final int paramCount = Srl.count(Srl.trim(paramPath, "/"), "/") + 1; // e.g. sea/land => 2
+                return matchesParameterCount(paramCount);
+            } else { // e.g. sea(String first, OptionalThing<String> second) with 'sea/dockside' or 'sea/dockside/hangar'
+                // required parameter may not be specified but checked later as 404
+                final String firstElement = Srl.substringFirstFront(paramPath, "/"); // e.g. sea (from sea/dockside)
+                if (firstElement.equals(getExecuteMethod().getName())) { // e.g. sea(first) with sea/dockside
+                    final int paramCount = Srl.count(Srl.trim(paramPath, "/"), "/"); // e.g. sea/dockside => 1
+                    return matchesParameterCount(paramCount);
+                }
+                return false;
+            }
         } else {
             return false;
         }
     }
 
     protected boolean hasOptionalUrlParameter() {
+        // already checked here that optional parameters are defined at rear arguments
         return urlParamArgs.map(args -> {
             return args.getUrlParamTypeList().stream().anyMatch(tp -> isOptionalParameterType(tp));
         }).orElse(false);
+    }
+
+    protected boolean matchesParameterCount(int paramCount) {
+        return paramCount >= countRequiredParameter() && paramCount <= countAllParameter();
+    }
+
+    protected int countAllParameter() {
+        return urlParamArgs.map(args -> args.getUrlParamTypeList().size()).orElse(0);
+    }
+
+    protected int countRequiredParameter() {
+        return urlParamArgs.map(args -> {
+            return args.getUrlParamTypeList().stream().filter(tp -> {
+                return !isOptionalParameterType(tp);
+            }).count();
+        }).orElse(0L).intValue();
     }
 
     // -----------------------------------------------------
@@ -647,7 +673,7 @@ public class ActionExecute implements Serializable {
     // ===================================================================================
     //                                                                         Action Form
     //                                                                         ===========
-    public OptionalThing<VirtualActionForm> createActionForm() {
+    public OptionalThing<VirtualForm> createActionForm() {
         return formMeta.map(meta -> meta.createActionForm());
     }
 

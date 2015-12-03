@@ -105,7 +105,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                             Execute
     //                                                                             =======
     @Override
-    public NextJourney execute(OptionalThing<VirtualActionForm> form) {
+    public NextJourney execute(OptionalThing<VirtualForm> form) {
         final NextJourney journey = godHandyExecute(form);
         setupDisplayData(journey);
         showTransition(journey);
@@ -115,7 +115,7 @@ public class GodHandableAction implements VirtualAction {
     // -----------------------------------------------------
     //                                             God Handy
     //                                             ---------
-    protected NextJourney godHandyExecute(OptionalThing<VirtualActionForm> form) {
+    protected NextJourney godHandyExecute(OptionalThing<VirtualForm> form) {
         final ActionHook hook = prepareActionHook();
         try {
             final ActionResponse before = processHookBefore(hook);
@@ -139,7 +139,7 @@ public class GodHandableAction implements VirtualAction {
         return action instanceof ActionHook ? (ActionHook) action : null;
     }
 
-    protected NextJourney transactionalExecute(OptionalThing<VirtualActionForm> form, ActionHook hook) {
+    protected NextJourney transactionalExecute(OptionalThing<VirtualForm> form, ActionHook hook) {
         final ExecuteTransactionResult result = (ExecuteTransactionResult) stage.selectable(tx -> {
             final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
             assertExecuteMethodResponseDefined(response);
@@ -325,7 +325,7 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                    Actually Execute
     //                                                                    ================
-    protected ActionResponse actuallyExecute(OptionalThing<VirtualActionForm> optForm, ActionHook hook) {
+    protected ActionResponse actuallyExecute(OptionalThing<VirtualForm> optForm, ActionHook hook) {
         showAction(runtime);
         final Object[] requestArgs = toRequestArgs(optForm);
         final Object result = invokeExecuteMethod(execute.getExecuteMethod(), requestArgs); // #to_action
@@ -336,7 +336,7 @@ public class GodHandableAction implements VirtualAction {
         return response;
     }
 
-    protected Object[] toRequestArgs(OptionalThing<VirtualActionForm> optForm) {
+    protected Object[] toRequestArgs(OptionalThing<VirtualForm> optForm) {
         final List<Object> paramList = new ArrayList<Object>(4);
         execute.getUrlParamArgs().ifPresent(args -> {
             paramList.addAll(runtime.getRequestUrlParam().getUrlParamValueMap().values());
@@ -514,25 +514,25 @@ public class GodHandableAction implements VirtualAction {
         if (apiExecute) {
             br.addElement("  (x):");
             br.addElement("    @Execute");
-            br.addElement("    public JsonResponse index(SeaForm form) { // *NG");
+            br.addElement("    public JsonResponse index(SeaForm form) { // *Bad");
             br.addElement("        return asJson(...);");
             br.addElement("    }");
             br.addElement("  (o):");
             br.addElement("    @Execute");
             br.addElement("    public JsonResponse index(SeaForm form) {");
-            br.addElement("        " + expectedMethod + "(form, message -> {}); // OK");
+            br.addElement("        " + expectedMethod + "(form, message -> {}); // Good");
             br.addElement("        return asJson(...);");
             br.addElement("    }");
         } else {
             br.addElement("  (x):");
             br.addElement("    @Execute");
-            br.addElement("    public HtmlResponse index(SeaForm form) { // *NG");
+            br.addElement("    public HtmlResponse index(SeaForm form) { // *Bad");
             br.addElement("        return asHtml(...);");
             br.addElement("    }");
             br.addElement("  (o):");
             br.addElement("    @Execute");
             br.addElement("    public HtmlResponse index(SeaForm form) {");
-            br.addElement("        " + expectedMethod + "(form, message -> {}, () -> { // OK");
+            br.addElement("        " + expectedMethod + "(form, message -> {}, () -> { // Good");
             br.addElement("            return asHtml(path_LandJsp);");
             br.addElement("        });");
             br.addElement("        return asHtml(...);");
@@ -652,14 +652,14 @@ public class GodHandableAction implements VirtualAction {
         br.addElement("For example, if callbackBefore():");
         br.addElement("  (x):");
         br.addElement("    public ActionResponse callbackBefore(...) {");
-        br.addElement("        return null; // *NG");
+        br.addElement("        return null; // *Bad");
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    public ActionResponse callbackBefore(...) {");
-        br.addElement("        return ActionResponse.empty(); // OK");
+        br.addElement("        return ActionResponse.empty(); // Good");
         br.addElement("    }");
         br.addElement("    public ActionResponse callbackBefore(...) {");
-        br.addElement("        return asHtml(...); // OK");
+        br.addElement("        return asHtml(...); // Good");
         br.addElement("    }");
         br.addItem("Action Execute");
         br.addElement(execute);
@@ -683,11 +683,11 @@ public class GodHandableAction implements VirtualAction {
         br.addElement("For example:");
         br.addElement("  (x):");
         br.addElement("    public HtmlResponse index(...) {");
-        br.addElement("        return null; // *NG");
+        br.addElement("        return null; // *Bad");
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    public HtmlResponse index(...) {");
-        br.addElement("        return asHtml(...); // OK");
+        br.addElement("        return asHtml(...); // Good");
         br.addElement("    }");
         br.addItem("Action Execute");
         br.addElement(execute);

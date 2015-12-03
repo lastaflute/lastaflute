@@ -53,10 +53,9 @@ public class JspHtmlRenderer implements HtmlRenderer {
             if (properties.isEmpty()) {
                 return;
             }
-            final Object form = virtualForm.getRealForm();
             for (ActionFormProperty property : properties) {
                 if (isExportableProperty(property.getPropertyDesc())) {
-                    final Object propertyValue = property.getPropertyValue(form);
+                    final Object propertyValue = virtualForm.getPropertyValue(property);
                     if (propertyValue != null) {
                         requestManager.setAttribute(property.getPropertyName(), propertyValue);
                     }

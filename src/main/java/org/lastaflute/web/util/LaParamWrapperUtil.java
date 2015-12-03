@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.lastaflute.web.ruts.VirtualActionForm;
+import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.wrapper.ArrayWrapper;
 import org.lastaflute.web.ruts.wrapper.BeanWrapper;
 import org.lastaflute.web.ruts.wrapper.ListWrapper;
@@ -87,7 +87,7 @@ public class LaParamWrapperUtil {
         if (clazz.isArray()) {
             return (WRAPPER) new ArrayWrapper(value);
         }
-        if (VirtualActionForm.class.isAssignableFrom(clazz)) {
+        if (VirtualForm.class.isAssignableFrom(clazz)) {
             return (WRAPPER) value;
         }
         if (List.class.isAssignableFrom(clazz)) {

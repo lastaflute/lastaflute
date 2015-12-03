@@ -114,8 +114,8 @@ public class ActionPathResolver {
     protected boolean doHandleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
         final String[] names = LdiStringUtil.split(requestPath, "/"); // e.g. [sea, land] if /sea/land/
         final LaContainer root = container.getRoot(); // because actions are in root
+        final String rootAction = "rootAction";
         if (names.length == 0) { // root action, / => rootAction
-            final String rootAction = "rootAction";
             if (hasActionDef(root, rootAction)) {
                 if (actuallyHandleActionPath(requestPath, handler, rootAction, null)) {
                     return true;
@@ -197,6 +197,14 @@ public class ActionPathResolver {
             prefixSb.append(index == 0 ? currentName : initCap(currentName));
             previousList = previousList != null ? previousList : new ArrayList<String>(4);
             previousList.add(currentName);
+        }
+        if (names.length > 0) { // e.g. /sea/land but not found except root action
+            // only root action's named methods are low priority (to avoid searching cost)
+            if (hasActionDef(root, rootAction)) {
+                if (actuallyHandleActionPath(requestPath, handler, rootAction, buildParamPath(names, 0))) {
+                    return true;
+                }
+            }
         }
         return false;
     }

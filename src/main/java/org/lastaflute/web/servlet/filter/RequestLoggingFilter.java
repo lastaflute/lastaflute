@@ -490,9 +490,9 @@ public class RequestLoggingFilter implements Filter {
         }
     }
 
-    protected String filterAttributeDisp(final Object attr) {
+    protected String filterAttributeDisp(Object attr) {
         if (attr == null) {
-            return "null";
+            return null;
         }
         final String stringExp;
         if (attr instanceof Throwable) { // exception will be displayed in another way
@@ -502,13 +502,24 @@ public class RequestLoggingFilter implements Filter {
         }
         // might contain line separator in the expression
         // and large display is noisy for debug so one liner
-        return convertToOneLinerDisp(stringExp);
+        return convertToOneLinerDisp(convertToCutDisp(stringExp));
     }
 
-    protected String convertToOneLinerDisp(final String msg) {
+    protected String convertToCutDisp(String msg) {
+        if (msg == null) {
+            return null;
+        }
+        final int limit = 500;
+        return msg.length() > limit ? (msg.substring(0, limit) + "...") : msg;
+    }
+
+    protected String convertToOneLinerDisp(String msg) {
+        if (msg == null) {
+            return null;
+        }
         final String filtered;
         final String ln = "\n";
-        if (msg != null && msg.contains(ln)) {
+        if (msg.contains(ln)) {
             filtered = msg.substring(0, msg.indexOf(ln)) + "...";
         } else {
             filtered = msg;

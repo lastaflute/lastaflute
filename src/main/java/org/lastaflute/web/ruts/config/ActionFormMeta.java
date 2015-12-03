@@ -37,8 +37,8 @@ import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.exception.ActionFormCreateFailureException;
 import org.lastaflute.web.exception.LonelyValidatorAnnotationException;
-import org.lastaflute.web.ruts.VirtualActionForm;
-import org.lastaflute.web.ruts.VirtualActionForm.RealFormSupplier;
+import org.lastaflute.web.ruts.VirtualForm;
+import org.lastaflute.web.ruts.VirtualForm.RealFormSupplier;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.validation.ActionValidator;
 
@@ -176,7 +176,7 @@ public class ActionFormMeta {
         br.addElement("For example:");
         br.addElement("  (x):");
         br.addElement("    public class SeaForm {");
-        br.addElement("        public LandBean land; // *NG: no annotation");
+        br.addElement("        public LandBean land; // *Bad: no annotation");
         br.addElement("");
         br.addElement("        public static class LandBean {");
         br.addElement("            @Required");
@@ -185,7 +185,7 @@ public class ActionFormMeta {
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    public class SeaForm {");
-        br.addElement("        @Valid                // OK: javax.validation");
+        br.addElement("        @Valid                // Good: javax.validation");
         br.addElement("        public LandBean land;");
         br.addElement("");
         br.addElement("        public static class LandBean {");
@@ -259,12 +259,12 @@ public class ActionFormMeta {
     // ===================================================================================
     //                                                                        Virtual Form
     //                                                                        ============
-    public VirtualActionForm createActionForm() {
+    public VirtualForm createActionForm() {
         return newVirtualActionForm(getActionFormSupplier(), this);
     }
 
-    protected VirtualActionForm newVirtualActionForm(RealFormSupplier formSupplier, ActionFormMeta formMeta) {
-        return new VirtualActionForm(formSupplier, formMeta);
+    protected VirtualForm newVirtualActionForm(RealFormSupplier formSupplier, ActionFormMeta formMeta) {
+        return new VirtualForm(formSupplier, formMeta);
     }
 
     protected RealFormSupplier getActionFormSupplier() {

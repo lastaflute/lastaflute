@@ -242,7 +242,6 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
      * Handle login success for the found login user.
      * @param userEntity The found entity of the login user. (NotNull)
      * @param option The option of login specified by caller. (NotNull)
-     * @param silently Is the login executed silently? (no saving history)
      */
     protected void handleLoginSuccess(USER_ENTITY userEntity, LoginSpecifiedOption option) {
         assertUserEntityRequired(userEntity);
@@ -630,7 +629,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         logger.debug("...Checking login status for login required");
         if (tryAlreadyLoginOrRememberMe(resource)) {
             checkPermission(resource); // throws if denied
-            return; // OK
+            return; // Good
         }
         if (needsSavingRequestedLoginRedirect(resource)) {
             saveRequestedLoginRedirectInfo();
@@ -775,7 +774,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             logger.debug("...Checking login status for non login required");
             if (tryAlreadyLoginOrRememberMe(resource)) {
                 checkPermission(resource); // throws if denied
-                return; // OK
+                return; // Good
             }
         }
         if (isLoginRedirectBeanKeptAction(resource)) {

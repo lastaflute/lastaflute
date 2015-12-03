@@ -59,10 +59,10 @@ public class SimpleTimeManager implements TimeManager {
     /** Does it ignore transaction time when the time manager returns current date? (not used if development) */
     protected boolean currentIgnoreTransaction;
 
-    /** if {@link adjustAbsoluteMode} is true, absolute milliseconds, else relative milliseconds. (not used if development) */
+    /** if adjustAbsoluteMode is true, absolute milliseconds, else relative milliseconds. (not used if development) */
     protected long adjustTimeMillis;
 
-    /** Is it absolute time mode when using {@link adjustTimeMillis}? (not used if development) */
+    /** Is it absolute time mode when using adjustTimeMillis? (not used if development) */
     protected boolean adjustAbsoluteMode;
 
     /** The provider of current time as real time. (NullAllowed: option, so normally null) */
@@ -196,18 +196,14 @@ public class SimpleTimeManager implements TimeManager {
     // ===================================================================================
     //                                                                       Business Date
     //                                                                       =============
-    /**
-     * {@inheritDoc}
-     */
-    public boolean isBusinessDate(Date targetDate) {
+    /** {@inheritDoc} */
+    public boolean isBusinessDate(LocalDate targetDate) {
         assertBusinessTimeHandler();
         return businessTimeHandler.isBusinessDate(targetDate);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public Date getNextBusinessDate(Date baseDate, int addedDay) {
+    /** {@inheritDoc} */
+    public Date getNextBusinessDate(LocalDate baseDate, int addedDay) {
         assertBusinessTimeHandler();
         return businessTimeHandler.getNextBusinessDate(baseDate, addedDay);
     }
@@ -215,9 +211,7 @@ public class SimpleTimeManager implements TimeManager {
     // ===================================================================================
     //                                                                   Business TimeZone
     //                                                                   =================
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public TimeZone getBusinessTimeZone() {
         return businessTimeHandler.getBusinessTimeZone();
     }
