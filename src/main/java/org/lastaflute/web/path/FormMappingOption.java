@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.LastaWebKey;
 
@@ -32,17 +33,35 @@ public class FormMappingOption {
     //                                                                           Attribute
     //                                                                           =========
     protected boolean keepEmptyStringParameter;
+    protected OptionalThing<FormSimpleTextParameterFilter> simpleTextParameterFilter = OptionalThing.empty();
     protected boolean undefinedParameterError;
-    protected Set<String> indefinableParameterSet;
+    protected Set<String> indefinableParameterSet; // null allowed
 
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
+    // -----------------------------------------------------
+    //                                          Empty String
+    //                                          ------------
     public FormMappingOption asKeepEmptyStringParameter() {
         keepEmptyStringParameter = true;
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                           Simple Text
+    //                                           -----------
+    public FormMappingOption filterSimpleTextParameter(FormSimpleTextParameterFilter filter) {
+        if (filter == null) {
+            throw new IllegalArgumentException("The argument 'filter' should not be null.");
+        }
+        this.simpleTextParameterFilter = OptionalThing.of(filter);
+        return this;
+    }
+
+    // -----------------------------------------------------
+    //                                   Undefined Parameter
+    //                                   -------------------
     public FormMappingOption asUndefinedParameterError() {
         undefinedParameterError = true;
         return this;
@@ -69,21 +88,35 @@ public class FormMappingOption {
     @Override
     public String toString() {
         final String title = DfTypeUtil.toClassTitle(this);
-        return title + ":{" + keepEmptyStringParameter + ", " + undefinedParameterError + ", " + indefinableParameterSet + "}";
+        return title + ":{" + keepEmptyStringParameter + ", " + simpleTextParameterFilter + ", " + undefinedParameterError + ", "
+                + indefinableParameterSet + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                          Empty String
+    //                                          ------------
     public boolean isKeepEmptyStringParameter() {
         return keepEmptyStringParameter;
     }
 
+    // -----------------------------------------------------
+    //                                           Simple Text
+    //                                           -----------
+    public OptionalThing<FormSimpleTextParameterFilter> getSimpleTextParameterFilter() { // not null
+        return simpleTextParameterFilter;
+    }
+
+    // -----------------------------------------------------
+    //                                   Undefined Parameter
+    //                                   -------------------
     public boolean isUndefinedParameterError() {
         return undefinedParameterError;
     }
 
-    public Set<String> getIndefinableParameterSet() {
+    public Set<String> getIndefinableParameterSet() { // not null
         return indefinableParameterSet != null ? indefinableParameterSet : Collections.emptySet();
     }
 }
