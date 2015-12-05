@@ -47,7 +47,7 @@ public interface LaActionDocs {
      * <span style="color: #70226C">public</span> JsonResponse list(<span style="color: #994747">Integer pageNumber, SinginBody body</span>) { <span style="color: #3F7E5E">// JSON Body</span>
      * 
      * <span style="font-size: 130%; color: #553000">[Action Response]</span>
-     * <span style="color: #70226C">return</span> asHtml(path_MyPage_MyPageJsp); <span style="color: #3F7E5E">// HTML template</span>
+     * <span style="color: #70226C">return</span> asHtml(path_MyPage_MyPageHtml); <span style="color: #3F7E5E">// HTML template</span>
      * <span style="color: #70226C">return</span> asJson(bean); <span style="color: #3F7E5E">// JSON e.g. AJAX, API server</span>
      * <span style="color: #70226C">return</span> asStream(fileName).stream(...); <span style="color: #3F7E5E">// Stream e.g. download</span>
      * 
@@ -61,7 +61,7 @@ public interface LaActionDocs {
      *     ListResultBean&lt;MypageProductBean&gt; <span style="color: #553000">topProducts</span> = <span style="color: #553000">memberList</span>.mappingList(<span style="color: #553000">product</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
      *         <span style="color: #70226C">return new</span> MypageProductBean(<span style="color: #553000">product</span>);
      *     });
-     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #553000">path_Mypage_MypageJsp</span>).renderWith(<span style="color: #553000">data</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #553000">path_Mypage_MypageHtml</span>).renderWith(<span style="color: #553000">data</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
      *         <span style="color: #553000">data</span>.register(<span style="color: #2A00FF">"topProducts"</span>, <span style="color: #553000">topProducts</span>);
      *     });
      * }
@@ -100,6 +100,7 @@ public interface LaActionDocs {
      * 
      * <span style="font-size: 130%; color: #553000">[Advance]</span>
      * o async(noArgLambda) <span style="color: #3F7E5E">// execute asynchronous process</span>
+     * o required(txLambda) <span style="color: #3F7E5E">// execute inheritable transaction process</span>
      * o requiresNew(txLambda) <span style="color: #3F7E5E">// execute new transaction process</span>
      * 
      * <span style="font-size: 130%; color: #553000">[User Info]</span>
@@ -126,8 +127,12 @@ public interface LaActionDocs {
 
     /**
      * <pre>
-     * o Cls : is Classification (CDef)
+     * o Body : accepts JSON on the Request body
      * o CDef : is auto-generated ENUM as Classification Definition
+     * o Cls : is Classification (CDef)
+     * o DBFlute : O/R Mapper
+     * o Form : accepts Form parameters
+     * o LastaFlute : Typesafe Web Framework of LeAn STArtup
      * </pre>
      */
     default void document8_WordDictionary() {
