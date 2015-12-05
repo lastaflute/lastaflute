@@ -23,7 +23,10 @@ import java.util.Set;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterFilter;
 
+// package is a little strange (path!? near adjustment provider...)
+// but no change for compatible
 /**
  * @author jflute
  */

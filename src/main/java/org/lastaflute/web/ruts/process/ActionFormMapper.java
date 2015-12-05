@@ -82,6 +82,8 @@ import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
 import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
+import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterFilter;
+import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterMeta;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
@@ -526,13 +528,13 @@ public class ActionFormMapper {
         final Class<?> propertyType = pd.getPropertyType();
         final Object mappedValue;
         if (propertyType.isArray()) { // fixedly String #for_now e.g. public String[] strArray;
-            mappedValue = prepareStringArray(value, option); // plain mapping to array, e.g. JSON not supported
+            mappedValue = prepareStringArray(value, name, propertyType, option); // plain mapping to array, e.g. JSON not supported
         } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
             if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
                 final Object scalar = prepareObjectScalar(value);
                 mappedValue = parseJsonParameter(virtualForm, bean, name, prepareJsonString(scalar), pd);
             } else { // fixedly String #for_now e.g. public List<String> strList;
-                mappedValue = prepareStringList(value, propertyType, option);
+                mappedValue = prepareStringList(value, name, propertyType, option);
             }
         } else { // not array or list, e.g. String, Object
             final Object scalar = prepareObjectScalar(value);
@@ -545,18 +547,18 @@ public class ActionFormMapper {
         pd.setValue(bean, mappedValue);
     }
 
-    protected String[] prepareStringArray(Object value, FormMappingOption option) { // not null (empty if null)
+    protected String[] prepareStringArray(Object value, String propertyName, Class<?> proeprtyType, FormMappingOption option) { // not null (empty if null)
         final String[] result;
         if (value != null && value instanceof String[]) {
             result = (String[]) value;
         } else {
             result = value != null ? new String[] { value.toString() } : EMPTY_STRING_ARRAY;
         }
-        return filterIfSimpleText(result, option);
+        return filterIfSimpleText(result, option, propertyName, proeprtyType);
     }
 
-    protected List<String> prepareStringList(Object value, Class<?> propertyType, FormMappingOption option) {
-        final String[] ary = prepareStringArray(value, option); // with filter
+    protected List<String> prepareStringList(Object value, String propertyName, Class<?> propertyType, FormMappingOption option) {
+        final String[] ary = prepareStringArray(value, propertyName, propertyType, option); // with filter
         if (ary.length == 0) {
             return Collections.emptyList();
         }
@@ -606,7 +608,7 @@ public class ActionFormMapper {
         } else {
             registered = strArray ? (value != null ? new String[] { value.toString() } : EMPTY_STRING_ARRAY) : value;
         }
-        map.put(name, filterIfSimpleText(registered, option));
+        map.put(name, filterIfSimpleText(registered, option, name, map.getClass()));
     }
 
     protected boolean isMapValueStringArray(Object parentBean, String parentName) {
@@ -822,7 +824,8 @@ public class ActionFormMapper {
             StringBuilder pathSb, FormMappingOption option) {
         final Class<?> propertyType = pd.getPropertyType();
         try {
-            return doConvertToNativeIfPossible(bean, name, filterIfSimpleText(exp, option), propertyType, option);
+            final Object filtered = filterIfSimpleText(exp, option, name, propertyType);
+            return doConvertToNativeIfPossible(bean, name, filtered, propertyType, option);
         } catch (RuntimeException e) {
             if (isTypeFailureException(e)) {
                 virtualForm.acceptTypeFailure(pathSb.toString(), exp); // to render failure value
@@ -990,24 +993,30 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                    Filter Simple Text
     //                                    ------------------
-    protected <OBJ> OBJ filterIfSimpleText(OBJ value, FormMappingOption option) {
+    protected <OBJ> OBJ filterIfSimpleText(OBJ value, FormMappingOption option, String propertyName, Class<?> propertyType) {
         if (value == null) {
             return null;
         }
         if (value instanceof String) {
             final String str = (String) value;
-            @SuppressWarnings("unchecked")
-            final OBJ resultObj = (OBJ) option.getSimpleTextParameterFilter().map(filter -> {
-                return filter.filter(str);
-            }).orElse(str);
-            return resultObj;
+            if (option.getSimpleTextParameterFilter().isPresent()) { // basically false
+                // not use map() to avoid many new instances at main route (not here)
+                final FormSimpleTextParameterFilter filter = option.getSimpleTextParameterFilter().get();
+                final FormSimpleTextParameterMeta meta = createFormSimpleTextParameterMeta(propertyName, propertyType);
+                @SuppressWarnings("unchecked")
+                final OBJ filtered = (OBJ) filter.filter(str, meta);
+                return filtered;
+            } else { // mainly here
+                return value;
+            }
         } else if (value instanceof String[]) {
             final String[] ary = (String[]) value;
             option.getSimpleTextParameterFilter().ifPresent(filter -> {
+                final FormSimpleTextParameterMeta meta = createFormSimpleTextParameterMeta(propertyName, propertyType);
                 int index = 0;
                 for (String element : ary) {
                     if (element != null) { // just in case
-                        ary[index] = filter.filter(element);
+                        ary[index] = filter.filter(element, meta);
                     }
                     ++index;
                 }
@@ -1018,6 +1027,10 @@ public class ActionFormMapper {
         } else {
             return value;
         }
+    }
+
+    protected FormSimpleTextParameterMeta createFormSimpleTextParameterMeta(String propertyName, Class<?> propertyType) {
+        return new FormSimpleTextParameterMeta(propertyName, propertyType);
     }
 
     // ===================================================================================

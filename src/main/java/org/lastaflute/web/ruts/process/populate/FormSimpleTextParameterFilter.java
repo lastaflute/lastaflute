@@ -13,12 +13,13 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.path;
+package org.lastaflute.web.ruts.process.populate;
 
 /**
  * The callback for filtering of simple text parameter. <br>
  * (contains array but not JSON)
  * @author jflute
+ * @since 0.7.0 (2015/12/05 Saturday)
  */
 @FunctionalInterface
 public interface FormSimpleTextParameterFilter {
@@ -26,7 +27,8 @@ public interface FormSimpleTextParameterFilter {
     /**
      * Filter the simple text parameter. (contains array but not JSON) <br>
      * @param parameter The parameter as string. (NotNull: not called if null parameter)
+     * @param meta The meta data of simple parameter. (NotNull)
      * @return The filtered parameter or plain parameter. (NullAllowed: then filtered as null value)
      */
-    String filter(String parameter);
+    String filter(String parameter, FormSimpleTextParameterMeta meta);
 }
