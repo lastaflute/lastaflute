@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
@@ -145,7 +146,8 @@ public class StreamResponse implements ActionResponse {
         assertArgumentNotNull("data", data);
         assertDefinedState("data");
         if (streamCall != null) {
-            throw new IllegalStateException("The stream call already exists.");
+            String msg = "The stream call already exists, so cannot call data(): " + data;
+            throw new IllegalStateException(msg);
         }
         this.byteData = data;
         return this;
@@ -188,7 +190,8 @@ public class StreamResponse implements ActionResponse {
         assertArgumentNotNull("writtenStreamLambda", writtenStreamLambda);
         assertDefinedState("stream");
         if (byteData != null) {
-            throw new IllegalStateException("The byte data already exists.");
+            String msg = "The byte data already exists, so cannot call stream(): " + writtenStreamLambda;
+            throw new IllegalStateException(msg);
         }
         streamCall = writtenStreamLambda;
     }
@@ -250,6 +253,9 @@ public class StreamResponse implements ActionResponse {
         for (Entry<String, String[]> entry : headerMap.entrySet()) {
             resource.header(entry.getKey(), entry.getValue());
         }
+        if (!returnAsEmptyBody && byteData == null && streamCall == null) {
+            throwStreamByteDataInputStreamNotFoundException();
+        }
         if (byteData != null) {
             resource.data(byteData);
         }
@@ -270,6 +276,28 @@ public class StreamResponse implements ActionResponse {
         return new ResponseDownloadResource(fileName);
     }
 
+    protected void throwStreamByteDataInputStreamNotFoundException() {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Not found the both byte data and input stream in the StreamResponse.");
+        br.addItem("Advice");
+        br.addElement("Either byte data or input stream is required.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    return asStream(\"sea.txt\"); // *Bad");
+        br.addElement("  (o):");
+        br.addElement("    return asStream(\"sea.txt\").data(bytes); // Good");
+        br.addElement("  (o):");
+        br.addElement("    return asStream(\"sea.txt\").stream(out -> { // Good");
+        br.addElement("        try (InputStream ins = ...) {");
+        br.addElement("            out.write(ins);");
+        br.addElement("        }");
+        br.addElement("    });");
+        br.addItem("File Name");
+        br.addElement(fileName);
+        final String msg = br.buildExceptionMessage();
+        throw new IllegalStateException(msg);
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -281,7 +309,8 @@ public class StreamResponse implements ActionResponse {
 
     protected void assertDefinedState(String methodName) {
         if (undefined) {
-            throw new IllegalStateException("undefined response: method=" + methodName + "() this=" + toString());
+            String msg = "undefined response: method=" + methodName + "() this=" + toString();
+            throw new IllegalStateException(msg);
         }
     }
 

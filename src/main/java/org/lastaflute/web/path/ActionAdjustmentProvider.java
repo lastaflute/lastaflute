@@ -23,6 +23,8 @@ import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 
+// package is a little strange (path adjustment from the beginning...)
+// but no change for compatible
 /**
  * @author jflute
  */

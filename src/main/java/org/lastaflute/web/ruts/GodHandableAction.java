@@ -185,7 +185,7 @@ public class GodHandableAction implements VirtualAction {
     protected void assertExecuteMethodResponseDefined(ActionResponse response) {
         if (response.isUndefined()) {
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-            br.addNotice("Cannot return undefined resopnse from the execute method");
+            br.addNotice("Cannot return undefined resopnse from the execute method.");
             br.addItem("Advice");
             br.addElement("Not allowed to return undefined() in execute method.");
             br.addElement("If you want to return response as empty body,");
