@@ -190,6 +190,12 @@ public interface RequestManager extends ScopedAttributeHolder {
      */
     OptionalThing<String> getHeaderXForwardedFor();
 
+    /**
+     * Get 'X-SSL' from header.
+     * @return The optional string for the header 'X-SSL'. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getHeaderXSsl();
+
     // ===================================================================================
     //                                                                     Remote Handling
     //                                                                     ===============

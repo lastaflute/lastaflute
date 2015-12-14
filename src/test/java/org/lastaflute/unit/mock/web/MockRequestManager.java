@@ -143,6 +143,11 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
+    public OptionalThing<String> getHeaderXSsl() {
+        return null;
+    }
+
+    @Override
     public OptionalThing<String> getRemoteAddr() {
         return null;
     }
