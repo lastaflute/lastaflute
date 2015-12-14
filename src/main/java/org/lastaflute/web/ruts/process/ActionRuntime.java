@@ -110,7 +110,10 @@ public class ActionRuntime {
 
     protected boolean isHtmlTemplateResponse(final HtmlResponse htmlResponse) {
         final String routingPath = htmlResponse.getRoutingPath();
-        return routingPath.endsWith(".html") || routingPath.endsWith(".jsp");
+        return routingPath.endsWith(".html") // e.g. Thymeleaf
+                || routingPath.endsWith(".xhtml") // e.g. Mayaa
+                || routingPath.endsWith(".jsp") // no comment
+                ;
     }
 
     /**
