@@ -175,13 +175,13 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // -----------------------------------------------------
     //                                               General
     //                                               -------
-    public ValidationSuccess validate(Object form, VaMore<MESSAGES> doValidateLambda, VaErrorHook validationErrorLambda) {
-        return doValidate(form, doValidateLambda, validationErrorLambda);
+    public ValidationSuccess validate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
+        return doValidate(form, moreValidationLambda, validationErrorLambda);
     }
 
-    protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> doValidateLambda, VaErrorHook validationErrorLambda) {
+    protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
         assertArgumentNotNull("form", form);
-        assertArgumentNotNull("doValidateLambda", doValidateLambda);
+        assertArgumentNotNull("moreValidationLambda", moreValidationLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
         markValidationCalled();
         final boolean implicitGroup = containsRuntimeGroup(runtimeGroups, DEFAULT_GROUP_TYPE);
@@ -193,7 +193,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
             verifyExplicitGroupClientError(form, vioSet);
         }
         final MESSAGES messages = resolveTypeFailure(toActionMessages(form, vioSet));
-        doValidateLambda.more(messages);
+        moreValidationLambda.more(messages);
         if (!messages.isEmpty()) {
             throwValidationErrorException(messages, validationErrorLambda);
         }

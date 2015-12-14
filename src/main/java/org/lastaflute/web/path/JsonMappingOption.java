@@ -13,33 +13,34 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.exception;
+package org.lastaflute.web.path;
 
-import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.dbflute.util.DfTypeUtil;
 
+// package is a little strange (path!? near adjustment provider...)
+// but no change for compatible
 /**
  * @author jflute
- * @since 0.6.0 (2015/08/08 Saturday at Showbase)
  */
-public class ClientErrorByValidatorException extends ForcedRequest400BadRequestException {
-
-    // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    private static final long serialVersionUID = 1L;
+public class JsonMappingOption {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionMessages messages; // not null
+    protected boolean jsonResponseValidationErrorWarned;
+    protected boolean jsonResponseValidatorSuppressed;
 
     // ===================================================================================
-    //                                                                         Constructor
-    //                                                                         ===========
-    public ClientErrorByValidatorException(String msg, ActionMessages messages) {
-        super(msg);
-        this.messages = messages;
+    //                                                                              Facade
+    //                                                                              ======
+    public JsonMappingOption warnJsonResponseValidationError() {
+        jsonResponseValidationErrorWarned = true;
+        return this;
+    }
+
+    public JsonMappingOption suppressJsonResponseValidator() {
+        jsonResponseValidatorSuppressed = true;
+        return this;
     }
 
     // ===================================================================================
@@ -47,13 +48,18 @@ public class ClientErrorByValidatorException extends ForcedRequest400BadRequestE
     //                                                                      ==============
     @Override
     public String toString() {
-        return "validationClientError:{messages=" + messages + "}";
+        final String title = DfTypeUtil.toClassTitle(this);
+        return title + ":{" + jsonResponseValidationErrorWarned + ", " + jsonResponseValidatorSuppressed + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public ActionMessages getMessages() {
-        return messages;
+    public boolean isJsonResponseValidationErrorWarned() {
+        return jsonResponseValidationErrorWarned;
+    }
+
+    public boolean isJsonResponseValidatorSuppressed() {
+        return jsonResponseValidatorSuppressed;
     }
 }

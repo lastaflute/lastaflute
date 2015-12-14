@@ -16,11 +16,18 @@
 package org.lastaflute.web.ruts.process;
 
 import java.lang.reflect.Parameter;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.function.Consumer;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.di.helper.beans.BeanDesc;
+import org.lastaflute.di.helper.beans.PropertyDesc;
+import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.path.JsonMappingOption;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
@@ -31,13 +38,27 @@ import org.lastaflute.web.response.render.RenderData;
 import org.lastaflute.web.ruts.NextJourney;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
+import org.lastaflute.web.ruts.message.ActionMessage;
+import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.process.exception.JsonBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
+import org.lastaflute.web.validation.ActionValidator;
+import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
+import org.lastaflute.web.validation.exception.ValidationErrorException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
  */
 public class ActionResponseReflector {
+
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(ActionResponseReflector.class);
+    private static final JsonMappingOption NULLOBJ_JSON_MAPPING_OPTION = new JsonMappingOption(); // simple cache, private to be immutable
 
     // ===================================================================================
     //                                                                           Attribute
@@ -168,7 +189,9 @@ public class ActionResponseReflector {
         if (response.isReturnAsJsonDirectly()) {
             json = response.getDirectJson().get();
         } else { // mainly here
-            json = requestManager.getJsonManager().toJson(response.getJsonBean());
+            final Object jsonBean = response.getJsonBean();
+            validateJsonBeanIfNeeds(jsonBean, response);
+            json = requestManager.getJsonManager().toJson(jsonBean);
         }
         response.getCallback().ifPresent(callback -> {
             final String script = callback + "(" + json + ")";
@@ -182,6 +205,102 @@ public class ActionResponseReflector {
             }
         });
         return undefinedJourney();
+    }
+
+    protected void validateJsonBeanIfNeeds(Object jsonBean, JsonResponse<?> response) {
+        final JsonMappingOption option = adjustJsonMapping();
+        if (option.isJsonResponseValidatorSuppressed()) {
+            return;
+        }
+        doValidateJsonBean(jsonBean, response, option);
+    }
+
+    protected JsonMappingOption adjustJsonMapping() { // not null
+        final JsonMappingOption option = adjustmentProvider.adjustJsonMapping();
+        return option != null ? option : NULLOBJ_JSON_MAPPING_OPTION;
+    }
+
+    protected void doValidateJsonBean(Object jsonBean, JsonResponse<?> response, JsonMappingOption option) {
+        final ActionValidator<ActionMessages> validator = new ActionValidator<>(requestManager, () -> {
+            return new ActionMessages();
+        } , ActionValidator.DEFAULT_GROUPS);
+        try {
+            validator.validate(jsonBean, more -> {} , () -> {
+                throw new IllegalStateException("unused here, no way");
+            });
+        } catch (ValidationErrorException e) {
+            handleJsonBeanValidationErrorException(jsonBean, response, option, e.getMessages(), e);
+        } catch (ClientErrorByValidatorException e) {
+            handleJsonBeanValidationErrorException(jsonBean, response, option, e.getMessages(), e);
+        }
+    }
+
+    protected void handleJsonBeanValidationErrorException(Object jsonBean, JsonResponse<?> response, JsonMappingOption option,
+            ActionMessages messages, RuntimeException cause) {
+        // cause is completely framework info so not show it
+        final String msg = buildJsonBeanValidationErrorMessage(jsonBean, response, messages);
+        if (option.isJsonResponseValidationErrorWarned()) {
+            logger.warn(msg);
+        } else {
+            throw new JsonBeanValidationErrorException(msg);
+        }
+    }
+
+    protected String buildJsonBeanValidationErrorMessage(Object jsonBean, JsonResponse<?> response, ActionMessages messages) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Validation error for the JSON response.");
+        br.addItem("Advice");
+        br.addElement("Make sure your JSON bean property values.");
+        br.addElement("For example:");
+        br.addElement("  public class SeaBean {");
+        br.addElement("      @Required");
+        br.addElement("      public String dockside;");
+        br.addElement("  }");
+        br.addElement("  (x):");
+        br.addElement("    public class SeaAction {");
+        br.addElement("        @Execute");
+        br.addElement("        public JsonResponse<SeaBean> index() {");
+        br.addElement("            SeaBean bean = new SeaBean();");
+        br.addElement("            reurn asJson(bean); // *Bad");
+        br.addElement("        }");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public class SeaAction {");
+        br.addElement("        @Execute");
+        br.addElement("        public JsonResponse<SeaBean> index() {");
+        br.addElement("            SeaBean bean = new SeaBean();");
+        br.addElement("            bean.dockside = \"overthewaves\"; // Good");
+        br.addElement("            reurn asJson(bean);");
+        br.addElement("        }");
+        br.addElement("    }");
+        br.addItem("Action");
+        br.addElement(runtime);
+        br.addItem("JSON Bean");
+        br.addElement(jsonBean.getClass());
+        final String jsonExp = jsonBean.toString();
+        br.addElement(jsonExp);
+        if (jsonExp == null || !jsonExp.contains("\n")) {
+            br.addItem("Bean Property");
+            try {
+                final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(jsonBean.getClass());
+                final int propertyDescSize = beanDesc.getPropertyDescSize();
+                for (int i = 0; i < propertyDescSize; i++) {
+                    final PropertyDesc pd = beanDesc.getPropertyDesc(i);
+                    br.addElement(pd.getPropertyName() + ": " + pd.getValue(jsonBean));
+                }
+            } catch (RuntimeException ignored) {
+                br.addElement("*Failed to get field values by BeanDesc");
+            }
+        }
+        br.addItem("Messages");
+        final Set<String> propertySet = messages.toPropertySet();
+        for (String property : propertySet) {
+            br.addElement(property);
+            for (Iterator<ActionMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
+                br.addElement("  " + ite.next());
+            }
+        }
+        return br.buildExceptionMessage();
     }
 
     // -----------------------------------------------------

@@ -197,12 +197,12 @@ public class ActionRuntime {
         sb.append("runtime:{");
         sb.append(requestPath);
         sb.append(", ").append(execute.toSimpleMethodExp());
-        sb.append(", urlParam=").append(urlParam);
+        sb.append(", ").append(urlParam); // e.g. urlParam:{{}}
         if (actionResponse != null) {
-            sb.append(", response=").append(actionResponse);
+            sb.append(", ").append(actionResponse); // e.g. JsonResponse:{...}
         }
         if (failureCause != null) {
-            sb.append(", failure=").append(DfTypeUtil.toClassTitle(failureCause));
+            sb.append(", *").append(DfTypeUtil.toClassTitle(failureCause)); // e.g. *SeaException
         }
         if (validationErrors != null) {
             sb.append(", errors=").append(validationErrors.toPropertySet());

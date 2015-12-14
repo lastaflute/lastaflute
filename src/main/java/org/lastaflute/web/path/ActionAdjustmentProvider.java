@@ -109,4 +109,12 @@ public interface ActionAdjustmentProvider {
     default FormMappingOption adjustFormMapping() {
         return null;
     }
+
+    /**
+     * Adjust JSON mapping from request parameters.
+     * @return The option of JSON mapping. (NullAllowed: if null, no option)
+     */
+    default JsonMappingOption adjustJsonMapping() {
+        return null;
+    }
 }
