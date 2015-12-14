@@ -21,15 +21,15 @@ import org.lastaflute.core.exception.LaSystemException;
  * @author jflute
  * @since 0.7.1 (2015/12/14 Monday)
  */
-public class JsonBeanValidationErrorException extends LaSystemException {
+public class ResponseJsonBeanValidationErrorException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public JsonBeanValidationErrorException(String msg) {
+    public ResponseJsonBeanValidationErrorException(String msg) {
         super(msg);
     }
 
-    public JsonBeanValidationErrorException(String msg, Throwable cause) {
+    public ResponseJsonBeanValidationErrorException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

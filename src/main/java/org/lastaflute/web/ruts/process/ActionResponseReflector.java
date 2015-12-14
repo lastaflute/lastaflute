@@ -40,7 +40,7 @@ import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.ruts.process.exception.JsonBeanValidationErrorException;
+import org.lastaflute.web.ruts.process.exception.ResponseJsonBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.validation.ActionValidator;
@@ -229,20 +229,20 @@ public class ActionResponseReflector {
                 throw new IllegalStateException("unused here, no way");
             });
         } catch (ValidationErrorException e) {
-            handleJsonBeanValidationErrorException(jsonBean, response, option, e.getMessages(), e);
+            handleResponseJsonBeanValidationErrorException(jsonBean, response, option, e.getMessages(), e);
         } catch (ClientErrorByValidatorException e) {
-            handleJsonBeanValidationErrorException(jsonBean, response, option, e.getMessages(), e);
+            handleResponseJsonBeanValidationErrorException(jsonBean, response, option, e.getMessages(), e);
         }
     }
 
-    protected void handleJsonBeanValidationErrorException(Object jsonBean, JsonResponse<?> response, ApiResponseOption option,
+    protected void handleResponseJsonBeanValidationErrorException(Object jsonBean, JsonResponse<?> response, ApiResponseOption option,
             ActionMessages messages, RuntimeException cause) {
         // cause is completely framework info so not show it
         final String msg = buildJsonBeanValidationErrorMessage(jsonBean, response, messages);
         if (option.isJsonBeanValidationErrorWarned()) {
             logger.warn(msg);
         } else {
-            throw new JsonBeanValidationErrorException(msg);
+            throw new ResponseJsonBeanValidationErrorException(msg);
         }
     }
 
