@@ -47,8 +47,7 @@ public class UrlChain {
     //                                                                        ============
     // method names and specifications should be synchronized with action's methods
     /**
-     * Set up more URL parts as URL chain. <br>
-     * The name and specification of this method is synchronized with {@link LastaAction#moreUrl()}.
+     * Set up more URL parts as URL chain.
      * @param urlParts The varying array of URL parts. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */
@@ -61,8 +60,7 @@ public class UrlChain {
     }
 
     /**
-     * Set up parameters on GET as URL chain. <br>
-     * The name and specification of this method is synchronized with {@link LastaAction#params()}.
+     * Set up parameters on GET as URL chain.
      * @param paramsOnGet The varying array of parameters on GET. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */
@@ -75,8 +73,8 @@ public class UrlChain {
     }
 
     /**
-     * Set up hash on URL as URL chain. <br>
-     * The name and specification of this method is synchronized with {@link LastaAction#hash()}.
+     * Set up hash on URL as URL chain.
+     * The name and specification of this method is synchronized with hash().
      * @param hashOnUrl The value of hash on URL. (NotNull)
      * @return The created instance of URL chain. (NotNull)
      */
