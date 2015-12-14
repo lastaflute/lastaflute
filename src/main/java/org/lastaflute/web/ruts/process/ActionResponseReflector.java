@@ -27,7 +27,7 @@ import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
-import org.lastaflute.web.path.JsonMappingOption;
+import org.lastaflute.web.path.ApiResponseOption;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
@@ -58,7 +58,7 @@ public class ActionResponseReflector {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(ActionResponseReflector.class);
-    private static final JsonMappingOption NULLOBJ_JSON_MAPPING_OPTION = new JsonMappingOption(); // simple cache, private to be immutable
+    private static final ApiResponseOption NULLOBJ_JSON_MAPPING_OPTION = new ApiResponseOption(); // simple cache, private to be immutable
 
     // ===================================================================================
     //                                                                           Attribute
@@ -208,19 +208,19 @@ public class ActionResponseReflector {
     }
 
     protected void validateJsonBeanIfNeeds(Object jsonBean, JsonResponse<?> response) {
-        final JsonMappingOption option = adjustJsonMapping();
-        if (option.isJsonResponseValidatorSuppressed()) {
+        final ApiResponseOption option = adjustJsonMapping();
+        if (option.isJsonBeanValidatorSuppressed()) {
             return;
         }
         doValidateJsonBean(jsonBean, response, option);
     }
 
-    protected JsonMappingOption adjustJsonMapping() { // not null
-        final JsonMappingOption option = adjustmentProvider.adjustJsonMapping();
+    protected ApiResponseOption adjustJsonMapping() { // not null
+        final ApiResponseOption option = adjustmentProvider.adjustApiResponse();
         return option != null ? option : NULLOBJ_JSON_MAPPING_OPTION;
     }
 
-    protected void doValidateJsonBean(Object jsonBean, JsonResponse<?> response, JsonMappingOption option) {
+    protected void doValidateJsonBean(Object jsonBean, JsonResponse<?> response, ApiResponseOption option) {
         final ActionValidator<ActionMessages> validator = new ActionValidator<>(requestManager, () -> {
             return new ActionMessages();
         } , ActionValidator.DEFAULT_GROUPS);
@@ -235,11 +235,11 @@ public class ActionResponseReflector {
         }
     }
 
-    protected void handleJsonBeanValidationErrorException(Object jsonBean, JsonResponse<?> response, JsonMappingOption option,
+    protected void handleJsonBeanValidationErrorException(Object jsonBean, JsonResponse<?> response, ApiResponseOption option,
             ActionMessages messages, RuntimeException cause) {
         // cause is completely framework info so not show it
         final String msg = buildJsonBeanValidationErrorMessage(jsonBean, response, messages);
-        if (option.isJsonResponseValidationErrorWarned()) {
+        if (option.isJsonBeanValidationErrorWarned()) {
             logger.warn(msg);
         } else {
             throw new JsonBeanValidationErrorException(msg);

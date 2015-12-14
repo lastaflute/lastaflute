@@ -111,10 +111,10 @@ public interface ActionAdjustmentProvider {
     }
 
     /**
-     * Adjust JSON mapping from request parameters.
-     * @return The option of JSON mapping. (NullAllowed: if null, no option)
+     * Adjust API response.
+     * @return The option of API response. (NullAllowed: if null, no option)
      */
-    default JsonMappingOption adjustJsonMapping() {
+    default ApiResponseOption adjustApiResponse() {
         return null;
     }
 }

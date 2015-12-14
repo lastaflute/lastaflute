@@ -21,25 +21,26 @@ import org.dbflute.util.DfTypeUtil;
 // but no change for compatible
 /**
  * @author jflute
+ * @since 0.4.6 (2015/12/14 Monday)
  */
-public class JsonMappingOption {
+public class ApiResponseOption {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected boolean jsonResponseValidationErrorWarned;
-    protected boolean jsonResponseValidatorSuppressed;
+    protected boolean jsonBeanValidationErrorWarned;
+    protected boolean jsonBeanValidatorSuppressed;
 
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
-    public JsonMappingOption warnJsonResponseValidationError() {
-        jsonResponseValidationErrorWarned = true;
+    public ApiResponseOption warnJsonBeanValidationError() {
+        jsonBeanValidationErrorWarned = true;
         return this;
     }
 
-    public JsonMappingOption suppressJsonResponseValidator() {
-        jsonResponseValidatorSuppressed = true;
+    public ApiResponseOption suppressJsonBeanValidator() {
+        jsonBeanValidatorSuppressed = true;
         return this;
     }
 
@@ -49,17 +50,17 @@ public class JsonMappingOption {
     @Override
     public String toString() {
         final String title = DfTypeUtil.toClassTitle(this);
-        return title + ":{" + jsonResponseValidationErrorWarned + ", " + jsonResponseValidatorSuppressed + "}";
+        return title + ":{" + jsonBeanValidationErrorWarned + ", " + jsonBeanValidatorSuppressed + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public boolean isJsonResponseValidationErrorWarned() {
-        return jsonResponseValidationErrorWarned;
+    public boolean isJsonBeanValidationErrorWarned() {
+        return jsonBeanValidationErrorWarned;
     }
 
-    public boolean isJsonResponseValidatorSuppressed() {
-        return jsonResponseValidatorSuppressed;
+    public boolean isJsonBeanValidatorSuppressed() {
+        return jsonBeanValidatorSuppressed;
     }
 }

@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.lastaflute</groupId>
 	<artifactId>lastaflute</artifactId>
-	<version>0.7.1-B-SNAPSHOT</version>
+	<version>0.7.1-RC1</version>
 	<packaging>jar</packaging>
 
 	<name>LastaFlute</name>
@@ -18,8 +18,8 @@
 		<hibernate.version>5.2.2.Final</hibernate.version>
 		<servlet.version>3.1.0</servlet.version>
 		<gson.version>2.3.1</gson.version>
-		<mailflute.version>0.4.5</mailflute.version>
-		<utflute.version>0.5.6</utflute.version>
+		<mailflute.version>0.4.6-RC1</mailflute.version>
+		<utflute.version>0.5.7</utflute.version>
 	</properties>
 
 	<licenses>
