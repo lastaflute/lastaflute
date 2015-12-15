@@ -22,6 +22,7 @@ import org.dbflute.jdbc.Classification;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeUnknownException;
+import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
@@ -71,10 +72,12 @@ public interface DBFluteGsonAdaptable {
 
         protected final Class<?> clsType;
         protected final JsonMappingOption option;
+        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
 
         public TypeAdapterClassification(Class<?> clsType, JsonMappingOption option) {
             this.clsType = clsType;
             this.option = option;
+            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
         @Override
@@ -83,7 +86,7 @@ public interface DBFluteGsonAdaptable {
                 in.nextNull();
                 return null;
             }
-            final String code = in.nextString();
+            final String code = filterReading(in.nextString());
             if (isEmptyToNullReading() && "".equals(code)) { // option
                 return null;
             }
@@ -96,6 +99,30 @@ public interface DBFluteGsonAdaptable {
                 throwJsonPropertyUnknownClassificationCodeException(code, in, e);
                 return null; // unreachable
             }
+        }
+
+        protected String filterReading(String text) {
+            if (text == null) {
+                return null;
+            }
+            return readingFilter != null ? readingFilter.filter(text) : text;
+        }
+
+        protected boolean isEmptyToNullReading() {
+            return option.isEmptyToNullReading();
+        }
+
+        @Override
+        public void write(JsonWriter out, Classification value) throws IOException {
+            if (isNullToEmptyWriting() && value == null) { // option
+                out.value("");
+            } else { // mainly here
+                out.value(value != null ? value.code() : null);
+            }
+        }
+
+        protected boolean isNullToEmptyWriting() {
+            return option.isNullToEmptyWriting();
         }
 
         protected void throwJsonPropertyClassificationCodeOfMethodNotFoundException(String code, JsonReader in,
@@ -138,23 +165,6 @@ public interface DBFluteGsonAdaptable {
             br.addElement(propertyPath);
             final String msg = br.buildExceptionMessage();
             throw new JsonPropertyClassificationCodeUnknownException(msg, clsType, propertyPath, e);
-        }
-
-        @Override
-        public void write(JsonWriter out, Classification value) throws IOException {
-            if (isNullToEmptyWriting() && value == null) { // option
-                out.value("");
-            } else { // mainly here
-                out.value(value != null ? value.code() : null);
-            }
-        }
-
-        protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
-        }
-
-        protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
         }
     }
 

@@ -20,6 +20,7 @@ import java.util.function.Function;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 
 /**
  * @author jflute
@@ -37,6 +38,7 @@ public class JsonMappingOption {
     protected boolean emptyToNullReading;
     protected boolean nullToEmptyWriting;
     protected boolean everywhereQuoteWriting;
+    protected OptionalThing<JsonSimpleTextReadingFilter> simpleTextReadingFilter = OptionalThing.empty(); // not null
 
     // ===================================================================================
     //                                                                      Accept Another
@@ -50,6 +52,7 @@ public class JsonMappingOption {
         emptyToNullReading = another.isEmptyToNullReading();
         nullToEmptyWriting = another.isNullToEmptyWriting();
         everywhereQuoteWriting = another.isEverywhereQuoteWriting();
+        simpleTextReadingFilter = another.getSimpleTextReadingFilter();
         return this;
     }
 
@@ -123,6 +126,14 @@ public class JsonMappingOption {
         return this;
     }
 
+    public JsonMappingOption filterSimpleTextReading(JsonSimpleTextReadingFilter simpleTextReadingFilter) {
+        if (simpleTextReadingFilter == null) {
+            throw new IllegalArgumentException("The argument 'simpleTextReadingFilter' should not be null.");
+        }
+        this.simpleTextReadingFilter = OptionalThing.of(simpleTextReadingFilter);
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -144,6 +155,7 @@ public class JsonMappingOption {
         if (everywhereQuoteWriting) {
             sb.append(delimiter).append("everywhereQuoteWriting");
         }
+        simpleTextReadingFilter.ifPresent(ter -> sb.append(delimiter).append(ter));
         return "{" + Srl.ltrim(sb.toString(), delimiter) + "}";
     }
 
@@ -180,5 +192,9 @@ public class JsonMappingOption {
 
     public boolean isEverywhereQuoteWriting() {
         return everywhereQuoteWriting;
+    }
+
+    public OptionalThing<JsonSimpleTextReadingFilter> getSimpleTextReadingFilter() {
+        return simpleTextReadingFilter;
     }
 }
