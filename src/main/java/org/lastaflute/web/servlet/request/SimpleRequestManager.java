@@ -427,6 +427,11 @@ public class SimpleRequestManager implements RequestManager {
         return getHeader("X-Forwarded-For");
     }
 
+    @Override
+    public OptionalThing<String> getHeaderXSsl() {
+        return getHeader("X-SSL");
+    }
+
     // ===================================================================================
     //                                                                     Remote Handling
     //                                                                     ===============

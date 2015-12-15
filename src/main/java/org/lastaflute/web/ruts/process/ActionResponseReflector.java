@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.path.ApiResponseOption;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
@@ -38,6 +39,11 @@ import org.lastaflute.web.servlet.request.ResponseManager;
  * @author jflute
  */
 public class ActionResponseReflector {
+
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    private static final ApiResponseOption NULLOBJ_JSON_MAPPING_OPTION = new ApiResponseOption(); // simple cache, private to be immutable
 
     // ===================================================================================
     //                                                                           Attribute
@@ -168,7 +174,9 @@ public class ActionResponseReflector {
         if (response.isReturnAsJsonDirectly()) {
             json = response.getDirectJson().get();
         } else { // mainly here
-            json = requestManager.getJsonManager().toJson(response.getJsonBean());
+            final Object jsonBean = response.getJsonBean();
+            validateJsonBeanIfNeeds(jsonBean, response);
+            json = requestManager.getJsonManager().toJson(jsonBean);
         }
         response.getCallback().ifPresent(callback -> {
             final String script = callback + "(" + json + ")";
@@ -182,6 +190,27 @@ public class ActionResponseReflector {
             }
         });
         return undefinedJourney();
+    }
+
+    protected void validateJsonBeanIfNeeds(Object jsonBean, JsonResponse<?> response) {
+        final ApiResponseOption option = adjustJsonMapping();
+        if (option.isJsonBeanValidatorSuppressed()) {
+            return;
+        }
+        doValidateJsonBean(jsonBean, response, option);
+    }
+
+    protected ApiResponseOption adjustJsonMapping() { // not null
+        final ApiResponseOption option = adjustmentProvider.adjustApiResponse();
+        return option != null ? option : NULLOBJ_JSON_MAPPING_OPTION;
+    }
+
+    protected void doValidateJsonBean(Object jsonBean, JsonResponse<?> response, ApiResponseOption option) {
+        createJsonBeanValidator(response, option).validate(jsonBean);
+    }
+
+    protected JsonBeanValidator createJsonBeanValidator(JsonResponse<?> response, ApiResponseOption option) {
+        return new JsonBeanValidator(requestManager, runtime, option.isJsonBeanValidationErrorWarned());
     }
 
     // -----------------------------------------------------

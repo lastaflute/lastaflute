@@ -24,8 +24,8 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
+import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
 import com.google.gson.internal.bind.TypeAdapters;
@@ -44,40 +44,46 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     abstract class AbstractTypeAdapterNumber<NUM extends Number> extends TypeAdapter<NUM> {
 
         protected final JsonMappingOption option;
+        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
 
         public AbstractTypeAdapterNumber(JsonMappingOption option) {
             this.option = option;
+            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
         @Override
-        public NUM read(JsonReader in) throws IOException {
-            if (isEmptyToNullReading()) { // option
-                return processEmptyToNullReading(in);
-            }
-            try {
-                return getRealAdapter().read(in); // mainly here
-            } catch (NumberFormatException e) {
-                throwJsonPropertyNumberParseFailureException(in, e);
-                return null; // unreachable
-            } catch (JsonSyntaxException e) {
-                throwJsonPropertyNumberParseFailureException(in, e);
-                return null; // unreachable
-            }
-        }
-
-        protected NUM processEmptyToNullReading(JsonReader in) throws IOException {
+        public NUM read(JsonReader in) throws IOException { // not use real adapter for options
             if (in.peek() == JsonToken.NULL) {
                 in.nextNull();
                 return null;
             }
-            final String str = in.nextString();
-            if ("".equals(str)) {
+            final String str = filterReading(in.nextString());
+            if (isEmptyToNullReading() && "".equals(str)) {
                 return null;
-            } else { // original reading because already next element by nextString()
+            }
+            try {
+                if (str != null && str.trim().isEmpty()) { // e.g. "" or " "
+                    // toNumber() treats empty as null so throw to keep Gson behavior 
+                    throw new NumberFormatException("because of empty string: [" + str + "]");
+                }
                 @SuppressWarnings("unchecked")
                 final NUM num = (NUM) DfTypeUtil.toNumber(str, getNumberType());
                 return num;
+            } catch (RuntimeException e) {
+                throwJsonPropertyNumberParseFailureException(in, e);
+                return null; // unreachable
             }
+        }
+
+        protected String filterReading(String text) {
+            if (text == null) {
+                return null;
+            }
+            return readingFilter != null ? readingFilter.filter(text) : text;
+        }
+
+        protected boolean isEmptyToNullReading() {
+            return option.isEmptyToNullReading();
         }
 
         @Override
@@ -91,10 +97,6 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
                     getRealAdapter().write(out, value);
                 }
             }
-        }
-
-        protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
         }
 
         protected boolean isNullToEmptyWriting() {

@@ -59,6 +59,13 @@ public interface ResponseManager {
     void movedPermanently(Redirectable redirectable);
 
     /**
+     * Set status as MOVED_PERMANENTLY and add the URL to location.
+     * @param redirectable The redirect-able object that can provides e.g. redirect path. (NotNull)
+     * @param host The host name for SSL URL, e.g. dockside.org. (NotNull)
+     */
+    void movedPermanentlySsl(Redirectable redirectable, String host);
+
+    /**
      * Forward to the path.
      * @param forwardable The forward-able object that can provide e.g. forward path without context path. (NotNull)
      * @throws ServletException When the servlet failed.

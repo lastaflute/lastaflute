@@ -20,6 +20,7 @@ import java.util.function.Function;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonMappingOption;
+import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -39,9 +40,11 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
     class TypeAdapterBoolean extends TypeAdapter<Boolean> {
 
         protected final JsonMappingOption option;
+        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
 
         public TypeAdapterBoolean(JsonMappingOption option) {
             this.option = option;
+            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
         @Override
@@ -52,7 +55,7 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
                 return null;
             }
             if (token == JsonToken.STRING) {
-                final String exp = in.nextString();
+                final String exp = filterReading(in.nextString());
                 if (isEmptyToNullReading() && "".equals(exp)) { // option
                     return null;
                 } else {
@@ -64,6 +67,17 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
             } else { // mainly here
                 return in.nextBoolean();
             }
+        }
+
+        protected String filterReading(String text) {
+            if (text == null) {
+                return null;
+            }
+            return readingFilter != null ? readingFilter.filter(text) : text;
+        }
+
+        protected boolean isEmptyToNullReading() {
+            return option.isEmptyToNullReading();
         }
 
         protected Boolean readAsBoolean(JsonToken token, Object exp) throws IOException {
@@ -108,10 +122,6 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
             return option.getBooleanSerializer().map(serializer -> {
                 return serializer.apply(value);
             });
-        }
-
-        protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
         }
 
         protected boolean isNullToEmptyWriting() {

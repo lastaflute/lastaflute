@@ -110,7 +110,7 @@ public class SimpleResponseManager implements ResponseManager {
     //                                                                   =================
     @Override
     public void redirect(Redirectable redirectable) throws IOException {
-        assertArgumentNotNull("response", redirectable);
+        assertArgumentNotNull("redirectable", redirectable);
         doRedirect(redirectable);
     }
 
@@ -136,7 +136,17 @@ public class SimpleResponseManager implements ResponseManager {
 
     @Override
     public void movedPermanently(Redirectable redirectable) {
+        assertArgumentNotNull("redirectable", redirectable);
         setLocationPermanently(buildRedirectUrl(getResponse(), redirectable)); // set up headers for 301
+    }
+
+    @Override
+    public void movedPermanentlySsl(Redirectable redirectable, String host) {
+        assertArgumentNotNull("redirectable", redirectable);
+        assertArgumentNotNull("host", host);
+        final String redirectUrl = buildRedirectUrl(getResponse(), redirectable);
+        final String delimiter = redirectUrl.startsWith("/") ? "" : "/";
+        setLocationPermanently("https://" + host + delimiter + redirectUrl); // set up headers for 301
     }
 
     @Override

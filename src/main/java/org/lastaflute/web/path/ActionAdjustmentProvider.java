@@ -109,4 +109,12 @@ public interface ActionAdjustmentProvider {
     default FormMappingOption adjustFormMapping() {
         return null;
     }
+
+    /**
+     * Adjust API response.
+     * @return The option of API response. (NullAllowed: if null, no option)
+     */
+    default ApiResponseOption adjustApiResponse() {
+        return null;
+    }
 }

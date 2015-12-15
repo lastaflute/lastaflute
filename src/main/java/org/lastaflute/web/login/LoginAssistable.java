@@ -94,7 +94,6 @@ public interface LoginAssistable {
     /**
      * Do login for the user by user ID (means identity login). (for remember-me or partner login)
      * @param userId for the login user. (NotNull)
-     * @param useAutoLogin Does it use remember-me for next time login?
      * @param opLambda The callback for option of login. e.g. useAutoLogin (NotNull)
      * @throws LoginFailureException When it fails to login by the user info.
      */

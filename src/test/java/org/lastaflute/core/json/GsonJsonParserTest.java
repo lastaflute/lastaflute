@@ -351,6 +351,48 @@ public class GsonJsonParserTest extends PlainTestCase {
     }
 
     // ===================================================================================
+    //                                                                   Filter SimpleText
+    //                                                                   =================
+    public void test_filterSimpleText_fromJson_non() throws Exception {
+        // ## Arrange ##
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+            op.filterSimpleTextReading(text -> text);
+        });
+        String json = "{id:\" 1 \",name:\" sea \",status:null,birthdate:\" 2015-12-15 \",validFlg:\" true \",primitiveFlg:\" true \"}";
+
+        // ## Act ##
+        try {
+            parser.fromJson(json, MockUser.class);
+            // ## Assert ##
+            fail();
+        } catch (JsonPropertyNumberParseFailureException e) {
+            log(e.getMessage());
+        }
+    }
+
+    public void test_filterSimpleText_fromJson_trim() throws Exception {
+        // ## Arrange ##
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+            op.filterSimpleTextReading(text -> text.trim());
+        });
+        String json = "{id:\" 1 \",name:\" sea \",status:null,birthdate:\" 2015-12-15 \",validFlg:\" true \",primitiveFlg:\" true \"}";
+
+        // ## Act ##
+        MockUser user = parser.fromJson(json, MockUser.class);
+
+        // ## Assert ##
+        log(user);
+        assertEquals(1, user.id);
+        assertEquals("sea", user.name);
+        assertNull(user.status);
+        assertEquals(LocalDate.of(2015, 12, 15), user.birthdate);
+        assertNull(user.formalizedDatetime);
+        assertEquals(MockCDef.Flg.True, user.validFlg);
+        assertTrue(user.primitiveFlg);
+        log(parser.toJson(user)); // expect no exception
+    }
+
+    // ===================================================================================
     //                                                                         Thread Safe
     //                                                                         ===========
     public void test_threadSafe() throws Exception {

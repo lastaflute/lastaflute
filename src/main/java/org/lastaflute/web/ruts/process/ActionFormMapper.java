@@ -112,6 +112,7 @@ public class ActionFormMapper {
     protected static final char MAPPED_DELIM2 = ')';
     protected static final String[] EMPTY_STRING_ARRAY = new String[0];
     protected static final String LF = "\n";
+    private static final FormMappingOption NULLOBJ_FORM_MAPPING_OPTION = new FormMappingOption(); // simple cache, private to be immutable
 
     // ===================================================================================
     //                                                                           Attribute
@@ -1427,7 +1428,7 @@ public class ActionFormMapper {
     //                                                                  ==================
     protected FormMappingOption adjustFormMapping() {
         final FormMappingOption option = getAdjustmentProvider().adjustFormMapping();
-        return option != null ? option : new FormMappingOption();
+        return option != null ? option : NULLOBJ_FORM_MAPPING_OPTION;
     }
 
     protected ActionAdjustmentProvider getAdjustmentProvider() {

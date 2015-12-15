@@ -198,8 +198,8 @@ public class ActionRequestProcessor {
         }
     }
 
-    protected NextJourney handleActionFailureException(VirtualAction action, OptionalThing<VirtualForm> optForm,
-            ActionRuntime runtime, RuntimeException cause) throws IOException, ServletException {
+    protected NextJourney handleActionFailureException(VirtualAction action, OptionalThing<VirtualForm> optForm, ActionRuntime runtime,
+            RuntimeException cause) throws IOException, ServletException {
         throw new ServletException(cause);
     }
 

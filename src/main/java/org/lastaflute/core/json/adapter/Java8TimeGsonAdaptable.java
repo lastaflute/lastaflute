@@ -26,6 +26,7 @@ import java.time.temporal.TemporalAccessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyDateTimeParseFailureException;
+import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
@@ -90,9 +91,11 @@ public interface Java8TimeGsonAdaptable {
     abstract class AbstractTypeDateTimeAdapter<DATE extends TemporalAccessor> extends TypeAdapter<DATE> {
 
         protected final JsonMappingOption option;
+        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
 
         public AbstractTypeDateTimeAdapter(JsonMappingOption option) {
             this.option = option;
+            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
         @Override
@@ -101,7 +104,7 @@ public interface Java8TimeGsonAdaptable {
                 in.nextNull();
                 return null;
             }
-            final String exp = in.nextString();
+            final String exp = filterReading(in.nextString());
             if (isEmptyToNullReading() && "".equals(exp)) { // option
                 return null;
             }
@@ -114,6 +117,17 @@ public interface Java8TimeGsonAdaptable {
             }
         }
 
+        protected String filterReading(String text) {
+            if (text == null) {
+                return null;
+            }
+            return readingFilter != null ? readingFilter.filter(text) : text;
+        }
+
+        protected boolean isEmptyToNullReading() {
+            return option.isEmptyToNullReading();
+        }
+
         @Override
         public void write(JsonWriter out, DATE value) throws IOException {
             if (isNullToEmptyWriting() && value == null) { // option
@@ -121,10 +135,6 @@ public interface Java8TimeGsonAdaptable {
             } else { // mainly here
                 out.value(value != null ? getDateTimeFormatter().format(value) : null);
             }
-        }
-
-        protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
         }
 
         protected boolean isNullToEmptyWriting() {
