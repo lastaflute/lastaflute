@@ -483,7 +483,7 @@ public class GodHandableAction implements VirtualAction {
     protected void checkValidatorCalled() {
         if (!execute.isSuppressValidatorCallCheck() && isValidatorCalled()) {
             execute.getFormMeta().filter(meta -> isValidatorAnnotated(meta)).ifPresent(meta -> {
-                throwLonelyValidatorAnnotationException(meta);
+                throwLonelyValidatorAnnotationException(meta); // #hope see fields in nested element
             });
         }
     }
