@@ -36,7 +36,7 @@ import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
 import org.lastaflute.web.exception.ExecuteMethodReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
 import org.lastaflute.web.exception.ExecuteMethodReturnUndefinedResponseException;
-import org.lastaflute.web.exception.LonelyValidatorAnnotationException;
+import org.lastaflute.web.exception.ExecuteMethodLonelyValidatorAnnotationException;
 import org.lastaflute.web.hook.ActionHook;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
@@ -546,7 +546,7 @@ public class GodHandableAction implements VirtualAction {
         br.addItem("Action Form (or Body)");
         br.addElement(meta.getFormType());
         final String msg = br.buildExceptionMessage();
-        throw new LonelyValidatorAnnotationException(msg);
+        throw new ExecuteMethodLonelyValidatorAnnotationException(msg);
     }
 
     // ===================================================================================

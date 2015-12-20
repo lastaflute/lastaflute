@@ -225,8 +225,8 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // -----------------------------------------------------
     //                                               for API
     //                                               -------
-    public ValidationSuccess validateApi(Object form, VaMore<MESSAGES> doValidateLambda) {
-        return doValidate(form, doValidateLambda, () -> hookApiValidationError());
+    public ValidationSuccess validateApi(Object body, VaMore<MESSAGES> doValidateLambda) {
+        return doValidate(body, doValidateLambda, () -> hookApiValidationError());
     }
 
     public void throwValidationErrorApi(MessagesCreator<MESSAGES> noArgInLambda) {

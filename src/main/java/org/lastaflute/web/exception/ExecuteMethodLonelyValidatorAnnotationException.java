@@ -18,15 +18,15 @@ package org.lastaflute.web.exception;
 /**
  * @author jflute
  */
-public class LonelyValidatorAnnotationException extends RuntimeException {
+public class ExecuteMethodLonelyValidatorAnnotationException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
-    public LonelyValidatorAnnotationException(String msg) {
+    public ExecuteMethodLonelyValidatorAnnotationException(String msg) {
         super(msg);
     }
 
-    public LonelyValidatorAnnotationException(String msg, Throwable cause) {
+    public ExecuteMethodLonelyValidatorAnnotationException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

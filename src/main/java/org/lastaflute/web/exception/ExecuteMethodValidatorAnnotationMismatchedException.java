@@ -20,15 +20,15 @@ import org.lastaflute.core.exception.LaSystemException;
 /**
  * @author jflute
  */
-public class ExecuteMethodFormPropertyValidationMismatchException extends LaSystemException {
+public class ExecuteMethodValidatorAnnotationMismatchedException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public ExecuteMethodFormPropertyValidationMismatchException(String msg) {
+    public ExecuteMethodValidatorAnnotationMismatchedException(String msg) {
         super(msg);
     }
 
-    public ExecuteMethodFormPropertyValidationMismatchException(String msg, Throwable cause) {
+    public ExecuteMethodValidatorAnnotationMismatchedException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }
