@@ -21,8 +21,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.time.temporal.TemporalAccessor;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -228,12 +230,12 @@ public class ExecuteMethodChecker implements Serializable {
 
     protected void checkFormMismatchedValidatorAnnotation(ActionFormProperty property, Field field, Deque<String> pathDeque,
             Set<Class<?>> checkedTypeSet) {
-        createFormValidatorChecker(property, pathDeque, checkedTypeSet).checkMismatchedValidatorAnnotation(field);
+        createFormValidatorChecker(property, pathDeque, checkedTypeSet).checkMismatchedValidatorAnnotation(field, Collections.emptyMap());
     }
 
     protected void checkFormLonelyValidatorAnnotation(ActionFormProperty property, Field field, Deque<String> pathDeque,
             Set<Class<?>> checkedTypeSet) {
-        createFormValidatorChecker(property, pathDeque, checkedTypeSet).checkLonelyValidatorAnnotation(field);
+        createFormValidatorChecker(property, pathDeque, checkedTypeSet).checkLonelyValidatorAnnotation(field, Collections.emptyMap());
     }
 
     protected ExecuteMethodValidatorChecker createFormValidatorChecker(ActionFormProperty property, Deque<String> pathDeque,
@@ -262,16 +264,16 @@ public class ExecuteMethodChecker implements Serializable {
         if (jsonBeanType == null) { // just in case
             return;
         }
-        if (Collection.class.isAssignableFrom(jsonBeanType)) {
+        if (Collection.class.isAssignableFrom(jsonBeanType)) { // e.g. JsonResponse<List<SeaBean>>
             final Type[] resopnseArgTypes = DfReflectionUtil.getGenericParameterTypes(genericReturnType);
             if (resopnseArgTypes.length > 0) { // just in case
                 final Class<?> elementBeanType = DfReflectionUtil.getGenericFirstClass(resopnseArgTypes[0]);
                 if (elementBeanType != null && mayBeJsonBeanType(elementBeanType)) { // just in case
-                    doCheckJsonBeanValidator(elementBeanType); // can check JsonResponse<List<SeaBean>>
+                    doCheckJsonBeanValidator(elementBeanType, Collections.emptyMap()); // can check JsonResponse<List<SeaBean>>
                 }
             }
-        } else if (mayBeJsonBeanType(jsonBeanType)) {
-            doCheckJsonBeanValidator(jsonBeanType);
+        } else if (mayBeJsonBeanType(jsonBeanType)) { // e.g. JsonResponse<SeaBean>, JsonResponse<WholeBean<SeaBean>>
+            doCheckJsonBeanValidator(jsonBeanType, prepareJsonBeanGenericMap(genericReturnType, jsonBeanType));
         }
     }
 
@@ -294,7 +296,25 @@ public class ExecuteMethodChecker implements Serializable {
                 || Object[].class.isAssignableFrom(fieldType); // also all arrays
     }
 
-    protected void doCheckJsonBeanValidator(Class<?> jsonBeanType) {
+    protected Map<String, Class<?>> prepareJsonBeanGenericMap(Type genericReturnType, Class<?> jsonBeanType) {
+        // can check: JsonResponse<LandBean<PiariBean>> landBean;
+        final Type[] resopnseArgTypes = DfReflectionUtil.getGenericParameterTypes(genericReturnType);
+        if (resopnseArgTypes.length > 0) { // just in case
+            final Type firstGenericType = resopnseArgTypes[0];
+            final Class<?> elementBeanType = DfReflectionUtil.getGenericFirstClass(firstGenericType);
+            if (elementBeanType != null && mayBeJsonBeanType(elementBeanType)) { // just in case
+                final Map<String, Class<?>> genericMap = new LinkedHashMap<String, Class<?>>(1); // only first generic #for_now
+                final TypeVariable<?>[] typeParameters = jsonBeanType.getTypeParameters();
+                if (typeParameters != null && typeParameters.length > 0) { // just in case
+                    genericMap.put(typeParameters[0].getName(), elementBeanType); // e.g. DATA = PiariBean.class
+                    return genericMap;
+                }
+            }
+        }
+        return Collections.emptyMap();
+    }
+
+    protected void doCheckJsonBeanValidator(Class<?> jsonBeanType, Map<String, Class<?>> genericMap) {
         final Deque<String> pathDeque = new LinkedList<String>(); // recycled
         final Set<Class<?>> mismatchedCheckedTypeSet = DfCollectionUtil.newHashSet(jsonBeanType);
         final Set<Class<?>> lonelyCheckedTypeSet = DfCollectionUtil.newHashSet(jsonBeanType);
@@ -305,21 +325,21 @@ public class ExecuteMethodChecker implements Serializable {
             final Field field = pd.getField();
             if (field != null) {
                 pathDeque.clear(); // to recycle
-                checkJsonBeanMismatchedValidatorAnnotation(jsonBeanType, pd, field, pathDeque, mismatchedCheckedTypeSet);
+                checkJsonBeanMismatchedValidatorAnnotation(jsonBeanType, pd, field, pathDeque, mismatchedCheckedTypeSet, genericMap);
                 pathDeque.clear(); // to recycle
-                checkJsonBeanLonelyValidatorAnnotation(jsonBeanType, pd, field, pathDeque, lonelyCheckedTypeSet);
+                checkJsonBeanLonelyValidatorAnnotation(jsonBeanType, pd, field, pathDeque, lonelyCheckedTypeSet, genericMap);
             }
         }
     }
 
     protected void checkJsonBeanMismatchedValidatorAnnotation(Class<?> jsonBeanType, PropertyDesc pd, Field field, Deque<String> pathDeque,
-            Set<Class<?>> checkedTypeSet) {
-        createJsonBeanValidatorChecker(jsonBeanType, pd, pathDeque, checkedTypeSet).checkMismatchedValidatorAnnotation(field);
+            Set<Class<?>> checkedTypeSet, Map<String, Class<?>> genericMap) {
+        createJsonBeanValidatorChecker(jsonBeanType, pd, pathDeque, checkedTypeSet).checkMismatchedValidatorAnnotation(field, genericMap);
     }
 
     protected void checkJsonBeanLonelyValidatorAnnotation(Class<?> jsonBeanType, PropertyDesc pd, Field field, Deque<String> pathDeque,
-            Set<Class<?>> checkedTypeSet) {
-        createJsonBeanValidatorChecker(jsonBeanType, pd, pathDeque, checkedTypeSet).checkLonelyValidatorAnnotation(field);
+            Set<Class<?>> checkedTypeSet, Map<String, Class<?>> genericMap) {
+        createJsonBeanValidatorChecker(jsonBeanType, pd, pathDeque, checkedTypeSet).checkLonelyValidatorAnnotation(field, genericMap);
     }
 
     protected ExecuteMethodValidatorChecker createJsonBeanValidatorChecker(Class<?> jsonBeanType, PropertyDesc pd, Deque<String> pathDeque,

@@ -81,14 +81,14 @@ public class ExecuteMethodValidatorChecker implements Serializable {
     // ===================================================================================
     //                                                     Mismatched Validator Annotation
     //                                                     ===============================
-    public void checkMismatchedValidatorAnnotation(Field field) {
-        doCheckMismatchedValidatorAnnotation(field);
+    public void checkMismatchedValidatorAnnotation(Field field, Map<String, Class<?>> genericMap) {
+        doCheckMismatchedValidatorAnnotation(field, genericMap);
     }
 
-    protected void doCheckMismatchedValidatorAnnotation(Field field) { // recursive point
+    protected void doCheckMismatchedValidatorAnnotation(Field field, Map<String, Class<?>> genericMap) { // recursive point
         pathDeque.push(field.getName());
         checkedTypeSet.add(field.getDeclaringClass());
-        final Class<?> fieldType = field.getType();
+        final Class<?> fieldType = deriveFieldType(field, genericMap);
         // *depends on JSON rule so difficult, check only physical mismatch here
         //if (isFormPropertyCannotNotNullType(fieldType)) {
         //    final Class<NotNull> notNullType = NotNull.class;
@@ -132,7 +132,7 @@ public class ExecuteMethodValidatorChecker implements Serializable {
     //                                           -----------
     protected void doCheckGenericBeanValidationMismatch(Field field) {
         // #hope cannot check now: public List<ROOM> roomList;
-        final Class<?> genericType = getGenericType(field); // only first generic #for_now
+        final Class<?> genericType = getFieldGenericType(field); // only first generic #for_now
         if (genericType == null) {
             return;
         }
@@ -168,7 +168,7 @@ public class ExecuteMethodValidatorChecker implements Serializable {
             final PropertyDesc pd = nestedDesc.getPropertyDesc(i);
             final Field nestedField = pd.getField();
             if (nestedField != null) {
-                doCheckMismatchedValidatorAnnotation(nestedField); // recursive call
+                doCheckMismatchedValidatorAnnotation(nestedField, Collections.emptyMap()); // recursive call
             }
         }
     }
@@ -299,14 +299,14 @@ public class ExecuteMethodValidatorChecker implements Serializable {
     // ===================================================================================
     //                                                         Lonely Validator Annotation
     //                                                         ===========================
-    public void checkLonelyValidatorAnnotation(Field field) {
-        doCheckLonelyValidatorAnnotation(field, field.getType());
+    public void checkLonelyValidatorAnnotation(Field field, Map<String, Class<?>> genericMap) {
+        doCheckLonelyValidatorAnnotation(field, deriveFieldType(field, genericMap));
     }
 
     protected void doCheckLonelyValidatorAnnotation(Field field, Class<?> fieldType) { // recursive point
         pathDeque.push(field.getName());
         if (Collection.class.isAssignableFrom(fieldType)) { // only collection, except array and map, simply
-            final Class<?> genericType = getGenericType(field);
+            final Class<?> genericType = getFieldGenericType(field);
             if (genericType != null && mayBeNestedBeanType(genericType)) {
                 if (checkedTypeSet.contains(fieldType)) {
                     return; // cannot check #for_now: SeaBean recursiveBean; in SeaBean
@@ -321,8 +321,8 @@ public class ExecuteMethodValidatorChecker implements Serializable {
                 return; // cannot check #for_now: SeaBean recursiveBean; in SeaBean
             }
             checkedTypeSet.add(fieldType);
-            // can check public LandBean<List<PiariBean>> landBean;
-            final Class<?> genericType = getGenericType(field);
+            // can check: LandBean<PiariBean> landBean; LandBean<List<PiariBean>> landBean;
+            final Class<?> genericType = getFieldGenericType(field);
             final Map<String, Class<?>> genericMap;
             if (genericType != null && mayBeNestedBeanType(genericType)) {
                 genericMap = new LinkedHashMap<String, Class<?>>(1); // only first generic #for_now
@@ -348,15 +348,7 @@ public class ExecuteMethodValidatorChecker implements Serializable {
                     }
                 }
             }
-            final Class<?> nestedFieldType;
-            final Type definedGenericType = nestedField.getGenericType();
-            if (definedGenericType != null && !genericMap.isEmpty()) { // e.g. public HAUNTED haunted;
-                final Class<?> translatedType = genericMap.get(definedGenericType.getTypeName()); // e.g. PiariBean by HAUNTED
-                nestedFieldType = translatedType != null ? translatedType : nestedField.getType();
-            } else {
-                nestedFieldType = nestedField.getType();
-            }
-            doCheckLonelyValidatorAnnotation(nestedField, nestedFieldType); // recursive call
+            doCheckLonelyValidatorAnnotation(nestedField, deriveFieldType(nestedField, genericMap)); // recursive call
         }
     }
 
@@ -432,9 +424,16 @@ public class ExecuteMethodValidatorChecker implements Serializable {
                 || Object[].class.isAssignableFrom(fieldType); // also all arrays
     }
 
-    protected Class<?> getGenericType(Field field) {
+    protected Class<?> deriveFieldType(Field field, Map<String, Class<?>> genericMap) {
+        final Class<?> fieldType;
         final Type genericType = field.getGenericType();
-        return genericType != null ? DfReflectionUtil.getGenericFirstClass(genericType) : null;
+        if (genericType != null && !genericMap.isEmpty()) { // e.g. public HAUNTED haunted;
+            final Class<?> translatedType = genericMap.get(genericType.getTypeName()); // e.g. PiariBean by HAUNTED
+            fieldType = translatedType != null ? translatedType : field.getType();
+        } else {
+            fieldType = field.getType();
+        }
+        return fieldType;
     }
 
     protected String buildPushedOrderPathExp(Deque<String> pathDeque) {
@@ -449,8 +448,13 @@ public class ExecuteMethodValidatorChecker implements Serializable {
         final Type genericType = field.getGenericType();
         final String typeExp = genericType != null ? genericType.getTypeName() : field.getType().getSimpleName();
         sb.append("@").append(field.getName()).append(": ").append(typeExp);
-        final Class<?> genericBeanType = getGenericType(field);
+        final Class<?> genericBeanType = getFieldGenericType(field);
         sb.append(genericBeanType != null ? "<" + genericBeanType.getSimpleName() + ">" : "");
         return sb.toString();
+    }
+
+    protected Class<?> getFieldGenericType(Field field) {
+        final Type genericType = field.getGenericType();
+        return genericType != null ? DfReflectionUtil.getGenericFirstClass(genericType) : null;
     }
 }
