@@ -28,4 +28,6 @@ public class RomanticTraceableSqlStringFilter extends SimpleTraceableSqlStringFi
     public RomanticTraceableSqlStringFilter(Method actionMethod, TraceableSqlAdditionalInfoProvider additionalInfoProvider) {
         super(actionMethod, additionalInfoProvider);
     }
+
+    // #hope inheritsExistingHook of DBFlute
 }

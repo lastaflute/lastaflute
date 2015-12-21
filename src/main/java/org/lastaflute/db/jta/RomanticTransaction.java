@@ -19,6 +19,8 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -28,6 +30,8 @@ import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
+import org.dbflute.bhv.core.BehaviorCommandMeta;
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTraceViewUtil;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.jta.core.TransactionImpl;
@@ -42,23 +46,30 @@ public class RomanticTransaction extends TransactionImpl {
     //                                                                           Attribute
     //                                                                           =========
     // -----------------------------------------------------
-    //                                         Request State
-    //                                         -------------
+    //                                          Request Info
+    //                                          ------------
     protected String requestPath;
     protected Method entryMethod;
     protected Object userBean; // object not to depend on web
 
     // -----------------------------------------------------
-    //                                     Transaction State
-    //                                     -----------------
+    //                                         Current State
+    //                                         -------------
+    // basically to tell its state when other transactions fail
     protected long transactionBeginMillis; // set when transaction begins
-    protected Map<String, Set<String>> tableCommandMap; // lazy loaded, needs synchronized
+    protected Map<String, Set<String>> tableCommandMap; // lazy loaded, needs synchronized, e.g. map:{MEMBER = list:{selectList}}
 
     // current state: might be overridden many times, needs synchronized
     protected String currentTableName; // basically not null in command
     protected String currentCommand; // basically not null in command
     protected Long currentSqlBeginMillis; // null allowed (but almost not null)
     protected TransactionCurrentSqlBuilder currentSqlBuilder; // basically not null in command
+
+    // -----------------------------------------------------
+    //                                         Recent Result
+    //                                         -------------
+    // basically for simple debug of current tranasction
+    protected LinkedList<TransactionSavedRecentResult> recentResultList; // lazy loaded, needs synchronized
 
     // ===================================================================================
     //                                                                               Begin
@@ -104,22 +115,34 @@ public class RomanticTransaction extends TransactionImpl {
     //                                                                            ========
     /**
      * @param wrapper The wrapper of connection for the transaction. (NotNull)
-     * @return The romantic expression for transaction state. (NotNull)
+     * @return The romantic expression for transaction snapshot. (NotNull)
      */
-    public String toRomanticString(ConnectionWrapper wrapper) {
+    public String toRomanticSnapshot(ConnectionWrapper wrapper) { // called when other transactions fail
         synchronized (this) { // blocks registration
-            final TransactionRomanticStringBuilder builder = createRomanticStringBuilder();
-            return builder.buildRomanticString(this, wrapper);
+            return createRomanticSnapshotBuilder().buildRomanticSnapshot(this, wrapper);
         }
     }
 
-    protected TransactionRomanticStringBuilder createRomanticStringBuilder() {
-        return new TransactionRomanticStringBuilder();
+    protected TransactionRomanticSnapshotBuilder createRomanticSnapshotBuilder() {
+        return new TransactionRomanticSnapshotBuilder();
+    }
+
+    /**
+     * @return The optional romantic expression for transaction memories. (NotNull)
+     */
+    public OptionalThing<String> toRomanticMemories() { // called when this transaction fails
+        synchronized (this) { // blocks registration
+            return createRomanticMemoriesBuilder().buildRomanticMemories(this);
+        }
+    }
+
+    protected TransactionRomanticMemoriesBuilder createRomanticMemoriesBuilder() {
+        return new TransactionRomanticMemoriesBuilder();
     }
 
     // ===================================================================================
-    //                                                                   Transaction State
-    //                                                                   =================
+    //                                                                       Current State
+    //                                                                       =============
     // -----------------------------------------------------
     //                                          Elapsed Time
     //                                          ------------
@@ -170,7 +193,7 @@ public class RomanticTransaction extends TransactionImpl {
     }
 
     // -----------------------------------------------------
-    //                                         Current State
+    //                                         Clear Current
     //                                         -------------
     public void clearCurrent() {
         synchronized (this) { // toRomanticString() of exception thread looks the resources
@@ -183,6 +206,62 @@ public class RomanticTransaction extends TransactionImpl {
         currentCommand = null;
         currentSqlBeginMillis = null;
         currentSqlBuilder = null;
+    }
+
+    // ===================================================================================
+    //                                                                       Recent Result
+    //                                                                       =============
+    public void registerRecentResult(String tableName, String command, Long beginMillis, Long endMillis, Class<?> resultType,
+            Object resultValue, BehaviorCommandMeta meta) {
+        synchronized (this) { // toRomanticString() of exception thread looks the resources
+            doRegisterRecentResult(tableName, command, beginMillis, endMillis, resultType, resultValue, meta);
+        }
+    }
+
+    public void doRegisterRecentResult(String tableName, String command, Long beginMillis, Long endMillis, Class<?> resultType,
+            Object resultValue, BehaviorCommandMeta meta) {
+        if (recentResultList == null) {
+            recentResultList = newRecentResult();
+        }
+        if (recentResultList.size() > getRecentResultSavingLimit()) {
+            recentResultList.removeFirst();
+        }
+        final long statementNo = prepareRecentResultStatementNo();
+        recentResultList
+                .add(createSavedRecentResult(statementNo, tableName, command, beginMillis, endMillis, resultType, resultValue, meta));
+    }
+
+    protected LinkedList<TransactionSavedRecentResult> newRecentResult() {
+        return new LinkedList<TransactionSavedRecentResult>(); // plain because of synchronized
+    }
+
+    protected int getRecentResultSavingLimit() {
+        return 30;
+    }
+
+    protected long prepareRecentResultStatementNo() {
+        return recentResultList.isEmpty() ? 1L : recentResultList.peekLast().getStatementNo() + 1;
+    }
+
+    protected TransactionSavedRecentResult createSavedRecentResult(long statementNo, String tableName, String command, Long beginMillis,
+            Long endMillis, Class<?> resultType, Object resultValue, BehaviorCommandMeta meta) {
+        return new TransactionSavedRecentResult(statementNo, tableName, command, beginMillis, endMillis, resultType, resultValue, meta);
+    }
+
+    // -----------------------------------------------------
+    //                                          Clear Recent
+    //                                          ------------
+    public void clearRecent() {
+        synchronized (this) { // toRomanticString() of exception thread looks the resources
+            doClearRecent();
+        }
+    }
+
+    protected void doClearRecent() {
+        if (recentResultList != null) {
+            recentResultList.clear();
+        }
+        recentResultList = null;
     }
 
     // ===================================================================================
@@ -226,5 +305,13 @@ public class RomanticTransaction extends TransactionImpl {
 
     public TransactionCurrentSqlBuilder getCurrentSqlBuilder() {
         return currentSqlBuilder;
+    }
+
+    public List<TransactionSavedRecentResult> getReadOnlyRecentResultList() {
+        if (recentResultList != null) {
+            return Collections.unmodifiableList(recentResultList);
+        } else {
+            return Collections.emptyList();
+        }
     }
 }

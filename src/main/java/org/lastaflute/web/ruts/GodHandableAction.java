@@ -27,16 +27,19 @@ import java.util.stream.Stream;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.db.jta.RomanticTransaction;
+import org.lastaflute.db.jta.TransactionRomanticContext;
+import org.lastaflute.db.jta.stage.BegunTx;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.exception.ActionHookReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
 import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
+import org.lastaflute.web.exception.ExecuteMethodLonelyValidatorAnnotationException;
 import org.lastaflute.web.exception.ExecuteMethodReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
 import org.lastaflute.web.exception.ExecuteMethodReturnUndefinedResponseException;
-import org.lastaflute.web.exception.ExecuteMethodLonelyValidatorAnnotationException;
 import org.lastaflute.web.hook.ActionHook;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
@@ -48,6 +51,7 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.WholeShowRequestAttribute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.validation.LaValidatable;
@@ -141,20 +145,35 @@ public class GodHandableAction implements VirtualAction {
 
     protected NextJourney transactionalExecute(OptionalThing<VirtualForm> form, ActionHook hook) {
         final ExecuteTransactionResult result = (ExecuteTransactionResult) stage.selectable(tx -> {
-            final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
-            assertExecuteMethodResponseDefined(response);
-            final NextJourney journey = reflect(response); /* also response handling in transaction */
-            boolean rollbackOnly = false;
-            if (runtime.hasValidationError()) {
-                tx.rollbackOnly();
-                rollbackOnly = true;
+            try {
+                doExecute(form, hook, tx); /* #to_action */
+            } catch (RuntimeException e) {
+                prepareTransactionMemoriesIfExists();
+                throw e;
             }
-            tx.returns(new ExecuteTransactionResult(response, journey, rollbackOnly));
         } , getExecuteTransactionGenre()).get(); // because of not null
         if (!result.isRollbackOnly()) {
             hookAfterTxCommitIfExists(result);
         }
         return result.getJourney();
+    }
+
+    protected void doExecute(OptionalThing<VirtualForm> form, ActionHook hook, BegunTx<Object> tx) {
+        final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
+        assertExecuteMethodResponseDefined(response);
+        final NextJourney journey = reflect(response); /* also response handling in transaction */
+        final boolean rollbackOnly;
+        if (runtime.hasValidationError()) {
+            tx.rollbackOnly();
+            rollbackOnly = true;
+        } else {
+            rollbackOnly = false;
+        }
+        tx.returns(newExecuteTransactionResult(response, journey, rollbackOnly));
+    }
+
+    protected ExecuteTransactionResult newExecuteTransactionResult(ActionResponse response, NextJourney journey, boolean rollbackOnly) {
+        return new ExecuteTransactionResult(response, journey, rollbackOnly);
     }
 
     protected static class ExecuteTransactionResult {
@@ -198,6 +217,16 @@ public class GodHandableAction implements VirtualAction {
             br.addElement(execute);
             final String msg = br.buildExceptionMessage();
             throw new ExecuteMethodReturnUndefinedResponseException(msg);
+        }
+    }
+
+    protected void prepareTransactionMemoriesIfExists() {
+        final RomanticTransaction tx = TransactionRomanticContext.getRomanticTransaction();
+        if (tx != null) {
+            tx.toRomanticMemories().ifPresent(result -> {
+                final WholeShowRequestAttribute attribute = new WholeShowRequestAttribute(result);
+                requestManager.setAttribute(RequestManager.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
+            });
         }
     }
 

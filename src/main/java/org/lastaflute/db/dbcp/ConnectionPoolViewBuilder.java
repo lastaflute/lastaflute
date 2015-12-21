@@ -107,7 +107,7 @@ public class ConnectionPoolViewBuilder {
                 final ConnectionWrapper wrapper = entry.getValue();
                 final String romantic;
                 if (tx instanceof RomanticTransaction) {
-                    romantic = ((RomanticTransaction) tx).toRomanticString(wrapper);
+                    romantic = ((RomanticTransaction) tx).toRomanticSnapshot(wrapper);
                 } else {
                     romantic = tx.toString();
                 }

@@ -35,7 +35,7 @@ public class HookedConnectionPool extends SimpleConnectionPool {
     protected String buildRomanticExp(Transaction tx, ConnectionWrapper wrapper) {
         final String romantic;
         if (tx instanceof RomanticTransaction) {
-            romantic = ((RomanticTransaction) tx).toRomanticString(wrapper);
+            romantic = ((RomanticTransaction) tx).toRomanticSnapshot(wrapper);
         } else {
             romantic = super.buildRomanticExp(tx, wrapper);
         }

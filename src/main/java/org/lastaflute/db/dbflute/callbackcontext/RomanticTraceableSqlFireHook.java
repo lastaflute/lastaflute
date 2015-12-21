@@ -51,13 +51,11 @@ public class RomanticTraceableSqlFireHook implements SqlFireHook {
         }
     }
 
-    protected TransactionCurrentSqlBuilder createCurrentSqlBuilder(final SqlLogInfo sqlLogInfo) {
-        return new TransactionCurrentSqlBuilder() {
-            public String buildSql() {
-                // to be exact, this is not perfectly thread-safe but no problem,
-                // only possibility of no cache use (while, building process is thread-safe)
-                return sqlLogInfo.getDisplaySql(); // lazily
-            }
+    protected TransactionCurrentSqlBuilder createCurrentSqlBuilder(SqlLogInfo sqlLogInfo) {
+        return () -> {
+            // to be exact, this is not perfectly thread-safe but no problem,
+            // only possibility of no cache use (while, building process is thread-safe)
+            return sqlLogInfo.getDisplaySql(); // lazily
         };
     }
 

@@ -32,32 +32,32 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jflute
  */
-public class TransactionRomanticStringBuilder {
+public class TransactionRomanticSnapshotBuilder {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TransactionRomanticStringBuilder.class);
+    private static final Logger logger = LoggerFactory.getLogger(TransactionRomanticSnapshotBuilder.class);
 
     // ===================================================================================
     //                                                                            Romantic
     //                                                                            ========
     /**
      * @param tx The transaction it looks so romantic. (NotNull)
-     * @param wrapper The wrapper of connection for the transaction to extract native process ID. (NotNull)
-     * @return The romantic expression for transaction state. (NotNull)
+     * @param wrapper The wrapper of connection for the transaction to extract native process ID. (NotNull: but no check just in case)
+     * @return The romantic expression for transaction snapshot. (NotNull)
      */
-    public String buildRomanticString(RomanticTransaction tx, ConnectionWrapper wrapper) {
+    public String buildRomanticSnapshot(RomanticTransaction tx, ConnectionWrapper wrapper) {
         final StringBuilder sb = new StringBuilder();
         sb.append("{").append(currentElapsedTimeExp(tx));
-        doBuildXidExp(sb, tx, wrapper);
-        doBuildEntryMethodExp(sb, tx);
-        doBuildUserBeanExp(sb, tx);
-        doBuildTableCommandExp(sb, tx);
-        doBuildRequestPathExp(sb, tx); // might have long query string so last
+        setupXidExp(sb, tx, wrapper);
+        setupEntryMethodExp(sb, tx);
+        setupUserBeanExp(sb, tx);
+        setupTableCommandExp(sb, tx);
+        setupRequestPathExp(sb, tx); // might have long query string so last
         sb.append("}@").append(toHexHashExp(tx)).append("@").append(toHexHashExp(wrapper));
         // SQL display has lines so close here
-        doBuildCurrentSqlExp(sb, tx);
+        setupCurrentSqlExp(sb, tx);
         return sb.toString();
     }
 
@@ -75,7 +75,7 @@ public class TransactionRomanticStringBuilder {
     // ===================================================================================
     //                                                                                XID
     //                                                                               =====
-    protected void doBuildXidExp(StringBuilder sb, RomanticTransaction tx, ConnectionWrapper wrapper) {
+    protected void setupXidExp(StringBuilder sb, RomanticTransaction tx, ConnectionWrapper wrapper) {
         sb.append(", ");
         final Xid xid = tx.getXid();
         final byte[] globalId = xid.getGlobalTransactionId();
@@ -129,7 +129,7 @@ public class TransactionRomanticStringBuilder {
     // ===================================================================================
     //                                                                        Entry Method
     //                                                                        ============
-    protected void doBuildEntryMethodExp(StringBuilder sb, RomanticTransaction tx) {
+    protected void setupEntryMethodExp(StringBuilder sb, RomanticTransaction tx) {
         final Method entryMethod = tx.getEntryMethod();
         if (entryMethod != null) {
             final String appPkg = getApplicationPackageKeyword();
@@ -145,7 +145,7 @@ public class TransactionRomanticStringBuilder {
     // ===================================================================================
     //                                                                           User Bean
     //                                                                           =========
-    protected void doBuildUserBeanExp(StringBuilder sb, RomanticTransaction tx) {
+    protected void setupUserBeanExp(StringBuilder sb, RomanticTransaction tx) {
         final Object userBean = tx.getUserBean();
         if (userBean != null) {
             sb.append(", ").append(userBean);
@@ -155,7 +155,7 @@ public class TransactionRomanticStringBuilder {
     // ===================================================================================
     //                                                                       Table Command
     //                                                                       =============
-    protected void doBuildTableCommandExp(StringBuilder sb, RomanticTransaction tx) {
+    protected void setupTableCommandExp(StringBuilder sb, RomanticTransaction tx) {
         final Map<String, Set<String>> tableCommandMap = tx.getReadOnlyTableCommandMap();
         if (!tableCommandMap.isEmpty()) {
             final StringBuilder mapSb = new StringBuilder();
@@ -179,7 +179,7 @@ public class TransactionRomanticStringBuilder {
     // ===================================================================================
     //                                                                        Request Path
     //                                                                        ============
-    protected void doBuildRequestPathExp(StringBuilder sb, RomanticTransaction tx) {
+    protected void setupRequestPathExp(StringBuilder sb, RomanticTransaction tx) {
         final String requestPath = tx.getRequestPath();
         if (requestPath != null) {
             sb.append(", ").append(requestPath);
@@ -189,7 +189,7 @@ public class TransactionRomanticStringBuilder {
     // ===================================================================================
     //                                                                         Current SQL
     //                                                                         ===========
-    protected void doBuildCurrentSqlExp(StringBuilder sb, RomanticTransaction tx) {
+    protected void setupCurrentSqlExp(StringBuilder sb, RomanticTransaction tx) {
         final TransactionCurrentSqlBuilder currentSqlBuilder = tx.getCurrentSqlBuilder();
         if (currentSqlBuilder != null) {
             final String currentSql = currentSqlBuilder.buildSql();
