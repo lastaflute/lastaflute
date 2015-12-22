@@ -101,14 +101,14 @@ public class RomanticTransaction extends TransactionImpl {
 
     @Override
     public void rollback() throws IllegalStateException, SecurityException, SystemException {
-        registerMemoriesProviderIfNeeds(); // to show romantic memories in error message
+        registerMemoriesProviderIfNeeds("rollback"); // to show romantic memories in error message
         clearRomanticTransactionFromThread();
         super.rollback();
     }
 
-    protected void registerMemoriesProviderIfNeeds() {
+    protected void registerMemoriesProviderIfNeeds(String ending) {
         if (ThreadCacheContext.exists()) {
-            final TransactionMemoriesProvider provider = toRomanticMemoriesProvider();
+            final TransactionMemoriesProvider provider = toRomanticMemoriesProvider(ending);
             final SavedTransactionMemories existing = ThreadCacheContext.findTransactionMemories();
             if (existing != null) {
                 existing.registerNextProvider(provider);
@@ -140,11 +140,12 @@ public class RomanticTransaction extends TransactionImpl {
     }
 
     /**
+     * @param ending The ending type of transaction, e.g. rollback. (NotNull)
      * @return The provider of optional romantic expression for transaction memories. (NotNull)
      */
-    public TransactionMemoriesProvider toRomanticMemoriesProvider() { // called when this transaction fails
+    public TransactionMemoriesProvider toRomanticMemoriesProvider(String ending) { // called when this transaction fails
         synchronized (this) { // blocks registration
-            return TransactionRomanticMemoriesBuilder.createMemoriesProvider(this);
+            return TransactionRomanticMemoriesBuilder.createMemoriesProvider(this, ending);
         }
     }
 

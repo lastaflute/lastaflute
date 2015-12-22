@@ -57,7 +57,7 @@ public class TransactionRomanticMemoriesBuilder {
         this.recentResultList = recentResultList;
     }
 
-    public static TransactionMemoriesProvider createMemoriesProvider(RomanticTransaction tx) {
+    public static TransactionMemoriesProvider createMemoriesProvider(RomanticTransaction tx, String ending) {
         final String title = DfTypeUtil.toClassTitle(tx);
         final int hash = tx.hashCode();
         final long beginMillis = tx.getTransactionBeginMillis();
@@ -65,17 +65,18 @@ public class TransactionRomanticMemoriesBuilder {
         final List<TransactionSavedRecentResult> recentResultList = tx.getReadOnlyRecentResultList();
         final TransactionRomanticMemoriesBuilder builder =
                 new TransactionRomanticMemoriesBuilder(title, hash, beginMillis, tableCommandMap, recentResultList);
-        return () -> builder.buildRomanticMemories();
+        return () -> builder.buildRomanticMemories(ending);
     }
 
     // ===================================================================================
     //                                                                            Romantic
     //                                                                            ========
     /**
+     * @param ending The ending type of transaction, e.g. rollback. (NotNull)
      * @param tx The transaction it looks so romantic. (NotNull)
      * @return The romantic expression for transaction memories. (NotNull)
      */
-    public OptionalThing<String> buildRomanticMemories() {
+    public OptionalThing<String> buildRomanticMemories(String ending) {
         if (recentResultList.isEmpty()) {
             return OptionalThing.empty();
         }
@@ -88,6 +89,7 @@ public class TransactionRomanticMemoriesBuilder {
         //setupUserBeanExp(sb, tx);
         sb.append(ln()).append("beginning time: ").append(toDateExp(transactionBeginMillis));
         setupTableCommandExp(sb);
+        sb.append(ln()).append("ending: ").append(ending);
         if (beforeStateLength == sb.length()) { // no change
             sb.append(ln()).append("*no info");
         }

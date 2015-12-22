@@ -68,6 +68,7 @@ public class TransactionSavedRecentResult {
                 }
                 resultMap.put("first", firstExp);
             } else { // basically no way
+                // #hope want to get updated PK from meta, but after DBFlute-1.1.1
                 final String valueTitle;
                 if (meta.isInsert()) {
                     valueTitle = "inserted";
