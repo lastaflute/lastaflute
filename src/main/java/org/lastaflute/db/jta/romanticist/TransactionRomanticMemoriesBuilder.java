@@ -15,7 +15,6 @@
  */
 package org.lastaflute.db.jta.romanticist;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -151,13 +150,13 @@ public class TransactionRomanticMemoriesBuilder {
     //                                                                              Result
     //                                                                              ======
     protected void setupResultExp(StringBuilder sb, TransactionSavedRecentResult result) {
-        final Class<?> resultType = result.getResultType();
-        final Map<String, Object> resultMap = result.getResultMap();
+        final Class<?> resultType = result.getResultType(); // not null
+        final Map<String, Object> resultMap = result.getResultMap(); // not null
         sb.append(resultType.getSimpleName()).append(":").append(buildResultExp(resultMap));
     }
 
     protected String buildResultExp(Map<String, Object> resultMap) {
-        return (resultMap != null ? resultMap : Collections.emptyMap()).toString();
+        return resultMap.toString(); // simply
     }
 
     // ===================================================================================
