@@ -17,6 +17,7 @@ package org.lastaflute.core.magic.async;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
@@ -52,7 +53,10 @@ import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.magic.async.ConcurrentAsyncOption.ConcurrentAsyncInheritType;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
+import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlResultHandler;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
+import org.lastaflute.db.jta.SavedTransactionMemories;
+import org.lastaflute.db.jta.TransactionMemoriesProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -362,6 +366,8 @@ public class SimpleAsyncManager implements AsyncManager {
             if (handler != null) {
                 dest.setSqlResultHandler(handler);
             }
+        } else {
+            dest.setSqlResultHandler(createDefaultSqlResultHandler(call));
         }
         if (isInherit(option.getSqlStringFilterType(), defaultOption.getSqlStringFilterType())) {
             final SqlStringFilter filter = src.getSqlStringFilter();
@@ -410,6 +416,10 @@ public class SimpleAsyncManager implements AsyncManager {
                 return additionalInfo;
             }
         });
+    }
+
+    protected SqlResultHandler createDefaultSqlResultHandler(ConcurrentAsyncCall call) {
+        return new RomanticTraceableSqlResultHandler();
     }
 
     protected Map<String, Object> findCallerVariousContextMap() { // for extension
@@ -488,34 +498,63 @@ public class SimpleAsyncManager implements AsyncManager {
         sb.append("callbackInterface=").append(call);
         if (requestPath != null) {
             sb.append(LF).append(IND);
-            sb.append(", requestPath=").append(requestPath);
+            sb.append("; requestPath=").append(requestPath);
         }
         if (entryMethod != null) {
             sb.append(LF).append(IND);
             final Class<?> declaringClass = entryMethod.getDeclaringClass();
-            sb.append(", entryMethod=").append(declaringClass.getName()).append("@").append(entryMethod.getName()).append("()");
+            sb.append("; entryMethod=").append(declaringClass.getName()).append("@").append(entryMethod.getName()).append("()");
         }
         if (userBean != null) {
             sb.append(LF).append(IND);
-            sb.append(", userBean=").append(userBean);
+            sb.append("; userBean=").append(userBean);
         }
         sb.append(LF).append(IND);
         final AccessContext accessContext = PreparedAccessContext.getAccessContextOnThread();
-        sb.append(", accessContext=").append(accessContext);
+        sb.append("; accessContext=").append(accessContext);
         sb.append(LF).append(IND);
         final CallbackContext callbackContext = CallbackContext.getCallbackContextOnThread();
-        sb.append(", callbackContext=").append(callbackContext);
+        sb.append("; callbackContext=").append(callbackContext);
         final StringBuilder variousContextSb = new StringBuilder();
         buildVariousContextInAsyncCallbackExceptionMessage(call, cause, variousContextSb);
         if (variousContextSb.length() > 0) {
             sb.append(LF).append(IND);
             sb.append(variousContextSb.toString());
         }
-        sb.append(LF);
+        setupTransactionMemoriesIfExists(sb);
         final long after = System.currentTimeMillis();
         final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
+        sb.append(LF);
         sb.append("= = = = = = = = = =/ [").append(performanceView).append("] #").append(Integer.toHexString(cause.hashCode()));
         return sb.toString();
+    }
+
+    protected void setupTransactionMemoriesIfExists(StringBuilder sb) {
+        // e.g.
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // ; transactionMemories=wholeShow:  
+        // *RomanticTransaction@2d1cd52a
+        // << Transaction Current State >>
+        // beginning time: 2015/12/22 12:04:40.574
+        // table command: map:{PRODUCT = list:{selectCursor ; scalarSelect(LocalDate).max}}
+        // << Transaction Recent Result >>
+        // 1. (2015/12/22 12:04:40.740) [00m00s027ms] PRODUCT@selectCursor => Object:{}
+        // 2. (2015/12/22 12:04:40.773) [00m00s015ms] PRODUCT@scalarSelect(LocalDate).max => LocalDate:{value=2013-08-02}
+        // _/_/_/_/_/_/_/_/_/_/
+        final SavedTransactionMemories memories = ThreadCacheContext.findTransactionMemories();
+        if (memories != null) {
+            final List<TransactionMemoriesProvider> providerList = memories.getOrderedProviderList();
+            final StringBuilder txSb = new StringBuilder();
+            for (TransactionMemoriesProvider provider : providerList) {
+                provider.provide().ifPresent(result -> {
+                    if (txSb.length() == 0) {
+                        txSb.append(LF).append(IND).append("; transactionMemories=wholeShow:");
+                    }
+                    txSb.append(Srl.indent(IND.length(), LF + "*" + result));
+                });
+            }
+            sb.append(txSb);
+        }
     }
 
     protected void buildVariousContextInAsyncCallbackExceptionMessage(ConcurrentAsyncCall call, Throwable cause, StringBuilder sb) {

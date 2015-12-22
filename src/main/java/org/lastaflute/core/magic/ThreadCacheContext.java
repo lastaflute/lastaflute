@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfCollectionUtil;
+import org.lastaflute.db.jta.SavedTransactionMemories;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 
 /**
@@ -49,10 +50,15 @@ public class ThreadCacheContext {
     public static final String FW_USER_BEAN = "fw:userBean";
 
     // -----------------------------------------------------
-    //                                               Marking
-    //                                               -------
+    //                                            Validation
+    //                                            ----------
     public static final String FW_VALIDATOR_CALLED = "fw:validatorCalled";
     public static final String FW_VALIDATOR_TYPE_FAILURE = "fw:validatorTypeFailure";
+
+    // -----------------------------------------------------
+    //                                           Transaction
+    //                                           -----------
+    public static final String FW_TRANSACTION_MEMORIES = "fw:transactionMemories";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -211,5 +217,16 @@ public class ThreadCacheContext {
 
     public static void registerValidatorTypeFailure(Object failureBean) {
         setObject(FW_VALIDATOR_TYPE_FAILURE, failureBean);
+    }
+
+    // -----------------------------------------------------
+    //                                           Transaction
+    //                                           -----------
+    public static SavedTransactionMemories findTransactionMemories() {
+        return exists() ? getObject(FW_TRANSACTION_MEMORIES) : null;
+    }
+
+    public static void registerTransactionMemories(SavedTransactionMemories memoriesInfo) {
+        setObject(FW_TRANSACTION_MEMORIES, memoriesInfo);
     }
 }

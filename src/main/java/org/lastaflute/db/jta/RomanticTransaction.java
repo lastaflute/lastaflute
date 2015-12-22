@@ -31,7 +31,6 @@ import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 
 import org.dbflute.bhv.core.BehaviorCommandMeta;
-import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTraceViewUtil;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.jta.core.TransactionImpl;
@@ -102,8 +101,21 @@ public class RomanticTransaction extends TransactionImpl {
 
     @Override
     public void rollback() throws IllegalStateException, SecurityException, SystemException {
+        registerMemoriesProviderIfNeeds(); // to show romantic memories in error message
         clearRomanticTransactionFromThread();
         super.rollback();
+    }
+
+    protected void registerMemoriesProviderIfNeeds() {
+        if (ThreadCacheContext.exists()) {
+            final TransactionMemoriesProvider provider = toRomanticMemoriesProvider();
+            final SavedTransactionMemories existing = ThreadCacheContext.findTransactionMemories();
+            if (existing != null) {
+                existing.registerNextProvider(provider);
+            } else {
+                ThreadCacheContext.registerTransactionMemories(new SavedTransactionMemories(provider));
+            }
+        }
     }
 
     protected void clearRomanticTransactionFromThread() {
@@ -128,16 +140,12 @@ public class RomanticTransaction extends TransactionImpl {
     }
 
     /**
-     * @return The optional romantic expression for transaction memories. (NotNull)
+     * @return The provider of optional romantic expression for transaction memories. (NotNull)
      */
-    public OptionalThing<String> toRomanticMemories() { // called when this transaction fails
+    public TransactionMemoriesProvider toRomanticMemoriesProvider() { // called when this transaction fails
         synchronized (this) { // blocks registration
-            return createRomanticMemoriesBuilder().buildRomanticMemories(this);
+            return TransactionRomanticMemoriesBuilder.createMemoriesProvider(this);
         }
-    }
-
-    protected TransactionRomanticMemoriesBuilder createRomanticMemoriesBuilder() {
-        return new TransactionRomanticMemoriesBuilder();
     }
 
     // ===================================================================================

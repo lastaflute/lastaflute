@@ -37,32 +37,63 @@ import org.dbflute.util.Srl;
 public class TransactionRomanticMemoriesBuilder {
 
     // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final String transactionTypeTitle;
+    protected final int transactionTypeHash;
+    protected final long transactionBeginMillis;
+    protected final Map<String, Set<String>> tableCommandMap;
+    protected final List<TransactionSavedRecentResult> recentResultList;
+
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public TransactionRomanticMemoriesBuilder(String transactionTypeTitle, int transactionTypeHash, long transactionBeginMillis,
+            Map<String, Set<String>> tableCommandMap, List<TransactionSavedRecentResult> recentResultList) {
+        this.transactionTypeTitle = transactionTypeTitle;
+        this.transactionTypeHash = transactionTypeHash;
+        this.transactionBeginMillis = transactionBeginMillis;
+        this.tableCommandMap = tableCommandMap;
+        this.recentResultList = recentResultList;
+    }
+
+    public static TransactionMemoriesProvider createMemoriesProvider(RomanticTransaction tx) {
+        final String title = DfTypeUtil.toClassTitle(tx);
+        final int hash = tx.hashCode();
+        final long beginMillis = tx.getTransactionBeginMillis();
+        final Map<String, Set<String>> tableCommandMap = tx.getReadOnlyTableCommandMap();
+        final List<TransactionSavedRecentResult> recentResultList = tx.getReadOnlyRecentResultList();
+        final TransactionRomanticMemoriesBuilder builder =
+                new TransactionRomanticMemoriesBuilder(title, hash, beginMillis, tableCommandMap, recentResultList);
+        return () -> builder.buildRomanticMemories();
+    }
+
+    // ===================================================================================
     //                                                                            Romantic
     //                                                                            ========
     /**
      * @param tx The transaction it looks so romantic. (NotNull)
      * @return The romantic expression for transaction memories. (NotNull)
      */
-    public OptionalThing<String> buildRomanticMemories(RomanticTransaction tx) {
-        final List<TransactionSavedRecentResult> resultList = tx.getReadOnlyRecentResultList();
-        if (resultList.isEmpty()) {
+    public OptionalThing<String> buildRomanticMemories() {
+        if (recentResultList.isEmpty()) {
             return OptionalThing.empty();
         }
         final StringBuilder sb = new StringBuilder();
-        sb.append(DfTypeUtil.toClassTitle(tx)).append("@").append(toHexHashExp(tx));
+        sb.append(transactionTypeTitle).append("@").append(toHexHashExp(transactionTypeHash));
         sb.append(ln()).append("<< Transaction Current State >>");
         final int beforeStateLength = sb.length();
         // error message already contains it
         //setupEntryMethodExp(sb, tx);
         //setupUserBeanExp(sb, tx);
-        sb.append(ln()).append("beginning time: ").append(toDateExp(tx.getTransactionBeginMillis()));
-        setupTableCommandExp(sb, tx);
+        sb.append(ln()).append("beginning time: ").append(toDateExp(transactionBeginMillis));
+        setupTableCommandExp(sb);
         if (beforeStateLength == sb.length()) { // no change
             sb.append(ln()).append("*no info");
         }
         sb.append(ln()).append("<< Transaction Recent Result >>");
-        final int precision = calculatePrecision(resultList);
-        for (TransactionSavedRecentResult result : resultList) {
+        final int precision = calculatePrecision(recentResultList);
+        for (TransactionSavedRecentResult result : recentResultList) {
             final long statementNo = result.getStatementNo();
             final String tableName = result.getTableName();
             final String command = result.getCommand();
@@ -93,8 +124,7 @@ public class TransactionRomanticMemoriesBuilder {
     //                                                                       Current State
     //                                                                       =============
     // similar to current state, no recycle for independency
-    protected void setupTableCommandExp(StringBuilder sb, RomanticTransaction tx) { // originated in current state
-        final Map<String, Set<String>> tableCommandMap = tx.getReadOnlyTableCommandMap();
+    protected void setupTableCommandExp(StringBuilder sb) { // originated in current state
         if (!tableCommandMap.isEmpty()) {
             final StringBuilder mapSb = new StringBuilder();
             mapSb.append("map:{");
@@ -162,8 +192,8 @@ public class TransactionRomanticMemoriesBuilder {
         return new HandyDate(new Date(beginMillis)).timeZone(timeZone).toDisp("yyyy/MM/dd HH:mm:ss.SSS");
     }
 
-    protected String toHexHashExp(Object obj) {
-        return obj != null ? Integer.toHexString(obj.hashCode()) : "null";
+    protected String toHexHashExp(int hash) {
+        return Integer.toHexString(hash);
     }
 
     protected String ln() {

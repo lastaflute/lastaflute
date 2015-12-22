@@ -21,6 +21,7 @@ import org.dbflute.hook.SqlFireHook;
 import org.dbflute.hook.SqlFireReadyInfo;
 import org.dbflute.hook.SqlFireResultInfo;
 import org.dbflute.hook.SqlLogInfo;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.db.jta.RomanticTransaction;
 import org.lastaflute.db.jta.TransactionCurrentSqlBuilder;
 import org.lastaflute.db.jta.TransactionRomanticContext;
@@ -64,5 +65,10 @@ public class RomanticTraceableSqlFireHook implements SqlFireHook {
         if (tx != null) {
             tx.clearCurrent();
         }
+    }
+
+    @Override
+    public String toString() {
+        return DfTypeUtil.toClassTitle(this) + "@" + Integer.toHexString(hashCode());
     }
 }

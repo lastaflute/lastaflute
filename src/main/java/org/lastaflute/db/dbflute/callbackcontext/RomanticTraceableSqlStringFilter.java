@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 
 import org.dbflute.bhv.proposal.callback.SimpleTraceableSqlStringFilter;
 import org.dbflute.bhv.proposal.callback.TraceableSqlAdditionalInfoProvider;
+import org.dbflute.util.DfTypeUtil;
 
 /**
  * @author jflute
@@ -29,5 +30,8 @@ public class RomanticTraceableSqlStringFilter extends SimpleTraceableSqlStringFi
         super(actionMethod, additionalInfoProvider);
     }
 
-    // #hope inheritsExistingHook of DBFlute
+    @Override
+    public String toString() {
+        return DfTypeUtil.toClassTitle(this) + "@" + Integer.toHexString(hashCode());
+    }
 }

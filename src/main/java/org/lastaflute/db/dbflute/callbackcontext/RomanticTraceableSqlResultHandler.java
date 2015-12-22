@@ -19,6 +19,7 @@ import org.dbflute.bhv.core.BehaviorCommandMeta;
 import org.dbflute.hook.SqlResultHandler;
 import org.dbflute.hook.SqlResultInfo;
 import org.dbflute.jdbc.ExecutionTimeInfo;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.db.jta.RomanticTransaction;
 import org.lastaflute.db.jta.TransactionRomanticContext;
 
@@ -44,5 +45,8 @@ public class RomanticTraceableSqlResultHandler implements SqlResultHandler {
         }
     }
 
-    // #hope inheritsExistingHook of DBFlute
+    @Override
+    public String toString() {
+        return DfTypeUtil.toClassTitle(this) + "@" + Integer.toHexString(hashCode());
+    }
 }

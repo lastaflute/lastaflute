@@ -27,8 +27,8 @@ import java.util.stream.Stream;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.ThreadCacheContext;
-import org.lastaflute.db.jta.RomanticTransaction;
-import org.lastaflute.db.jta.TransactionRomanticContext;
+import org.lastaflute.db.jta.SavedTransactionMemories;
+import org.lastaflute.db.jta.TransactionMemoriesProvider;
 import org.lastaflute.db.jta.stage.BegunTx;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
@@ -136,6 +136,7 @@ public class GodHandableAction implements VirtualAction {
             throw e;
         } finally {
             processHookFinally(hook);
+            prepareTransactionMemoriesIfExists();
         }
     }
 
@@ -145,12 +146,7 @@ public class GodHandableAction implements VirtualAction {
 
     protected NextJourney transactionalExecute(OptionalThing<VirtualForm> form, ActionHook hook) {
         final ExecuteTransactionResult result = (ExecuteTransactionResult) stage.selectable(tx -> {
-            try {
-                doExecute(form, hook, tx); /* #to_action */
-            } catch (RuntimeException e) {
-                prepareTransactionMemoriesIfExists();
-                throw e;
-            }
+            doExecute(form, hook, tx); /* #to_action */
         } , getExecuteTransactionGenre()).get(); // because of not null
         if (!result.isRollbackOnly()) {
             hookAfterTxCommitIfExists(result);
@@ -220,16 +216,6 @@ public class GodHandableAction implements VirtualAction {
         }
     }
 
-    protected void prepareTransactionMemoriesIfExists() {
-        final RomanticTransaction tx = TransactionRomanticContext.getRomanticTransaction();
-        if (tx != null) {
-            tx.toRomanticMemories().ifPresent(result -> {
-                final WholeShowRequestAttribute attribute = new WholeShowRequestAttribute(result);
-                requestManager.setAttribute(RequestManager.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
-            });
-        }
-    }
-
     protected TransactionGenre getExecuteTransactionGenre() {
         return execute.getTransactionGenre();
     }
@@ -245,6 +231,24 @@ public class GodHandableAction implements VirtualAction {
     //                                      ----------------
     protected NextJourney reflect(ActionResponse response) {
         return reflector.reflect(response);
+    }
+
+    // -----------------------------------------------------
+    //                                  Transaction Memories
+    //                                  --------------------
+    protected void prepareTransactionMemoriesIfExists() {
+        final SavedTransactionMemories memories = ThreadCacheContext.findTransactionMemories();
+        if (memories != null) {
+            final List<TransactionMemoriesProvider> providerList = memories.getOrderedProviderList();
+            final StringBuilder sb = new StringBuilder();
+            for (TransactionMemoriesProvider provider : providerList) {
+                provider.provide().ifPresent(result -> {
+                    sb.append("\n*").append(result);
+                });
+            }
+            final WholeShowRequestAttribute attribute = new WholeShowRequestAttribute(sb.toString());
+            requestManager.setAttribute(RequestManager.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
+        }
     }
 
     // ===================================================================================
