@@ -74,12 +74,16 @@ public class OneWayCryptographer {
         final String encoding = getEncoding();
         final MessageDigest digest = createDigest();
         try {
-            digest.update(plainText.getBytes(encoding));
+            digest.update(toDigestBytes(plainText, encoding));
         } catch (UnsupportedEncodingException e) {
             String msg = "Unknown encoding: " + encoding;
             throw new CipherFailureException(msg);
         }
         return convertToCryptoString(digest.digest());
+    }
+
+    protected byte[] toDigestBytes(String plainText, String encoding) throws UnsupportedEncodingException {
+        return plainText.getBytes(encoding);
     }
 
     protected String getEncoding() {
