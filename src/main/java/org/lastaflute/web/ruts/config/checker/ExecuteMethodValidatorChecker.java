@@ -374,8 +374,8 @@ public class ExecuteMethodValidatorChecker implements Serializable {
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    public class SeaBean {");
-        br.addElement("        @Valid                // Good: javax.validation");
-        br.addElement("        public LandBean land;");
+        br.addElement("        @Valid");
+        br.addElement("        public LandBean land; // Good: javax.validation");
         br.addElement("");
         br.addElement("        public static class LandBean {");
         br.addElement("            @Required");
