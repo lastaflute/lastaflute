@@ -13,16 +13,16 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.db.jta;
-
-import org.dbflute.optional.OptionalThing;
+package org.lastaflute.db.jta.romanticist;
 
 /**
  * @author jflute
- * @since 0.7.2 (2015/12/22 Tuesday)
  */
 @FunctionalInterface
-public interface TransactionMemoriesProvider {
+public interface TransactionCurrentSqlBuilder {
 
-    OptionalThing<String> provide();
+    /**
+     * @return The expression of current SQL, might not be executedSql (might be displaySql). (NotNull)
+     */
+    String buildSql();
 }

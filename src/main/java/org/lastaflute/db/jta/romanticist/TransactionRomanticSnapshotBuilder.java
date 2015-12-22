@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.db.jta;
+package org.lastaflute.db.jta.romanticist;
 
 import java.lang.reflect.Method;
 import java.sql.Connection;
@@ -25,6 +25,7 @@ import javax.transaction.xa.Xid;
 
 import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.Srl;
+import org.lastaflute.db.jta.RomanticTransaction;
 import org.lastaflute.jta.dbcp.ConnectionWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -58,8 +58,8 @@ import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlResultHandler;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
-import org.lastaflute.db.jta.SavedTransactionMemories;
-import org.lastaflute.db.jta.TransactionMemoriesProvider;
+import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
+import org.lastaflute.db.jta.romanticist.TransactionMemoriesProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -23,8 +23,8 @@ import org.dbflute.hook.SqlFireResultInfo;
 import org.dbflute.hook.SqlLogInfo;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.db.jta.RomanticTransaction;
-import org.lastaflute.db.jta.TransactionCurrentSqlBuilder;
 import org.lastaflute.db.jta.TransactionRomanticContext;
+import org.lastaflute.db.jta.romanticist.TransactionCurrentSqlBuilder;
 
 /**
  * @author jflute

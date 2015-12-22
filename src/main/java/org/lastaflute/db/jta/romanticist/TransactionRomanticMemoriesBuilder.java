@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.db.jta;
+package org.lastaflute.db.jta.romanticist;
 
 import java.util.Collections;
 import java.util.Date;
@@ -29,6 +29,7 @@ import org.dbflute.system.DBFluteSystem;
 import org.dbflute.util.DfTraceViewUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
+import org.lastaflute.db.jta.RomanticTransaction;
 
 /**
  * @author jflute

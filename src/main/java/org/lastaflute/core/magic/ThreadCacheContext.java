@@ -22,7 +22,7 @@ import java.util.Map;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfCollectionUtil;
-import org.lastaflute.db.jta.SavedTransactionMemories;
+import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 
 /**

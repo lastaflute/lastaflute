@@ -33,6 +33,12 @@ import javax.transaction.SystemException;
 import org.dbflute.bhv.core.BehaviorCommandMeta;
 import org.dbflute.util.DfTraceViewUtil;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
+import org.lastaflute.db.jta.romanticist.TransactionCurrentSqlBuilder;
+import org.lastaflute.db.jta.romanticist.TransactionMemoriesProvider;
+import org.lastaflute.db.jta.romanticist.TransactionRomanticMemoriesBuilder;
+import org.lastaflute.db.jta.romanticist.TransactionRomanticSnapshotBuilder;
+import org.lastaflute.db.jta.romanticist.TransactionSavedRecentResult;
 import org.lastaflute.jta.core.TransactionImpl;
 import org.lastaflute.jta.dbcp.ConnectionWrapper;
 
