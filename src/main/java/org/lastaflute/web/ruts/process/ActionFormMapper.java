@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -528,26 +529,29 @@ public class ActionFormMapper {
             FormMappingOption option, PropertyDesc pd) {
         final Class<?> propertyType = pd.getPropertyType();
         final Object mappedValue;
-        if (propertyType.isArray()) { // fixedly String #for_now e.g. public String[] strArray;
+        if (propertyType.isArray()) { // fixedly String #for_now e.g. public String[] strArray; so use List<>
             mappedValue = prepareStringArray(value, name, propertyType, option); // plain mapping to array, e.g. JSON not supported
         } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
             if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
                 final Object scalar = prepareObjectScalar(value);
                 mappedValue = parseJsonParameter(virtualForm, bean, name, prepareJsonString(scalar), pd);
-            } else { // fixedly String #for_now e.g. public List<String> strList;
-                mappedValue = prepareStringList(value, name, propertyType, option);
+            } else { // e.g. List<String>, List<CDef.MemberStatus>
+                mappedValue = prepareMappedList(virtualForm, bean, name, value, pd, pathSb, option);
             }
         } else { // not array or list, e.g. String, Object
             final Object scalar = prepareObjectScalar(value);
             if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
                 mappedValue = parseJsonParameter(virtualForm, bean, name, prepareJsonString(scalar), pd);
             } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
-                mappedValue = convertToNativeIfPossible(virtualForm, bean, name, scalar, pd, pathSb, option);
+                mappedValue = prepareNativeValue(virtualForm, bean, name, scalar, pd, pathSb, option);
             }
         }
         pd.setValue(bean, mappedValue);
     }
 
+    // -----------------------------------------------------
+    //                                        Array Property
+    //                                        --------------
     protected String[] prepareStringArray(Object value, String propertyName, Class<?> proeprtyType, FormMappingOption option) { // not null (empty if null)
         final String[] result;
         if (value != null && value instanceof String[]) {
@@ -558,12 +562,29 @@ public class ActionFormMapper {
         return filterIfSimpleText(result, option, propertyName, proeprtyType);
     }
 
+    // -----------------------------------------------------
+    //                                         List Property
+    //                                         -------------
+    protected List<? extends Object> prepareMappedList(VirtualForm virtualForm, Object bean, String name, Object value, PropertyDesc pd,
+            StringBuilder pathSb, FormMappingOption option) {
+        final Class<?> propertyType = pd.getPropertyType();
+        final List<String> strList = prepareStringList(value, name, propertyType, option);
+        if (pd.isParameterized()) {
+            final Class<?> elementType = pd.getParameterizedClassDesc().getGenericFirstType();
+            final List<Object> mappedList = strList.stream().map(exp -> { // already filtered
+                return convertToNativeIfPossible(bean, name, exp, elementType, option);
+            }).collect(Collectors.toList());
+            return Collections.unmodifiableList(mappedList);
+        }
+        return strList;
+    }
+
     protected List<String> prepareStringList(Object value, String propertyName, Class<?> propertyType, FormMappingOption option) {
         final String[] ary = prepareStringArray(value, propertyName, propertyType, option); // with filter
         if (ary.length == 0) {
             return Collections.emptyList();
         }
-        final boolean absList = LdiModifierUtil.isAbstract(propertyType); // e.g. List or ArrayList
+        final boolean absList = LdiModifierUtil.isAbstract(propertyType); // e.g. List
         final List<String> valueList = absList ? new ArrayList<String>(ary.length) : newStringList(propertyType);
         for (String element : ary) {
             valueList.add(element);
@@ -576,6 +597,9 @@ public class ActionFormMapper {
         return (List<String>) LdiClassUtil.newInstance(propertyType);
     }
 
+    // -----------------------------------------------------
+    //                                         JSON Property
+    //                                         -------------
     protected String prepareJsonString(Object value) { // not null (empty if null)
         if (value != null) {
             if (value instanceof String) {
@@ -588,6 +612,9 @@ public class ActionFormMapper {
         }
     }
 
+    // -----------------------------------------------------
+    //                                       Scalar Property
+    //                                       ---------------
     protected Object prepareObjectScalar(Object value) { // null allowed
         if (value != null && value instanceof String[] && ((String[]) value).length > 0) {
             return ((String[]) value)[0];
@@ -821,12 +848,12 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                       Property Native
     //                                       ---------------
-    protected Object convertToNativeIfPossible(VirtualForm virtualForm, Object bean, String name, Object exp, PropertyDesc pd,
+    protected Object prepareNativeValue(VirtualForm virtualForm, Object bean, String name, Object exp, PropertyDesc pd,
             StringBuilder pathSb, FormMappingOption option) {
         final Class<?> propertyType = pd.getPropertyType();
         try {
             final Object filtered = filterIfSimpleText(exp, option, name, propertyType);
-            return doConvertToNativeIfPossible(bean, name, filtered, propertyType, option);
+            return convertToNativeIfPossible(bean, name, filtered, propertyType, option);
         } catch (RuntimeException e) {
             if (isTypeFailureException(e)) {
                 virtualForm.acceptTypeFailure(pathSb.toString(), exp); // to render failure value
@@ -838,7 +865,7 @@ public class ActionFormMapper {
         }
     }
 
-    protected Object doConvertToNativeIfPossible(Object bean, String name, Object exp, Class<?> propertyType, FormMappingOption option) {
+    protected Object convertToNativeIfPossible(Object bean, String name, Object exp, Class<?> propertyType, FormMappingOption option) {
         // not to depend on conversion logic in BeanDesc
         final Object converted;
         if (propertyType.isPrimitive()) {
