@@ -15,6 +15,9 @@
  */
 package org.lastaflute.core.magic.async;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
@@ -474,7 +477,8 @@ public class SimpleAsyncManager implements AsyncManager {
         if (handled == null) {
             handled = cause;
         }
-        logger.error(buildAsyncCallbackExceptionMessage(call, before, handled), handled);
+        // not use second argument here, same reason as logging filter
+        logger.error(buildAsyncCallbackExceptionMessage(call, before, handled));
     }
 
     protected String buildAsyncCallbackExceptionMessage(ConcurrentAsyncCall call, long before, Throwable cause) {
@@ -496,6 +500,20 @@ public class SimpleAsyncManager implements AsyncManager {
         }
         sb.append(LF).append(IND);
         sb.append("callbackInterface=").append(call);
+        setupExceptionMessageRequestInfo(sb, requestPath, entryMethod, userBean);
+        setupExceptionMessageAccessContext(sb);
+        setupExceptionMessageCallbackContext(sb);
+        setupExceptionMessageVariousContext(call, cause, sb);
+        setupExceptionMessageTransactionMemoriesIfExists(sb);
+        final long after = System.currentTimeMillis();
+        final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
+        sb.append(LF);
+        sb.append("= = = = = = = = = =/ [").append(performanceView).append("] #").append(Integer.toHexString(cause.hashCode()));
+        buildExceptionStackTrace(cause, sb);
+        return sb.toString().trim();
+    }
+
+    protected void setupExceptionMessageRequestInfo(StringBuilder sb, String requestPath, Method entryMethod, Object userBean) {
         if (requestPath != null) {
             sb.append(LF).append(IND);
             sb.append("; requestPath=").append(requestPath);
@@ -509,27 +527,30 @@ public class SimpleAsyncManager implements AsyncManager {
             sb.append(LF).append(IND);
             sb.append("; userBean=").append(userBean);
         }
+    }
+
+    protected void setupExceptionMessageAccessContext(StringBuilder sb) {
         sb.append(LF).append(IND);
         final AccessContext accessContext = PreparedAccessContext.getAccessContextOnThread();
         sb.append("; accessContext=").append(accessContext);
+    }
+
+    protected void setupExceptionMessageCallbackContext(StringBuilder sb) {
         sb.append(LF).append(IND);
         final CallbackContext callbackContext = CallbackContext.getCallbackContextOnThread();
         sb.append("; callbackContext=").append(callbackContext);
+    }
+
+    protected void setupExceptionMessageVariousContext(ConcurrentAsyncCall call, Throwable cause, final StringBuilder sb) {
         final StringBuilder variousContextSb = new StringBuilder();
         buildVariousContextInAsyncCallbackExceptionMessage(call, cause, variousContextSb);
         if (variousContextSb.length() > 0) {
             sb.append(LF).append(IND);
             sb.append(variousContextSb.toString());
         }
-        setupTransactionMemoriesIfExists(sb);
-        final long after = System.currentTimeMillis();
-        final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
-        sb.append(LF);
-        sb.append("= = = = = = = = = =/ [").append(performanceView).append("] #").append(Integer.toHexString(cause.hashCode()));
-        return sb.toString();
     }
 
-    protected void setupTransactionMemoriesIfExists(StringBuilder sb) {
+    protected void setupExceptionMessageTransactionMemoriesIfExists(StringBuilder sb) {
         // e.g.
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
         // ; transactionMemories=wholeShow:  
@@ -558,6 +579,27 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     protected void buildVariousContextInAsyncCallbackExceptionMessage(ConcurrentAsyncCall call, Throwable cause, StringBuilder sb) {
+    }
+
+    protected void buildExceptionStackTrace(Throwable cause, StringBuilder sb) { // similar to logging filter
+        sb.append(LF);
+        final ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
+        PrintStream ps = null;
+        try {
+            ps = new PrintStream(out);
+            cause.printStackTrace(ps);
+            final String encoding = "UTF-8";
+            try {
+                sb.append(out.toString(encoding));
+            } catch (UnsupportedEncodingException continued) {
+                logger.warn("Unknown encoding: " + encoding, continued);
+                sb.append(out.toString()); // retry without encoding
+            }
+        } finally {
+            if (ps != null) {
+                ps.close();
+            }
+        }
     }
 
     // -----------------------------------------------------
