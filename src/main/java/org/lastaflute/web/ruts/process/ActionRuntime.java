@@ -16,12 +16,17 @@
 package org.lastaflute.web.ruts.process;
 
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.dbflute.Entity;
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.web.exception.DirectlyEntityDisplayDataNotAllowedException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
@@ -174,7 +179,56 @@ public class ActionRuntime {
         if (displayDataMap == null) {
             displayDataMap = new LinkedHashMap<String, Object>(4);
         }
+        stopDisplayDataEntityDirectly(key, value);
         displayDataMap.put(key, filterDisplayDataValue(value));
+    }
+
+    protected void stopDisplayDataEntityDirectly(String key, Object value) {
+        if (value instanceof Entity) {
+            throwDirectlyEntityDisplayDataNotAllowedException(key, value);
+        }
+        if (value instanceof Collection<?>) {
+            final Collection<?> coll = ((Collection<?>) value);
+            if (!coll.isEmpty()) {
+                // care performance for List that the most frequent pattern
+                final Object first = coll instanceof List<?> ? ((List<?>) coll).get(0) : coll.iterator().next();
+                if (first instanceof Entity) {
+                    throwDirectlyEntityDisplayDataNotAllowedException(key, value);
+                }
+            }
+        }
+        // cannot check perfectly e.g. map's value, but only primary patterns are enough
+    }
+
+    protected void throwDirectlyEntityDisplayDataNotAllowedException(String key, Object value) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Registered the entity directly as display data.");
+        br.addItem("Advice");
+        br.addElement("Not allowed to register register entity directly as display data.");
+        br.addElement("Convert your entity data to web bean for display data.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    Member member = ...");
+        br.addElement("    return asHtml(...).renderWith(data -> {");
+        br.addElement("        data.register(\"member\", member); // *Bad");
+        br.addElement("    });");
+        br.addElement("  (o):");
+        br.addElement("    Member member = ...");
+        br.addElement("    MemberBean bean = mappingToBean(member);");
+        br.addElement("    return asHtml(...).renderWith(data -> {");
+        br.addElement("        data.register(\"member\", bean); // Good");
+        br.addElement("    });");
+        br.addItem("Action");
+        br.addElement(toString());
+        br.addItem("Registered");
+        br.addElement("key: " + key);
+        if (value instanceof Collection<?>) {
+            ((Collection<?>) value).forEach(element -> br.addElement(element));
+        } else {
+            br.addElement(value);
+        }
+        final String msg = br.buildExceptionMessage();
+        throw new DirectlyEntityDisplayDataNotAllowedException(msg);
     }
 
     protected Object filterDisplayDataValue(Object value) {
