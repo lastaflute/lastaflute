@@ -179,15 +179,14 @@ public class ActionRuntime {
         if (displayDataMap == null) {
             displayDataMap = new LinkedHashMap<String, Object>(4);
         }
-        stopDisplayDataEntityDirectly(key, value);
+        stopDirectlyEntityDisplayData(key, value);
         displayDataMap.put(key, filterDisplayDataValue(value));
     }
 
-    protected void stopDisplayDataEntityDirectly(String key, Object value) {
+    protected void stopDirectlyEntityDisplayData(String key, Object value) {
         if (value instanceof Entity) {
             throwDirectlyEntityDisplayDataNotAllowedException(key, value);
-        }
-        if (value instanceof Collection<?>) {
+        } else if (value instanceof Collection<?>) {
             final Collection<?> coll = ((Collection<?>) value);
             if (!coll.isEmpty()) {
                 // care performance for List that the most frequent pattern
