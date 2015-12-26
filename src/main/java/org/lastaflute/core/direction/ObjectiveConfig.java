@@ -29,7 +29,6 @@ import org.dbflute.helper.jprop.ObjectiveProperties;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.exception.ConfigPropertyNotFoundException;
-import org.lastaflute.di.Disposable;
 import org.lastaflute.di.DisposableUtil;
 import org.lastaflute.di.core.LastaDiProperties;
 import org.slf4j.Logger;
@@ -78,12 +77,16 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
      */
     @PostConstruct
     public synchronized void initialize() {
+        doInitialize();
+        showBootLogging();
+    }
+
+    protected void doInitialize() {
         direct();
         final ObjectiveProperties makingProp = prepareObjectiveProperties();
         makingProp.load();
         prop = makingProp; // prop always be complete object for HotDeploy get() might be called in initialize()
         prepareHotDeploy();
-        showBootLogging();
     }
 
     protected void direct() {
@@ -205,24 +208,23 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     // ===================================================================================
     //                                                                          Hot Deploy
     //                                                                          ==========
-    protected void prepareHotDeploy() {
-        DisposableUtil.add(new Disposable() {
-            public void dispose() {
-                requestHotDeploy();
-            }
-        });
+    protected void prepareHotDeploy() { // only unused if cool
+        DisposableUtil.add(() -> requestHotDeploy());
         hotDeployRequested = false;
     }
 
-    protected void requestHotDeploy() {
-        // no sync to avoid disposable thread locking this (or deadlock)
-        // and no clearing here, initialize() clears because of no sync
+    protected void requestHotDeploy() { // called when request ending if HotDeploy
+        // no sync to avoid disposable thread locking this (or deadlock) and so no clearing here
         hotDeployRequested = true;
     }
 
     protected void reloadIfNeeds() {
         if (hotDeployRequested) {
-            initialize();
+            synchronized (this) {
+                // INFO to find mistake that it uses HotDeploy in production
+                logger.info("...Reloading objective config by HotDeploy request");
+                doInitialize(); // actual dispose, with preparing next HotDeploy, without boot logging
+            }
         }
     }
 
