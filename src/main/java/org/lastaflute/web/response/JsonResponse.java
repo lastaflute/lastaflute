@@ -49,6 +49,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     protected String directJson;
     protected boolean undefined;
     protected ResponseHook afterTxCommitHook;
+    protected boolean validatorSuppressed;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -184,6 +185,14 @@ public class JsonResponse<BEAN> implements ApiResponse {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                             Validator
+    //                                             ---------
+    public JsonResponse<BEAN> suppressValidator() {
+        validatorSuppressed = true;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -273,5 +282,12 @@ public class JsonResponse<BEAN> implements ApiResponse {
             String msg = "Not found the response hook: " + JsonResponse.this.toString();
             throw new IllegalStateException(msg);
         });
+    }
+
+    // -----------------------------------------------------
+    //                                             Validator
+    //                                             ---------
+    public boolean isValidatorSuppressed() {
+        return validatorSuppressed;
     }
 }

@@ -34,6 +34,8 @@ import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
@@ -43,6 +45,7 @@ public class ActionResponseReflector {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(ActionResponseReflector.class);
     private static final ApiResponseOption NULLOBJ_JSON_MAPPING_OPTION = new ApiResponseOption(); // simple cache, private to be immutable
 
     // ===================================================================================
@@ -193,8 +196,12 @@ public class ActionResponseReflector {
     }
 
     protected void validateJsonBeanIfNeeds(Object jsonBean, JsonResponse<?> response) {
+        if (response.isValidatorSuppressed()) { // by individual requirement
+            logger.debug("...Suppressing JSON bean validator by response option: {}", response);
+            return;
+        }
         final ApiResponseOption option = adjustJsonMapping();
-        if (option.isJsonBeanValidatorSuppressed()) {
+        if (option.isJsonBeanValidatorSuppressed()) { // by project policy
             return;
         }
         doValidateJsonBean(jsonBean, response, option);
