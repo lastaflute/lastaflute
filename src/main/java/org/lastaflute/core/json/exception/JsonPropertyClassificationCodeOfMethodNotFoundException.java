@@ -15,10 +15,12 @@
  */
 package org.lastaflute.core.json.exception;
 
+import org.lastaflute.core.exception.LaSystemException;
+
 /**
  * @author jflute
  */
-public class JsonPropertyClassificationCodeOfMethodNotFoundException extends RuntimeException {
+public class JsonPropertyClassificationCodeOfMethodNotFoundException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 

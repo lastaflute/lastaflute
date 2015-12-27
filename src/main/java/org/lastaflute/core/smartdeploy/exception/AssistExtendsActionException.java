@@ -13,37 +13,22 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.json.exception;
+package org.lastaflute.core.smartdeploy.exception;
 
 import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
  */
-public abstract class JsonPropertyParseFailureException extends LaSystemException {
+public class AssistExtendsActionException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    protected final Class<?> propertyType;
-    protected final String propertyPath;
-
-    public JsonPropertyParseFailureException(String msg, Class<?> propertyType, String propertyPath) {
+    public AssistExtendsActionException(String msg) {
         super(msg);
-        this.propertyType = propertyType;
-        this.propertyPath = propertyPath;
     }
 
-    public JsonPropertyParseFailureException(String msg, Class<?> propertyType, String propertyPath, Throwable e) {
+    public AssistExtendsActionException(String msg, Throwable e) {
         super(msg, e);
-        this.propertyType = propertyType;
-        this.propertyPath = propertyPath;
-    }
-
-    public Class<?> getPropertyType() {
-        return propertyType;
-    }
-
-    public String getPropertyPath() {
-        return propertyPath;
     }
 }
