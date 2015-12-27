@@ -19,6 +19,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -42,10 +44,21 @@ import org.lastaflute.web.servlet.session.SessionManager;
 public class RomanticLogicCreator extends LogicCreator {
 
     // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final List<String> webPackagePrefixList; // not null, for check, e.g. 'org.docksidestage.app.web.'
+
+    // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public RomanticLogicCreator(NamingConvention namingConvention) {
         super(namingConvention);
+        webPackagePrefixList = deriveWebPackageList(namingConvention);
+    }
+
+    protected List<String> deriveWebPackageList(NamingConvention namingConvention) {
+        final String[] packageNames = namingConvention.getRootPackageNames();
+        return Stream.of(packageNames).map(name -> name + ".web.").collect(Collectors.toList());
     }
 
     // ===================================================================================
@@ -95,9 +108,9 @@ public class RomanticLogicCreator extends LogicCreator {
 
     protected void throwLogicExtendsActionException(Class<?> componentType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Logic extends Action.");
+        br.addNotice("No way, the logic extends action.");
         br.addItem("Advice");
-        br.addElement("Logic is not an Action");
+        br.addElement("Logic is not Action,");
         br.addElement("so the logic cannot extend action.");
         br.addElement("For example:");
         br.addElement("  (x):");
@@ -110,7 +123,7 @@ public class RomanticLogicCreator extends LogicCreator {
         br.addElement("    }");
         br.addItem("Logic");
         br.addElement(componentType);
-        br.addItem("Supre Class");
+        br.addItem("Super Class");
         br.addElement(componentType.getSuperclass());
         final String msg = br.buildExceptionMessage();
         throw new LogicExtendsActionException(msg);
@@ -144,22 +157,20 @@ public class RomanticLogicCreator extends LogicCreator {
     }
 
     protected boolean isWebResource(Class<?> tp) {
-        return RequestManager.class.isAssignableFrom(tp) // request
-                || ResponseManager.class.isAssignableFrom(tp) // response
-                || SessionManager.class.isAssignableFrom(tp) // session
-                || CookieManager.class.isAssignableFrom(tp) // cookie
+        return isAppWeb(tp) // e.g. app.web.
+                || RequestManager.class.isAssignableFrom(tp) // lastaflute request
+                || ResponseManager.class.isAssignableFrom(tp) // lastaflute response
+                || SessionManager.class.isAssignableFrom(tp) // lastaflute session
+                || CookieManager.class.isAssignableFrom(tp) // lastaflute cookie
                 || HttpServletRequest.class.isAssignableFrom(tp) // servlet request
                 || HttpServletResponse.class.isAssignableFrom(tp) // servlet response
                 || HttpSession.class.isAssignableFrom(tp) // servlet session
-                || isAppWeb(tp) // e.g. app.web.
                 ;
     }
 
     protected boolean isAppWeb(Class<?> tp) {
-        final String fullName = tp.getName();
-        final String[] packageNames = getNamingConvention().getRootPackageNames();
-        for (String rootPackage : packageNames) {
-            if (fullName.startsWith(rootPackage + ".web.")) {
+        for (String webPackage : webPackagePrefixList) {
+            if (tp.getName().startsWith(webPackage)) {
                 return true;
             }
         }

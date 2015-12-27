@@ -21,15 +21,15 @@ import org.lastaflute.core.exception.LaSystemException;
  * @author jflute
  * @since 0.7.3 (2015/12/27 Sunday)
  */
-public class AssistExtendsActionException extends LaSystemException {
+public class ServiceExtendsActionException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public AssistExtendsActionException(String msg) {
+    public ServiceExtendsActionException(String msg) {
         super(msg);
     }
 
-    public AssistExtendsActionException(String msg, Throwable e) {
+    public ServiceExtendsActionException(String msg, Throwable e) {
         super(msg, e);
     }
 }

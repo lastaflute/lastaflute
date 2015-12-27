@@ -23,7 +23,6 @@ import javax.annotation.Resource;
 
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
@@ -31,6 +30,7 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
+import org.lastaflute.core.util.LaStringUtil;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.docs.LaActionDocs;
@@ -430,11 +430,11 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                        Empty Handling
     //                                        --------------
     protected boolean isEmpty(String str) {
-        return Srl.is_Null_or_Empty(str);
+        return LaStringUtil.isEmpty(str);
     }
 
     protected boolean isNotEmpty(String str) {
-        return Srl.is_NotNull_and_NotEmpty(str);
+        return LaStringUtil.isNotEmpty(str);
     }
 
     // -----------------------------------------------------

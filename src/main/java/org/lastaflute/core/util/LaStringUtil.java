@@ -9,27 +9,25 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.smartdeploy.exception;
+package org.lastaflute.core.util;
 
-import org.lastaflute.core.exception.LaSystemException;
+import org.dbflute.util.Srl;
 
 /**
  * @author jflute
  * @since 0.7.3 (2015/12/27 Sunday)
  */
-public class AssistExtendsActionException extends LaSystemException {
+public class LaStringUtil {
 
-    private static final long serialVersionUID = 1L;
-
-    public AssistExtendsActionException(String msg) {
-        super(msg);
+    public static boolean isEmpty(String str) {
+        return Srl.is_Null_or_Empty(str);
     }
 
-    public AssistExtendsActionException(String msg, Throwable e) {
-        super(msg, e);
+    public static boolean isNotEmpty(String str) {
+        return Srl.is_NotNull_and_NotEmpty(str);
     }
 }

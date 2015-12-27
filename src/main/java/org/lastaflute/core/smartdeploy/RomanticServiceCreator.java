@@ -15,10 +15,14 @@
  */
 package org.lastaflute.core.smartdeploy;
 
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.dbflute.helper.message.ExceptionMessageBuilder;
-import org.lastaflute.core.smartdeploy.exception.AssistExtendsActionException;
+import org.lastaflute.core.smartdeploy.exception.ServiceExtendsActionException;
 import org.lastaflute.di.core.ComponentDef;
-import org.lastaflute.di.core.creator.AssistCreator;
+import org.lastaflute.di.core.creator.ServiceCreator;
 import org.lastaflute.di.naming.NamingConvention;
 import org.lastaflute.web.LastaAction;
 
@@ -26,13 +30,24 @@ import org.lastaflute.web.LastaAction;
  * @author jflute
  * @since 0.7.3 (2015/12/27 Sunday)
  */
-public class RomanticAssistCreator extends AssistCreator {
+public class RomanticServiceCreator extends ServiceCreator {
+
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final List<String> webPackagePrefixList; // not null, for check, e.g. 'org.docksidestage.app.web.'
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public RomanticAssistCreator(NamingConvention namingConvention) {
+    public RomanticServiceCreator(NamingConvention namingConvention) {
         super(namingConvention);
+        webPackagePrefixList = deriveWebPackageList(namingConvention);
+    }
+
+    protected List<String> deriveWebPackageList(NamingConvention namingConvention) {
+        final String[] packageNames = namingConvention.getRootPackageNames();
+        return Stream.of(packageNames).map(name -> name + ".web.").collect(Collectors.toList());
     }
 
     // ===================================================================================
@@ -40,11 +55,14 @@ public class RomanticAssistCreator extends AssistCreator {
     //                                                                       =============
     @Override
     public ComponentDef createComponentDef(Class<?> componentClass) {
+        // env dispatch is only for logic (so use logic about environment process)
         final ComponentDef componentDef = super.createComponentDef(componentClass); // null allowed
         if (componentDef == null) {
             return null;
         }
         checkExtendsAction(componentDef);
+        // service has delicate role for various people so no check about web reference
+        //checkWebReference(componentDef);
         return componentDef;
     }
 
@@ -54,30 +72,30 @@ public class RomanticAssistCreator extends AssistCreator {
     protected void checkExtendsAction(ComponentDef componentDef) {
         final Class<?> componentType = componentDef.getComponentClass();
         if (LastaAction.class.isAssignableFrom(componentType)) {
-            throwAssistExtendsActionException(componentType);
+            throwServiceExtendsActionException(componentType);
         }
     }
 
-    protected void throwAssistExtendsActionException(Class<?> componentType) {
+    protected void throwServiceExtendsActionException(Class<?> componentType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("No way, the assist extends action.");
+        br.addNotice("No way, the service extends action.");
         br.addItem("Advice");
-        br.addElement("Assist is not Action");
-        br.addElement("so the assist cannot extend action.");
+        br.addElement("Service is not Action,");
+        br.addElement("so the service cannot extend action.");
         br.addElement("For example:");
         br.addElement("  (x):");
-        br.addElement("    public class SeaAssist extends MaihamaBaseAction { // *Bad");
+        br.addElement("    public class SeaService extends MaihamaBaseAction { // *Bad");
         br.addElement("       ...");
         br.addElement("    }");
         br.addElement("  (o):");
-        br.addElement("    public class SeaAssist { // Good");
+        br.addElement("    public class SeaService { // Good");
         br.addElement("       ...");
         br.addElement("    }");
-        br.addItem("Assist Class");
+        br.addItem("Service");
         br.addElement(componentType);
         br.addItem("Super Class");
         br.addElement(componentType.getSuperclass());
         final String msg = br.buildExceptionMessage();
-        throw new AssistExtendsActionException(msg);
+        throw new ServiceExtendsActionException(msg);
     }
 }
