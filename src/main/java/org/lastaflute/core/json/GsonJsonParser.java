@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.core.json.adapter.BooleanGsonAdaptable;
+import org.lastaflute.core.json.adapter.CollectionGsonAdaptable;
 import org.lastaflute.core.json.adapter.DBFluteGsonAdaptable;
 import org.lastaflute.core.json.adapter.Java8TimeGsonAdaptable;
 import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
@@ -35,7 +36,8 @@ import com.google.gson.GsonBuilder;
  * @author jflute
  */
 public class GsonJsonParser implements RealJsonParser // adapters here
-        , StringGsonAdaptable, NumberGsonAdaptable, Java8TimeGsonAdaptable, BooleanGsonAdaptable, DBFluteGsonAdaptable {
+        , StringGsonAdaptable, NumberGsonAdaptable, Java8TimeGsonAdaptable, BooleanGsonAdaptable // basic
+        , CollectionGsonAdaptable, DBFluteGsonAdaptable {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -77,8 +79,9 @@ public class GsonJsonParser implements RealJsonParser // adapters here
         registerNumberAdapter(builder);
         registerJava8TimeAdapter(builder);
         registerBooleanAdapter(builder);
-        registerUtilDateFormat(builder);
+        registerCollectionAdapter(builder);
         registerDBFluteAdapter(builder);
+        registerUtilDateFormat(builder);
     }
 
     protected void registerStringAdapter(GsonBuilder builder) {
@@ -97,12 +100,16 @@ public class GsonJsonParser implements RealJsonParser // adapters here
         builder.registerTypeAdapterFactory(createBooleanTypeAdapterFactory());
     }
 
-    protected void registerUtilDateFormat(GsonBuilder builder) {
-        builder.setDateFormat("yyyy-MM-dd'T'HH:mm:ss"); // same as local date-time
+    protected void registerCollectionAdapter(GsonBuilder builder) { // for option of list-null-to-empty
+        builder.registerTypeAdapterFactory(createCollectionTypeAdapterFactory());
     }
 
     protected void registerDBFluteAdapter(GsonBuilder builder) {
         builder.registerTypeAdapterFactory(createClassificationTypeAdapterFactory());
+    }
+
+    protected void registerUtilDateFormat(GsonBuilder builder) {
+        builder.setDateFormat("yyyy-MM-dd'T'HH:mm:ss"); // same as local date-time
     }
 
     // -----------------------------------------------------
