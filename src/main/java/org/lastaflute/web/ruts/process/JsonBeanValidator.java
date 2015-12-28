@@ -23,6 +23,7 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
+import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.exception.ResponseJsonBeanValidationErrorException;
@@ -49,13 +50,15 @@ public class JsonBeanValidator {
     //                                                                           =========
     protected final RequestManager requestManager;
     protected final Object actionExp; // used as only exception message, Object for unit test
+    protected final JsonResponse<?> response;
     protected final boolean warning;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public JsonBeanValidator(RequestManager requestManager, Object actionExp, boolean warning) {
+    public JsonBeanValidator(RequestManager requestManager, Object actionExp, JsonResponse<?> response, boolean warning) {
         this.requestManager = requestManager;
+        this.response = response;
         this.actionExp = actionExp;
         this.warning = warning;
     }
@@ -84,7 +87,7 @@ public class JsonBeanValidator {
     protected ActionValidator<ActionMessages> createActionValidator() {
         return new ActionValidator<>(requestManager, () -> {
             return new ActionMessages();
-        } , ActionValidator.DEFAULT_GROUPS);
+        } , response.getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS));
     }
 
     protected void executeValidator(ActionValidator<ActionMessages> validator, Object jsonBean) {

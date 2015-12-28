@@ -217,7 +217,7 @@ public class ActionResponseReflector {
     }
 
     protected JsonBeanValidator createJsonBeanValidator(JsonResponse<?> response, ApiResponseOption option) {
-        return new JsonBeanValidator(requestManager, runtime, option.isJsonBeanValidationErrorWarned());
+        return new JsonBeanValidator(requestManager, runtime, response, option.isJsonBeanValidationErrorWarned());
     }
 
     // -----------------------------------------------------

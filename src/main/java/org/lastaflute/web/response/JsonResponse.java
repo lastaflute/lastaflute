@@ -18,6 +18,8 @@ package org.lastaflute.web.response;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
@@ -34,6 +36,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     //                                                                          Definition
     //                                                                          ==========
     protected static final Object DUMMY = new Object();
+    protected static final Class<?>[] EMPTY_TYPES = new Class<?>[0];
     protected static final JsonResponse<?> INSTANCE_OF_UNDEFINED = new JsonResponse<Object>(DUMMY).ofUndefined();
 
     // ===================================================================================
@@ -49,6 +52,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     protected String directJson;
     protected boolean undefined;
     protected ResponseHook afterTxCommitHook;
+    protected Class<?>[] validatorGroups;
     protected boolean validatorSuppressed;
 
     // ===================================================================================
@@ -188,8 +192,31 @@ public class JsonResponse<BEAN> implements ApiResponse {
     // -----------------------------------------------------
     //                                             Validator
     //                                             ---------
-    public JsonResponse<BEAN> suppressValidator() {
-        validatorSuppressed = true;
+    /**
+     * @param groups The array of group types. (NullAllowed, EmptyAllowed: if null or empty, use default groups)
+     * @return this. (NotNull)
+     */
+    public JsonResponse<BEAN> groupValidator(Class<?>... groups) {
+        // allow null or empty to flexibly switch by condition
+        final Class<?>[] filtered = filterValidatorGroups(groups);
+        validatorGroups = filtered.length > 0 ? filtered : null;
+        return this;
+    }
+
+    protected Class<?>[] filterValidatorGroups(Class<?>[] groups) {
+        if (groups == null) { // just in case
+            return EMPTY_TYPES;
+        }
+        // the groups may have null element, if groupValidator(hasSea ? Land.class : null)
+        return Stream.of(groups).filter(group -> group != null).collect(Collectors.toList()).toArray(EMPTY_TYPES);
+    }
+
+    /**
+     * @param suppressed Does it really suppress validator?
+     * @return this. (NotNull)
+     */
+    public JsonResponse<BEAN> suppressValidator(boolean suppressed) { // argument to flexibly switch by condition
+        validatorSuppressed = suppressed;
         return this;
     }
 
@@ -287,6 +314,13 @@ public class JsonResponse<BEAN> implements ApiResponse {
     // -----------------------------------------------------
     //                                             Validator
     //                                             ---------
+    public OptionalThing<Class<?>[]> getValidatorGroups() {
+        return OptionalThing.ofNullable(validatorGroups, () -> {
+            String msg = "Not found the validator groups: " + JsonResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
+    }
+
     public boolean isValidatorSuppressed() {
         return validatorSuppressed;
     }
