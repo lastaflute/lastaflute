@@ -157,6 +157,12 @@ public interface LoginManager {
     OptionalThing<? extends UserBean<?>> getSessionUserBean(); // thanks, feedback of "? extends" way
 
     /**
+     * Get the type of user bean as save key of session.
+     * @return The type of user bean. (NotNull)
+     */
+    Class<?> getSaveKeyUserBeanType();
+
+    /**
      * Is the action for login? (login action or not)
      * @param resource The resource of login handling to determine login action or not. (NotNull)
      * @return The determination, true or false.

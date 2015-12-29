@@ -599,12 +599,6 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         });
     }
 
-    /**
-     * Get the type of user bean basically for session key.
-     * @return The type of user bean. (NotNull)
-     */
-    protected abstract Class<USER_BEAN> getUserBeanType();
-
     // ===================================================================================
     //                                                                         Login Check
     //                                                                         ===========
@@ -760,6 +754,17 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             throwLoginRequiredException("Not found the user in session by the key:" + key); // to login action
         });
     }
+
+    @Override
+    public Class<?> getSaveKeyUserBeanType() {
+        return getUserBeanType();
+    }
+
+    /**
+     * Get the type of user bean basically for session key.
+     * @return The type of user bean. (NotNull)
+     */
+    protected abstract Class<USER_BEAN> getUserBeanType();
 
     // -----------------------------------------------------
     //                                     Non LoginRequired

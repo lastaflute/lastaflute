@@ -41,8 +41,10 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ComponentDef;
+import org.lastaflute.di.core.SingletonLaContainer;
 import org.lastaflute.di.core.exception.ComponentNotFoundException;
 import org.lastaflute.di.core.exception.TooManyRegistrationComponentException;
+import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.direction.FwWebDirection;
@@ -480,19 +482,62 @@ public class SimpleRequestManager implements RequestManager {
     //                                                                      ==============
     @Override
     public OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType) {
+        final LoginManager manager;
         try {
             // login manager's implementation is basically smart deploy component
             // the component may not be initialized yet because of HotDeploy
             // so use ContainerUtil here and handle not-found exception
-            return OptionalThing.of(ContainerUtil.getComponent(LoginManager.class));
-        } catch (ComponentNotFoundException e) {
-            return OptionalThing.ofNullable(null, () -> {
-                String msg = "Not found the login manager for the bean type: " + userBeanType.getName();
-                throw new IllegalStateException(msg);
-            });
+            manager = ContainerUtil.getComponent(LoginManager.class);
+        } catch (ComponentNotFoundException ignored) {
+            return handleLoginManagerNotFound(userBeanType);
         } catch (TooManyRegistrationComponentException e) {
             return handleLoginManagerTooMany(userBeanType, e);
         }
+        if (userBeanType.equals(manager.getSaveKeyUserBeanType())) {
+            return OptionalThing.of(manager);
+        } else { // if hot deploy, only another manager might be initialized when multiple login
+            return handleLoginManagerNotFound(userBeanType);
+        }
+    }
+
+    protected OptionalThing<LoginManager> handleLoginManagerNotFound(Class<?> userBeanType) {
+        if (HotdeployUtil.isHotdeploy()) { // local development only here
+            // login assist (concrete class of login manager) may not initialized yet by HotDeploy
+            // so find the class forcedly (local development only so tricky allowed)
+            final boolean needsHot = !HotdeployUtil.isAlreadyHotdeploy();
+            if (needsHot) {
+                HotdeployUtil.start(); // for login assist (under smart deploy)
+            }
+            try {
+                // support only-one login #for_now, want to find other pattern login assist classes
+                final String directorName = assistantDirector.getClass().getSimpleName();
+                final String interfaceName = FwAssistantDirector.class.getSimpleName();
+                final String appName = Srl.substringFirstFront(directorName, interfaceName);
+                final String componentName = "base_login_" + Srl.initUncap(appName) + "LoginAssist"; // guess name
+                try {
+                    final LoginManager loginManager = SingletonLaContainer.getComponent(componentName); // not null
+                    if (userBeanType.equals(loginManager.getSaveKeyUserBeanType())) {
+                        final Class<?> managerType = loginManager.getClass();
+                        final String managerName = managerType.getSimpleName();
+                        final String loaderName = managerType.getClassLoader().getClass().getSimpleName();
+                        logger.debug("*Forcedly found the concrete class of login manager: {} in {}", managerName, loaderName);
+                        return OptionalThing.of(loginManager);
+                    } else {
+                        logger.debug("*Unmatched the concrete class of login manager: {} with {}", componentName, userBeanType);
+                    }
+                } catch (ComponentNotFoundException ignored) {
+                    logger.debug("*Not found the concrete class of login manager: {} for {}", componentName, userBeanType);
+                }
+            } finally {
+                if (needsHot) {
+                    HotdeployUtil.stop();
+                }
+            }
+        }
+        return OptionalThing.ofNullable(null, () -> {
+            String msg = "Not found the login manager for the bean type: " + userBeanType.getName();
+            throw new IllegalStateException(msg);
+        });
     }
 
     protected OptionalThing<LoginManager> handleLoginManagerTooMany(Class<?> userBeanType, TooManyRegistrationComponentException cause) {
@@ -513,7 +558,7 @@ public class SimpleRequestManager implements RequestManager {
             }
             return (LoginManager) component;
         }).filter(manager -> {
-            return manager.getSessionUserBean().filter(foundBean -> userBeanType.isAssignableFrom(foundBean.getClass())).isPresent();
+            return userBeanType.equals(manager.getSaveKeyUserBeanType());
         }).findFirst(), () -> {
             String msg = "Not found the login manager for the bean type: " + userBeanType.getName();
             throw new IllegalStateException(msg, cause);
