@@ -175,12 +175,12 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
-    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> beanType) {
+    public OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType) {
         return null;
     }
 
     @Override
-    public OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType) {
+    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> beanType) {
         return null;
     }
 

@@ -479,15 +479,6 @@ public class SimpleRequestManager implements RequestManager {
     //                                                                      Login Handling
     //                                                                      ==============
     @Override
-    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> userBeanType) {
-        @SuppressWarnings("unchecked")
-        final OptionalThing<USER_BEAN> userBean = (OptionalThing<USER_BEAN>) findLoginManager(userBeanType).flatMap(manager -> {
-            return manager.getSessionUserBean();
-        });
-        return userBean;
-    }
-
-    @Override
     public OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType) {
         try {
             // login manager's implementation is basically smart deploy component
@@ -529,6 +520,16 @@ public class SimpleRequestManager implements RequestManager {
         });
     }
 
+    @Override
+    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> userBeanType) {
+        @SuppressWarnings("unchecked")
+        final OptionalThing<USER_BEAN> userBean = (OptionalThing<USER_BEAN>) findLoginManager(userBeanType).flatMap(manager -> {
+            return manager.getSessionUserBean();
+        });
+        return userBean;
+    }
+
+    // ===================================================================================
     //                                                                     Region Handling
     //                                                                     ===============
     // -----------------------------------------------------

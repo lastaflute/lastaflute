@@ -239,6 +239,16 @@ public interface RequestManager extends ScopedAttributeHolder {
     //                                                                      Login Handling
     //                                                                      ==============
     /**
+     * Find login manager interface by user bean. <br>
+     * Implementations of login managers may be plural (and smart deploy components), <br>
+     * so you cannot get it from container by type, you need to find it by this method. <br>
+     * And you cannot use same user bean between plural login managers.
+     * @param userBeanType The type of user bean to find. (NotNull)
+     * @return The optional login manager. (NotNull, EmptyAllowed: if not found, not logined)
+     */
+    OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType);
+
+    /**
      * Find user bean of current request for the type. (basically from session, but unconcern) <br>
      * Empty optional means not login state, so you can control by optional thing methods. <br>
      * If your application does not use login, always returns empty.
@@ -256,16 +266,6 @@ public interface RequestManager extends ScopedAttributeHolder {
      * @return The optional user bean. (NotNull, EmptyAllowed: if not found, not logined)
      */
     <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> userBeanType);
-
-    /**
-     * Find login manager interface by user bean. <br>
-     * Implementations of login managers may be plural (and smart deploy components), <br>
-     * so you cannot get it from container by type, you need to find it by this method. <br>
-     * And you cannot use same user bean between plural login managers.
-     * @param userBeanType The type of user bean to find. (NotNull)
-     * @return The optional login manager. (NotNull, EmptyAllowed: if not found, not logined)
-     */
-    OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType);
 
     // ===================================================================================
     //                                                                     Region Handling
