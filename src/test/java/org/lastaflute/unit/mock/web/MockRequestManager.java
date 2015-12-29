@@ -28,6 +28,7 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.api.ApiManager;
+import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
@@ -174,7 +175,12 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
-    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> getUserBean(Class<USER_BEAN> beanType) {
+    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> beanType) {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType) {
         return null;
     }
 

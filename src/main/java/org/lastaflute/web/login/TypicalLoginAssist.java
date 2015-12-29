@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
  * @param <USER_ENTITY> The type of user entity or model.
  * @author jflute
  */
-public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USER_ENTITY> implements LoginAssistable {
+public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USER_ENTITY> implements LoginManager {
 
     // ===================================================================================
     //                                                                          Definition

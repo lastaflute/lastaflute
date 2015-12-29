@@ -73,7 +73,6 @@ public class TransactionRomanticMemoriesBuilder {
     //                                                                            ========
     /**
      * @param ending The ending type of transaction, e.g. rollback. (NotNull)
-     * @param tx The transaction it looks so romantic. (NotNull)
      * @return The romantic expression for transaction memories. (NotNull)
      */
     public OptionalThing<String> buildRomanticMemories(String ending) {

@@ -40,7 +40,9 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.core.exception.ComponentNotFoundException;
+import org.lastaflute.di.core.exception.TooManyRegistrationComponentException;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.direction.FwWebDirection;
@@ -477,24 +479,56 @@ public class SimpleRequestManager implements RequestManager {
     //                                                                      Login Handling
     //                                                                      ==============
     @Override
-    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> getUserBean(Class<USER_BEAN> beanType) {
-        final OptionalThing<? extends UserBean<?>> userBean;
+    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> userBeanType) {
+        @SuppressWarnings("unchecked")
+        final OptionalThing<USER_BEAN> userBean = (OptionalThing<USER_BEAN>) findLoginManager(userBeanType).flatMap(manager -> {
+            return manager.getSessionUserBean();
+        });
+        return userBean;
+    }
+
+    @Override
+    public OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType) {
         try {
             // login manager's implementation is basically smart deploy component
             // the component may not be initialized yet because of HotDeploy
-            // so use getComponent() here and handle not-found exception
-            userBean = ContainerUtil.getComponent(LoginManager.class).getSessionUserBean();
-        } catch (ComponentNotFoundException e) { // e.g. not initialized yet when HotDeploy
+            // so use ContainerUtil here and handle not-found exception
+            return OptionalThing.of(ContainerUtil.getComponent(LoginManager.class));
+        } catch (ComponentNotFoundException e) {
             return OptionalThing.ofNullable(null, () -> {
-                throw new IllegalStateException("Not found the user bean: " + beanType, e);
+                String msg = "Not found the login manager for the bean type: " + userBeanType.getName();
+                throw new IllegalStateException(msg);
             });
+        } catch (TooManyRegistrationComponentException e) {
+            return handleLoginManagerTooMany(userBeanType, e);
         }
-        @SuppressWarnings("unchecked")
-        final OptionalThing<USER_BEAN> cast = (OptionalThing<USER_BEAN>) userBean;
-        return cast;
     }
 
-    // ===================================================================================
+    protected OptionalThing<LoginManager> handleLoginManagerTooMany(Class<?> userBeanType, TooManyRegistrationComponentException cause) {
+        // not use findAllComponents() because cannot get components by login manager if hot deploy
+        // and cannot use same user bean between plural login managers
+        final List<ComponentDef> componentDefList = cause.getComponentDefList();
+        return OptionalThing.migratedFrom(componentDefList.stream().map(def -> {
+            final Object component = def.getComponent();
+            if (component == null) {
+                String msg = "Not found the login manager, getComponent() returned null:";
+                msg = msg + " componentDef=" + def + " userBeanType=" + userBeanType;
+                throw new IllegalStateException(msg, cause);
+            }
+            if (!(component instanceof LoginManager)) {
+                String msg = "Cannot cast the component to login manager:";
+                msg = msg + " componentType=" + component.getClass() + " component=" + component + " userBeanType=" + userBeanType;
+                throw new IllegalStateException(msg, cause);
+            }
+            return (LoginManager) component;
+        }).filter(manager -> {
+            return manager.getSessionUserBean().filter(foundBean -> userBeanType.isAssignableFrom(foundBean.getClass())).isPresent();
+        }).findFirst(), () -> {
+            String msg = "Not found the login manager for the bean type: " + userBeanType.getName();
+            throw new IllegalStateException(msg, cause);
+        });
+    }
+
     //                                                                     Region Handling
     //                                                                     ===============
     // -----------------------------------------------------

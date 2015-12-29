@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.lastaflute.di.core.ExternalContext;
 import org.lastaflute.di.core.SingletonLaContainer;
 import org.lastaflute.di.core.exception.ComponentNotFoundException;
+import org.lastaflute.di.core.exception.TooManyRegistrationComponentException;
 import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
 
 /**
@@ -31,6 +32,7 @@ public abstract class ContainerUtil {
      * @param type The component type to find. (NotNull)
      * @return The found component. (NotNull)
      * @throws ComponentNotFoundException When the component is not found by the type.
+     * @throws TooManyRegistrationComponentException When the component key is related to plural components.
      */
     public static <COMPONENT> COMPONENT getComponent(Class<COMPONENT> type) {
         return (COMPONENT) SingletonLaContainer.getComponent(type);
