@@ -39,12 +39,16 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
+import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.di.core.exception.ComponentNotFoundException;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.RequestAttributeCannotCastException;
 import org.lastaflute.web.exception.RequestAttributeNotFoundException;
 import org.lastaflute.web.exception.RequestInfoNotFoundException;
+import org.lastaflute.web.login.LoginManager;
+import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionRuntime;
@@ -467,6 +471,27 @@ public class SimpleRequestManager implements RequestManager {
         return OptionalThing.ofNullable(getRequest().getRemoteUser(), () -> {
             throw new RequestInfoNotFoundException("Not found the remote user for the request: path=" + getRequestPath());
         });
+    }
+
+    // ===================================================================================
+    //                                                                      Login Handling
+    //                                                                      ==============
+    @Override
+    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> getUserBean(Class<USER_BEAN> beanType) {
+        final OptionalThing<? extends UserBean<?>> userBean;
+        try {
+            // login manager's implementation is basically smart deploy component
+            // the component may not be initialized yet because of HotDeploy
+            // so use getComponent() here and handle not-found exception
+            userBean = ContainerUtil.getComponent(LoginManager.class).getSessionUserBean();
+        } catch (ComponentNotFoundException e) { // e.g. not initialized yet when HotDeploy
+            return OptionalThing.ofNullable(null, () -> {
+                throw new IllegalStateException("Not found the user bean: " + beanType, e);
+            });
+        }
+        @SuppressWarnings("unchecked")
+        final OptionalThing<USER_BEAN> cast = (OptionalThing<USER_BEAN>) userBean;
+        return cast;
     }
 
     // ===================================================================================

@@ -19,17 +19,27 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.lastaflute.di.core.ExternalContext;
 import org.lastaflute.di.core.SingletonLaContainer;
+import org.lastaflute.di.core.exception.ComponentNotFoundException;
 import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
 
 /**
  * @author jflute
  */
-public class ContainerUtil {
+public abstract class ContainerUtil {
 
+    /**
+     * @param type The component type to find. (NotNull)
+     * @return The found component. (NotNull)
+     * @throws ComponentNotFoundException When the component is not found by the type.
+     */
     public static <COMPONENT> COMPONENT getComponent(Class<COMPONENT> type) {
         return (COMPONENT) SingletonLaContainer.getComponent(type);
     }
 
+    /**
+     * @param type The component type to find. (NotNull)
+     * @return The array of found components. (NotNull)
+     */
     @SuppressWarnings("unchecked")
     public static <COMPONENT> COMPONENT[] findAllComponents(Class<COMPONENT> type) {
         return (COMPONENT[]) SingletonLaContainerFactory.getContainer().findAllComponents(type);

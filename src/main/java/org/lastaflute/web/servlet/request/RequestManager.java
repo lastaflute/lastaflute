@@ -27,6 +27,7 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
+import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.scoped.ScopedAttributeHolder;
@@ -232,6 +233,28 @@ public interface RequestManager extends ScopedAttributeHolder {
      * @return The optional string as remote user. (NotNull, EmptyAllowed)
      */
     OptionalThing<String> getRemoteUser();
+
+    // ===================================================================================
+    //                                                                      Login Handling
+    //                                                                      ==============
+    /**
+     * Get user bean of current request. (basically from session, but unconcern) <br>
+     * Empty optional means not login state, so you can control by optional thing methods. <br>
+     * If your application does not use login, always returns empty.
+     * <pre>
+     * Integer userId = requestManager.getUserBean(SeaUserBean.class).map(userBean -&gt; {
+     *     return userBean.getUserId();
+     * }).orElse(DEFAULT_USER_ID);
+     * </pre>
+     * <p>You can get user bean without login manager.
+     * Login manager is for login control so many functions are provided.
+     * But all cases need only user bean so facade method here.</p>
+     * @param <USER_BEAN> The type of user bean.
+     * @param <ID> The type of user ID.
+     * @param beanType The type of user bean to find. (NotNull)
+     * @return The optional user bean. (NotNull, EmptyAllowed: if not found, not logined)
+     */
+    <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> getUserBean(Class<USER_BEAN> beanType);
 
     // ===================================================================================
     //                                                                     Region Handling
