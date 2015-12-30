@@ -41,7 +41,6 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ComponentDef;
-import org.lastaflute.di.core.SingletonLaContainer;
 import org.lastaflute.di.core.exception.ComponentNotFoundException;
 import org.lastaflute.di.core.exception.TooManyRegistrationComponentException;
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
@@ -515,7 +514,7 @@ public class SimpleRequestManager implements RequestManager {
                 final String appName = Srl.substringFirstFront(directorName, interfaceName);
                 final String componentName = "base_login_" + Srl.initUncap(appName) + "LoginAssist"; // guess name
                 try {
-                    final LoginManager loginManager = SingletonLaContainer.getComponent(componentName); // not null
+                    final LoginManager loginManager = ContainerUtil.pickupComponentByName(componentName); // not null
                     if (userBeanType.equals(loginManager.getSaveKeyUserBeanType())) {
                         final Class<?> managerType = loginManager.getClass();
                         final String managerName = managerType.getSimpleName();

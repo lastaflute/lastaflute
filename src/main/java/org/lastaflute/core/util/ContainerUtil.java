@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.lastaflute.di.core.ExternalContext;
 import org.lastaflute.di.core.SingletonLaContainer;
 import org.lastaflute.di.core.exception.ComponentNotFoundException;
+import org.lastaflute.di.core.exception.CyclicReferenceComponentException;
 import org.lastaflute.di.core.exception.TooManyRegistrationComponentException;
 import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
 
@@ -28,25 +29,55 @@ import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
  */
 public abstract class ContainerUtil {
 
+    // ===================================================================================
+    //                                                                           Component
+    //                                                                           =========
     /**
-     * @param type The component type to find. (NotNull)
+     * @param componentType The component type to find. (NotNull)
      * @return The found component. (NotNull)
      * @throws ComponentNotFoundException When the component is not found by the type.
      * @throws TooManyRegistrationComponentException When the component key is related to plural components.
+     * @throws CyclicReferenceComponentException When the components refers each other.
      */
-    public static <COMPONENT> COMPONENT getComponent(Class<COMPONENT> type) {
-        return (COMPONENT) SingletonLaContainer.getComponent(type);
+    public static <COMPONENT> COMPONENT getComponent(Class<COMPONENT> componentType) { // most frequently used
+        return (COMPONENT) SingletonLaContainer.getComponent(componentType);
     }
 
     /**
-     * @param type The component type to find. (NotNull)
-     * @return The array of found components. (NotNull)
+     * @param componentName The component name to find. (NotNull)
+     * @return The found component. (NotNull)
+     * @throws ComponentNotFoundException When the component is not found by the type.
+     * @throws TooManyRegistrationComponentException When the component key is related to plural components.
+     * @throws CyclicReferenceComponentException When the components refers each other.
      */
-    @SuppressWarnings("unchecked")
-    public static <COMPONENT> COMPONENT[] findAllComponents(Class<COMPONENT> type) {
-        return (COMPONENT[]) SingletonLaContainerFactory.getContainer().findAllComponents(type);
+    public static <COMPONENT> COMPONENT pickupComponentByName(String componentName) {
+        final COMPONENT component = SingletonLaContainer.getComponent(componentName); // variable for generic
+        return component;
     }
 
+    /**
+     * @param componentType The component type to find. (NotNull)
+     * @return The array of found components. (NotNull)
+     * @throws CyclicReferenceComponentException When the components refers each other.
+     */
+    @SuppressWarnings("unchecked")
+    public static <COMPONENT> COMPONENT[] searchComponents(Class<COMPONENT> componentType) {
+        return (COMPONENT[]) SingletonLaContainerFactory.getContainer().findComponents(componentType);
+    }
+
+    /**
+     * @param componentType The component type to find. (NotNull)
+     * @return The array of found components. (NotNull)
+     * @throws CyclicReferenceComponentException When the components refers each other.
+     */
+    @SuppressWarnings("unchecked")
+    public static <COMPONENT> COMPONENT[] searchComponentsAll(Class<COMPONENT> componentType) {
+        return (COMPONENT[]) SingletonLaContainerFactory.getContainer().findAllComponents(componentType);
+    }
+
+    // ===================================================================================
+    //                                                                    External Context
+    //                                                                    ================
     public static ExternalContext retrieveExternalContext() {
         final ExternalContext context = SingletonLaContainerFactory.getExternalContext();
         if (context == null) {
@@ -56,6 +87,9 @@ public abstract class ContainerUtil {
     }
 
     public static void overrideExternalRequest(HttpServletRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("The argument 'request' should not be null.");
+        }
         final ExternalContext context = retrieveExternalContext();
         final Object existing = context.getRequest();
         if (existing == null) {

@@ -46,7 +46,7 @@ public class ConnectionPoolViewBuilder {
     //                                                                          ==========
     public String buildView() {
         final StringBuilder sb = new StringBuilder();
-        final ConnectionPool[] pools = ContainerUtil.findAllComponents(ConnectionPool.class); // plural if e.g. master/slave
+        final ConnectionPool[] pools = ContainerUtil.searchComponentsAll(ConnectionPool.class); // plural if e.g. master/slave
         boolean firstDone = false;
         for (ConnectionPool pool : pools) {
             if (firstDone) {
