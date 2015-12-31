@@ -46,6 +46,12 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     private static final long serialVersionUID = 1L;
     private static final Logger logger = LoggerFactory.getLogger(ObjectiveConfig.class);
 
+    // -----------------------------------------------------
+    //                                              Stateful
+    //                                              --------
+    protected static PropertyFilter bowgunPropertyFilter; // used when initialization
+    protected static boolean locked = true;
+
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
@@ -115,12 +121,20 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     }
 
     protected ObjectiveProperties prepareObjectiveProperties() {
-        final ObjectiveProperties makingProp = newObjectiveProperties(appResource, propertyFilter);
+        final ObjectiveProperties makingProp = newObjectiveProperties(appResource, preparePropertyFilter());
         makingProp.checkImplicitOverride();
         if (!extendsResourceList.isEmpty()) {
             makingProp.extendsProperties(extendsResourceList.toArray(new String[extendsResourceList.size()]));
         }
         return makingProp;
+    }
+
+    protected PropertyFilter preparePropertyFilter() {
+        if (bowgunPropertyFilter != null) {
+            return (key, value) -> bowgunPropertyFilter.filter(key, propertyFilter.filter(key, value));
+        } else {
+            return propertyFilter;
+        }
     }
 
     protected ObjectiveProperties newObjectiveProperties(String resourcePath, PropertyFilter propertyFilter) {
@@ -162,6 +176,9 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
             final boolean checkImplicitOverride = prop.isCheckImplicitOverride();
             final int count = prop.getJavaPropertiesResult().getPropertyList().size();
             logger.info(" checkImplicitOverride=" + checkImplicitOverride + ", propertyCount=" + count);
+            if (bowgunPropertyFilter != null) {
+                logger.info(" bowgun=" + bowgunPropertyFilter); // because of important
+            }
             // *no logging of all property values because it might contain security info
         }
     }
@@ -226,6 +243,52 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
                 doInitialize(); // actual dispose, with preparing next HotDeploy, without boot logging
             }
         }
+    }
+
+    // ===================================================================================
+    //                                                               Bowgun PropertyFilter
+    //                                                               =====================
+    public static void shootBowgunPropertyFilter(PropertyFilter propertyFilter) {
+        assertUnlocked();
+        if (logger.isInfoEnabled()) {
+            logger.info("...Shooting bowgun property filter: " + propertyFilter);
+        }
+        bowgunPropertyFilter = propertyFilter;
+        lock(); // auto-lock here, because of deep world
+    }
+
+    // ===================================================================================
+    //                                                                         Config Lock
+    //                                                                         ===========
+    public static boolean isLocked() {
+        return locked;
+    }
+
+    public static void lock() {
+        if (locked) {
+            return;
+        }
+        if (logger.isInfoEnabled()) {
+            logger.info("...Locking the objective config!");
+        }
+        locked = true;
+    }
+
+    public static void unlock() {
+        if (!locked) {
+            return;
+        }
+        if (logger.isInfoEnabled()) {
+            logger.info("...Unlocking the objective config!");
+        }
+        locked = false;
+    }
+
+    protected static void assertUnlocked() {
+        if (!isLocked()) {
+            return;
+        }
+        throw new IllegalStateException("The objective config is locked.");
     }
 
     // ===================================================================================
