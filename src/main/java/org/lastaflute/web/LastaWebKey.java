@@ -32,7 +32,7 @@ public interface LastaWebKey {
     String ACTION_RUNTIME_KEY = "lastaflute.action.ACTION_RUMTIME"; // Request
     String PUSHED_ACTION_FORM_KEY = "lastaflute.action.PUSHED_ACTION_FORM"; // Request
 
-    String USER_BEAN_KEY = "lastaflute.action.USER_BEAN"; // Session (actually added suffix per assist)
+    String USER_BEAN_KEY = "lastaflute.action.USER_BEAN"; // Session (actually suffix added per assist)
     String USER_LOCALE_KEY = "lastaflute.action.USER_LOCALE"; // Request or Session
     String USER_TIMEZONE_KEY = "lastaflute.action.USER_TIMEZONE"; // Request or Session
 
