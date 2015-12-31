@@ -34,6 +34,7 @@ import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.exception.ActionHookReturnNullException;
+import org.lastaflute.web.exception.ActionWrappedCheckedException;
 import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
 import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
 import org.lastaflute.web.exception.ExecuteMethodLonelyValidatorAnnotationException;
@@ -402,8 +403,7 @@ public class GodHandableAction implements VirtualAction {
         return result;
     }
 
-    protected Object handleExecuteMethodInvocationTargetException(Method executeMethod, Object[] requestArgs, InvocationTargetException e)
-            throws Error {
+    protected Object handleExecuteMethodInvocationTargetException(Method executeMethod, Object[] requestArgs, InvocationTargetException e) {
         final Throwable cause = e.getTargetException();
         if (cause instanceof ValidationErrorException) {
             return handleValidationErrorException((ValidationErrorException) cause);
@@ -414,8 +414,9 @@ public class GodHandableAction implements VirtualAction {
         if (cause instanceof Error) {
             throw (Error) cause;
         }
+        // checked exception e.g. IOException
         final String msg = setupMethodExceptionMessage("Found the exception in the method invoking.", executeMethod, requestArgs);
-        throw new IllegalStateException(msg, cause);
+        throw new ActionWrappedCheckedException(msg, cause);
     }
 
     protected void throwExecuteMethodAccessFailureException(Method executeMethod, Object[] requestArgs, IllegalAccessException cause) {
