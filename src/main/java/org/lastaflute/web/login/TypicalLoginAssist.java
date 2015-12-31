@@ -61,7 +61,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(TypicalLoginAssist.class);
 
-    /** The session key of user bean. */
+    /** The session key of user bean. (actually added suffix per assist) */
     private static final String USER_BEAN_KEY = LastaWebKey.USER_BEAN_KEY;
 
     /** The delimiter of remember-me login value saved in cookie. */
@@ -301,7 +301,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     protected abstract USER_BEAN createUserBean(USER_ENTITY userEntity);
 
     protected String getUserBeanKey() {
-        return USER_BEAN_KEY;
+        return USER_BEAN_KEY + "." + getUserBeanType().getSimpleName();
     }
 
     @Override
