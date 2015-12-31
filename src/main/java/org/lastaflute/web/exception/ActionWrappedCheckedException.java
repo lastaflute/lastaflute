@@ -19,6 +19,7 @@ import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
+ * @since 0.7.4 (2015/12/31 Thursday)
  */
 public class ActionWrappedCheckedException extends LaSystemException {
 
