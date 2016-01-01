@@ -424,9 +424,9 @@ public class SimpleResponseManager implements ResponseManager {
 
     @Override
     public void addNoCache() {
-        addHeader("Pragma", "no-cache");
-        addHeader("Cache-Control", "no-cache, no-store");
-        addHeader("Expires", "Thu, 01 Dec 1994 16:00:00 GMT");
+        addHeader(HEADER_PRAGMA, "no-cache");
+        addHeader(HEADER_CACHE_CONTROL, "no-cache, no-store");
+        addHeader(HEADER_EXPIRES, "Thu, 01 Dec 1994 16:00:00 GMT");
     }
 
     @Override

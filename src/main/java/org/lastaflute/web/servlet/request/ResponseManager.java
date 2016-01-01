@@ -29,7 +29,10 @@ public interface ResponseManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    String HEADER_CONTENT_DISPOSITION = "Content-disposition";
+    String HEADER_CONTENT_DISPOSITION = "Content-Disposition";
+    String HEADER_PRAGMA = "Pragma";
+    String HEADER_CACHE_CONTROL = "Cache-Control";
+    String HEADER_EXPIRES = "Expires";
 
     // ===================================================================================
     //                                                                      Basic Handling
