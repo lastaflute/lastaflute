@@ -48,6 +48,7 @@ public class ResponseDownloadResource {
     //                                                                        Content Type
     //                                                                        ============
     public ResponseDownloadResource contentType(String contentType) {
+        assertArgumentNotNull("contentType", contentType);
         this.contentType = contentType;
         return this;
     }
@@ -76,7 +77,19 @@ public class ResponseDownloadResource {
     }
 
     public void headerContentDispositionAttachment() { // used as default
-        headerMap.put("Content-disposition", new String[] { "attachment; filename=\"" + fileName + "\"" });
+        headerContentDisposition("attachment; filename=\"" + fileName + "\"");
+    }
+
+    public void headerContentDispositionInline() {
+        headerContentDisposition("inline; filename=\"" + fileName + "\"");
+    }
+
+    protected void headerContentDisposition(String disposition) {
+        headerMap.put(ResponseManager.HEADER_CONTENT_DISPOSITION, new String[] { disposition });
+    }
+
+    public boolean hasContentDisposition() {
+        return headerMap.containsKey(ResponseManager.HEADER_CONTENT_DISPOSITION);
     }
 
     public Map<String, String[]> getHeaderMap() {

@@ -24,6 +24,7 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
+import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.request.WritternStreamCall;
 
 /**
@@ -115,7 +116,15 @@ public class StreamResponse implements ActionResponse {
     }
 
     public void headerContentDispositionAttachment() { // used as default
-        headerMap.put("Content-disposition", new String[] { "attachment; filename=\"" + fileName + "\"" });
+        headerContentDisposition("attachment; filename=\"" + fileName + "\"");
+    }
+
+    public void headerContentDispositionInline() {
+        headerContentDisposition("inline; filename=\"" + fileName + "\"");
+    }
+
+    protected void headerContentDisposition(String disposition) {
+        headerMap.put(ResponseManager.HEADER_CONTENT_DISPOSITION, new String[] { disposition });
     }
 
     // ===================================================================================
@@ -249,7 +258,9 @@ public class StreamResponse implements ActionResponse {
     //                                                                 ===================
     public ResponseDownloadResource toDownloadResource() {
         final ResponseDownloadResource resource = createResponseDownloadResource();
-        resource.contentType(contentType);
+        if (contentType != null) {
+            resource.contentType(contentType);
+        }
         for (Entry<String, String[]> entry : headerMap.entrySet()) {
             resource.header(entry.getKey(), entry.getValue());
         }

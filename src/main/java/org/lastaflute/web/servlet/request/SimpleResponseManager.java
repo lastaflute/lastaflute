@@ -280,9 +280,6 @@ public class SimpleResponseManager implements ResponseManager {
 
     protected ResponseDownloadResource createResponseDownloadResource(String fileName) {
         final ResponseDownloadResource resource = new ResponseDownloadResource(fileName);
-        if (resource.getContentType() != null) {
-            return resource;
-        }
         if (downloadExtensionContentTypeMap != null && fileName.contains(".")) {
             final String extension = Srl.substringLastRear(fileName, ".");
             final String contentType = downloadExtensionContentTypeMap.get(extension);
@@ -316,7 +313,9 @@ public class SimpleResponseManager implements ResponseManager {
     protected void prepareDownloadResponse(ResponseDownloadResource resource, HttpServletResponse response) {
         if (resource.getContentType() == null) {
             resource.contentTypeOctetStream(); // as default
-            resource.headerContentDispositionAttachment(); // with header for the type
+        }
+        if (!resource.hasContentDisposition()) {
+            resource.headerContentDispositionAttachment(); // as default
         }
         final String contentType = resource.getContentType();
         response.setContentType(contentType);
