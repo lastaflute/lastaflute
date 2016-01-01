@@ -15,8 +15,9 @@
  */
 package org.lastaflute.web.servlet.request;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
+
+import org.dbflute.helper.StringKeyMap;
 
 /**
  * @author jflute
@@ -28,11 +29,15 @@ public class ResponseDownloadResource {
     //                                                                           =========
     protected final String fileName;
     protected String contentType;
-    protected final Map<String, String[]> headerMap = new LinkedHashMap<String, String[]>();
+    protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected byte[] byteData;
     protected WritternStreamCall streamCall;
     protected Integer contentLength;
     protected boolean returnAsEmptyBody;
+
+    protected Map<String, String[]> createHeaderMap() {
+        return StringKeyMap.createAsCaseInsensitiveOrdered();
+    }
 
     // ===================================================================================
     //                                                                         Constructor

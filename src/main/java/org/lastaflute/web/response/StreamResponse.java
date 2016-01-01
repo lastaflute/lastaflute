@@ -16,10 +16,10 @@
 package org.lastaflute.web.response;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.dbflute.helper.StringKeyMap;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
@@ -61,7 +61,7 @@ public class StreamResponse implements ActionResponse {
     protected ResponseHook afterTxCommitHook;
 
     protected Map<String, String[]> createHeaderMap() {
-        return new LinkedHashMap<String, String[]>();
+        return StringKeyMap.createAsCaseInsensitiveOrdered();
     }
 
     // ===================================================================================

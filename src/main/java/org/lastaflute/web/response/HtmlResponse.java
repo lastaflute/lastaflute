@@ -17,10 +17,10 @@ package org.lastaflute.web.response;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.dbflute.helper.StringKeyMap;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
@@ -141,7 +141,7 @@ public class HtmlResponse implements ActionResponse, Redirectable {
 
     protected Map<String, String[]> prepareHeaderMap() {
         if (headerMap == null) {
-            headerMap = new LinkedHashMap<String, String[]>(4);
+            headerMap = StringKeyMap.createAsCaseInsensitiveOrdered();
         }
         return headerMap;
     }

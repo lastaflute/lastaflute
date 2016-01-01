@@ -16,11 +16,11 @@
 package org.lastaflute.web.response;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.dbflute.helper.StringKeyMap;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
@@ -98,7 +98,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
 
     protected Map<String, String[]> prepareHeaderMap() {
         if (headerMap == null) {
-            headerMap = new LinkedHashMap<String, String[]>(4);
+            headerMap = StringKeyMap.createAsCaseInsensitiveOrdered();
         }
         return headerMap;
     }
