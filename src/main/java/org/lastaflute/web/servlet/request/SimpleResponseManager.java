@@ -280,13 +280,7 @@ public class SimpleResponseManager implements ResponseManager {
 
     protected ResponseDownloadResource createResponseDownloadResource(String fileName) {
         final ResponseDownloadResource resource = new ResponseDownloadResource(fileName);
-        if (downloadExtensionContentTypeMap != null && fileName.contains(".")) {
-            final String extension = Srl.substringLastRear(fileName, ".");
-            final String contentType = downloadExtensionContentTypeMap.get(extension);
-            if (contentType != null) {
-                resource.contentType(contentType);
-            }
-        }
+        setupContentTypeByExtension(resource);
         return resource; // as default
     }
 
@@ -311,20 +305,35 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     protected void prepareDownloadResponse(ResponseDownloadResource resource, HttpServletResponse response) {
-        if (resource.getContentType() == null) {
-            resource.contentTypeOctetStream(); // as default
+        if (!resource.hasContentType()) {
+            setupContentTypeByExtension(resource);
+            if (!resource.hasContentType()) { // retry
+                resource.contentTypeOctetStream(); // as default
+            }
         }
         if (!resource.hasContentDisposition()) {
             resource.headerContentDispositionAttachment(); // as default
         }
-        final String contentType = resource.getContentType();
-        response.setContentType(contentType);
-        final Map<String, String[]> headerMap = resource.getHeaderMap();
-        headerMap.forEach((key, values) -> {
+        response.setContentType(resource.getContentType());
+        resource.getHeaderMap().forEach((key, values) -> {
             for (String value : values) {
                 response.addHeader(key, value); // added as array if already exists
             }
         });
+    }
+
+    protected void setupContentTypeByExtension(ResponseDownloadResource resource) {
+        if (downloadExtensionContentTypeMap == null || downloadExtensionContentTypeMap.isEmpty()) {
+            return;
+        }
+        final String fileName = resource.getFileName();
+        if (fileName.contains(".")) {
+            final String extension = Srl.substringLastRear(fileName, ".");
+            final String contentType = downloadExtensionContentTypeMap.get(extension);
+            if (contentType != null) {
+                resource.contentType(contentType);
+            }
+        }
     }
 
     protected void doDownloadByteData(ResponseDownloadResource resource, HttpServletResponse response, byte[] byteData) {

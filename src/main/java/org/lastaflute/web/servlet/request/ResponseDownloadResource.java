@@ -28,7 +28,7 @@ public class ResponseDownloadResource {
     //                                                                           =========
     protected final String fileName;
     protected String contentType;
-    protected final Map<String, String[]> headerMap = new LinkedHashMap<String, String[]>(4);
+    protected final Map<String, String[]> headerMap = new LinkedHashMap<String, String[]>();
     protected byte[] byteData;
     protected WritternStreamCall streamCall;
     protected Integer contentLength;
@@ -61,6 +61,10 @@ public class ResponseDownloadResource {
     public ResponseDownloadResource contentTypeJpeg() {
         contentType = "image/jpeg";
         return this;
+    }
+
+    public boolean hasContentType() {
+        return contentType != null;
     }
 
     public String getContentType() {
@@ -166,5 +170,12 @@ public class ResponseDownloadResource {
     @Override
     public String toString() {
         return "{" + fileName + ", " + contentType + ", " + headerMap + "}";
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public String getFileName() {
+        return fileName;
     }
 }

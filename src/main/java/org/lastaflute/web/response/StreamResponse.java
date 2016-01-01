@@ -91,6 +91,10 @@ public class StreamResponse implements ActionResponse {
         return this;
     }
 
+    public boolean hasContentType() {
+        return contentType != null;
+    }
+
     public String getContentType() {
         return contentType;
     }

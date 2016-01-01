@@ -137,7 +137,7 @@ public abstract class LastaAction {
      * }
      * </pre>
      * @param path_ The path definition of forwarding next resource e.g. HTML template. (NotNull)
-     * @return this. (NotNull)
+     * @return The new-created response for HTML. (NotNull)
      */
     protected HtmlResponse asHtml(ForwardNext path_) {
         assertArgumentNotNull("path_ (as forwardNext)", path_);
@@ -152,13 +152,14 @@ public abstract class LastaAction {
     /**
      * Return response as JSON.
      * <pre>
-     * <span style="color: #70226C">public void</span> index() {
+     * <span style="color: #70226C">public</span> JsonResponse&lt;SeaBean&gt; index() {
      *     ...
      *     <span style="color: #70226C">return</span> asJson(<span style="color: #553000">bean</span>);
      * }
      * </pre>
+     * @param <BEAN> The type of bean serialized to JSON.
      * @param bean The bean object converted to JSON string. (NotNull)
-     * @return The new-created bean for JSON response. (NotNull)
+     * @return The new-created response for JSON. (NotNull)
      */
     protected <BEAN> JsonResponse<BEAN> asJson(BEAN bean) {
         assertArgumentNotNull("bean", bean);
@@ -167,8 +168,9 @@ public abstract class LastaAction {
 
     /**
      * New-create JSON response object.
+     * @param <BEAN> The type of bean serialized to JSON.
      * @param bean The bean object converted to JSON string. (NotNull)
-     * @return The new-created bean for JSON response. (NotNull)
+     * @return The new-created response for JSON. (NotNull)
      */
     protected <BEAN> JsonResponse<BEAN> newJsonResponse(BEAN bean) {
         assertArgumentNotNull("bean", bean);
@@ -176,16 +178,19 @@ public abstract class LastaAction {
     }
 
     /**
-     * Return response as stream.
+     * Return response as stream. <br>
+     * Default Content-type is 'application/octet-stream', Content-disposition is 'attachment'. <br>
+     * or default Content-type is derived by file name if extension mapping exists.
      * <pre>
-     * e.g. simple (content-type is octet-stream or found by extension mapping)
-     *  return asStream("classificationDefinitionMap.dfprop").stream(ins);
-     * 
-     * e.g. specify content-type
-     *  return asStream("jflute.jpg").contentTypeJpeg().stream(ins);
+     * e.g. content-type is octet-stream or found by extension mapping
+     * <span style="color: #70226C">return</span> asStream("sea.txt").<span style="color: #CC4747">stream</span>(<span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
+     *         <span style="color: #553000">out</span>.write(<span style="color: #553000">ins</span>);
+     *     }
+     * });
      * </pre>
-     * @param fileName The file name as data of the stream. (NotNull)
-     * @return The new-created bean for XML response. (NotNull)
+     * @param fileName The file name as data of the stream, used in header Content-disposition. (NotNull)
+     * @return The new-created response for stream. (NotNull)
      */
     protected StreamResponse asStream(String fileName) {
         assertArgumentNotNull("fileName", fileName);
