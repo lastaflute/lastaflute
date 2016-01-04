@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.dbflute.helper.StringKeyMap;
 import org.dbflute.optional.OptionalThing;
@@ -43,6 +45,7 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     //                                                                          Definition
     //                                                                          ==========
     protected static final ForwardNext DUMMY = new ForwardNext("dummy");
+    protected static final Class<?>[] EMPTY_TYPES = new Class<?>[0];
     protected static final HtmlResponse INSTANCE_OF_UNDEFINED = new HtmlResponse(DUMMY).ofUndefined();
 
     // ===================================================================================
@@ -70,6 +73,12 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     //                                         Response Hook
     //                                         -------------
     protected ResponseHook afterTxCommitHook; // null allowed
+
+    // -----------------------------------------------------
+    //                                            Validation
+    //                                            ----------
+    protected Class<?>[] validatorGroups;
+    protected boolean validatorSuppressed;
 
     // -----------------------------------------------------
     //                                           View Object
@@ -318,6 +327,37 @@ public class HtmlResponse implements ActionResponse, Redirectable {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                             Validator
+    //                                             ---------
+    /**
+     * @param groups The array of group types. (NullAllowed, EmptyAllowed: if null or empty, use default groups)
+     * @return this. (NotNull)
+     */
+    public HtmlResponse groupValidator(Class<?>... groups) {
+        // allow null or empty to flexibly switch by condition
+        final Class<?>[] filtered = filterValidatorGroups(groups);
+        validatorGroups = filtered.length > 0 ? filtered : null;
+        return this;
+    }
+
+    protected Class<?>[] filterValidatorGroups(Class<?>[] groups) {
+        if (groups == null) { // just in case
+            return EMPTY_TYPES;
+        }
+        // the groups may have null element, if groupValidator(hasSea ? Land.class : null)
+        return Stream.of(groups).filter(group -> group != null).collect(Collectors.toList()).toArray(EMPTY_TYPES);
+    }
+
+    /**
+     * @param suppressed Does it really suppress validator?
+     * @return this. (NotNull)
+     */
+    public HtmlResponse suppressValidator(boolean suppressed) { // argument to flexibly switch by condition
+        validatorSuppressed = suppressed;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                         View Object
     //                                                                         ===========
@@ -457,5 +497,19 @@ public class HtmlResponse implements ActionResponse, Redirectable {
             String msg = "Not found the prepared view: " + HtmlResponse.this.toString();
             throw new IllegalStateException(msg);
         });
+    }
+
+    // -----------------------------------------------------
+    //                                             Validator
+    //                                             ---------
+    public OptionalThing<Class<?>[]> getValidatorGroups() {
+        return OptionalThing.ofNullable(validatorGroups, () -> {
+            String msg = "Not found the validator groups: " + HtmlResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
+    }
+
+    public boolean isValidatorSuppressed() {
+        return validatorSuppressed;
     }
 }

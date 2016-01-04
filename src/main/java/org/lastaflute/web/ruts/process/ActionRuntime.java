@@ -58,6 +58,13 @@ public class ActionRuntime {
     protected RuntimeException failureCause;
     protected ActionMessages validationErrors;
     protected Map<String, Object> displayDataMap; // lazy loaded
+    protected DisplayDataValidator displayDataValidator; // is set when html responce reflecting
+
+    @FunctionalInterface
+    public static interface DisplayDataValidator {
+
+        void validate(String key, Object value);
+    }
 
     // ===================================================================================
     //                                                                         Constructor
@@ -116,7 +123,7 @@ public class ActionRuntime {
     protected boolean isHtmlTemplateResponse(final HtmlResponse htmlResponse) {
         final String routingPath = htmlResponse.getRoutingPath();
         return routingPath.endsWith(".html") // e.g. Thymeleaf
-                || routingPath.endsWith(".xhtml") // e.g. Mayaa
+                || routingPath.endsWith(".xhtml") // just in case
                 || routingPath.endsWith(".jsp") // no comment
                 ;
     }
@@ -175,11 +182,20 @@ public class ActionRuntime {
     // ===================================================================================
     //                                                                        Display Data
     //                                                                        ============
+    /**
+     * @param key The key of the data. (NotNull)
+     * @param value The value of the data for the key. (NotNull)
+     */
     public void registerData(String key, Object value) {
+        assertArgumentNotNull("key", key);
+        assertArgumentNotNull("value", value);
         if (displayDataMap == null) {
             displayDataMap = new LinkedHashMap<String, Object>(4);
         }
         stopDirectlyEntityDisplayData(key, value);
+        if (displayDataValidator != null) { // since reflecting 
+            displayDataValidator.validate(key, value);
+        }
         displayDataMap.put(key, filterDisplayDataValue(value));
     }
 
@@ -196,7 +212,8 @@ public class ActionRuntime {
                 }
             }
         }
-        // cannot check perfectly e.g. map's value, but only primary patterns are enough
+        // cannot check perfectly e.g. empty list, map's value, nested property in bean,
+        // but only primary patterns are enough, strict check is provided by UTFlute
     }
 
     protected void throwDirectlyEntityDisplayDataNotAllowedException(String key, Object value) {
@@ -309,7 +326,8 @@ public class ActionRuntime {
         return form != null ? form : OptionalThing.empty();
     }
 
-    public void setActionForm(OptionalThing<VirtualForm> form) {
+    public void manageActionForm(OptionalThing<VirtualForm> form) {
+        assertArgumentNotNull("form", form);
         this.form = form;
     }
 
@@ -321,7 +339,8 @@ public class ActionRuntime {
         return actionResponse;
     }
 
-    public void setActionResponse(ActionResponse actionResponse) {
+    public void manageActionResponse(ActionResponse actionResponse) {
+        assertArgumentNotNull("actionResponse", actionResponse);
         this.actionResponse = actionResponse;
     }
 
@@ -333,7 +352,8 @@ public class ActionRuntime {
         return failureCause;
     }
 
-    public void setFailureCause(RuntimeException failureCause) {
+    public void manageFailureCause(RuntimeException failureCause) {
+        assertArgumentNotNull("failureCause", failureCause);
         this.failureCause = failureCause;
     }
 
@@ -345,7 +365,8 @@ public class ActionRuntime {
         return validationErrors;
     }
 
-    public void setValidationErrors(ActionMessages validationErrors) {
+    public void manageValidationErrors(ActionMessages validationErrors) {
+        assertArgumentNotNull("validationErrors", validationErrors);
         this.validationErrors = validationErrors;
     }
 
@@ -355,5 +376,22 @@ public class ActionRuntime {
      */
     public Map<String, Object> getDisplayDataMap() {
         return displayDataMap != null ? Collections.unmodifiableMap(displayDataMap) : Collections.emptyMap();
+    }
+
+    public void manageDisplayDataValidator(DisplayDataValidator displayDataValidator) {
+        assertArgumentNotNull("displayDataValidator", displayDataValidator);
+        this.displayDataValidator = displayDataValidator;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 }

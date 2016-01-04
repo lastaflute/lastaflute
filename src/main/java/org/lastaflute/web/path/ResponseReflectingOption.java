@@ -21,25 +21,37 @@ import org.dbflute.util.DfTypeUtil;
 // but no change for compatible
 /**
  * @author jflute
- * @since 0.4.6 (2015/12/14 Monday)
+ * @since 0.7.6 (2016/01/04 Monday)
  */
-public class ApiResponseOption {
+public class ResponseReflectingOption {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected boolean htmlBeanValidationErrorWarned;
+    protected boolean htmlBeanValidatorSuppressed;
     protected boolean jsonBeanValidationErrorWarned;
     protected boolean jsonBeanValidatorSuppressed;
 
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
-    public ApiResponseOption warnJsonBeanValidationError() {
+    public ResponseReflectingOption warnHtmlBeanValidationError() {
+        htmlBeanValidationErrorWarned = true;
+        return this;
+    }
+
+    public ResponseReflectingOption suppressHtmlBeanValidator() {
+        htmlBeanValidatorSuppressed = true;
+        return this;
+    }
+
+    public ResponseReflectingOption warnJsonBeanValidationError() {
         jsonBeanValidationErrorWarned = true;
         return this;
     }
 
-    public ApiResponseOption suppressJsonBeanValidator() {
+    public ResponseReflectingOption suppressJsonBeanValidator() {
         jsonBeanValidatorSuppressed = true;
         return this;
     }
@@ -50,12 +62,22 @@ public class ApiResponseOption {
     @Override
     public String toString() {
         final String title = DfTypeUtil.toClassTitle(this);
-        return title + ":{" + jsonBeanValidationErrorWarned + ", " + jsonBeanValidatorSuppressed + "}";
+        return title + ":{" + htmlBeanValidationErrorWarned + ", " + htmlBeanValidatorSuppressed // html
+                + ", " + jsonBeanValidationErrorWarned + ", " + jsonBeanValidatorSuppressed // json
+                + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    public boolean isHtmlBeanValidationErrorWarned() {
+        return htmlBeanValidationErrorWarned;
+    }
+
+    public boolean isHtmlBeanValidatorSuppressed() {
+        return htmlBeanValidatorSuppressed;
+    }
+
     public boolean isJsonBeanValidationErrorWarned() {
         return jsonBeanValidationErrorWarned;
     }

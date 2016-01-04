@@ -154,7 +154,7 @@ public class ActionRequestProcessor {
         final ActionExecute execute = runtime.getActionExecute();
         final OptionalThing<VirtualForm> optForm = execute.createActionForm();
         optForm.ifPresent(form -> saveFormToRequest(execute, form)); // to use form tag
-        runtime.setActionForm(optForm); // to use in action hook
+        runtime.manageActionForm(optForm); // to use in action hook
         return optForm;
     }
 

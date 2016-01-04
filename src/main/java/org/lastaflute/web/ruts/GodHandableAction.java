@@ -268,7 +268,7 @@ public class GodHandableAction implements VirtualAction {
             response = hook.hookBefore(runtime);
         }
         if (isDefined(response)) {
-            runtime.setActionResponse(response);
+            runtime.manageActionResponse(response);
         }
         assertAfterTxCommitHookNotSpecified("before", response);
         return response;
@@ -284,13 +284,13 @@ public class GodHandableAction implements VirtualAction {
     //                                            on Failure
     //                                            ----------
     protected ActionResponse tellExceptionMonologue(ActionHook hook, RuntimeException e) {
-        runtime.setFailureCause(e);
+        runtime.manageFailureCause(e);
         if (hook == null) {
             throw e;
         }
         final ActionResponse response = hook.godHandMonologue(runtime);
         if (isDefined(response)) {
-            runtime.setActionResponse(response);
+            runtime.manageActionResponse(response);
             assertAfterTxCommitHookNotSpecified("monologue", response);
             return response;
         } else {
@@ -366,7 +366,7 @@ public class GodHandableAction implements VirtualAction {
         assertExecuteReturnNotNull(requestArgs, result);
         assertExecuteMethodReturnTypeActionResponse(requestArgs, result);
         final ActionResponse response = (ActionResponse) result;
-        runtime.setActionResponse(response); // always set here because of main
+        runtime.manageActionResponse(response); // always set here because of main
         return response;
     }
 
@@ -459,8 +459,8 @@ public class GodHandableAction implements VirtualAction {
             logger.debug(sb.toString());
         }
         requestManager.errors().save(messages); // also API can use it
-        runtime.setValidationErrors(messages); // reflect to runtime
-        runtime.setFailureCause(cause); // also cause
+        runtime.manageValidationErrors(messages); // reflect to runtime
+        runtime.manageFailureCause(cause); // also cause
         final VaErrorHook errorHook = cause.getErrorHook();
         final ActionResponse response = errorHook.hook(); // failure hook here if API
         if (response == null) {

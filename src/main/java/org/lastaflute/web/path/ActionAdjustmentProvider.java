@@ -111,10 +111,10 @@ public interface ActionAdjustmentProvider {
     }
 
     /**
-     * Adjust API response.
+     * Adjust action response reflecting.
      * @return The option of API response. (NullAllowed: if null, no option)
      */
-    default ApiResponseOption adjustApiResponse() {
+    default ResponseReflectingOption adjustResponseReflecting() {
         return null;
     }
 }
