@@ -16,10 +16,13 @@
  */
 package org.lastaflute.web.ruts.process;
 
+import java.util.function.Consumer;
+
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
@@ -35,13 +38,21 @@ public class ResponseJsonBeanValidator extends ResponseBeanValidator {
         this.response = response;
     }
 
+    /**
+     * @param bean The JSON bean to be validated. (NotNull)
+     * @throws ResponseBeanValidationErrorException When the validation error.
+     */
+    public void validate(Object bean) {
+        doValidate(bean, br -> {});
+    }
+
     @Override
     protected OptionalThing<Class<?>[]> getValidatorGroups() {
         return response.getValidatorGroups();
     }
 
     @Override
-    protected String buildValidationErrorMessage(Object jsonBean, ActionMessages messages) {
+    protected String buildValidationErrorMessage(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder, ActionMessages messages) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Validation error for the JSON response.");
         br.addItem("Advice");
@@ -70,8 +81,9 @@ public class ResponseJsonBeanValidator extends ResponseBeanValidator {
         br.addElement("    }");
         br.addItem("Action");
         br.addElement(actionExp);
-        setupItemValidatedBean(br, jsonBean);
-        setupItemMessages(messages, br);
+        locationBuilder.accept(br); // basically do nothing when JSON
+        setupItemValidatedBean(br, bean);
+        setupItemMessages(br, messages);
         return br.buildExceptionMessage();
     }
 

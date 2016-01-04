@@ -16,10 +16,13 @@
  */
 package org.lastaflute.web.ruts.process;
 
+import java.util.function.Consumer;
+
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
@@ -35,13 +38,25 @@ public class ResponseHtmlBeanValidator extends ResponseBeanValidator {
         this.response = response;
     }
 
+    /**
+     * @param htmlBean The HTML bean to be validated. (NotNull)
+     * @param dataKey The data key for rendering. (NotNull)
+     * @throws ResponseBeanValidationErrorException When the validation error.
+     */
+    public void validate(String dataKey, Object htmlBean) {
+        doValidate(htmlBean, br -> {
+            br.addItem("Data Key");
+            br.addElement(dataKey);
+        });
+    }
+
     @Override
     protected OptionalThing<Class<?>[]> getValidatorGroups() {
         return response.getValidatorGroups();
     }
 
     @Override
-    protected String buildValidationErrorMessage(Object jsonBean, ActionMessages messages) {
+    protected String buildValidationErrorMessage(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder, ActionMessages messages) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Validation error for the HTML response.");
         br.addItem("Advice");
@@ -74,8 +89,9 @@ public class ResponseHtmlBeanValidator extends ResponseBeanValidator {
         br.addElement("    }");
         br.addItem("Action");
         br.addElement(actionExp);
-        setupItemValidatedBean(br, jsonBean);
-        setupItemMessages(messages, br);
+        locationBuilder.accept(br);
+        setupItemValidatedBean(br, bean);
+        setupItemMessages(br, messages);
         return br.buildExceptionMessage();
     }
 

@@ -172,40 +172,33 @@ public class ActionResponseReflector {
     }
 
     protected DisplayDataValidator createDisplayDataValidator(HtmlResponse response) {
+        if (response.isValidatorSuppressed()) { // by individual requirement
+            logger.debug("...Suppressing HTML bean validator by response option: {}", response);
+            return (key, value) -> {};
+        }
+        final ResponseReflectingOption option = adjustResponseReflecting();
+        if (option.isHtmlBeanValidatorSuppressed()) { // by project policy
+            return (key, value) -> {};
+        }
+        final ResponseHtmlBeanValidator validator = createHtmlBeanValidator(response, option);
         return (key, value) -> { // registered data cannot be null
-            if (mightBeValidable(value)) {
-                validateHtmlBeanIfNeeds(value, response);
+            if (mightBeValidable(key, value)) {
+                validator.validate(key, value);
             }
         };
     }
 
-    protected boolean mightBeValidable(Object value) { // for performance
+    protected ResponseHtmlBeanValidator createHtmlBeanValidator(HtmlResponse response, ResponseReflectingOption option) {
+        return new ResponseHtmlBeanValidator(requestManager, runtime, option.isHtmlBeanValidationErrorWarned(), response);
+    }
+
+    protected boolean mightBeValidable(String key, Object value) { // for performance
         return !(value instanceof String // yes-yes-yes
                 || value instanceof Number // e.g. Integer
                 || DfTypeUtil.isAnyLocalDate(value) // e.g. LocalDate
                 || value instanceof Boolean // of course
                 || value.getClass().isPrimitive() // probably no way, just in case
         );
-    }
-
-    protected void validateHtmlBeanIfNeeds(Object htmlBean, HtmlResponse response) {
-        if (response.isValidatorSuppressed()) { // by individual requirement
-            logger.debug("...Suppressing HTML bean validator by response option: {}", response);
-            return;
-        }
-        final ResponseReflectingOption option = adjustResponseReflecting();
-        if (option.isHtmlBeanValidatorSuppressed()) { // by project policy
-            return;
-        }
-        doValidateHtmlBean(htmlBean, response, option);
-    }
-
-    protected void doValidateHtmlBean(Object htmlBean, HtmlResponse response, ResponseReflectingOption option) {
-        createHtmlBeanValidator(response, option).validate(htmlBean);
-    }
-
-    protected ResponseHtmlBeanValidator createHtmlBeanValidator(HtmlResponse response, ResponseReflectingOption option) {
-        return new ResponseHtmlBeanValidator(requestManager, runtime, option.isHtmlBeanValidationErrorWarned(), response);
     }
 
     // ===================================================================================

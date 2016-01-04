@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
@@ -29,7 +30,7 @@ import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.ruts.process.exception.ResponseJsonBeanValidationErrorException;
+import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
@@ -67,21 +68,17 @@ public abstract class ResponseBeanValidator {
     // ===================================================================================
     //                                                                            Validate
     //                                                                            ========
-    /**
-     * @param jsonBean The bean of JSON. (NotNull)
-     * @throws ResponseJsonBeanValidationErrorException When the validation error.
-     */
-    public void validate(Object jsonBean) {
-        if (jsonBean == null) {
-            throw new IllegalStateException("The argument 'jsonBean' should not be null.");
+    protected void doValidate(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder) {
+        if (bean == null) {
+            throw new IllegalStateException("The argument 'bean' should not be null.");
         }
         final ActionValidator<ActionMessages> validator = createActionValidator();
         try {
-            executeValidator(validator, jsonBean);
+            executeValidator(validator, bean);
         } catch (ValidationErrorException e) {
-            handleResponseJsonBeanValidationErrorException(jsonBean, e.getMessages(), e);
+            handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
         } catch (ClientErrorByValidatorException e) {
-            handleResponseJsonBeanValidationErrorException(jsonBean, e.getMessages(), e);
+            handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
         }
     }
 
@@ -93,8 +90,8 @@ public abstract class ResponseBeanValidator {
 
     protected abstract OptionalThing<Class<?>[]> getValidatorGroups();
 
-    protected void executeValidator(ActionValidator<ActionMessages> validator, Object jsonBean) {
-        validator.validate(jsonBean, more -> {} , () -> {
+    protected void executeValidator(ActionValidator<ActionMessages> validator, Object bean) {
+        validator.validate(bean, more -> {} , () -> {
             throw new IllegalStateException("unused here, no way");
         });
     }
@@ -102,26 +99,28 @@ public abstract class ResponseBeanValidator {
     // ===================================================================================
     //                                                                    Validation Error
     //                                                                    ================
-    protected void handleResponseJsonBeanValidationErrorException(Object jsonBean, ActionMessages messages, RuntimeException cause) {
+    protected void handleResponseBeanValidationErrorException(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder,
+            ActionMessages messages, RuntimeException cause) {
         // cause is completely framework info so not show it
-        final String msg = buildValidationErrorMessage(jsonBean, messages);
+        final String msg = buildValidationErrorMessage(bean, locationBuilder, messages);
         if (warning) {
             logger.warn(msg);
         } else {
-            throw new ResponseJsonBeanValidationErrorException(msg);
+            throw new ResponseBeanValidationErrorException(msg);
         }
     }
 
-    protected abstract String buildValidationErrorMessage(Object jsonBean, ActionMessages messages);
+    protected abstract String buildValidationErrorMessage(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder,
+            ActionMessages messages);
 
     // -----------------------------------------------------
     //                                        Message Helper
     //                                        --------------
-    protected void setupItemValidatedBean(ExceptionMessageBuilder br, Object jsonBean) {
-        final Class<?> beanType = jsonBean.getClass();
+    protected void setupItemValidatedBean(ExceptionMessageBuilder br, Object bean) {
+        final Class<?> beanType = bean.getClass();
         br.addItem("Validated Bean");
         br.addElement(beanType);
-        final String jsonExp = jsonBean.toString();
+        final String jsonExp = bean.toString();
         br.addElement(jsonExp);
         if ((jsonExp == null || !jsonExp.contains("\n"))
                 && !(List.class.isAssignableFrom(beanType) || Map.class.isAssignableFrom(beanType))) {
@@ -131,7 +130,7 @@ public abstract class ResponseBeanValidator {
                 final int propertyDescSize = beanDesc.getPropertyDescSize();
                 for (int i = 0; i < propertyDescSize; i++) {
                     final PropertyDesc pd = beanDesc.getPropertyDesc(i);
-                    br.addElement(pd.getPropertyName() + ": " + pd.getValue(jsonBean));
+                    br.addElement(pd.getPropertyName() + ": " + pd.getValue(bean));
                 }
             } catch (RuntimeException ignored) {
                 br.addElement("*Failed to get field values by BeanDesc: " + Srl.cut(ignored.getMessage(), 50, "..."));
@@ -139,7 +138,7 @@ public abstract class ResponseBeanValidator {
         }
     }
 
-    protected void setupItemMessages(ActionMessages messages, final ExceptionMessageBuilder br) {
+    protected void setupItemMessages(ExceptionMessageBuilder br, ActionMessages messages) {
         br.addItem("Messages");
         final Set<String> propertySet = messages.toPropertySet();
         for (String property : propertySet) {
