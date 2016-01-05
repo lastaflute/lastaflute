@@ -26,6 +26,7 @@ import org.dbflute.util.Srl;
 import org.lastaflute.web.exception.ActionUrlParameterDifferentArgsException;
 import org.lastaflute.web.exception.UrlPatternBeginBraceNotFoundException;
 import org.lastaflute.web.exception.UrlPatternEndBraceNotFoundException;
+import org.lastaflute.web.exception.UrlPatternFrontOrRearSlashUnneededException;
 import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
@@ -44,8 +45,13 @@ public class UrlPatternAnalyzer {
     //                                                                     Check Specified
     //                                                                     ===============
     public void checkSpecifiedUrlPattern(Method executeMethod, String specifiedUrlPattern) {
-        if (specifiedUrlPattern != null && canBeAbbreviatedUrlPattern(specifiedUrlPattern)) {
-            throwUrlPatternNonsenseSettingException(executeMethod, specifiedUrlPattern);
+        if (specifiedUrlPattern != null) {
+            if (canBeAbbreviatedUrlPattern(specifiedUrlPattern)) {
+                throwUrlPatternNonsenseSettingException(executeMethod, specifiedUrlPattern);
+            }
+            if (hasFrontOrRearSlashUrlPattern(specifiedUrlPattern)) {
+                throwUrlPatternFrontOrRearSlashUnneededException(executeMethod, specifiedUrlPattern);
+            }
         }
     }
 
@@ -55,7 +61,7 @@ public class UrlPatternAnalyzer {
 
     protected void throwUrlPatternNonsenseSettingException(Method executeMethod, String specifiedUrlPattern) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("The urlPattern was non-sense.");
+        br.addNotice("Found the non-sense urlPattern.");
         br.addItem("Advice");
         br.addElement("You can abbreviate the urlPattern attribute");
         br.addElement("because it is very simple pattern.");
@@ -77,6 +83,30 @@ public class UrlPatternAnalyzer {
         br.addElement(specifiedUrlPattern);
         final String msg = br.buildExceptionMessage();
         throw new UrlPatternNonsenseSettingException(msg);
+    }
+
+    protected boolean hasFrontOrRearSlashUrlPattern(String specifiedUrlPattern) {
+        return specifiedUrlPattern.startsWith("/") || specifiedUrlPattern.endsWith("/");
+    }
+
+    protected void throwUrlPatternFrontOrRearSlashUnneededException(Method executeMethod, String specifiedUrlPattern) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Unneeded front or rear slash '/' in urlPattern.");
+        br.addItem("Advice");
+        br.addElement("Remove the front or rear slash '/' from your urlPattern");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    urlPattern=\"/{}/sea/{}/\" // *Bad");
+        br.addElement("    urlPattern=\"{}/sea/{}/\" // *Bad");
+        br.addElement("    urlPattern=\"/{}/sea/{}\" // *Bad");
+        br.addElement("  (o):");
+        br.addElement("    urlPattern=\"{}/sea/{}\" // Good");
+        br.addItem("Execute Method");
+        br.addElement(toSimpleMethodExp(executeMethod));
+        br.addItem("Specified urlPattern");
+        br.addElement(specifiedUrlPattern);
+        final String msg = br.buildExceptionMessage();
+        throw new UrlPatternFrontOrRearSlashUnneededException(msg);
     }
 
     // ===================================================================================
