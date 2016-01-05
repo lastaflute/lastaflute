@@ -31,9 +31,7 @@ import org.dbflute.util.Srl;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.exception.ActionFormNotFoundException;
-import org.lastaflute.web.exception.ActionUrlParameterDifferentArgsException;
 import org.lastaflute.web.exception.UrlParamArgsNotFoundException;
-import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
@@ -103,13 +101,13 @@ public class ActionExecute implements Serializable {
 
         // URL pattern (using urlParamTypeList)
         final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
-        checkSpecifiedUrlPattern(specifiedUrlPattern);
-        this.urlPattern = chooseUrlPattern(specifiedUrlPattern, this.urlParamTypeList);
         final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
+        urlPatternAnalyzer.checkSpecifiedUrlPattern(executeMethod, specifiedUrlPattern);
+        this.urlPattern = urlPatternAnalyzer.chooseUrlPattern(executeMethod, specifiedUrlPattern, this.urlParamTypeList);
         final UrlPatternBox urlPatternBox = newUrlPatternBox();
         final String pattern = urlPatternAnalyzer.analyzeUrlPattern(executeMethod, this.urlPattern, urlPatternBox);
-        this.urlPatternRegexp = buildUrlPatternRegexp(pattern);
-        checkUrlPatternVariableAndDefinedTypeCount(urlPatternBox.getUrlPatternVarList(), this.urlParamTypeList);
+        this.urlPatternRegexp = urlPatternAnalyzer.buildUrlPatternRegexp(pattern);
+        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, urlPatternBox.getUrlPatternVarList(), this.urlParamTypeList);
 
         // defined parameter again (uses URL pattern result)
         this.urlParamArgs = prepareUrlParamArgs(this.urlParamTypeList, this.optionalGenericTypeList);
@@ -200,45 +198,6 @@ public class ActionExecute implements Serializable {
     }
 
     // -----------------------------------------------------
-    //                                 Specified URL Pattern
-    //                                 ---------------------
-    protected void checkSpecifiedUrlPattern(String specifiedUrlPattern) {
-        if (specifiedUrlPattern != null && canBeAbbreviatedUrlPattern(specifiedUrlPattern)) {
-            throwUrlPatternNonsenseSettingException(specifiedUrlPattern);
-        }
-    }
-
-    protected boolean canBeAbbreviatedUrlPattern(String str) { // format check so simple logic
-        return Srl.equalsPlain(str, "{}", "{}/{}", "{}/{}/{}", "{}/{}/{}/{}", "{}/{}/{}/{}/{}", "{}/{}/{}/{}/{}/{}");
-    }
-
-    protected void throwUrlPatternNonsenseSettingException(String specifiedUrlPattern) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("The urlPattern was non-sense.");
-        br.addItem("Advice");
-        br.addElement("You can abbreviate the urlPattern attribute");
-        br.addElement("because it is very simple pattern.");
-        br.addElement("  (x):");
-        br.addElement("    @Execute(urlPattern = \"{}\") // *Bad");
-        br.addElement("    public void index(int pageNumber) {");
-        br.addElement("  (o):");
-        br.addElement("    @Execute // Good: abbreviate it");
-        br.addElement("    public void index(int pageNumber) {");
-        br.addElement("  (x):");
-        br.addElement("    @Execute(urlPattern = \"{}/{}\") // *Bad");
-        br.addElement("    public void index(int pageNumber, String keyword) {");
-        br.addElement("  (o):");
-        br.addElement("    @Execute // Good: abbreviate it");
-        br.addElement("    public void index(int pageNumber, String keyword) {");
-        br.addItem("Execute Method");
-        br.addElement(toSimpleMethodExp());
-        br.addItem("Specified urlPattern");
-        br.addElement(specifiedUrlPattern);
-        final String msg = br.buildExceptionMessage();
-        throw new UrlPatternNonsenseSettingException(msg);
-    }
-
-    // -----------------------------------------------------
     //                               URL Parameter Arguments
     //                               -----------------------
     protected OptionalThing<UrlParamArgs> prepareUrlParamArgs(List<Class<?>> urlParamTypeList,
@@ -258,73 +217,6 @@ public class ActionExecute implements Serializable {
         br.addElement(toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
         throw new UrlParamArgsNotFoundException(msg);
-    }
-
-    // -----------------------------------------------------
-    //                                           URL Pattern
-    //                                           -----------
-    protected String chooseUrlPattern(String specifiedUrlPattern, List<Class<?>> urlParamTypeList) {
-        final String methodName = executeMethod.getName();
-        if (specifiedUrlPattern != null && !specifiedUrlPattern.isEmpty()) { // e.g. urlPattern="{}"
-            return adjustUrlPatternMethodPrefix(specifiedUrlPattern, methodName);
-        } else { // urlPattern=[no definition]
-            if (!urlParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
-                return adjustUrlPatternMethodPrefix(buildDerivedUrlPattern(urlParamTypeList), methodName);
-            } else { // e.g. index(), sea() *no parameter
-                return adjustUrlPatternByMethodNameWithoutParam(methodName);
-            }
-        }
-    }
-
-    protected String adjustUrlPatternMethodPrefix(String specifiedUrlPattern, String methodName) {
-        if (methodName.equals("index")) { // e.g. index(pageNumber), urlPattern="{}"
-            return specifiedUrlPattern;
-        } else { // e.g. sea(pageNumber), urlPattern="{}"
-            return methodName + "/" + specifiedUrlPattern;
-        }
-    }
-
-    protected String buildDerivedUrlPattern(List<Class<?>> urlParamTypeList) {
-        final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < urlParamTypeList.size(); i++) {
-            sb.append(i > 0 ? "/" : "").append("{}");
-        }
-        return sb.toString();
-    }
-
-    protected String adjustUrlPatternByMethodNameWithoutParam(final String methodName) {
-        return !methodName.equals("index") ? methodName : ""; // to avoid '/index/' hit
-    }
-
-    protected Pattern buildUrlPatternRegexp(String pattern) {
-        return Pattern.compile("^" + pattern + "$");
-    }
-
-    protected void checkUrlPatternVariableAndDefinedTypeCount(List<String> urlPatternVarList, List<Class<?>> urlParamTypeList) {
-        if (urlPatternVarList.size() != urlParamTypeList.size()) {
-            throwActionUrlParameterDifferentArgsException(urlPatternVarList, urlParamTypeList);
-        }
-    }
-
-    protected void throwActionUrlParameterDifferentArgsException(List<String> urlPatternVarList, List<Class<?>> urlParamTypeList) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Different number of argument for URL parameter.");
-        br.addItem("Advice");
-        br.addElement("Make sure your urlPattern or arguments.");
-        br.addElement("  (x):");
-        br.addElement("    @Execute(\"{}/sea/{}\")");
-        br.addElement("    public HtmlResponse index(int land) { // *Bad");
-        br.addElement("  (o):");
-        br.addElement("    @Execute(\"{}/sea/{}\")");
-        br.addElement("    public HtmlResponse index(int land, String ikspiary) { // Good");
-        br.addItem("Execute Method");
-        br.addElement(toSimpleMethodExp());
-        br.addItem("urlPattern Variable List");
-        br.addElement(urlPatternVarList);
-        br.addItem("Defined Argument List");
-        br.addElement(urlParamTypeList);
-        final String msg = br.buildExceptionMessage();
-        throw new ActionUrlParameterDifferentArgsException(msg);
     }
 
     // -----------------------------------------------------

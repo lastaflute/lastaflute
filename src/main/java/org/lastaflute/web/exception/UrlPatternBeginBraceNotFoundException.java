@@ -15,10 +15,12 @@
  */
 package org.lastaflute.web.exception;
 
+import org.lastaflute.core.exception.LaSystemException;
+
 /**
  * @author jflute
  */
-public class UrlPatternBeginBraceNotFoundException extends RuntimeException {
+public class UrlPatternBeginBraceNotFoundException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 

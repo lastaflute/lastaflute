@@ -15,10 +15,12 @@
  */
 package org.lastaflute.web.exception;
 
+import org.lastaflute.core.exception.LaSystemException;
+
 /**
  * @author modified by jflute (originated in Seasar)
  */
-public class ExecuteMethodIllegalDefinitionException extends RuntimeException {
+public class ExecuteMethodIllegalDefinitionException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 

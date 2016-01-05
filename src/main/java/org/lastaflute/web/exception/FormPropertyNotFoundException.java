@@ -15,10 +15,12 @@
  */
 package org.lastaflute.web.exception;
 
+import org.lastaflute.core.exception.LaSystemException;
+
 /**
  * @author modified by jflute (originated in Seasar)
  */
-public class FormPropertyNotFoundException extends RuntimeException {
+public class FormPropertyNotFoundException extends LaSystemException {
 
     private static final long serialVersionUID = -1;
 
