@@ -22,11 +22,13 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.web.exception.ActionUrlParameterDifferentArgsException;
 import org.lastaflute.web.exception.UrlPatternBeginBraceNotFoundException;
 import org.lastaflute.web.exception.UrlPatternEndBraceNotFoundException;
 import org.lastaflute.web.exception.UrlPatternFrontOrRearSlashUnneededException;
+import org.lastaflute.web.exception.UrlPatternMethodKeywordWithOptionalArgException;
 import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
@@ -42,15 +44,67 @@ public class UrlPatternAnalyzer {
     public static final String METHOD_KEYWORD_MARK = "@word";
 
     // ===================================================================================
-    //                                                                     Check Specified
-    //                                                                     ===============
-    public void checkSpecifiedUrlPattern(Method executeMethod, String specifiedUrlPattern) {
+    //                                                                              Choose
+    //                                                                              ======
+    public UrlPatternChosenBox choose(Method executeMethod, String specifiedUrlPattern, List<Class<?>> urlParamTypeList) {
+        checkSpecifiedUrlPattern(executeMethod, specifiedUrlPattern, urlParamTypeList);
+        final String methodName = executeMethod.getName();
+        if (specifiedUrlPattern != null && !specifiedUrlPattern.isEmpty()) { // e.g. urlPattern="{}"
+            return adjustUrlPatternMethodPrefix(executeMethod, specifiedUrlPattern, methodName);
+        } else { // urlPattern=[no definition]
+            if (!urlParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
+                final String derivedUrlPattern = buildDerivedUrlPattern(urlParamTypeList);
+                return adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, methodName);
+            } else { // e.g. index(), sea() *no parameter
+                return adjustUrlPatternByMethodNameWithoutParam(methodName);
+            }
+        }
+    }
+
+    protected String buildDerivedUrlPattern(List<Class<?>> urlParamTypeList) {
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < urlParamTypeList.size(); i++) {
+            sb.append(i > 0 ? "/" : "").append("{}");
+        }
+        return sb.toString();
+    }
+
+    public static class UrlPatternChosenBox {
+
+        protected final String urlPattern;
+        protected boolean methodNamePrefix;
+
+        public UrlPatternChosenBox(String urlPattern) {
+            this.urlPattern = urlPattern;
+        }
+
+        public UrlPatternChosenBox withMethodPrefix() {
+            methodNamePrefix = true;
+            return this;
+        }
+
+        public String getUrlPattern() {
+            return urlPattern;
+        }
+
+        public boolean isMethodNamePrefix() {
+            return methodNamePrefix;
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                       Check Specified
+    //                                       ---------------
+    protected void checkSpecifiedUrlPattern(Method executeMethod, String specifiedUrlPattern, List<Class<?>> urlParamTypeList) {
         if (specifiedUrlPattern != null) {
             if (canBeAbbreviatedUrlPattern(specifiedUrlPattern)) {
                 throwUrlPatternNonsenseSettingException(executeMethod, specifiedUrlPattern);
             }
             if (hasFrontOrRearSlashUrlPattern(specifiedUrlPattern)) {
                 throwUrlPatternFrontOrRearSlashUnneededException(executeMethod, specifiedUrlPattern);
+            }
+            if (hasMethodKeywordWithOptionalArg(specifiedUrlPattern, urlParamTypeList)) {
+                throwUrlPatternMethodKeywordWithOptionalArgException(executeMethod, specifiedUrlPattern);
             }
         }
     }
@@ -109,52 +163,57 @@ public class UrlPatternAnalyzer {
         throw new UrlPatternFrontOrRearSlashUnneededException(msg);
     }
 
-    // ===================================================================================
-    //                                                                              Choose
-    //                                                                              ======
-    public String chooseUrlPattern(Method executeMethod, String specifiedUrlPattern, List<Class<?>> urlParamTypeList) {
-        final String methodName = executeMethod.getName();
-        if (specifiedUrlPattern != null && !specifiedUrlPattern.isEmpty()) { // e.g. urlPattern="{}"
-            return adjustUrlPatternMethodPrefix(executeMethod, specifiedUrlPattern, methodName);
-        } else { // urlPattern=[no definition]
-            if (!urlParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
-                final String derivedUrlPattern = buildDerivedUrlPattern(urlParamTypeList);
-                return adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, methodName);
-            } else { // e.g. index(), sea() *no parameter
-                return adjustUrlPatternByMethodNameWithoutParam(methodName);
-            }
-        }
+    protected boolean hasMethodKeywordWithOptionalArg(String specifiedUrlPattern, List<Class<?>> urlParamTypeList) {
+        return specifiedUrlPattern.contains(METHOD_KEYWORD_MARK) && urlParamTypeList.stream().anyMatch(tp -> {
+            return OptionalThing.class.isAssignableFrom(tp);
+        });
     }
 
-    protected String buildDerivedUrlPattern(List<Class<?>> urlParamTypeList) {
-        final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < urlParamTypeList.size(); i++) {
-            sb.append(i > 0 ? "/" : "").append("{}");
-        }
-        return sb.toString();
+    protected void throwUrlPatternMethodKeywordWithOptionalArgException(Method executeMethod, String specifiedUrlPattern) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Found the method keyword of urlPattern with optional argument.");
+        br.addItem("Advice");
+        br.addElement("Cannot use method keyword with optional argument.");
+        br.addElement("Remove method keyword or quit using optional type.");
+        br.addElement("  (x):");
+        br.addElement("    @Execute(urlPattern = \"{}/@word\")");
+        br.addElement("    public void sea(OptionalThing<Integer> landId) { // *Bad");
+        br.addElement("  (o):");
+        br.addElement("    @Execute");
+        br.addElement("    public void sea(OptionalThing<Integer> landId) { // Good");
+        br.addElement("  (o):");
+        br.addElement("    @Execute(urlPattern = \"{}/@word\")");
+        br.addElement("    public void sea(Integer landId) { // Good");
+        br.addItem("Execute Method");
+        br.addElement(toSimpleMethodExp(executeMethod));
+        br.addItem("Specified urlPattern");
+        br.addElement(specifiedUrlPattern);
+        final String msg = br.buildExceptionMessage();
+        throw new UrlPatternMethodKeywordWithOptionalArgException(msg);
     }
 
     // -----------------------------------------------------
     //                                        has urlPattern
     //                                        --------------
-    protected String adjustUrlPatternMethodPrefix(Method executeMethod, String specifiedUrlPattern, String methodName) {
+    protected UrlPatternChosenBox adjustUrlPatternMethodPrefix(Method executeMethod, String specifiedUrlPattern, String methodName) {
         final String keywordMark = getMethodKeywordMark();
         if (methodName.equals("index")) { // e.g. index(pageNumber), urlPattern="{}"
             if (specifiedUrlPattern.contains(keywordMark)) {
                 throwUrlPatternMethodKeywordMarkButIndexMethodException(executeMethod, specifiedUrlPattern, keywordMark);
             }
-            return specifiedUrlPattern;
+            return new UrlPatternChosenBox(specifiedUrlPattern);
         } else { // e.g. sea(pageNumber), urlPattern="{}"
             if (specifiedUrlPattern.contains(keywordMark)) { // e.g. @word/{}/@word
                 final List<String> keywordList = splitMethodKeywordList(methodName);
                 if (keywordList.size() != Srl.count(specifiedUrlPattern, keywordMark)) { // e.g. sea() but @word/{}/@word
                     throwUrlPatternMethodKeywordMarkUnmatchedCountException(executeMethod, specifiedUrlPattern, keywordMark);
                 }
-                return keywordList.stream().reduce(specifiedUrlPattern, (first, second) -> {
+                final String resolved = keywordList.stream().reduce(specifiedUrlPattern, (first, second) -> {
                     return Srl.substringFirstFront(first, keywordMark) + second + Srl.substringFirstRear(first, keywordMark);
                 }); // e.g. sea/land
+                return new UrlPatternChosenBox(resolved);
             } else {
-                return methodName + "/" + specifiedUrlPattern;
+                return new UrlPatternChosenBox(methodName + "/" + specifiedUrlPattern).withMethodPrefix();
             }
         }
     }
@@ -170,13 +229,13 @@ public class UrlPatternAnalyzer {
         Character previousCh = null;
         for (char ch : charArray) {
             if (previousCh != null && !Character.isUpperCase(previousCh) && Character.isUpperCase(ch)) {
-                splitList.add(sb.toString().toLowerCase());
+                splitList.add(sb.toString().toLowerCase()); // e.g. Land to land
                 sb.delete(0, sb.length()); // clear all
             }
             sb.append(ch);
             previousCh = ch;
         }
-        splitList.add(sb.toString());
+        splitList.add(sb.toString().toLowerCase()); // e.g. Land to land
         return splitList;
     }
 
@@ -232,20 +291,23 @@ public class UrlPatternAnalyzer {
     // -----------------------------------------------------
     //                                         No urlPattern
     //                                         -------------
-    protected String adjustUrlPatternByMethodNameWithoutParam(String methodName) {
-        return !methodName.equals("index") ? methodName : ""; // to avoid '/index/' hit
+    protected UrlPatternChosenBox adjustUrlPatternByMethodNameWithoutParam(String methodName) {
+        if (methodName.equals("index")) {
+            return new UrlPatternChosenBox(""); // empty if index to avoid '/index/' hit
+        } else {
+            return new UrlPatternChosenBox(methodName).withMethodPrefix();
+        }
     }
 
     // ===================================================================================
-    //                                                                             Analyze
-    //                                                                             =======
+    //                                                                           to Regexp
+    //                                                                           =========
     /**
      * @param executeMethod The execute method basically for debug message. (NotNull)
      * @param urlPattern The URL pattern to be analyzed. (NotNull)
-     * @param box The box of URL parameter to accept additional info. (NotNull)
-     * @return The analyzed URL pattern. (NotNull)
+     * @return The box of regular expression for URL pattern. (NotNull)
      */
-    public String analyzeUrlPattern(Method executeMethod, String urlPattern, UrlPatternBox box) {
+    public UrlPatternRegexpBox toRegexp(Method executeMethod, String urlPattern) {
         final StringBuilder sb = new StringBuilder(32);
         final char[] chars = urlPattern.toCharArray();
         final int length = chars.length;
@@ -270,12 +332,34 @@ public class UrlPatternAnalyzer {
             }
         }
         assertEndBraceExists(executeMethod, urlPattern, index);
-        box.setUrlPatternVarList(varList != null ? Collections.unmodifiableList(varList) : Collections.emptyList());
-        return sb.toString();
+        return new UrlPatternRegexpBox(buildRegexpPattern(sb.toString()), varList);
     }
 
     protected String buildParamName(Method executeMethod, String urlPattern, List<String> nameList, String elementName) {
         return "arg" + nameList.size(); // for internal management
+    }
+
+    protected Pattern buildRegexpPattern(String pattern) {
+        return Pattern.compile("^" + pattern + "$");
+    }
+
+    public static class UrlPatternRegexpBox {
+
+        protected final Pattern regexpPattern;
+        protected final List<String> varList;
+
+        public UrlPatternRegexpBox(Pattern regexpPattern, List<String> varList) {
+            this.regexpPattern = regexpPattern;
+            this.varList = varList != null ? Collections.unmodifiableList(varList) : Collections.emptyList();
+        }
+
+        public Pattern getRegexpPattern() {
+            return regexpPattern;
+        }
+
+        public List<String> getVarList() {
+            return varList;
+        }
     }
 
     // -----------------------------------------------------
@@ -389,13 +473,6 @@ public class UrlPatternAnalyzer {
     }
 
     // ===================================================================================
-    //                                                            Build Regular Expression
-    //                                                            ========================
-    public Pattern buildUrlPatternRegexp(String pattern) {
-        return Pattern.compile("^" + pattern + "$");
-    }
-
-    // ===================================================================================
     //                                                                Check Variable Count
     //                                                                ====================
     public void checkUrlPatternVariableCount(Method executeMethod, List<String> urlPatternVarList, List<Class<?>> urlParamTypeList) {
@@ -431,21 +508,5 @@ public class UrlPatternAnalyzer {
     //                                                                        ============
     public String toSimpleMethodExp(Method executeMethod) {
         return LaActionExecuteUtil.buildSimpleMethodExp(executeMethod);
-    }
-
-    // ===================================================================================
-    //                                                                     URL Pattern Box
-    //                                                                     ===============
-    public static class UrlPatternBox {
-
-        protected List<String> urlPatternVarList;
-
-        public List<String> getUrlPatternVarList() {
-            return urlPatternVarList;
-        }
-
-        public void setUrlPatternVarList(List<String> urlPatternVarList) {
-            this.urlPatternVarList = urlPatternVarList;
-        }
     }
 }

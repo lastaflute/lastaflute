@@ -21,7 +21,6 @@ import java.lang.reflect.Parameter;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -37,7 +36,8 @@ import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer.ExecuteArgBox;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
-import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternBox;
+import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternChosenBox;
+import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternRegexpBox;
 import org.lastaflute.web.ruts.config.checker.ExecuteMethodChecker;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
@@ -72,8 +72,7 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                           URL Pattern
     //                                           -----------
-    protected final String urlPattern; // not null, empty allowed e.g. [method] or [method]/{} or "" (when index())
-    protected final Pattern urlPatternRegexp; // not null e.g. ^([^/]+)$ or ^([^/]+)/([^/]+)$ or ^sea/([^/]+)$
+    protected final PreparedUrlPattern preparedUrlPattern; // not null
 
     // ===================================================================================
     //                                                                         Constructor
@@ -102,12 +101,10 @@ public class ActionExecute implements Serializable {
         // URL pattern (using urlParamTypeList)
         final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
         final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
-        urlPatternAnalyzer.checkSpecifiedUrlPattern(executeMethod, specifiedUrlPattern);
-        this.urlPattern = urlPatternAnalyzer.chooseUrlPattern(executeMethod, specifiedUrlPattern, this.urlParamTypeList);
-        final UrlPatternBox urlPatternBox = newUrlPatternBox();
-        final String pattern = urlPatternAnalyzer.analyzeUrlPattern(executeMethod, this.urlPattern, urlPatternBox);
-        this.urlPatternRegexp = urlPatternAnalyzer.buildUrlPatternRegexp(pattern);
-        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, urlPatternBox.getUrlPatternVarList(), this.urlParamTypeList);
+        final UrlPatternChosenBox chosenBox = urlPatternAnalyzer.choose(executeMethod, specifiedUrlPattern, this.urlParamTypeList);
+        final UrlPatternRegexpBox regexpBox = urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getUrlPattern());
+        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), this.urlParamTypeList);
+        this.preparedUrlPattern = newPreparedUrlPattern(chosenBox, regexpBox);
 
         // defined parameter again (uses URL pattern result)
         this.urlParamArgs = prepareUrlParamArgs(this.urlParamTypeList, this.optionalGenericTypeList);
@@ -152,8 +149,8 @@ public class ActionExecute implements Serializable {
         return new UrlPatternAnalyzer();
     }
 
-    protected UrlPatternBox newUrlPatternBox() {
-        return new UrlPatternBox();
+    protected PreparedUrlPattern newPreparedUrlPattern(UrlPatternChosenBox chosenBox, UrlPatternRegexpBox regexpBox) {
+        return new PreparedUrlPattern(chosenBox.getUrlPattern(), regexpBox.getRegexpPattern(), chosenBox.isMethodNamePrefix());
     }
 
     // -----------------------------------------------------
@@ -234,7 +231,7 @@ public class ActionExecute implements Serializable {
     //                                      ----------------
     public boolean determineTargetByUrlParameter(String paramPath) {
         if (!isParameterEmpty(paramPath)) {
-            return handleOptionalParameterMapping(paramPath) || urlPatternRegexp.matcher(paramPath).find();
+            return handleOptionalParameterMapping(paramPath) || preparedUrlPattern.matcher(paramPath).find();
         } else {
             // should not be called if param is empty, old code is like this:
             //return "index".equals(urlPattern);
@@ -337,8 +334,7 @@ public class ActionExecute implements Serializable {
         final StringBuilder sb = new StringBuilder();
         sb.append("execute:{");
         sb.append(toSimpleMethodExp());
-        sb.append(", urlPattern=").append(urlPattern);
-        sb.append(", regexp=").append(urlPatternRegexp);
+        sb.append(", ").append(preparedUrlPattern);
         sb.append("}@").append(Integer.toHexString(hashCode()));
         return sb.toString();
     }
@@ -411,11 +407,15 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                           URL Pattern
     //                                           -----------
-    public String getUrlPattern() {
-        return urlPattern;
+    public PreparedUrlPattern getPreparedUrlPattern() {
+        return preparedUrlPattern;
     }
 
-    public Pattern getUrlPatternRegexp() {
-        return urlPatternRegexp;
+    /**
+     * @return The prepared expression of URL pattern. (NotNull)
+     * @deprecated use getPreparedUrlPattern()
+     */
+    public String getUrlPattern() { // for compatible, already UTFlute uses
+        return preparedUrlPattern.getUrlPattern();
     }
 }

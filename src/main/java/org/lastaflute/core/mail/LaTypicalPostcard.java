@@ -245,6 +245,10 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // ===================================================================================
     //                                                                   Template Variable
     //                                                                   =================
+    /**
+     * @param key The key of variable. (NotNull)
+     * @param value The value of variable. (NotNull, EmptyAllowed: you can put empty string)
+     */
     protected void registerVariable(String key, Object value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
