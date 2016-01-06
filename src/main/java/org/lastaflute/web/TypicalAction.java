@@ -27,6 +27,7 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.LaDBFluteUtil;
 import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
@@ -294,8 +295,8 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     // ===================================================================================
-    //                                                                              Verify
-    //                                                                              ======
+    //                                                                     Verify Anything
+    //                                                                     ===============
     // -----------------------------------------------------
     //                                      Verify Parameter
     //                                      ----------------
@@ -401,7 +402,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     // ===================================================================================
-    //                                                                        Small Helper
+    //                                                                        Small Facade
     //                                                                        ============
     // -----------------------------------------------------
     //                                          Current Date
@@ -426,13 +427,42 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
         return timeManager.currentDateTime();
     }
 
+    /**
+     * Get the message for currently-requested user locale from message resources.
+     * @param key The key of message managed by message resources. (NotNull)
+     * @return The found message, specified locale resolved. (NotNull: if not found, throws exception)
+     * @throws MessageKeyNotFoundException When the message is not found.
+     */
+    protected String getUserMessage(String key) {
+        return messageManager.getMessage(requestManager.getUserLocale(), key);
+    }
+
+    /**
+     * Get the message for currently-requested user locale from message resources.
+     * @param key The key of message managed by message resources. (NotNull)
+     * @param args The varying arguments for the message. (NotNull, EmptyAllowed)
+     * @return The found message, specified locale resolved. (NotNull: if not found, throws exception)
+     * @throws MessageKeyNotFoundException When the message is not found.
+     */
+    protected String getUserMessage(String key, Object... args) {
+        return messageManager.getMessage(requestManager.getUserLocale(), key, args);
+    }
+
     // -----------------------------------------------------
     //                                        Empty Handling
     //                                        --------------
+    /**
+     * @param str might be empty. (NullAllowed: if null, return true)
+     * @return true if null or empty, false if blank or has characters.
+     */
     protected boolean isEmpty(String str) {
         return LaStringUtil.isEmpty(str);
     }
 
+    /**
+     * @param str might not be empty. (NullAllowed: if null, return false)
+     * @return true if blank or has characters, false if null or empty.
+     */
     protected boolean isNotEmpty(String str) {
         return LaStringUtil.isNotEmpty(str);
     }
