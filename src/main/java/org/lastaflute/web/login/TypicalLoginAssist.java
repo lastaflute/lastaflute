@@ -247,7 +247,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         assertUserEntityRequired(userEntity);
         final USER_BEAN userBean = saveLoginInfoToSession(userEntity);
         if (userBean instanceof SyncCheckable) {
-            ((SyncCheckable) userBean).setLastestSyncCheckDateTime(timeManager.currentDateTime());
+            ((SyncCheckable) userBean).manageLastestSyncCheckTime(timeManager.currentDateTime());
         }
         if (option.isRememberMe()) {
             saveRememberMeKeyToCookie(userEntity, userBean);
@@ -685,7 +685,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             return true; // means no check
         }
         final SyncCheckable checkable = (SyncCheckable) userBean;
-        final OptionalThing<LocalDateTime> checkDt = checkable.getLastestSyncCheckDateTime(); // might be null
+        final OptionalThing<LocalDateTime> checkDt = checkable.getLastestSyncCheckTime(); // might be null
         final LocalDateTime currentDt = timeManager.currentDateTime();
         if (!needsLoginSessionSyncCheck(userBean, checkDt, currentDt)) {
             return true; // means no check
@@ -695,7 +695,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             final String checkDisp = checkDt.map(dt -> new HandyDate(dt).toDisp("yyyy/MM/dd HH:mm:ss")).orElse(null);
             logger.debug("...Sync-checking login session: userId={}, checkDate={}", userId, checkDisp);
         }
-        checkable.setLastestSyncCheckDateTime(currentDt); // update latest check date
+        checkable.manageLastestSyncCheckTime(currentDt); // update latest check date
         return findLoginSessionSyncCheckUser(userBean).map(loginUser -> {
             handleLoginSessionSyncCheckSuccess(userBean, loginUser);
             return true;
