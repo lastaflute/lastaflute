@@ -20,12 +20,13 @@ import java.util.Collections;
 import java.util.List;
 
 import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.core.magic.ThreadCompleted;
 
 /**
  * @author jflute
  * @since 0.7.2 (2015/12/22 Tuesday)
  */
-public class SavedTransactionMemories {
+public class SavedTransactionMemories implements ThreadCompleted { // thread cached
 
     protected final List<TransactionMemoriesProvider> providerList = new ArrayList<>(4);
 

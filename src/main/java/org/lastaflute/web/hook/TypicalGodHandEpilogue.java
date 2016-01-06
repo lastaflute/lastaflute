@@ -18,7 +18,11 @@ package org.lastaflute.web.hook;
 import org.dbflute.bhv.proposal.callback.ExecutedSqlCounter;
 import org.dbflute.hook.CallbackContext;
 import org.dbflute.hook.SqlStringFilter;
+import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.mail.PostedMailCounter;
+import org.lastaflute.core.mail.RequestedMailCount;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
+import org.lastaflute.db.dbflute.callbackcontext.RequestedSqlCount;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
@@ -59,17 +63,21 @@ public class TypicalGodHandEpilogue {
             arrangeNoCacheResponseWhenJsp(runtime);
         }
         handleSqlCount(runtime);
+        handleMailCount(runtime);
         clearCallbackContext();
         clearPreparedAccessContext();
     }
 
+    // ===================================================================================
+    //                                                                            No Cache
+    //                                                                            ========
     protected void arrangeNoCacheResponseWhenJsp(ActionRuntime runtime) {
         responseManager.addNoCache();
     }
 
     // ===================================================================================
-    //                                                                    Callback Context
-    //                                                                    ================
+    //                                                                           SQL Count
+    //                                                                           =========
     /**
      * Handle count of SQL execution in the request.
      * @param runtime The runtime meta of action execute. (NotNull)
@@ -90,8 +98,7 @@ public class TypicalGodHandEpilogue {
             // if it needs to specify it by-annotation, enough to set large size
             handleTooManySqlExecution(runtime, counter, sqlExecutionCountLimit);
         }
-        final String exp = counter.toLineDisp();
-        requestManager.setAttribute(RequestManager.DBFLUTE_SQL_COUNT_KEY, exp); // logged by logging filter
+        saveRequestedSqlCount(counter);
     }
 
     /**
@@ -120,6 +127,41 @@ public class TypicalGodHandEpilogue {
         return tooManySqlOption.getSqlExecutionCountLimit();
     }
 
+    protected void saveRequestedSqlCount(ExecutedSqlCounter counter) {
+        requestManager.setAttribute(RequestManager.DBFLUTE_SQL_COUNT_KEY, createRequestedSqlCount(counter)); // logged by logging filter
+    }
+
+    protected RequestedSqlCount createRequestedSqlCount(ExecutedSqlCounter counter) {
+        return new RequestedSqlCount(counter); // as snapshot
+    }
+
+    // ===================================================================================
+    //                                                                               Mail
+    //                                                                              ======
+    /**
+     * Handle count of mail posting in the request.
+     * @param runtime The runtime meta of action execute. (NotNull)
+     */
+    protected void handleMailCount(ActionRuntime runtime) {
+        if (ThreadCacheContext.exists()) {
+            final PostedMailCounter counter = ThreadCacheContext.findMailCounter();
+            if (counter != null) {
+                saveRequestedMailCount(counter);
+            }
+        }
+    }
+
+    protected void saveRequestedMailCount(PostedMailCounter counter) {
+        requestManager.setAttribute(RequestManager.MAILFLUTE_MAIL_COUNT_KEY, createRequestedMailCount(counter));
+    }
+
+    protected RequestedMailCount createRequestedMailCount(PostedMailCounter counter) {
+        return new RequestedMailCount(counter); // as snapshot
+    }
+
+    // ===================================================================================
+    //                                                                    Callback Context
+    //                                                                    ================
     /**
      * Clear callback context. <br>
      * This is called by callback process so you should NOT call this directly in your action.

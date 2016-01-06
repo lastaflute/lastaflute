@@ -53,7 +53,9 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.magic.ThreadCompleted;
 import org.lastaflute.core.magic.async.ConcurrentAsyncOption.ConcurrentAsyncInheritType;
+import org.lastaflute.core.mail.PostedMailCounter;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlResultHandler;
@@ -441,9 +443,12 @@ public class SimpleAsyncManager implements AsyncManager {
 
     protected void prepareThreadCacheContext(ConcurrentAsyncCall call, Map<String, Object> threadCacheMap) {
         ThreadCacheContext.initialize();
-        for (Entry<String, Object> entry : threadCacheMap.entrySet()) {
-            ThreadCacheContext.setObject(entry.getKey(), entry.getValue());
-        }
+        threadCacheMap.forEach((key, value) -> {
+            if (value instanceof ThreadCompleted) { // cannot be inherited
+                return;
+            }
+            ThreadCacheContext.setObject(key, value);
+        });
     }
 
     protected void prepareAccessContext(ConcurrentAsyncCall call, AccessContext accessContext) {
@@ -505,6 +510,7 @@ public class SimpleAsyncManager implements AsyncManager {
         setupExceptionMessageCallbackContext(sb);
         setupExceptionMessageVariousContext(call, cause, sb);
         setupExceptionMessageTransactionMemoriesIfExists(sb);
+        setupExceptionMessageMailCountIfExists(sb);
         final long after = System.currentTimeMillis();
         final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
         sb.append(LF);
@@ -575,6 +581,14 @@ public class SimpleAsyncManager implements AsyncManager {
                 });
             }
             sb.append(txSb);
+        }
+    }
+
+    protected void setupExceptionMessageMailCountIfExists(StringBuilder sb) {
+        final PostedMailCounter mailCounter = ThreadCacheContext.findMailCounter();
+        if (mailCounter != null) {
+            sb.append(LF).append(IND);
+            sb.append("; mailCount=").append(mailCounter);
         }
     }
 

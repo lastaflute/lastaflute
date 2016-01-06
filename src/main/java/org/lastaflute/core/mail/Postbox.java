@@ -23,6 +23,7 @@ import org.dbflute.mail.Postcard;
 import org.dbflute.mail.send.SMailDeliveryDepartment;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
+import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.di.DisposableUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,13 +95,14 @@ public class Postbox {
     }
 
     // ===================================================================================
-    //                                                                             Deliver
-    //                                                                             =======
+    //                                                                               Post
+    //                                                                              ======
     public void post(LaMailPostcard postcard) {
         assertPostOfficeWorks(postcard);
         reloadIfNeeds();
         final Postcard nativePostcard = postcard.toNativePostcard();
         postOffice.deliver(nativePostcard);
+        saveMemories(postcard);
     }
 
     protected void assertPostOfficeWorks(LaMailPostcard postcard) {
@@ -108,6 +110,33 @@ public class Postbox {
             String msg = "No mail settings so cannot send your mail: " + postcard;
             throw new IllegalStateException(msg);
         }
+    }
+
+    protected void saveMemories(LaMailPostcard postcard) {
+        if (!ThreadCacheContext.exists()) {
+            return;
+        }
+        final PostedMailCounter counter = counterComesHere();
+        counter.incrementPosting();
+        final Postcard nativePostcard = postcard.toNativePostcard();
+        if (nativePostcard.isDryrun()) {
+            counter.incrementDryrun();
+        }
+        if (nativePostcard.isAlsoHtmlFile()) {
+            counter.incrementAlsoHtml();
+        }
+        if (nativePostcard.isForcedlyDirect()) {
+            counter.incrementForcedlyDirect();
+        }
+    }
+
+    protected PostedMailCounter counterComesHere() {
+        PostedMailCounter counter = ThreadCacheContext.findMailCounter();
+        if (counter == null) {
+            counter = new PostedMailCounter();
+            ThreadCacheContext.registerMailCounter(counter);
+        }
+        return counter;
     }
 
     // ===================================================================================

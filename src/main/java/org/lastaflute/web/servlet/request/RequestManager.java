@@ -71,6 +71,9 @@ public interface RequestManager extends ScopedAttributeHolder {
     /** The key of romantic transaction memories by DBFlute. */
     String DBFLUTE_TRANSACTION_MEMORIES_KEY = "lastaflute.dbflute.TRANSACTION_MEMORIES";
 
+    /** The key of mail count by MailFlute. */
+    String MAILFLUTE_MAIL_COUNT_KEY = "lastaflute.mailflute.MAIL_COUNT";
+
     // ===================================================================================
     //                                                                      Basic Handling
     //                                                                      ==============
