@@ -228,7 +228,7 @@ public class TypicalGodHandPrologue {
     }
 
     protected String buildActionDisp(ActionRuntime runtime) {
-        return runtime.getActionType().getSimpleName() + "." + runtime.getExecuteMethod().getName() + "()";
+        return runtime.getActionType().getSimpleName() + "@" + runtime.getExecuteMethod().getName() + "()";
     }
 
     /**
