@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
@@ -40,7 +41,8 @@ public class UrlPatternAnalyzer {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    public static final String ELEMENT_PATTERN = "([^/]+)";
+    public static final String ELEMENT_BASIC_PATTERN = "([^/]+)";
+    public static final String ELEMENT_NUMBER_PATTERN = "([^/&&\\-\\.\\d]+)";
     public static final String METHOD_KEYWORD_MARK = "@word";
 
     // ===================================================================================
@@ -302,16 +304,13 @@ public class UrlPatternAnalyzer {
     // ===================================================================================
     //                                                                           to Regexp
     //                                                                           =========
-    /**
-     * @param executeMethod The execute method basically for debug message. (NotNull)
-     * @param urlPattern The URL pattern to be analyzed. (NotNull)
-     * @return The box of regular expression for URL pattern. (NotNull)
-     */
-    public UrlPatternRegexpBox toRegexp(Method executeMethod, String urlPattern) {
+    public UrlPatternRegexpBox toRegexp(Method executeMethod, String urlPattern, List<Class<?>> urlParamTypeList,
+            Map<Integer, Class<?>> optionalGenericTypeList) {
         final StringBuilder sb = new StringBuilder(32);
         final char[] chars = urlPattern.toCharArray();
         final int length = chars.length;
         List<String> varList = null;
+        int parameterIndex = -1;
         int index = -1;
         for (int i = 0; i < length; i++) {
             final char currentChar = chars[i];
@@ -319,7 +318,8 @@ public class UrlPatternAnalyzer {
                 index = i;
             } else if (currentChar == '}') { // end brace
                 assertBeginBraceExists(executeMethod, urlPattern, index, i);
-                sb.append(ELEMENT_PATTERN);
+                ++parameterIndex;
+                setupParameterPattern(sb, urlParamTypeList, optionalGenericTypeList, parameterIndex);
                 final String elementName = urlPattern.substring(index + 1, i);
                 assertNoNameParameter(executeMethod, urlPattern, elementName);
                 if (varList == null) {
@@ -333,6 +333,28 @@ public class UrlPatternAnalyzer {
         }
         assertEndBraceExists(executeMethod, urlPattern, index);
         return new UrlPatternRegexpBox(buildRegexpPattern(sb.toString()), varList);
+    }
+
+    protected void setupParameterPattern(StringBuilder sb, List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeList,
+            int parameterIndex) {
+        if (isNumberTypePattern(urlParamTypeList, optionalGenericTypeList, parameterIndex)) {
+            sb.append(ELEMENT_NUMBER_PATTERN); // to enable mapping index(Integer) and sea()
+        } else {
+            sb.append(ELEMENT_BASIC_PATTERN);
+        }
+    }
+
+    protected boolean isNumberTypePattern(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeList,
+            int parameterIndex) {
+        if (urlParamTypeList.size() <= parameterIndex) {
+            return false; // different count of parameters will be checked later so only avoid out-of-index here
+        }
+        final Class<?> parameterType = urlParamTypeList.get(parameterIndex);
+        if (Number.class.isAssignableFrom(parameterType)) {
+            return true;
+        }
+        final Class<?> genericType = optionalGenericTypeList.get(parameterIndex);
+        return genericType != null && Number.class.isAssignableFrom(genericType);
     }
 
     protected String buildParamName(Method executeMethod, String urlPattern, List<String> nameList, String elementName) {

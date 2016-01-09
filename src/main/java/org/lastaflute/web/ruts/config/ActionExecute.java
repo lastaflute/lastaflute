@@ -102,7 +102,8 @@ public class ActionExecute implements Serializable {
         final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
         final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
         final UrlPatternChosenBox chosenBox = urlPatternAnalyzer.choose(executeMethod, specifiedUrlPattern, this.urlParamTypeList);
-        final UrlPatternRegexpBox regexpBox = urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getUrlPattern());
+        final UrlPatternRegexpBox regexpBox =
+                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getUrlPattern(), this.urlParamTypeList, this.optionalGenericTypeList);
         urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), this.urlParamTypeList);
         this.preparedUrlPattern = newPreparedUrlPattern(chosenBox, regexpBox);
 
