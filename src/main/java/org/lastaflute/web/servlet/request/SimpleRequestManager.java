@@ -43,6 +43,7 @@ import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.core.exception.ComponentNotFoundException;
 import org.lastaflute.di.core.exception.TooManyRegistrationComponentException;
+import org.lastaflute.di.core.smart.hot.HotdeployLock;
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
@@ -500,13 +501,14 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected OptionalThing<LoginManager> handleLoginManagerNotFound(Class<?> userBeanType) {
-        if (HotdeployUtil.isHotdeploy()) { // local development only here
+        if (!HotdeployUtil.isHotdeploy()) { // e.g. production, unit-test
+            return OptionalThing.empty();
+        }
+        // local development only here
+        synchronized (HotdeployLock.class) {
             // login assist (concrete class of login manager) may not initialized yet by HotDeploy
             // so find the class forcedly (local development only so tricky allowed)
-            final boolean needsHot = !HotdeployUtil.isAlreadyHotdeploy();
-            if (needsHot) {
-                HotdeployUtil.start(); // for login assist (under smart deploy)
-            }
+            HotdeployUtil.start(); // for login assist (under smart deploy)
             try {
                 // support only-one login #for_now, want to find other pattern login assist classes
                 final String directorName = assistantDirector.getClass().getSimpleName();
@@ -528,9 +530,7 @@ public class SimpleRequestManager implements RequestManager {
                     logger.debug("*Not found the concrete class of login manager: {} for {}", componentName, userBeanType);
                 }
             } finally {
-                if (needsHot) {
-                    HotdeployUtil.stop();
-                }
+                HotdeployUtil.stop();
             }
         }
         return OptionalThing.ofNullable(null, () -> {
