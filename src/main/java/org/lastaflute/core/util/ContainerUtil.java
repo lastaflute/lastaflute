@@ -15,8 +15,12 @@
  */
 package org.lastaflute.core.util;
 
+import java.lang.reflect.Field;
+
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
+import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.di.core.ExternalContext;
 import org.lastaflute.di.core.SingletonLaContainer;
 import org.lastaflute.di.core.exception.ComponentNotFoundException;
@@ -78,6 +82,9 @@ public abstract class ContainerUtil {
     // ===================================================================================
     //                                                                    External Context
     //                                                                    ================
+    /**
+     * @return The external context of Lasta Di. (NotNull)
+     */
     public static ExternalContext retrieveExternalContext() {
         final ExternalContext context = SingletonLaContainerFactory.getExternalContext();
         if (context == null) {
@@ -86,6 +93,9 @@ public abstract class ContainerUtil {
         return context;
     }
 
+    /**
+     * @param request The request for external context of Lasta Di. (NotNull)
+     */
     public static void overrideExternalRequest(HttpServletRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("The argument 'request' should not be null.");
@@ -96,5 +106,26 @@ public abstract class ContainerUtil {
             throw new IllegalStateException("Not found external request in Lasta Di container for your overriding by: " + request);
         }
         context.setRequest(request);
+    }
+
+    // ===================================================================================
+    //                                                                            Injector
+    //                                                                            ========
+    /**
+     * @param target The target instance to which injecting. (NotNull)
+     */
+    public static void injectSimply(Object target) {
+        if (target == null) {
+            throw new IllegalArgumentException("The argument 'target' should not be null.");
+        }
+        // no cache fields #for_now so don't use it at frequently-called object
+        for (Class<?> currentType = target.getClass(); !currentType.equals(Object.class); currentType = currentType.getSuperclass()) {
+            final Field[] fields = currentType.getDeclaredFields();
+            for (Field field : fields) {
+                if (field.getAnnotation(Resource.class) != null) { // type only #for_now
+                    DfReflectionUtil.setValueForcedly(field, target, getComponent(field.getType()));
+                }
+            }
+        }
     }
 }
