@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ public class HookedConnectionPool extends SimpleConnectionPool {
     protected String buildRomanticExp(Transaction tx, ConnectionWrapper wrapper) {
         final String romantic;
         if (tx instanceof RomanticTransaction) {
-            romantic = ((RomanticTransaction) tx).toRomanticString(wrapper);
+            romantic = ((RomanticTransaction) tx).toRomanticSnapshot(wrapper);
         } else {
             romantic = super.buildRomanticExp(tx, wrapper);
         }

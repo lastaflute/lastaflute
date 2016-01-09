@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 
 import org.dbflute.bhv.proposal.callback.SimpleTraceableSqlStringFilter;
 import org.dbflute.bhv.proposal.callback.TraceableSqlAdditionalInfoProvider;
+import org.dbflute.util.DfTypeUtil;
 
 /**
  * @author jflute
@@ -27,5 +28,10 @@ public class RomanticTraceableSqlStringFilter extends SimpleTraceableSqlStringFi
 
     public RomanticTraceableSqlStringFilter(Method actionMethod, TraceableSqlAdditionalInfoProvider additionalInfoProvider) {
         super(actionMethod, additionalInfoProvider);
+    }
+
+    @Override
+    public String toString() {
+        return DfTypeUtil.toClassTitle(this) + "@" + Integer.toHexString(hashCode());
     }
 }

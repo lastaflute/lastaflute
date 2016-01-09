@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,12 @@
  */
 package org.lastaflute.core.magic.async;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
@@ -49,10 +53,15 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.magic.ThreadCompleted;
 import org.lastaflute.core.magic.async.ConcurrentAsyncOption.ConcurrentAsyncInheritType;
+import org.lastaflute.core.mail.PostedMailCounter;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
+import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlResultHandler;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
+import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
+import org.lastaflute.db.jta.romanticist.TransactionMemoriesProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -362,6 +371,8 @@ public class SimpleAsyncManager implements AsyncManager {
             if (handler != null) {
                 dest.setSqlResultHandler(handler);
             }
+        } else {
+            dest.setSqlResultHandler(createDefaultSqlResultHandler(call));
         }
         if (isInherit(option.getSqlStringFilterType(), defaultOption.getSqlStringFilterType())) {
             final SqlStringFilter filter = src.getSqlStringFilter();
@@ -412,6 +423,10 @@ public class SimpleAsyncManager implements AsyncManager {
         });
     }
 
+    protected SqlResultHandler createDefaultSqlResultHandler(ConcurrentAsyncCall call) {
+        return new RomanticTraceableSqlResultHandler();
+    }
+
     protected Map<String, Object> findCallerVariousContextMap() { // for extension
         return null;
     }
@@ -428,9 +443,12 @@ public class SimpleAsyncManager implements AsyncManager {
 
     protected void prepareThreadCacheContext(ConcurrentAsyncCall call, Map<String, Object> threadCacheMap) {
         ThreadCacheContext.initialize();
-        for (Entry<String, Object> entry : threadCacheMap.entrySet()) {
-            ThreadCacheContext.setObject(entry.getKey(), entry.getValue());
-        }
+        threadCacheMap.forEach((key, value) -> {
+            if (value instanceof ThreadCompleted) { // cannot be inherited
+                return;
+            }
+            ThreadCacheContext.setObject(key, value);
+        });
     }
 
     protected void prepareAccessContext(ConcurrentAsyncCall call, AccessContext accessContext) {
@@ -464,7 +482,8 @@ public class SimpleAsyncManager implements AsyncManager {
         if (handled == null) {
             handled = cause;
         }
-        logger.error(buildAsyncCallbackExceptionMessage(call, before, handled), handled);
+        // not use second argument here, same reason as logging filter
+        logger.error(buildAsyncCallbackExceptionMessage(call, before, handled));
     }
 
     protected String buildAsyncCallbackExceptionMessage(ConcurrentAsyncCall call, long before, Throwable cause) {
@@ -486,39 +505,115 @@ public class SimpleAsyncManager implements AsyncManager {
         }
         sb.append(LF).append(IND);
         sb.append("callbackInterface=").append(call);
+        setupExceptionMessageRequestInfo(sb, requestPath, entryMethod, userBean);
+        setupExceptionMessageAccessContext(sb);
+        setupExceptionMessageCallbackContext(sb);
+        setupExceptionMessageVariousContext(call, cause, sb);
+        setupExceptionMessageTransactionMemoriesIfExists(sb);
+        setupExceptionMessageMailCountIfExists(sb);
+        final long after = System.currentTimeMillis();
+        final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
+        sb.append(LF);
+        sb.append("= = = = = = = = = =/ [").append(performanceView).append("] #").append(Integer.toHexString(cause.hashCode()));
+        buildExceptionStackTrace(cause, sb);
+        return sb.toString().trim();
+    }
+
+    protected void setupExceptionMessageRequestInfo(StringBuilder sb, String requestPath, Method entryMethod, Object userBean) {
         if (requestPath != null) {
             sb.append(LF).append(IND);
-            sb.append(", requestPath=").append(requestPath);
+            sb.append("; requestPath=").append(requestPath);
         }
         if (entryMethod != null) {
             sb.append(LF).append(IND);
             final Class<?> declaringClass = entryMethod.getDeclaringClass();
-            sb.append(", entryMethod=").append(declaringClass.getName()).append("@").append(entryMethod.getName()).append("()");
+            sb.append("; entryMethod=").append(declaringClass.getName()).append("@").append(entryMethod.getName()).append("()");
         }
         if (userBean != null) {
             sb.append(LF).append(IND);
-            sb.append(", userBean=").append(userBean);
+            sb.append("; userBean=").append(userBean);
         }
+    }
+
+    protected void setupExceptionMessageAccessContext(StringBuilder sb) {
         sb.append(LF).append(IND);
         final AccessContext accessContext = PreparedAccessContext.getAccessContextOnThread();
-        sb.append(", accessContext=").append(accessContext);
+        sb.append("; accessContext=").append(accessContext);
+    }
+
+    protected void setupExceptionMessageCallbackContext(StringBuilder sb) {
         sb.append(LF).append(IND);
         final CallbackContext callbackContext = CallbackContext.getCallbackContextOnThread();
-        sb.append(", callbackContext=").append(callbackContext);
+        sb.append("; callbackContext=").append(callbackContext);
+    }
+
+    protected void setupExceptionMessageVariousContext(ConcurrentAsyncCall call, Throwable cause, final StringBuilder sb) {
         final StringBuilder variousContextSb = new StringBuilder();
         buildVariousContextInAsyncCallbackExceptionMessage(call, cause, variousContextSb);
         if (variousContextSb.length() > 0) {
             sb.append(LF).append(IND);
             sb.append(variousContextSb.toString());
         }
-        sb.append(LF);
-        final long after = System.currentTimeMillis();
-        final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
-        sb.append("= = = = = = = = = =/ [").append(performanceView).append("] #").append(Integer.toHexString(cause.hashCode()));
-        return sb.toString();
+    }
+
+    protected void setupExceptionMessageTransactionMemoriesIfExists(StringBuilder sb) {
+        // e.g.
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // ; transactionMemories=wholeShow:  
+        // *RomanticTransaction@2d1cd52a
+        // << Transaction Current State >>
+        // beginning time: 2015/12/22 12:04:40.574
+        // table command: map:{PRODUCT = list:{selectCursor ; scalarSelect(LocalDate).max}}
+        // << Transaction Recent Result >>
+        // 1. (2015/12/22 12:04:40.740) [00m00s027ms] PRODUCT@selectCursor => Object:{}
+        // 2. (2015/12/22 12:04:40.773) [00m00s015ms] PRODUCT@scalarSelect(LocalDate).max => LocalDate:{value=2013-08-02}
+        // _/_/_/_/_/_/_/_/_/_/
+        final SavedTransactionMemories memories = ThreadCacheContext.findTransactionMemories();
+        if (memories != null) {
+            final List<TransactionMemoriesProvider> providerList = memories.getOrderedProviderList();
+            final StringBuilder txSb = new StringBuilder();
+            for (TransactionMemoriesProvider provider : providerList) {
+                provider.provide().ifPresent(result -> {
+                    if (txSb.length() == 0) {
+                        txSb.append(LF).append(IND).append("; transactionMemories=wholeShow:");
+                    }
+                    txSb.append(Srl.indent(IND.length(), LF + "*" + result));
+                });
+            }
+            sb.append(txSb);
+        }
+    }
+
+    protected void setupExceptionMessageMailCountIfExists(StringBuilder sb) {
+        final PostedMailCounter mailCounter = ThreadCacheContext.findMailCounter();
+        if (mailCounter != null) {
+            sb.append(LF).append(IND);
+            sb.append("; mailCount=").append(mailCounter);
+        }
     }
 
     protected void buildVariousContextInAsyncCallbackExceptionMessage(ConcurrentAsyncCall call, Throwable cause, StringBuilder sb) {
+    }
+
+    protected void buildExceptionStackTrace(Throwable cause, StringBuilder sb) { // similar to logging filter
+        sb.append(LF);
+        final ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
+        PrintStream ps = null;
+        try {
+            ps = new PrintStream(out);
+            cause.printStackTrace(ps);
+            final String encoding = "UTF-8";
+            try {
+                sb.append(out.toString(encoding));
+            } catch (UnsupportedEncodingException continued) {
+                logger.warn("Unknown encoding: " + encoding, continued);
+                sb.append(out.toString()); // retry without encoding
+            }
+        } finally {
+            if (ps != null) {
+                ps.close();
+            }
+        }
     }
 
     // -----------------------------------------------------

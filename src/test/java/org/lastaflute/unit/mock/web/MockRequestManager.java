@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.api.ApiManager;
+import org.lastaflute.web.login.LoginManager;
+import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -169,6 +171,16 @@ public class MockRequestManager implements RequestManager {
 
     @Override
     public OptionalThing<String> getRemoteUser() {
+        return null;
+    }
+
+    @Override
+    public OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType) {
+        return null;
+    }
+
+    @Override
+    public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> beanType) {
         return null;
     }
 

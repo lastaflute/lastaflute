@@ -1,0 +1,83 @@
+/*
+ * Copyright 2015-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
+package org.lastaflute.core.smartdeploy;
+
+import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.lastaflute.core.smartdeploy.exception.AssistExtendsActionException;
+import org.lastaflute.di.core.ComponentDef;
+import org.lastaflute.di.core.creator.AssistCreator;
+import org.lastaflute.di.naming.NamingConvention;
+import org.lastaflute.web.LastaAction;
+
+/**
+ * @author jflute
+ * @since 0.7.3 (2015/12/27 Sunday)
+ */
+public class RomanticAssistCreator extends AssistCreator {
+
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public RomanticAssistCreator(NamingConvention namingConvention) {
+        super(namingConvention);
+    }
+
+    // ===================================================================================
+    //                                                                       Component Def
+    //                                                                       =============
+    @Override
+    public ComponentDef createComponentDef(Class<?> componentClass) {
+        final ComponentDef componentDef = super.createComponentDef(componentClass); // null allowed
+        if (componentDef == null) {
+            return null;
+        }
+        checkExtendsAction(componentDef);
+        return componentDef;
+    }
+
+    // ===================================================================================
+    //                                                                      Extends Action
+    //                                                                      ==============
+    protected void checkExtendsAction(ComponentDef componentDef) {
+        final Class<?> componentType = componentDef.getComponentClass();
+        if (LastaAction.class.isAssignableFrom(componentType)) {
+            throwAssistExtendsActionException(componentType);
+        }
+    }
+
+    protected void throwAssistExtendsActionException(Class<?> componentType) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("No way, the assist extends action.");
+        br.addItem("Advice");
+        br.addElement("Assist is not Action");
+        br.addElement("so the assist cannot extend action.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public class SeaAssist extends MaihamaBaseAction { // *Bad");
+        br.addElement("       ...");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public class SeaAssist { // Good");
+        br.addElement("       ...");
+        br.addElement("    }");
+        br.addItem("Assist Class");
+        br.addElement(componentType);
+        br.addItem("Super Class");
+        br.addElement(componentType.getSuperclass());
+        final String msg = br.buildExceptionMessage();
+        throw new AssistExtendsActionException(msg);
+    }
+}

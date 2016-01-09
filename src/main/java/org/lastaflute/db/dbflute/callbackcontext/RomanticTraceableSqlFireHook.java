@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,10 @@ import org.dbflute.hook.SqlFireHook;
 import org.dbflute.hook.SqlFireReadyInfo;
 import org.dbflute.hook.SqlFireResultInfo;
 import org.dbflute.hook.SqlLogInfo;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.db.jta.RomanticTransaction;
-import org.lastaflute.db.jta.TransactionCurrentSqlBuilder;
 import org.lastaflute.db.jta.TransactionRomanticContext;
+import org.lastaflute.db.jta.romanticist.TransactionCurrentSqlBuilder;
 
 /**
  * @author jflute
@@ -51,13 +52,11 @@ public class RomanticTraceableSqlFireHook implements SqlFireHook {
         }
     }
 
-    protected TransactionCurrentSqlBuilder createCurrentSqlBuilder(final SqlLogInfo sqlLogInfo) {
-        return new TransactionCurrentSqlBuilder() {
-            public String buildSql() {
-                // to be exact, this is not perfectly thread-safe but no problem,
-                // only possibility of no cache use (while, building process is thread-safe)
-                return sqlLogInfo.getDisplaySql(); // lazily
-            }
+    protected TransactionCurrentSqlBuilder createCurrentSqlBuilder(SqlLogInfo sqlLogInfo) {
+        return () -> {
+            // to be exact, this is not perfectly thread-safe but no problem,
+            // only possibility of no cache use (while, building process is thread-safe)
+            return sqlLogInfo.getDisplaySql(); // lazily
         };
     }
 
@@ -66,5 +65,10 @@ public class RomanticTraceableSqlFireHook implements SqlFireHook {
         if (tx != null) {
             tx.clearCurrent();
         }
+    }
+
+    @Override
+    public String toString() {
+        return DfTypeUtil.toClassTitle(this) + "@" + Integer.toHexString(hashCode());
     }
 }

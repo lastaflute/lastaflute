@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,7 +154,7 @@ public class ActionRequestProcessor {
         final ActionExecute execute = runtime.getActionExecute();
         final OptionalThing<VirtualForm> optForm = execute.createActionForm();
         optForm.ifPresent(form -> saveFormToRequest(execute, form)); // to use form tag
-        runtime.setActionForm(optForm); // to use in action hook
+        runtime.manageActionForm(optForm); // to use in action hook
         return optForm;
     }
 

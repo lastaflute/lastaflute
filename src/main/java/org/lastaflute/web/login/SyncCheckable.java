@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,11 @@ public interface SyncCheckable {
      * Get the latest date of synchronized check.
      * @return The optional date-time that specifies the latest check date. (NullAllowed: no check yet)
      */
-    OptionalThing<LocalDateTime> getLastestSyncCheckDateTime();
+    OptionalThing<LocalDateTime> getLastestSyncCheckTime();
 
     /**
      * Get the latest date of synchronized check.
-     * @param checkDt The date that specifies the latest check date. (NullAllowed: checked at next access)
+     * @param lastestSyncCheckTime The date that specifies the latest check date. (NotNull)
      */
-    void setLastestSyncCheckDateTime(LocalDateTime checkDt);
+    void manageLastestSyncCheckTime(LocalDateTime lastestSyncCheckTime);
 }

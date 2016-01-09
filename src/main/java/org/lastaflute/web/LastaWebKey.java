@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ public interface LastaWebKey {
     String ACTION_RUNTIME_KEY = "lastaflute.action.ACTION_RUMTIME"; // Request
     String PUSHED_ACTION_FORM_KEY = "lastaflute.action.PUSHED_ACTION_FORM"; // Request
 
-    String USER_BEAN_KEY = "lastaflute.action.USER_BEAN"; // Session
+    String USER_BEAN_KEY = "lastaflute.action.USER_BEAN"; // Session (actually suffix added per assist)
     String USER_LOCALE_KEY = "lastaflute.action.USER_LOCALE"; // Request or Session
     String USER_TIMEZONE_KEY = "lastaflute.action.USER_TIMEZONE"; // Request or Session
 

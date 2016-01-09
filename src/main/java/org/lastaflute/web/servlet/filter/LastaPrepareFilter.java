@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,8 +38,7 @@ import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ExternalContext;
 import org.lastaflute.di.core.LaContainer;
 import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
-import org.lastaflute.di.core.meta.impl.LaContainerBehavior;
-import org.lastaflute.di.core.smart.hot.HotdeployBehavior;
+import org.lastaflute.di.core.smart.hot.HotdeployLock;
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.container.WebLastaContainerDestroyer;
@@ -236,7 +235,7 @@ public class LastaPrepareFilter implements Filter {
     //                                ----------------------
     protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        if (!HotdeployUtil.isHotdeploy()) {
+        if (!HotdeployUtil.isHotdeploy()) { // e.g. production, unit-test
             toNextFilter(request, response, chain); // #to_action
             return;
         }
@@ -247,21 +246,23 @@ public class LastaPrepareFilter implements Filter {
             toNextFilter(request, response, chain); // #to_action
             return;
         }
-        final HotdeployBehavior ondemand = (HotdeployBehavior) LaContainerBehavior.getProvider();
-        synchronized (LastaPrepareFilter.class) {
-            ondemand.start();
-            final HotdeployHttpServletRequest hotdeployRequest = newHotdeployHttpServletRequest(request);
-            ContainerUtil.overrideExternalRequest(hotdeployRequest); // override formal request
+        synchronized (HotdeployLock.class) {
+            HotdeployUtil.start();
             try {
-                request.setAttribute(loaderKey, Thread.currentThread().getContextClassLoader());
-                toNextFilter(hotdeployRequest, response, chain); // #to_action
-            } finally {
-                final HotdeployHttpSession session = (HotdeployHttpSession) hotdeployRequest.getSession(false);
-                if (session != null) {
-                    session.flush();
+                final HotdeployHttpServletRequest hotdeployRequest = newHotdeployHttpServletRequest(request);
+                ContainerUtil.overrideExternalRequest(hotdeployRequest); // override formal request
+                try {
+                    request.setAttribute(loaderKey, Thread.currentThread().getContextClassLoader());
+                    toNextFilter(hotdeployRequest, response, chain); // #to_action
+                } finally {
+                    final HotdeployHttpSession session = (HotdeployHttpSession) hotdeployRequest.getSession(false);
+                    if (session != null) {
+                        session.flush();
+                    }
+                    request.removeAttribute(loaderKey);
                 }
-                request.removeAttribute(loaderKey);
-                ondemand.stop();
+            } finally {
+                HotdeployUtil.stop();
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ public interface ApiFailureHook {
      * Handle API failure when client exception, e.g. 404 not found, 400 bad request. (Not Required) <br>
      * HTTP status will be automatically sent by framework's hook so empty response allowed. <br>
      * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
-     * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
+     * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)
      * @param cause The client exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */

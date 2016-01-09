@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  */
 package org.lastaflute.web.servlet.request;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
+
+import org.dbflute.helper.StringKeyMap;
 
 /**
  * @author jflute
@@ -28,11 +29,15 @@ public class ResponseDownloadResource {
     //                                                                           =========
     protected final String fileName;
     protected String contentType;
-    protected final Map<String, String[]> headerMap = new LinkedHashMap<String, String[]>(4);
+    protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected byte[] byteData;
     protected WritternStreamCall streamCall;
     protected Integer contentLength;
     protected boolean returnAsEmptyBody;
+
+    protected Map<String, String[]> createHeaderMap() {
+        return StringKeyMap.createAsCaseInsensitiveOrdered();
+    }
 
     // ===================================================================================
     //                                                                         Constructor
@@ -48,6 +53,7 @@ public class ResponseDownloadResource {
     //                                                                        Content Type
     //                                                                        ============
     public ResponseDownloadResource contentType(String contentType) {
+        assertArgumentNotNull("contentType", contentType);
         this.contentType = contentType;
         return this;
     }
@@ -60,6 +66,10 @@ public class ResponseDownloadResource {
     public ResponseDownloadResource contentTypeJpeg() {
         contentType = "image/jpeg";
         return this;
+    }
+
+    public boolean hasContentType() {
+        return contentType != null;
     }
 
     public String getContentType() {
@@ -76,7 +86,19 @@ public class ResponseDownloadResource {
     }
 
     public void headerContentDispositionAttachment() { // used as default
-        headerMap.put("Content-disposition", new String[] { "attachment; filename=\"" + fileName + "\"" });
+        headerContentDisposition("attachment; filename=\"" + fileName + "\"");
+    }
+
+    public void headerContentDispositionInline() {
+        headerContentDisposition("inline; filename=\"" + fileName + "\"");
+    }
+
+    protected void headerContentDisposition(String disposition) {
+        headerMap.put(ResponseManager.HEADER_CONTENT_DISPOSITION, new String[] { disposition });
+    }
+
+    public boolean hasContentDisposition() {
+        return headerMap.containsKey(ResponseManager.HEADER_CONTENT_DISPOSITION);
     }
 
     public Map<String, String[]> getHeaderMap() {
@@ -153,5 +175,12 @@ public class ResponseDownloadResource {
     @Override
     public String toString() {
         return "{" + fileName + ", " + contentType + ", " + headerMap + "}";
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public String getFileName() {
+        return fileName;
     }
 }

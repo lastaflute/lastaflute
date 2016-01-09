@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package org.lastaflute.core.json;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.List;
 
 import org.dbflute.utflute.core.PlainTestCase;
 import org.dbflute.utflute.core.cannonball.CannonballCar;
@@ -393,6 +395,150 @@ public class GsonJsonParserTest extends PlainTestCase {
     }
 
     // ===================================================================================
+    //                                                          List Null-to-Empty Reading
+    //                                                          ==========================
+    public void test_asListNullToEmptyReading_fromJson_noOption_null() throws Exception {
+        // ## Arrange ##
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        String json = "{id:\"1\",stringList:null}";
+        // ## Act ##
+        MockUser user = parser.fromJson(json, MockUser.class);
+        // ## Assert ##
+        log(user);
+        assertEquals(1, user.id);
+        assertNull(user.stringList);
+        assertContains(parser.toJson(user), "\"stringList\":null");
+    }
+
+    public void test_asListNullToEmptyReading_fromJson_noOption_hasElement() throws Exception {
+        // ## Arrange ##
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        String json = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
+        // ## Act ##
+        MockUser user = parser.fromJson(json, MockUser.class);
+        // ## Assert ##
+        log(user);
+        assertEquals(1, user.id);
+        assertNotNull(user.stringList);
+        assertEquals(Arrays.asList("over", "mystic"), user.stringList);
+        assertContains(parser.toJson(user), "\"stringList\":[\"over\",\"mystic\"]");
+    }
+
+    public void test_asListNullToEmptyReading_fromJson_null() throws Exception {
+        // ## Arrange ##
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+            op.asListNullToEmptyReading();
+        });
+        String json = "{id:\"1\",stringList:null}";
+        // ## Act ##
+        MockUser user = parser.fromJson(json, MockUser.class);
+        // ## Assert ##
+        log(user);
+        assertEquals(1, user.id);
+        assertNotNull(user.stringList);
+        assertHasZeroElement(user.stringList);
+        assertContains(parser.toJson(user), "\"stringList\":[]");
+    }
+
+    public void test_asListNullToEmptyReading_fromJson_emptyList() throws Exception {
+        // ## Arrange ##
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+            op.asListNullToEmptyReading();
+        });
+        String json = "{id:\"1\",stringList:[]}";
+        // ## Act ##
+        MockUser user = parser.fromJson(json, MockUser.class);
+        // ## Assert ##
+        log(user);
+        assertEquals(1, user.id);
+        assertNotNull(user.stringList);
+        assertHasZeroElement(user.stringList);
+        assertContains(parser.toJson(user), "\"stringList\":[]");
+    }
+
+    public void test_asListNullToEmptyReading_fromJson_hasElement() throws Exception {
+        // ## Arrange ##
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+            op.asListNullToEmptyReading();
+        });
+        String json = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
+        // ## Act ##
+        MockUser user = parser.fromJson(json, MockUser.class);
+        // ## Assert ##
+        log(user);
+        assertEquals(1, user.id);
+        assertNotNull(user.stringList);
+        assertEquals(Arrays.asList("over", "mystic"), user.stringList);
+        assertContains(parser.toJson(user), "over");
+    }
+
+    // ===================================================================================
+    //                                                          List Null-to-Empty Writing
+    //                                                          ==========================
+    public void test_asListNullToEmptyWriting_toJson_noOption_null() throws Exception {
+        // ## Arrange ##
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        String sourceJson = "{id:\"1\",stringList:null}";
+        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        // ## Act ##
+        String json = parser.toJson(user);
+        // ## Assert ##
+        log(json);
+        assertContains(json, "\"stringList\":null");
+    }
+
+    public void test_asListNullToEmptyWriting_toJson_noOption_hasElement() throws Exception {
+        // ## Arrange ##
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        String sourceJson = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
+        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        // ## Act ##
+        String json = parser.toJson(user);
+        // ## Assert ##
+        log(json);
+        assertContains(json, "\"stringList\":[\"over\",\"mystic\"]");
+    }
+
+    public void test_asListNullToEmptyWriting_toJson_null() throws Exception {
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+            op.asListNullToEmptyWriting();
+        });
+        String sourceJson = "{id:\"1\",stringList:null}";
+        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        // ## Act ##
+        String json = parser.toJson(user);
+        // ## Assert ##
+        log(json);
+        assertContains(json, "\"stringList\":[]");
+    }
+
+    public void test_asListNullToEmptyWriting_toJson_emptyList() throws Exception {
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+            op.asListNullToEmptyWriting();
+        });
+        String sourceJson = "{id:\"1\",stringList:[]}";
+        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        // ## Act ##
+        String json = parser.toJson(user);
+        // ## Assert ##
+        log(json);
+        assertContains(json, "\"stringList\":[]");
+    }
+
+    public void test_asListNullToEmptyWriting_toJson_hasElement() throws Exception {
+        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+            op.asListNullToEmptyReading();
+        });
+        String sourceJson = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
+        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        // ## Act ##
+        String json = parser.toJson(user);
+        // ## Assert ##
+        log(json);
+        assertContains(json, "\"stringList\":[\"over\",\"mystic\"]");
+    }
+
+    // ===================================================================================
     //                                                                         Thread Safe
     //                                                                         ===========
     public void test_threadSafe() throws Exception {
@@ -434,6 +580,7 @@ public class GsonJsonParserTest extends PlainTestCase {
         public MockCDef.Flg validFlg;
         public boolean primitiveFlg;
         public Boolean wrapperFlg;
+        public List<String> stringList;
 
         public MockUser() {
         }
@@ -441,7 +588,7 @@ public class GsonJsonParserTest extends PlainTestCase {
         @Override
         public String toString() {
             return "{" + id + ", " + name + ", " + status + ", " + birthdate + ", " + formalizedDatetime + ", " + morningCallTime + ", "
-                    + validFlg + ", " + primitiveFlg + ", " + wrapperFlg + "}";
+                    + validFlg + ", " + primitiveFlg + ", " + wrapperFlg + ", " + stringList + "}";
         }
     }
 

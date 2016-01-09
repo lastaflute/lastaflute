@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,21 +57,21 @@ public interface LaValidatable<MESSAGES extends ActionMessages> {
      * The validation error handling is in ApiFailureHook.
      * <pre>
      * <span style="color: #3F7E5E">// by-annotation only</span>
-     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {});
+     * <span style="color: #CC4747">validateApi</span>(<span style="color: #553000">body</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {});
      * 
      * <span style="color: #3F7E5E">// by-annotation and by-program</span>
-     * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     * <span style="color: #CC4747">validateApi</span>(<span style="color: #553000">body</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
      *     <span style="color: #70226C">if</span> (...) {
      *         <span style="color: #553000">messages</span>.addConstraint...
      *     }
      * });
      * </pre>
-     * @param form The form that has request parameters. (NotNull)
+     * @param body The form or body that has request parameters. (NotNull)
      * @param moreValidationLambda The callback for more validation, e.g. correlation rule, very complex rule. (NotNull)
      * @return The success information of validation, basically for success attribute. (NotNull)
      */
-    default ValidationSuccess validateApi(Object form, VaMore<MESSAGES> moreValidationLambda) {
-        return createValidator().validateApi(form, moreValidationLambda);
+    default ValidationSuccess validateApi(Object body, VaMore<MESSAGES> moreValidationLambda) {
+        return createValidator().validateApi(body, moreValidationLambda);
     }
 
     // ===================================================================================

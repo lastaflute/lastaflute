@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,14 @@ import javax.servlet.http.HttpServletResponse;
  * @author jflute
  */
 public interface ResponseManager {
+
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    String HEADER_CONTENT_DISPOSITION = "Content-Disposition";
+    String HEADER_PRAGMA = "Pragma";
+    String HEADER_CACHE_CONTROL = "Cache-Control";
+    String HEADER_EXPIRES = "Expires";
 
     // ===================================================================================
     //                                                                      Basic Handling
@@ -109,12 +117,16 @@ public interface ResponseManager {
     //                                                                   Download Response
     //                                                                   =================
     /**
+     * Download the byte data. <br>
+     * Default Content-type is 'application/octet-stream', Content-disposition is 'attachment'.
      * @param fileName The file name as 'filename' used in the header. (NotNull)
      * @param data The download data as bytes. (NotNull)
      */
     void download(String fileName, byte[] data);
 
     /**
+     * Download by the stream callback. <br>
+     * Default Content-type is 'application/octet-stream', Content-disposition is 'attachment'.
      * <pre>
      * responseManager.<span style="color: #CC4747">download</span>("sea.txt", <span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
      *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
@@ -128,6 +140,8 @@ public interface ResponseManager {
     void download(String fileName, WritternStreamCall writtenStreamLambda);
 
     /**
+     * Download by the stream callback with content length. <br>
+     * Default Content-type is 'application/octet-stream', Content-disposition is 'attachment'.
      * <pre>
      * responseManager.<span style="color: #CC4747">download</span>("sea.txt", <span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
      *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
@@ -142,6 +156,8 @@ public interface ResponseManager {
     void download(String fileName, WritternStreamCall writtenStreamLambda, int contentLength);
 
     /**
+     * Download the resource by flexible settings. <br>
+     * Default Content-type is 'application/octet-stream', Content-disposition is 'attachment'.
      * @param resource The resource to download, contains file name and content type and so on... (NotNull)
      */
     void download(ResponseDownloadResource resource);

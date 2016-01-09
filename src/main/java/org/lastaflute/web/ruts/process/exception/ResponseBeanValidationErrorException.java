@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9,26 +9,27 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
+package org.lastaflute.web.ruts.process.exception;
 
 import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
+ * @since 0.7.1 (2015/12/14 Monday)
  */
-public class ExecuteMethodFormPropertyValidationMismatchException extends LaSystemException {
+public class ResponseBeanValidationErrorException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public ExecuteMethodFormPropertyValidationMismatchException(String msg) {
+    public ResponseBeanValidationErrorException(String msg) {
         super(msg);
     }
 
-    public ExecuteMethodFormPropertyValidationMismatchException(String msg, Throwable cause) {
+    public ResponseBeanValidationErrorException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

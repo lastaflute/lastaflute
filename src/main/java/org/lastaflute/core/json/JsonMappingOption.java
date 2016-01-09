@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,10 +35,12 @@ public class JsonMappingOption {
     protected OptionalThing<DateTimeFormatter> localTimeFormatter = OptionalThing.empty(); // not null
     protected OptionalThing<Function<Object, Boolean>> booleanDeserializer = OptionalThing.empty(); // not null
     protected OptionalThing<Function<Boolean, Object>> booleanSerializer = OptionalThing.empty(); // not null
-    protected boolean emptyToNullReading;
-    protected boolean nullToEmptyWriting;
-    protected boolean everywhereQuoteWriting;
+    protected boolean emptyToNullReading; // e.g. String, Integer, LocalDate, ... (except List)
+    protected boolean nullToEmptyWriting; // same
+    protected boolean everywhereQuoteWriting; // e.g. Integer(1) to "1"
     protected OptionalThing<JsonSimpleTextReadingFilter> simpleTextReadingFilter = OptionalThing.empty(); // not null
+    protected boolean listNullToEmptyReading; // [] if null
+    protected boolean listNullToEmptyWriting; // same
 
     // ===================================================================================
     //                                                                      Accept Another
@@ -53,6 +55,8 @@ public class JsonMappingOption {
         nullToEmptyWriting = another.isNullToEmptyWriting();
         everywhereQuoteWriting = another.isEverywhereQuoteWriting();
         simpleTextReadingFilter = another.getSimpleTextReadingFilter();
+        listNullToEmptyReading = another.isListNullToEmptyReading();
+        listNullToEmptyWriting = another.isListNullToEmptyWriting();
         return this;
     }
 
@@ -134,6 +138,24 @@ public class JsonMappingOption {
         return this;
     }
 
+    /**
+     * Set up as list-null-to-empty reading. (null value of List is read as empty list)
+     * @return this. (NotNull)
+     */
+    public JsonMappingOption asListNullToEmptyReading() {
+        listNullToEmptyReading = true;
+        return this;
+    }
+
+    /**
+     * Set up as list-null-to-empty writing. (null value of List is writtern as empty list)
+     * @return this. (NotNull)
+     */
+    public JsonMappingOption asListNullToEmptyWriting() {
+        listNullToEmptyWriting = true;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -196,5 +218,13 @@ public class JsonMappingOption {
 
     public OptionalThing<JsonSimpleTextReadingFilter> getSimpleTextReadingFilter() {
         return simpleTextReadingFilter;
+    }
+
+    public boolean isListNullToEmptyReading() {
+        return listNullToEmptyReading;
+    }
+
+    public boolean isListNullToEmptyWriting() {
+        return listNullToEmptyWriting;
     }
 }

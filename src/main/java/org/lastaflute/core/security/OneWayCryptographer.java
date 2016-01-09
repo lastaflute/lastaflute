@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,12 +74,16 @@ public class OneWayCryptographer {
         final String encoding = getEncoding();
         final MessageDigest digest = createDigest();
         try {
-            digest.update(plainText.getBytes(encoding));
+            digest.update(toDigestBytes(plainText, encoding));
         } catch (UnsupportedEncodingException e) {
             String msg = "Unknown encoding: " + encoding;
             throw new CipherFailureException(msg);
         }
         return convertToCryptoString(digest.digest());
+    }
+
+    protected byte[] toDigestBytes(String plainText, String encoding) throws UnsupportedEncodingException {
+        return plainText.getBytes(encoding);
     }
 
     protected String getEncoding() {

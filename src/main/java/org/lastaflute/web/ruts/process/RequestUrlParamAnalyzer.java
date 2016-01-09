@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,10 +115,6 @@ public class RequestUrlParamAnalyzer {
     // -----------------------------------------------------
     //                                        from ParamPath
     //                                        --------------
-    protected String adjustParamPathPrefix(ActionExecute execute, String paramPath) {
-        return execute.isIndexMethod() ? paramPath : execute.getExecuteMethod().getName() + "/" + paramPath;
-    }
-
     protected Map<Integer, Object> fromParamPath(ActionExecute execute, String paramPath, List<Class<?>> urlParamTypeList,
             Map<Integer, Class<?>> optGenTypeMap) {
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
@@ -144,7 +140,7 @@ public class RequestUrlParamAnalyzer {
 
     protected List<String> prepareParamList(ActionExecute execute, String paramPath, List<Class<?>> urlParamTypeList) {
         final List<String> paramList = new ArrayList<String>(urlParamTypeList.size());
-        final Matcher matcher = execute.getUrlPatternRegexp().matcher(adjustParamPathPrefix(execute, paramPath));
+        final Matcher matcher = execute.getPreparedUrlPattern().matcher(adjustParamPathPrefix(execute, paramPath));
         if (matcher.find()) {
             for (int i = 0; i < urlParamTypeList.size(); i++) {
                 paramList.add(matcher.group(i + 1)); // group 1 origin (0 provides all string)
@@ -160,6 +156,18 @@ public class RequestUrlParamAnalyzer {
             }
         }
         return paramList;
+    }
+
+    protected String adjustParamPathPrefix(ActionExecute execute, String paramPath) {
+        if (execute.isIndexMethod()) {
+            return paramPath;
+        } else {
+            if (execute.getPreparedUrlPattern().isMethodNamePrefix()) { // e.g. sea()
+                return execute.getExecuteMethod().getName() + "/" + paramPath;
+            } else { // e.g. @word/{}/@word
+                return paramPath;
+            }
+        }
     }
 
     // -----------------------------------------------------

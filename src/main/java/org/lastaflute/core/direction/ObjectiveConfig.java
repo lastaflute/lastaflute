@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.dbflute.helper.jprop.ObjectiveProperties;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.exception.ConfigPropertyNotFoundException;
-import org.lastaflute.di.Disposable;
 import org.lastaflute.di.DisposableUtil;
 import org.lastaflute.di.core.LastaDiProperties;
 import org.slf4j.Logger;
@@ -46,6 +45,12 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     //                                                                          ==========
     private static final long serialVersionUID = 1L;
     private static final Logger logger = LoggerFactory.getLogger(ObjectiveConfig.class);
+
+    // -----------------------------------------------------
+    //                                              Stateful
+    //                                              --------
+    protected static PropertyFilter bowgunPropertyFilter; // used when initialization
+    protected static boolean locked = true;
 
     // ===================================================================================
     //                                                                           Attribute
@@ -78,12 +83,16 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
      */
     @PostConstruct
     public synchronized void initialize() {
+        doInitialize();
+        showBootLogging();
+    }
+
+    protected void doInitialize() {
         direct();
         final ObjectiveProperties makingProp = prepareObjectiveProperties();
         makingProp.load();
         prop = makingProp; // prop always be complete object for HotDeploy get() might be called in initialize()
         prepareHotDeploy();
-        showBootLogging();
     }
 
     protected void direct() {
@@ -112,12 +121,20 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     }
 
     protected ObjectiveProperties prepareObjectiveProperties() {
-        final ObjectiveProperties makingProp = newObjectiveProperties(appResource, propertyFilter);
+        final ObjectiveProperties makingProp = newObjectiveProperties(appResource, preparePropertyFilter());
         makingProp.checkImplicitOverride();
         if (!extendsResourceList.isEmpty()) {
             makingProp.extendsProperties(extendsResourceList.toArray(new String[extendsResourceList.size()]));
         }
         return makingProp;
+    }
+
+    protected PropertyFilter preparePropertyFilter() {
+        if (bowgunPropertyFilter != null) {
+            return (key, value) -> bowgunPropertyFilter.filter(key, propertyFilter.filter(key, value));
+        } else {
+            return propertyFilter;
+        }
     }
 
     protected ObjectiveProperties newObjectiveProperties(String resourcePath, PropertyFilter propertyFilter) {
@@ -159,6 +176,9 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
             final boolean checkImplicitOverride = prop.isCheckImplicitOverride();
             final int count = prop.getJavaPropertiesResult().getPropertyList().size();
             logger.info(" checkImplicitOverride=" + checkImplicitOverride + ", propertyCount=" + count);
+            if (bowgunPropertyFilter != null) {
+                logger.info(" bowgun=" + bowgunPropertyFilter); // because of important
+            }
             // *no logging of all property values because it might contain security info
         }
     }
@@ -205,25 +225,70 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     // ===================================================================================
     //                                                                          Hot Deploy
     //                                                                          ==========
-    protected void prepareHotDeploy() {
-        DisposableUtil.add(new Disposable() {
-            public void dispose() {
-                requestHotDeploy();
-            }
-        });
+    protected void prepareHotDeploy() { // only unused if cool
+        DisposableUtil.add(() -> requestHotDeploy());
         hotDeployRequested = false;
     }
 
-    protected void requestHotDeploy() {
-        // no sync to avoid disposable thread locking this (or deadlock)
-        // and no clearing here, initialize() clears because of no sync
+    protected void requestHotDeploy() { // called when request ending if HotDeploy
+        // no sync to avoid disposable thread locking this (or deadlock) and so no clearing here
         hotDeployRequested = true;
     }
 
     protected void reloadIfNeeds() {
         if (hotDeployRequested) {
-            initialize();
+            synchronized (this) {
+                // INFO to find mistake that it uses HotDeploy in production
+                logger.info("...Reloading objective config by HotDeploy request");
+                doInitialize(); // actual dispose, with preparing next HotDeploy, without boot logging
+            }
         }
+    }
+
+    // ===================================================================================
+    //                                                               Bowgun PropertyFilter
+    //                                                               =====================
+    public static void shootBowgunPropertyFilter(PropertyFilter propertyFilter) {
+        assertUnlocked();
+        if (logger.isInfoEnabled()) {
+            logger.info("...Shooting bowgun property filter: " + propertyFilter);
+        }
+        bowgunPropertyFilter = propertyFilter;
+        lock(); // auto-lock here, because of deep world
+    }
+
+    // ===================================================================================
+    //                                                                         Config Lock
+    //                                                                         ===========
+    public static boolean isLocked() {
+        return locked;
+    }
+
+    public static void lock() {
+        if (locked) {
+            return;
+        }
+        if (logger.isInfoEnabled()) {
+            logger.info("...Locking the objective config!");
+        }
+        locked = true;
+    }
+
+    public static void unlock() {
+        if (!locked) {
+            return;
+        }
+        if (logger.isInfoEnabled()) {
+            logger.info("...Unlocking the objective config!");
+        }
+        locked = false;
+    }
+
+    protected static void assertUnlocked() {
+        if (!isLocked()) {
+            return;
+        }
+        throw new IllegalStateException("The objective config is locked.");
     }
 
     // ===================================================================================

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,10 @@ import java.lang.reflect.Parameter;
 import java.util.function.Consumer;
 
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
-import org.lastaflute.web.path.ApiResponseOption;
+import org.lastaflute.web.path.ResponseReflectingOption;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
@@ -32,8 +33,11 @@ import org.lastaflute.web.response.render.RenderData;
 import org.lastaflute.web.ruts.NextJourney;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
+import org.lastaflute.web.ruts.process.ActionRuntime.DisplayDataValidator;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
@@ -43,7 +47,8 @@ public class ActionResponseReflector {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final ApiResponseOption NULLOBJ_JSON_MAPPING_OPTION = new ApiResponseOption(); // simple cache, private to be immutable
+    private static final Logger logger = LoggerFactory.getLogger(ActionResponseReflector.class);
+    private static final ResponseReflectingOption NULLOBJ_REFLECTING_OPTION = new ResponseReflectingOption(); // simple cache, private to be immutable
 
     // ===================================================================================
     //                                                                           Attribute
@@ -93,11 +98,8 @@ public class ActionResponseReflector {
     }
 
     // ===================================================================================
-    //                                                                   Response Handling
-    //                                                                   =================
-    // -----------------------------------------------------
-    //                                         HTML Response
-    //                                         -------------
+    //                                                                       HTML Response
+    //                                                                       =============
     protected NextJourney handleHtmlResponse(HtmlResponse response) {
         final ResponseManager responseManager = requestManager.getResponseManager();
         setupActionResponseHeader(responseManager, response);
@@ -119,10 +121,11 @@ public class ActionResponseReflector {
         requestManager.getResponseManager().write(response.getDirectHtml().get(), "text/html");
     }
 
-    protected void setupForwardRenderData(HtmlResponse htmlResponse) {
+    protected void setupForwardRenderData(HtmlResponse response) {
         final RenderData data = newRenderData();
-        htmlResponse.getRegistrationList().forEach(reg -> reg.register(data));
-        data.getDataMap().forEach((key, value) -> runtime.registerData(key, value));
+        response.getRegistrationList().forEach(reg -> reg.register(data));
+        validateHtmlBeanIfNeeds(response); // manage validator
+        data.getDataMap().forEach((key, value) -> runtime.registerData(key, value)); // so validated here
     }
 
     protected RenderData newRenderData() {
@@ -134,7 +137,7 @@ public class ActionResponseReflector {
             final String formKey = LastaWebKey.PUSHED_ACTION_FORM_KEY;
             VirtualForm form = createPushedActionForm(formInfo, formKey);
             requestManager.setAttribute(formKey, form);
-            runtime.setActionForm(OptionalThing.of(form)); // to export properties to request attribute
+            runtime.manageActionForm(OptionalThing.of(form)); // to export properties to request attribute
         });
     }
 
@@ -160,8 +163,47 @@ public class ActionResponseReflector {
     }
 
     // -----------------------------------------------------
-    //                                         JSON Response
-    //                                         -------------
+    //                                             Validator
+    //                                             ---------
+    protected void validateHtmlBeanIfNeeds(HtmlResponse response) {
+        final DisplayDataValidator validator = createDisplayDataValidator(response);
+        runtime.getDisplayDataMap().forEach((key, value) -> validator.validate(key, value)); // from e.g. hookBefore()
+        runtime.manageDisplayDataValidator(validator); // enable validation when regsitering data
+    }
+
+    protected DisplayDataValidator createDisplayDataValidator(HtmlResponse response) {
+        if (response.isValidatorSuppressed()) { // by individual requirement
+            logger.debug("...Suppressing HTML bean validator by response option: {}", response);
+            return (key, value) -> {};
+        }
+        final ResponseReflectingOption option = adjustResponseReflecting();
+        if (option.isHtmlBeanValidatorSuppressed()) { // by project policy
+            return (key, value) -> {};
+        }
+        final ResponseHtmlBeanValidator validator = createHtmlBeanValidator(response, option);
+        return (key, value) -> { // registered data cannot be null
+            if (mightBeValidable(key, value)) {
+                validator.validate(key, value);
+            }
+        };
+    }
+
+    protected ResponseHtmlBeanValidator createHtmlBeanValidator(HtmlResponse response, ResponseReflectingOption option) {
+        return new ResponseHtmlBeanValidator(requestManager, runtime, option.isHtmlBeanValidationErrorWarned(), response);
+    }
+
+    protected boolean mightBeValidable(String key, Object value) { // for performance
+        return !(value instanceof String // yes-yes-yes
+                || value instanceof Number // e.g. Integer
+                || DfTypeUtil.isAnyLocalDate(value) // e.g. LocalDate
+                || value instanceof Boolean // of course
+                || value.getClass().isPrimitive() // probably no way, just in case
+        );
+    }
+
+    // ===================================================================================
+    //                                                                       JSON Response
+    //                                                                       =============
     protected NextJourney handleJsonResponse(JsonResponse<?> response) {
         // this needs original action customizer in your customizer.dicon
         final ResponseManager responseManager = requestManager.getResponseManager();
@@ -192,30 +234,32 @@ public class ActionResponseReflector {
         return undefinedJourney();
     }
 
+    // -----------------------------------------------------
+    //                                             Validator
+    //                                             ---------
     protected void validateJsonBeanIfNeeds(Object jsonBean, JsonResponse<?> response) {
-        final ApiResponseOption option = adjustJsonMapping();
-        if (option.isJsonBeanValidatorSuppressed()) {
+        if (response.isValidatorSuppressed()) { // by individual requirement
+            logger.debug("...Suppressing JSON bean validator by response option: {}", response);
+            return;
+        }
+        final ResponseReflectingOption option = adjustResponseReflecting();
+        if (option.isJsonBeanValidatorSuppressed()) { // by project policy
             return;
         }
         doValidateJsonBean(jsonBean, response, option);
     }
 
-    protected ApiResponseOption adjustJsonMapping() { // not null
-        final ApiResponseOption option = adjustmentProvider.adjustApiResponse();
-        return option != null ? option : NULLOBJ_JSON_MAPPING_OPTION;
-    }
-
-    protected void doValidateJsonBean(Object jsonBean, JsonResponse<?> response, ApiResponseOption option) {
+    protected void doValidateJsonBean(Object jsonBean, JsonResponse<?> response, ResponseReflectingOption option) {
         createJsonBeanValidator(response, option).validate(jsonBean);
     }
 
-    protected JsonBeanValidator createJsonBeanValidator(JsonResponse<?> response, ApiResponseOption option) {
-        return new JsonBeanValidator(requestManager, runtime, option.isJsonBeanValidationErrorWarned());
+    protected ResponseJsonBeanValidator createJsonBeanValidator(JsonResponse<?> response, ResponseReflectingOption option) {
+        return new ResponseJsonBeanValidator(requestManager, runtime, option.isJsonBeanValidationErrorWarned(), response);
     }
 
-    // -----------------------------------------------------
-    //                                          XML Response
-    //                                          ------------
+    // ===================================================================================
+    //                                                                        XML Response
+    //                                                                        ============
     protected NextJourney handleXmlResponse(XmlResponse response) {
         final ResponseManager responseManager = requestManager.getResponseManager();
         setupActionResponseHeader(responseManager, response);
@@ -227,9 +271,9 @@ public class ActionResponseReflector {
         return undefinedJourney();
     }
 
-    // -----------------------------------------------------
-    //                                       Stream Response
-    //                                       ---------------
+    // ===================================================================================
+    //                                                                     Stream Response
+    //                                                                     ===============
     protected NextJourney handleStreamResponse(StreamResponse response) {
         final ResponseManager responseManager = requestManager.getResponseManager();
         // needs to be handled in download()
@@ -239,17 +283,24 @@ public class ActionResponseReflector {
         return undefinedJourney();
     }
 
-    // -----------------------------------------------------
-    //                                      Unknown Response
-    //                                      ----------------
+    // ===================================================================================
+    //                                                                    Unknown Response
+    //                                                                    ================
     protected NextJourney handleUnknownResponse(ActionResponse response) {
         String msg = "Unknown action response type: " + response.getClass() + ", " + response;
         throw new IllegalStateException(msg);
     }
 
-    // -----------------------------------------------------
-    //                                       Response Helper
-    //                                       ---------------
+    // ===================================================================================
+    //                                                                   Undefined Journey
+    //                                                                   =================
+    protected NextJourney undefinedJourney() {
+        return NextJourney.undefined();
+    }
+
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
     protected void setupActionResponseHeader(ResponseManager responseManager, ActionResponse response) {
         response.getHeaderMap().forEach((key, values) -> {
             for (String value : values) {
@@ -262,10 +313,8 @@ public class ActionResponseReflector {
         response.getHttpStatus().ifPresent(status -> responseManager.setResponseStatus(status));
     }
 
-    // ===================================================================================
-    //                                                                   Undefined Journey
-    //                                                                   =================
-    protected NextJourney undefinedJourney() {
-        return NextJourney.undefined();
+    protected ResponseReflectingOption adjustResponseReflecting() { // not null
+        final ResponseReflectingOption option = adjustmentProvider.adjustResponseReflecting();
+        return option != null ? option : NULLOBJ_REFLECTING_OPTION;
     }
 }

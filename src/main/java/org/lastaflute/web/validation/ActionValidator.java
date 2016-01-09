@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -173,16 +173,67 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     //                                                                            Validate
     //                                                                            ========
     // -----------------------------------------------------
-    //                                               General
-    //                                               -------
+    //                                           Form Facade
+    //                                           -----------
     public ValidationSuccess validate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
-        return doValidate(form, moreValidationLambda, validationErrorLambda);
-    }
-
-    protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
         assertArgumentNotNull("form", form);
         assertArgumentNotNull("moreValidationLambda", moreValidationLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
+        return doValidate(form, moreValidationLambda, validationErrorLambda);
+    }
+
+    public void throwValidationError(MessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
+        assertArgumentNotNull("noArgInLambda", noArgInLambda);
+        assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
+        throwValidationErrorException(noArgInLambda.provide(), validationErrorLambda);
+    }
+
+    // -----------------------------------------------------
+    //                                            API Facade
+    //                                            ----------
+    public ValidationSuccess validateApi(Object body, VaMore<MESSAGES> moreValidationLambda) {
+        assertArgumentNotNull("body", body);
+        assertArgumentNotNull("moreValidationLambda", moreValidationLambda);
+        return doValidate(body, moreValidationLambda, () -> hookApiValidationError());
+    }
+
+    public void throwValidationErrorApi(MessagesCreator<MESSAGES> noArgInLambda) {
+        assertArgumentNotNull("noArgInLambda", noArgInLambda);
+        throwValidationErrorException(noArgInLambda.provide(), () -> hookApiValidationError());
+    }
+
+    protected ApiResponse hookApiValidationError() { // for API
+        final ApiFailureResource resource = createApiFailureResource(requestManager.errors().get(), requestManager);
+        return requestManager.getApiManager().handleValidationError(resource);
+    }
+
+    protected ApiFailureResource createApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
+        return new ApiFailureResource(getActionRuntime(), errors, requestManager);
+    }
+
+    protected ActionRuntime getActionRuntime() {
+        return LaActionRuntimeUtil.getActionRuntime();
+    }
+
+    // -----------------------------------------------------
+    //                                               Control
+    //                                               -------
+
+    protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
+        return actuallyValidate(wrapAsValidIfNeeds(form), moreValidationLambda, validationErrorLambda);
+    }
+
+    protected Object wrapAsValidIfNeeds(Object form) {
+        if (form instanceof List<?>) {
+            return new VaValidListBean<>((List<?>) form);
+        } else if (form instanceof Map<?, ?>) {
+            return new VaValidMapBean<>((Map<?, ?>) form);
+        } else {
+            return form;
+        }
+    }
+
+    protected ValidationSuccess actuallyValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
         markValidationCalled();
         final boolean implicitGroup = containsRuntimeGroup(runtimeGroups, DEFAULT_GROUP_TYPE);
         if (implicitGroup) {
@@ -210,40 +261,12 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         }
     }
 
-    public void throwValidationError(MessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
-        throwValidationErrorException(noArgInLambda.provide(), validationErrorLambda);
-    }
-
     protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
         throw new ValidationErrorException(runtimeGroups, messages, validationErrorLambda);
     }
 
     protected ValidationSuccess createValidationSuccess(MESSAGES messages) {
         return new ValidationSuccess(messages);
-    }
-
-    // -----------------------------------------------------
-    //                                               for API
-    //                                               -------
-    public ValidationSuccess validateApi(Object form, VaMore<MESSAGES> doValidateLambda) {
-        return doValidate(form, doValidateLambda, () -> hookApiValidationError());
-    }
-
-    public void throwValidationErrorApi(MessagesCreator<MESSAGES> noArgInLambda) {
-        throwValidationErrorException(noArgInLambda.provide(), () -> hookApiValidationError());
-    }
-
-    protected ApiResponse hookApiValidationError() { // for API
-        final ApiFailureResource resource = createApiFailureResource(requestManager.errors().get(), requestManager);
-        return requestManager.getApiManager().handleValidationError(resource);
-    }
-
-    protected ApiFailureResource createApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
-        return new ApiFailureResource(getActionRuntime(), errors, requestManager);
-    }
-
-    protected ActionRuntime getActionRuntime() {
-        return LaActionRuntimeUtil.getActionRuntime();
     }
 
     // ===================================================================================

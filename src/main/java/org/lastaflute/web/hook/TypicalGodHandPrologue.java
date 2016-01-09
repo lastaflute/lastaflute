@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import org.dbflute.bhv.proposal.callback.TraceableSqlAdditionalInfoProvider;
 import org.dbflute.hook.AccessContext;
 import org.dbflute.hook.CallbackContext;
 import org.dbflute.hook.SqlFireHook;
+import org.dbflute.hook.SqlResultHandler;
 import org.dbflute.hook.SqlStringFilter;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
@@ -32,6 +33,7 @@ import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextResource;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
+import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlResultHandler;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginHandlingResource;
@@ -150,10 +152,9 @@ public class TypicalGodHandPrologue {
      * @param runtime The runtime meta of action execute. (NotNull)
      */
     protected void arrangeCallbackContext(final ActionRuntime runtime) {
-        final SqlFireHook sqlFireHook = createSqlFireHook(runtime);
-        CallbackContext.setSqlFireHookOnThread(sqlFireHook);
-        final SqlStringFilter filter = createSqlStringFilter(runtime);
-        CallbackContext.setSqlStringFilterOnThread(filter);
+        CallbackContext.setSqlFireHookOnThread(createSqlFireHook(runtime));
+        CallbackContext.setSqlStringFilterOnThread(createSqlStringFilter(runtime));
+        CallbackContext.setSqlResultHandlerOnThread(createSqlResultHandler());
     }
 
     /**
@@ -176,11 +177,8 @@ public class TypicalGodHandPrologue {
      */
     protected SqlStringFilter createSqlStringFilter(ActionRuntime runtime) {
         final Method actionMethod = runtime.getExecuteMethod();
-        return newRomanticTraceableSqlStringFilter(actionMethod, new TraceableSqlAdditionalInfoProvider() {
-            @Override
-            public String provide() { // lazy because it may be auto-login later
-                return buildSqlMarkingAdditionalInfo();
-            }
+        return newRomanticTraceableSqlStringFilter(actionMethod, () -> {
+            return buildSqlMarkingAdditionalInfo(); // lazy because it may be auto-login later
         });
     }
 
@@ -243,11 +241,20 @@ public class TypicalGodHandPrologue {
         return 30; // as default
     }
 
+    protected SqlResultHandler createSqlResultHandler() {
+        return newRomanticTraceableSqlResultHandler();
+    }
+
+    protected RomanticTraceableSqlResultHandler newRomanticTraceableSqlResultHandler() {
+        return new RomanticTraceableSqlResultHandler();
+    }
+
     /**
      * Clear callback context. <br>
      * This is called by callback process so you should NOT call this directly in your action.
      */
     protected void clearCallbackContext() {
+        CallbackContext.clearSqlResultHandlerOnThread();
         CallbackContext.clearSqlStringFilterOnThread();
         CallbackContext.clearSqlFireHookOnThread();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,9 @@ public interface I18nable {
 
     /**
      * Set the user locale.
-     * @param userLocale The locale for the user. (NullAllowed)
+     * @param userLocale The locale for the user. (NotNull)
      */
-    void setUserLocale(Locale userLocale);
+    void manageUserLocale(Locale userLocale);
 
     /**
      * Get the user time-zone.
@@ -45,7 +45,7 @@ public interface I18nable {
 
     /**
      * Set the user time-zone.
-     * @param userTimeZone The time-zone for the user. (NullAllowed)
+     * @param userTimeZone The time-zone for the user. (NotNull)
      */
-    void setUserTimeZone(TimeZone userTimeZone);
+    void manageUserTimeZone(TimeZone userTimeZone);
 }

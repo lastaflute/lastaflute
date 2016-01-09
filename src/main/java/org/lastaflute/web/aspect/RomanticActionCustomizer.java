@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.lastaflute.web.aspect;
 
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -194,10 +195,15 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         final Map<String, ActionExecute> executeMap = actionMapping.getExecuteMap();
         final ActionExecute index = executeMap.get("index");
         if (index != null && index.getUrlParamArgs().isPresent()) {
-            for (Entry<String, ActionExecute> entry : executeMap.entrySet()) {
-                final ActionExecute execute = entry.getValue();
-                if (!execute.isIndexMethod() && execute.getUrlParamArgs().isPresent()) {
-                    throwUrlParameterCannotUseBothIndexNamedException(index, execute);
+            final List<Class<?>> urlParamTypeList = index.getUrlParamArgs().get().getUrlParamTypeList();
+            if (!urlParamTypeList.isEmpty()) { // basically true but just in case
+                if (!Number.class.isAssignableFrom(urlParamTypeList.get(0))) { // because of Number has original pattern
+                    for (Entry<String, ActionExecute> entry : executeMap.entrySet()) {
+                        final ActionExecute execute = entry.getValue();
+                        if (!execute.isIndexMethod() && execute.getUrlParamArgs().isPresent()) {
+                            throwUrlParameterCannotUseBothIndexNamedException(index, execute);
+                        }
+                    }
                 }
             }
         }
@@ -208,10 +214,11 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addNotice("Cannot use URL parameter both index() and named execute.");
         br.addItem("Advice");
         br.addElement("URL parameter can be used either index() or named execute method.");
+        br.addElement("Or you can use Integer type as first argument of index().");
         br.addElement("For example:");
         br.addElement("  (x):");
         br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse index(Integer pageNumber) {");
+        br.addElement("    public HtmlResponse index(String name) {");
         br.addElement("    }");
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse sea(String land) {");
@@ -229,6 +236,13 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement("    }");
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse sea() {");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index(Integer pageNumber) {");
+        br.addElement("    }");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse sea(String land) {");
         br.addElement("    }");
         br.addElement("Index Execute");
         br.addElement(index);

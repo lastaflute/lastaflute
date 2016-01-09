@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,14 +54,14 @@ import org.slf4j.LoggerFactory;
  * @param <USER_ENTITY> The type of user entity or model.
  * @author jflute
  */
-public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USER_ENTITY> implements LoginAssistable {
+public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USER_ENTITY> implements LoginManager {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(TypicalLoginAssist.class);
 
-    /** The session key of user bean. */
+    /** The session key of user bean. (actually suffix added per assist) */
     private static final String USER_BEAN_KEY = LastaWebKey.USER_BEAN_KEY;
 
     /** The delimiter of remember-me login value saved in cookie. */
@@ -247,7 +247,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         assertUserEntityRequired(userEntity);
         final USER_BEAN userBean = saveLoginInfoToSession(userEntity);
         if (userBean instanceof SyncCheckable) {
-            ((SyncCheckable) userBean).setLastestSyncCheckDateTime(timeManager.currentDateTime());
+            ((SyncCheckable) userBean).manageLastestSyncCheckTime(timeManager.currentDateTime());
         }
         if (option.isRememberMe()) {
             saveRememberMeKeyToCookie(userEntity, userBean);
@@ -301,7 +301,8 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     protected abstract USER_BEAN createUserBean(USER_ENTITY userEntity);
 
     protected String getUserBeanKey() {
-        return USER_BEAN_KEY;
+        // suffix for multiple login assist (user bean should be different per assist)
+        return USER_BEAN_KEY + "." + getUserBeanType().getSimpleName();
     }
 
     @Override
@@ -599,12 +600,6 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         });
     }
 
-    /**
-     * Get the type of user bean basically for session key.
-     * @return The type of user bean. (NotNull)
-     */
-    protected abstract Class<USER_BEAN> getUserBeanType();
-
     // ===================================================================================
     //                                                                         Login Check
     //                                                                         ===========
@@ -690,7 +685,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             return true; // means no check
         }
         final SyncCheckable checkable = (SyncCheckable) userBean;
-        final OptionalThing<LocalDateTime> checkDt = checkable.getLastestSyncCheckDateTime(); // might be null
+        final OptionalThing<LocalDateTime> checkDt = checkable.getLastestSyncCheckTime(); // might be null
         final LocalDateTime currentDt = timeManager.currentDateTime();
         if (!needsLoginSessionSyncCheck(userBean, checkDt, currentDt)) {
             return true; // means no check
@@ -700,7 +695,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             final String checkDisp = checkDt.map(dt -> new HandyDate(dt).toDisp("yyyy/MM/dd HH:mm:ss")).orElse(null);
             logger.debug("...Sync-checking login session: userId={}, checkDate={}", userId, checkDisp);
         }
-        checkable.setLastestSyncCheckDateTime(currentDt); // update latest check date
+        checkable.manageLastestSyncCheckTime(currentDt); // update latest check date
         return findLoginSessionSyncCheckUser(userBean).map(loginUser -> {
             handleLoginSessionSyncCheckSuccess(userBean, loginUser);
             return true;
@@ -760,6 +755,17 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             throwLoginRequiredException("Not found the user in session by the key:" + key); // to login action
         });
     }
+
+    @Override
+    public Class<?> getSaveKeyUserBeanType() {
+        return getUserBeanType();
+    }
+
+    /**
+     * Get the type of user bean basically for session key.
+     * @return The type of user bean. (NotNull)
+     */
+    protected abstract Class<USER_BEAN> getUserBeanType();
 
     // -----------------------------------------------------
     //                                     Non LoginRequired

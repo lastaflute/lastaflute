@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 package org.lastaflute.web.response;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.dbflute.helper.StringKeyMap;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
@@ -92,7 +92,7 @@ public class XmlResponse implements ApiResponse {
 
     protected Map<String, String[]> prepareHeaderMap() {
         if (headerMap == null) {
-            headerMap = new LinkedHashMap<String, String[]>(4);
+            headerMap = StringKeyMap.createAsCaseInsensitiveOrdered();
         }
         return headerMap;
     }

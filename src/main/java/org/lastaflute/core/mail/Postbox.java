@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import org.dbflute.mail.Postcard;
 import org.dbflute.mail.send.SMailDeliveryDepartment;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
-import org.lastaflute.di.Disposable;
+import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.di.DisposableUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * @author jflute
  * @since 0.6.0 (2015/05/04 Monday)
  */
-public class Postbox implements Disposable {
+public class Postbox {
 
     // ===================================================================================
     //                                                                          Definition
@@ -49,6 +49,9 @@ public class Postbox implements Disposable {
     /** Everybody knows, it's post office. (NullAllowed: null means no mail) */
     protected PostOffice postOffice;
 
+    /** Is hot deploy requested? (true only when local development) */
+    protected boolean hotDeployRequested;
+
     // ===================================================================================
     //                                                                          Initialize
     //                                                                          ==========
@@ -57,13 +60,11 @@ public class Postbox implements Disposable {
      * This is basically called by DI setting file.
      */
     @PostConstruct
-    public void initialize() {
+    public synchronized void initialize() {
         final FwCoreDirection direction = assistCoreDirection();
         final SMailDeliveryDepartment deliveryDepartment = direction.assistMailDeliveryDepartment();
         postOffice = deliveryDepartment != null ? newPostOffice(deliveryDepartment) : null;
-        if (direction.isDevelopmentHere()) {
-            prepareHotDeploy();
-        }
+        prepareHotDeploy();
         showBootLogging();
     }
 
@@ -73,10 +74,6 @@ public class Postbox implements Disposable {
 
     protected PostOffice newPostOffice(SMailDeliveryDepartment deliveryDepartment) {
         return new PostOffice(deliveryDepartment);
-    }
-
-    protected void prepareHotDeploy() {
-        DisposableUtil.add(this);
     }
 
     protected void showBootLogging() {
@@ -98,12 +95,14 @@ public class Postbox implements Disposable {
     }
 
     // ===================================================================================
-    //                                                                             Deliver
-    //                                                                             =======
+    //                                                                               Post
+    //                                                                              ======
     public void post(LaMailPostcard postcard) {
         assertPostOfficeWorks(postcard);
+        reloadIfNeeds();
         final Postcard nativePostcard = postcard.toNativePostcard();
         postOffice.deliver(nativePostcard);
+        saveMemories(postcard);
     }
 
     protected void assertPostOfficeWorks(LaMailPostcard postcard) {
@@ -113,13 +112,53 @@ public class Postbox implements Disposable {
         }
     }
 
+    protected void saveMemories(LaMailPostcard postcard) {
+        if (!ThreadCacheContext.exists()) {
+            return;
+        }
+        final PostedMailCounter counter = counterComesHere();
+        counter.incrementPosting();
+        final Postcard nativePostcard = postcard.toNativePostcard();
+        if (nativePostcard.isDryrun()) {
+            counter.incrementDryrun();
+        }
+        if (nativePostcard.isAlsoHtmlFile()) {
+            counter.incrementAlsoHtml();
+        }
+        if (nativePostcard.isForcedlyDirect()) {
+            counter.incrementForcedlyDirect();
+        }
+    }
+
+    protected PostedMailCounter counterComesHere() {
+        PostedMailCounter counter = ThreadCacheContext.findMailCounter();
+        if (counter == null) {
+            counter = new PostedMailCounter();
+            ThreadCacheContext.registerMailCounter(counter);
+        }
+        return counter;
+    }
+
     // ===================================================================================
-    //                                                                             Dispose
-    //                                                                             =======
-    @Override
-    public void dispose() {
-        if (postOffice != null) {
-            postOffice.workingDispose();
+    //                                                                          Hot Deploy
+    //                                                                          ==========
+    protected void prepareHotDeploy() { // only unused if cool
+        DisposableUtil.add(() -> requestHotDeploy());
+        hotDeployRequested = false;
+    }
+
+    protected void requestHotDeploy() { // called when request ending if HotDeploy
+        // no sync to avoid disposable thread locking this (or deadlock)
+        // should be synchronized in office process
+        postOffice.workingDispose(); // actual dispose
+        hotDeployRequested = true;
+    }
+
+    protected void reloadIfNeeds() {
+        if (hotDeployRequested) {
+            // INFO to find mistake that it uses HotDeploy in production
+            logger.info("...Reloading postbox for MailFlute by HotDeploy request");
+            prepareHotDeploy(); // for next HotDeploy, actual disposing when dispose() called by framework
         }
     }
 }

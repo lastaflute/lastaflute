@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,17 @@
 package org.lastaflute.web.ruts.process;
 
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.dbflute.Entity;
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.web.exception.DirectlyEntityDisplayDataNotAllowedException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
@@ -53,6 +58,13 @@ public class ActionRuntime {
     protected RuntimeException failureCause;
     protected ActionMessages validationErrors;
     protected Map<String, Object> displayDataMap; // lazy loaded
+    protected DisplayDataValidator displayDataValidator; // is set when html responce reflecting
+
+    @FunctionalInterface
+    public static interface DisplayDataValidator {
+
+        void validate(String key, Object value);
+    }
 
     // ===================================================================================
     //                                                                         Constructor
@@ -111,7 +123,7 @@ public class ActionRuntime {
     protected boolean isHtmlTemplateResponse(final HtmlResponse htmlResponse) {
         final String routingPath = htmlResponse.getRoutingPath();
         return routingPath.endsWith(".html") // e.g. Thymeleaf
-                || routingPath.endsWith(".xhtml") // e.g. Mayaa
+                || routingPath.endsWith(".xhtml") // just in case
                 || routingPath.endsWith(".jsp") // no comment
                 ;
     }
@@ -170,11 +182,69 @@ public class ActionRuntime {
     // ===================================================================================
     //                                                                        Display Data
     //                                                                        ============
+    /**
+     * @param key The key of the data. (NotNull)
+     * @param value The value of the data for the key. (NotNull)
+     */
     public void registerData(String key, Object value) {
+        assertArgumentNotNull("key", key);
+        assertArgumentNotNull("value", value);
         if (displayDataMap == null) {
             displayDataMap = new LinkedHashMap<String, Object>(4);
         }
+        stopDirectlyEntityDisplayData(key, value);
+        if (displayDataValidator != null) { // since reflecting 
+            displayDataValidator.validate(key, value);
+        }
         displayDataMap.put(key, filterDisplayDataValue(value));
+    }
+
+    protected void stopDirectlyEntityDisplayData(String key, Object value) {
+        if (value instanceof Entity) {
+            throwDirectlyEntityDisplayDataNotAllowedException(key, value);
+        } else if (value instanceof Collection<?>) {
+            final Collection<?> coll = ((Collection<?>) value);
+            if (!coll.isEmpty()) {
+                // care performance for List that the most frequent pattern
+                final Object first = coll instanceof List<?> ? ((List<?>) coll).get(0) : coll.iterator().next();
+                if (first instanceof Entity) {
+                    throwDirectlyEntityDisplayDataNotAllowedException(key, value);
+                }
+            }
+        }
+        // cannot check perfectly e.g. empty list, map's value, nested property in bean,
+        // but only primary patterns are enough, strict check is provided by UTFlute
+    }
+
+    protected void throwDirectlyEntityDisplayDataNotAllowedException(String key, Object value) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Registered the entity directly as display data.");
+        br.addItem("Advice");
+        br.addElement("Not allowed to register register entity directly as display data.");
+        br.addElement("Convert your entity data to web bean for display data.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    Member member = ...");
+        br.addElement("    return asHtml(...).renderWith(data -> {");
+        br.addElement("        data.register(\"member\", member); // *Bad");
+        br.addElement("    });");
+        br.addElement("  (o):");
+        br.addElement("    Member member = ...");
+        br.addElement("    MemberBean bean = mappingToBean(member);");
+        br.addElement("    return asHtml(...).renderWith(data -> {");
+        br.addElement("        data.register(\"member\", bean); // Good");
+        br.addElement("    });");
+        br.addItem("Action");
+        br.addElement(toString());
+        br.addItem("Registered");
+        br.addElement("key: " + key);
+        if (value instanceof Collection<?>) {
+            ((Collection<?>) value).forEach(element -> br.addElement(element));
+        } else {
+            br.addElement(value);
+        }
+        final String msg = br.buildExceptionMessage();
+        throw new DirectlyEntityDisplayDataNotAllowedException(msg);
     }
 
     protected Object filterDisplayDataValue(Object value) {
@@ -256,7 +326,8 @@ public class ActionRuntime {
         return form != null ? form : OptionalThing.empty();
     }
 
-    public void setActionForm(OptionalThing<VirtualForm> form) {
+    public void manageActionForm(OptionalThing<VirtualForm> form) {
+        assertArgumentNotNull("form", form);
         this.form = form;
     }
 
@@ -268,7 +339,8 @@ public class ActionRuntime {
         return actionResponse;
     }
 
-    public void setActionResponse(ActionResponse actionResponse) {
+    public void manageActionResponse(ActionResponse actionResponse) {
+        assertArgumentNotNull("actionResponse", actionResponse);
         this.actionResponse = actionResponse;
     }
 
@@ -280,7 +352,8 @@ public class ActionRuntime {
         return failureCause;
     }
 
-    public void setFailureCause(RuntimeException failureCause) {
+    public void manageFailureCause(RuntimeException failureCause) {
+        assertArgumentNotNull("failureCause", failureCause);
         this.failureCause = failureCause;
     }
 
@@ -292,7 +365,8 @@ public class ActionRuntime {
         return validationErrors;
     }
 
-    public void setValidationErrors(ActionMessages validationErrors) {
+    public void manageValidationErrors(ActionMessages validationErrors) {
+        assertArgumentNotNull("validationErrors", validationErrors);
         this.validationErrors = validationErrors;
     }
 
@@ -302,5 +376,22 @@ public class ActionRuntime {
      */
     public Map<String, Object> getDisplayDataMap() {
         return displayDataMap != null ? Collections.unmodifiableMap(displayDataMap) : Collections.emptyMap();
+    }
+
+    public void manageDisplayDataValidator(DisplayDataValidator displayDataValidator) {
+        assertArgumentNotNull("displayDataValidator", displayDataValidator);
+        this.displayDataValidator = displayDataValidator;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 }

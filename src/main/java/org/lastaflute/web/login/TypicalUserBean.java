@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ public abstract class TypicalUserBean<ID> implements UserBean<ID>, SyncCheckable
     //                                                                           Attribute
     //                                                                           =========
     /** the latest date of synchronized check. (NullAllowed: no check yet) */
-    protected LocalDateTime lastestSyncCheckDateTime;
+    protected LocalDateTime lastestSyncCheckTime;
 
     /** The locale for the user. (NullAllowed) */
     protected Locale userLocale;
@@ -51,7 +51,7 @@ public abstract class TypicalUserBean<ID> implements UserBean<ID>, SyncCheckable
         final StringBuilder sb = new StringBuilder();
         sb.append("{userId=").append(getUserId());
         setupToStringAdditionalUserInfo(sb);
-        getLastestSyncCheckDateTime().map(checkDateTime -> {
+        getLastestSyncCheckTime().map(checkDateTime -> {
             return new HandyDate(checkDateTime).toDisp("yyyy/MM/dd HH:mm:ss");
         }).ifPresent(checkDisp -> {
             sb.append(", sync=").append(checkDisp);
@@ -60,7 +60,7 @@ public abstract class TypicalUserBean<ID> implements UserBean<ID>, SyncCheckable
             sb.append(", locale=").append(locale);
         });
         getUserTimeZone().ifPresent(zone -> {
-            sb.append(", timeZone=").append(zone);
+            sb.append(", zone=").append(zone);
         });
         sb.append("}@").append(Integer.toHexString(hashCode()));
         return sb.toString();
@@ -73,16 +73,19 @@ public abstract class TypicalUserBean<ID> implements UserBean<ID>, SyncCheckable
     //                                                                           SyncCheck
     //                                                                           =========
     @Override
-    public OptionalThing<LocalDateTime> getLastestSyncCheckDateTime() {
-        return OptionalThing.ofNullable(lastestSyncCheckDateTime, () -> {
+    public OptionalThing<LocalDateTime> getLastestSyncCheckTime() {
+        return OptionalThing.ofNullable(lastestSyncCheckTime, () -> {
             String msg = "Not found the lastest synchronized check date-time in the user bean: " + getUserId();
             throw new IllegalStateException(msg);
         });
     }
 
     @Override
-    public void setLastestSyncCheckDateTime(LocalDateTime checkDt) {
-        lastestSyncCheckDateTime = checkDt;
+    public void manageLastestSyncCheckTime(LocalDateTime lastestSyncCheckTime) {
+        if (lastestSyncCheckTime == null) {
+            throw new IllegalArgumentException("The argument 'lastestSyncCheckTime' should not be null.");
+        }
+        this.lastestSyncCheckTime = lastestSyncCheckTime;
     }
 
     // ===================================================================================
@@ -97,7 +100,10 @@ public abstract class TypicalUserBean<ID> implements UserBean<ID>, SyncCheckable
     }
 
     @Override
-    public void setUserLocale(Locale userLocale) {
+    public void manageUserLocale(Locale userLocale) {
+        if (userLocale == null) {
+            throw new IllegalArgumentException("The argument 'userLocale' should not be null.");
+        }
         this.userLocale = userLocale;
     }
 
@@ -110,7 +116,10 @@ public abstract class TypicalUserBean<ID> implements UserBean<ID>, SyncCheckable
     }
 
     @Override
-    public void setUserTimeZone(TimeZone userTimeZone) {
+    public void manageUserTimeZone(TimeZone userTimeZone) {
+        if (userTimeZone == null) {
+            throw new IllegalArgumentException("The argument 'userTimeZone' should not be null.");
+        }
         this.userTimeZone = userTimeZone;
     }
 }

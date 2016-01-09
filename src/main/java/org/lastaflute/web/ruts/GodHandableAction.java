@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,16 +27,20 @@ import java.util.stream.Stream;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
+import org.lastaflute.db.jta.romanticist.TransactionMemoriesProvider;
+import org.lastaflute.db.jta.stage.BegunTx;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.exception.ActionHookReturnNullException;
+import org.lastaflute.web.exception.ActionWrappedCheckedException;
 import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
 import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
+import org.lastaflute.web.exception.ExecuteMethodLonelyValidatorAnnotationException;
 import org.lastaflute.web.exception.ExecuteMethodReturnNullException;
 import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
 import org.lastaflute.web.exception.ExecuteMethodReturnUndefinedResponseException;
-import org.lastaflute.web.exception.LonelyValidatorAnnotationException;
 import org.lastaflute.web.hook.ActionHook;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
@@ -48,6 +52,7 @@ import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.WholeShowRequestAttribute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.validation.LaValidatable;
@@ -132,6 +137,7 @@ public class GodHandableAction implements VirtualAction {
             throw e;
         } finally {
             processHookFinally(hook);
+            prepareTransactionMemoriesIfExists();
         }
     }
 
@@ -141,20 +147,30 @@ public class GodHandableAction implements VirtualAction {
 
     protected NextJourney transactionalExecute(OptionalThing<VirtualForm> form, ActionHook hook) {
         final ExecuteTransactionResult result = (ExecuteTransactionResult) stage.selectable(tx -> {
-            final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
-            assertExecuteMethodResponseDefined(response);
-            final NextJourney journey = reflect(response); /* also response handling in transaction */
-            boolean rollbackOnly = false;
-            if (runtime.hasValidationError()) {
-                tx.rollbackOnly();
-                rollbackOnly = true;
-            }
-            tx.returns(new ExecuteTransactionResult(response, journey, rollbackOnly));
+            doExecute(form, hook, tx); /* #to_action */
         } , getExecuteTransactionGenre()).get(); // because of not null
         if (!result.isRollbackOnly()) {
             hookAfterTxCommitIfExists(result);
         }
         return result.getJourney();
+    }
+
+    protected void doExecute(OptionalThing<VirtualForm> form, ActionHook hook, BegunTx<Object> tx) {
+        final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
+        assertExecuteMethodResponseDefined(response);
+        final NextJourney journey = reflect(response); /* also response handling in transaction */
+        final boolean rollbackOnly;
+        if (runtime.hasValidationError()) {
+            tx.rollbackOnly();
+            rollbackOnly = true;
+        } else {
+            rollbackOnly = false;
+        }
+        tx.returns(newExecuteTransactionResult(response, journey, rollbackOnly));
+    }
+
+    protected ExecuteTransactionResult newExecuteTransactionResult(ActionResponse response, NextJourney journey, boolean rollbackOnly) {
+        return new ExecuteTransactionResult(response, journey, rollbackOnly);
     }
 
     protected static class ExecuteTransactionResult {
@@ -218,6 +234,24 @@ public class GodHandableAction implements VirtualAction {
         return reflector.reflect(response);
     }
 
+    // -----------------------------------------------------
+    //                                  Transaction Memories
+    //                                  --------------------
+    protected void prepareTransactionMemoriesIfExists() {
+        final SavedTransactionMemories memories = ThreadCacheContext.findTransactionMemories();
+        if (memories != null) {
+            final List<TransactionMemoriesProvider> providerList = memories.getOrderedProviderList();
+            final StringBuilder sb = new StringBuilder();
+            for (TransactionMemoriesProvider provider : providerList) {
+                provider.provide().ifPresent(result -> {
+                    sb.append("\n*").append(result);
+                });
+            }
+            final WholeShowRequestAttribute attribute = new WholeShowRequestAttribute(sb.toString());
+            requestManager.setAttribute(RequestManager.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
+        }
+    }
+
     // ===================================================================================
     //                                                                        Process Hook
     //                                                                        ============
@@ -234,7 +268,7 @@ public class GodHandableAction implements VirtualAction {
             response = hook.hookBefore(runtime);
         }
         if (isDefined(response)) {
-            runtime.setActionResponse(response);
+            runtime.manageActionResponse(response);
         }
         assertAfterTxCommitHookNotSpecified("before", response);
         return response;
@@ -250,13 +284,13 @@ public class GodHandableAction implements VirtualAction {
     //                                            on Failure
     //                                            ----------
     protected ActionResponse tellExceptionMonologue(ActionHook hook, RuntimeException e) {
-        runtime.setFailureCause(e);
+        runtime.manageFailureCause(e);
         if (hook == null) {
             throw e;
         }
         final ActionResponse response = hook.godHandMonologue(runtime);
         if (isDefined(response)) {
-            runtime.setActionResponse(response);
+            runtime.manageActionResponse(response);
             assertAfterTxCommitHookNotSpecified("monologue", response);
             return response;
         } else {
@@ -332,7 +366,7 @@ public class GodHandableAction implements VirtualAction {
         assertExecuteReturnNotNull(requestArgs, result);
         assertExecuteMethodReturnTypeActionResponse(requestArgs, result);
         final ActionResponse response = (ActionResponse) result;
-        runtime.setActionResponse(response); // always set here because of main
+        runtime.manageActionResponse(response); // always set here because of main
         return response;
     }
 
@@ -369,8 +403,7 @@ public class GodHandableAction implements VirtualAction {
         return result;
     }
 
-    protected Object handleExecuteMethodInvocationTargetException(Method executeMethod, Object[] requestArgs, InvocationTargetException e)
-            throws Error {
+    protected Object handleExecuteMethodInvocationTargetException(Method executeMethod, Object[] requestArgs, InvocationTargetException e) {
         final Throwable cause = e.getTargetException();
         if (cause instanceof ValidationErrorException) {
             return handleValidationErrorException((ValidationErrorException) cause);
@@ -381,8 +414,9 @@ public class GodHandableAction implements VirtualAction {
         if (cause instanceof Error) {
             throw (Error) cause;
         }
+        // checked exception e.g. IOException
         final String msg = setupMethodExceptionMessage("Found the exception in the method invoking.", executeMethod, requestArgs);
-        throw new IllegalStateException(msg, cause);
+        throw new ActionWrappedCheckedException(msg, cause);
     }
 
     protected void throwExecuteMethodAccessFailureException(Method executeMethod, Object[] requestArgs, IllegalAccessException cause) {
@@ -425,8 +459,8 @@ public class GodHandableAction implements VirtualAction {
             logger.debug(sb.toString());
         }
         requestManager.errors().save(messages); // also API can use it
-        runtime.setValidationErrors(messages); // reflect to runtime
-        runtime.setFailureCause(cause); // also cause
+        runtime.manageValidationErrors(messages); // reflect to runtime
+        runtime.manageFailureCause(cause); // also cause
         final VaErrorHook errorHook = cause.getErrorHook();
         final ActionResponse response = errorHook.hook(); // failure hook here if API
         if (response == null) {
@@ -483,7 +517,7 @@ public class GodHandableAction implements VirtualAction {
     protected void checkValidatorCalled() {
         if (!execute.isSuppressValidatorCallCheck() && isValidatorCalled()) {
             execute.getFormMeta().filter(meta -> isValidatorAnnotated(meta)).ifPresent(meta -> {
-                throwLonelyValidatorAnnotationException(meta);
+                throwLonelyValidatorAnnotationException(meta); // #hope see fields in nested element
             });
         }
     }
@@ -546,7 +580,7 @@ public class GodHandableAction implements VirtualAction {
         br.addItem("Action Form (or Body)");
         br.addElement(meta.getFormType());
         final String msg = br.buildExceptionMessage();
-        throw new LonelyValidatorAnnotationException(msg);
+        throw new ExecuteMethodLonelyValidatorAnnotationException(msg);
     }
 
     // ===================================================================================

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.Map;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfCollectionUtil;
+import org.lastaflute.core.mail.PostedMailCounter;
+import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 
 /**
@@ -49,10 +51,20 @@ public class ThreadCacheContext {
     public static final String FW_USER_BEAN = "fw:userBean";
 
     // -----------------------------------------------------
-    //                                               Marking
-    //                                               -------
+    //                                            Validation
+    //                                            ----------
     public static final String FW_VALIDATOR_CALLED = "fw:validatorCalled";
     public static final String FW_VALIDATOR_TYPE_FAILURE = "fw:validatorTypeFailure";
+
+    // -----------------------------------------------------
+    //                                           Transaction
+    //                                           -----------
+    public static final String FW_TRANSACTION_MEMORIES = "fw:transactionMemories";
+
+    // -----------------------------------------------------
+    //                                                 Mail
+    //                                                ------
+    public static final String FW_MAIL_COUNTER = "fw:mailCounter";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -211,5 +223,27 @@ public class ThreadCacheContext {
 
     public static void registerValidatorTypeFailure(Object failureBean) {
         setObject(FW_VALIDATOR_TYPE_FAILURE, failureBean);
+    }
+
+    // -----------------------------------------------------
+    //                                           Transaction
+    //                                           -----------
+    public static SavedTransactionMemories findTransactionMemories() {
+        return exists() ? getObject(FW_TRANSACTION_MEMORIES) : null;
+    }
+
+    public static void registerTransactionMemories(SavedTransactionMemories memories) {
+        setObject(FW_TRANSACTION_MEMORIES, memories);
+    }
+
+    // -----------------------------------------------------
+    //                                                 Mail
+    //                                                ------
+    public static PostedMailCounter findMailCounter() {
+        return exists() ? getObject(FW_MAIL_COUNTER) : null;
+    }
+
+    public static void registerMailCounter(PostedMailCounter memories) {
+        setObject(FW_MAIL_COUNTER, memories);
     }
 }

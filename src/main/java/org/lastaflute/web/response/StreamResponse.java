@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,15 @@
 package org.lastaflute.web.response;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.dbflute.helper.StringKeyMap;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
+import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.request.WritternStreamCall;
 
 /**
@@ -60,7 +61,7 @@ public class StreamResponse implements ActionResponse {
     protected ResponseHook afterTxCommitHook;
 
     protected Map<String, String[]> createHeaderMap() {
-        return new LinkedHashMap<String, String[]>();
+        return StringKeyMap.createAsCaseInsensitiveOrdered();
     }
 
     // ===================================================================================
@@ -90,6 +91,10 @@ public class StreamResponse implements ActionResponse {
         return this;
     }
 
+    public boolean hasContentType() {
+        return contentType != null;
+    }
+
     public String getContentType() {
         return contentType;
     }
@@ -115,7 +120,15 @@ public class StreamResponse implements ActionResponse {
     }
 
     public void headerContentDispositionAttachment() { // used as default
-        headerMap.put("Content-disposition", new String[] { "attachment; filename=\"" + fileName + "\"" });
+        headerContentDisposition("attachment; filename=\"" + fileName + "\"");
+    }
+
+    public void headerContentDispositionInline() {
+        headerContentDisposition("inline; filename=\"" + fileName + "\"");
+    }
+
+    protected void headerContentDisposition(String disposition) {
+        headerMap.put(ResponseManager.HEADER_CONTENT_DISPOSITION, new String[] { disposition });
     }
 
     // ===================================================================================
@@ -249,7 +262,9 @@ public class StreamResponse implements ActionResponse {
     //                                                                 ===================
     public ResponseDownloadResource toDownloadResource() {
         final ResponseDownloadResource resource = createResponseDownloadResource();
-        resource.contentType(contentType);
+        if (contentType != null) {
+            resource.contentType(contentType);
+        }
         for (Entry<String, String[]> entry : headerMap.entrySet()) {
             resource.header(entry.getKey(), entry.getValue());
         }

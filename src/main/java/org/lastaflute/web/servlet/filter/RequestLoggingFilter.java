@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -500,9 +501,13 @@ public class RequestLoggingFilter implements Filter {
         } else {
             stringExp = attr.toString();
         }
-        // might contain line separator in the expression
-        // and large display is noisy for debug so one liner
-        return convertToOneLinerDisp(convertToCutDisp(stringExp));
+        if (attr instanceof WholeShowRequestAttribute) {
+            return convertToWholeShow(stringExp);
+        } else {
+            // might contain line separator in the expression
+            // and large display is noisy for debug so one liner
+            return convertToOneLinerDisp(convertToCutDisp(stringExp));
+        }
     }
 
     protected String convertToCutDisp(String msg) {
@@ -525,6 +530,25 @@ public class RequestLoggingFilter implements Filter {
             filtered = msg;
         }
         return filtered;
+    }
+
+    protected String convertToWholeShow(String exp) {
+        return indent(IND.length() + 1, exp).trim();
+
+    }
+
+    public static class WholeShowRequestAttribute {
+
+        protected final Object attribute;
+
+        public WholeShowRequestAttribute(Object attribute) {
+            this.attribute = attribute;
+        }
+
+        @Override
+        public String toString() {
+            return "wholeShow:" + (attribute != null ? attribute.toString() : null);
+        }
     }
 
     protected void buildResponseInfo(StringBuilder sb, HttpServletRequest request, HttpServletResponse response) {
@@ -943,18 +967,37 @@ public class RequestLoggingFilter implements Filter {
     }
 
     // ===================================================================================
-    //                                                                        Assist Logic
+    //                                                                        Small Helper
     //                                                                        ============
-    protected SortedSet<?> toSortedSet(Enumeration<?> enu) {
-        final SortedSet<Object> set = new TreeSet<Object>();
-        set.addAll(Collections.list(enu));
-        return set;
+    // -----------------------------------------------------
+    //                                                 Split
+    //                                                 -----
+    public List<String> splitList(final String str, final String delimiter) {
+        return doSplitList(str, delimiter, false);
     }
 
-    protected SortedSet<?> toSortedSet(Collection<?> enu) {
-        return new TreeSet<Object>(enu);
+    public List<String> splitListTrimmed(final String str, final String delimiter) {
+        return doSplitList(str, delimiter, true);
     }
 
+    protected List<String> doSplitList(final String str, final String delimiter, boolean trim) {
+        final List<String> list = new ArrayList<String>();
+        int elementIndex = 0;
+        int delimiterIndex = str.indexOf(delimiter);
+        while (delimiterIndex >= 0) {
+            final String element = str.substring(elementIndex, delimiterIndex);
+            list.add(trim ? element.trim() : element);
+            elementIndex = delimiterIndex + delimiter.length();
+            delimiterIndex = str.indexOf(delimiter, elementIndex);
+        }
+        final String element = str.substring(elementIndex);
+        list.add(trim ? element.trim() : element);
+        return list;
+    }
+
+    // -----------------------------------------------------
+    //                                               Replace
+    //                                               -------
     protected String replaceString(String str, String fromStr, String toStr) {
         StringBuilder sb = null; // lazy load
         int basePos = 0;
@@ -981,6 +1024,38 @@ public class RequestLoggingFilter implements Filter {
         } while (true);
     }
 
+    // -----------------------------------------------------
+    //                                                Indent
+    //                                                ------
+    protected String indent(int size) {
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < size; i++) {
+            sb.append(" ");
+        }
+        return sb.toString();
+    }
+
+    protected String indent(int size, String str) {
+        final List<String> lineList = splitList(removeCR(str), "\n");
+        final StringBuilder sb = new StringBuilder();
+        int index = 0;
+        for (String element : lineList) {
+            if (index > 0) {
+                sb.append("\n");
+            }
+            sb.append(indent(size)).append(element);
+            ++index;
+        }
+        return sb.toString();
+    }
+
+    protected String removeCR(String str) {
+        return str != null ? str.replaceAll("\r", "") : null;
+    }
+
+    // -----------------------------------------------------
+    //                                      Performance View
+    //                                      ----------------
     /**
      * Convert to performance view.
      * @param afterMinusBefore The difference between before time and after time.
@@ -1016,5 +1091,15 @@ public class RequestLoggingFilter implements Filter {
         }
 
         return sb.toString();
+    }
+
+    protected SortedSet<?> toSortedSet(Enumeration<?> enu) {
+        final SortedSet<Object> set = new TreeSet<Object>();
+        set.addAll(Collections.list(enu));
+        return set;
+    }
+
+    protected SortedSet<?> toSortedSet(Collection<?> enu) {
+        return new TreeSet<Object>(enu);
     }
 }

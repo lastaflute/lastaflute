@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,21 @@ import java.lang.annotation.Target;
 @Documented
 public @interface Execute {
 
+    /**
+     * The URL pattern to adjust method mapping. <br>
+     * <pre>
+     * <span style="color: #3F7E5E">// e.g. you can add fixed word between variables</span>
+     * &#064;Execute(<span style="color: #CC4747">urlPattern</span>=<span style="color: #2A00FF">"{}/piary/{}"</span>) <span style="color: #3F7E5E">// e.g. sea/3/piary/7</span>
+     * public HtmlResponse sea(int landId, int dstoreId) {
+     * }
+     * 
+     * <span style="color: #3F7E5E">// e.g. you can adjust mapping by camel case keywords of method name</span>
+     * &#064;Execute(<span style="color: #CC4747">urlPattern</span>=<span style="color: #2A00FF">"&#064;word/{}/&#064;word"</span>) <span style="color: #3F7E5E">// e.g. sea/3/land</span>
+     * public HtmlResponse seaLand(int piaryId) {
+     * }
+     * </pre>
+     * @return The pattern expression of URL pattern. (NotNull, EmptyAllowed: if empty, default mapping)
+     */
     String urlPattern() default "";
 
     /**

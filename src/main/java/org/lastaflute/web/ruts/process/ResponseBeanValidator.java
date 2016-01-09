@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2015 the original author or authors.
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,20 @@
 package org.lastaflute.web.ruts.process;
 
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.Srl;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.ruts.message.ActionMessage;
 import org.lastaflute.web.ruts.message.ActionMessages;
-import org.lastaflute.web.ruts.process.exception.ResponseJsonBeanValidationErrorException;
+import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
@@ -35,14 +40,14 @@ import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
- * @since 0.7.1 (2015/12/14 Monday)
+ * @since 0.7.6 (2016/01/04 Monday)
  */
-public class JsonBeanValidator {
+public abstract class ResponseBeanValidator {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(JsonBeanValidator.class);
+    private static final Logger logger = LoggerFactory.getLogger(ResponseBeanValidator.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -54,7 +59,7 @@ public class JsonBeanValidator {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public JsonBeanValidator(RequestManager requestManager, Object actionExp, boolean warning) {
+    public ResponseBeanValidator(RequestManager requestManager, Object actionExp, boolean warning) {
         this.requestManager = requestManager;
         this.actionExp = actionExp;
         this.warning = warning;
@@ -63,92 +68,77 @@ public class JsonBeanValidator {
     // ===================================================================================
     //                                                                            Validate
     //                                                                            ========
-    /**
-     * @param jsonBean The bean of JSON. (NotNull)
-     * @throws ResponseJsonBeanValidationErrorException When the validation error.
-     */
-    public void validate(Object jsonBean) {
-        if (jsonBean == null) {
-            throw new IllegalStateException("The argument 'jsonBean' should not be null.");
+    protected void doValidate(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder) {
+        if (bean == null) {
+            throw new IllegalStateException("The argument 'bean' should not be null.");
         }
         final ActionValidator<ActionMessages> validator = createActionValidator();
         try {
-            executeValidator(validator, jsonBean);
+            executeValidator(validator, bean);
         } catch (ValidationErrorException e) {
-            handleResponseJsonBeanValidationErrorException(jsonBean, e.getMessages(), e);
+            handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
         } catch (ClientErrorByValidatorException e) {
-            handleResponseJsonBeanValidationErrorException(jsonBean, e.getMessages(), e);
+            handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
         }
     }
 
     protected ActionValidator<ActionMessages> createActionValidator() {
         return new ActionValidator<>(requestManager, () -> {
             return new ActionMessages();
-        } , ActionValidator.DEFAULT_GROUPS);
+        } , getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS));
     }
 
-    protected void executeValidator(ActionValidator<ActionMessages> validator, Object jsonBean) {
-        validator.validate(jsonBean, more -> {} , () -> {
+    protected abstract OptionalThing<Class<?>[]> getValidatorGroups();
+
+    protected void executeValidator(ActionValidator<ActionMessages> validator, Object bean) {
+        validator.validate(bean, more -> {} , () -> {
             throw new IllegalStateException("unused here, no way");
         });
     }
 
-    protected void handleResponseJsonBeanValidationErrorException(Object jsonBean, ActionMessages messages, RuntimeException cause) {
+    // ===================================================================================
+    //                                                                    Validation Error
+    //                                                                    ================
+    protected void handleResponseBeanValidationErrorException(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder,
+            ActionMessages messages, RuntimeException cause) {
         // cause is completely framework info so not show it
-        final String msg = buildJsonBeanValidationErrorMessage(jsonBean, messages);
+        final String msg = buildValidationErrorMessage(bean, locationBuilder, messages);
         if (warning) {
             logger.warn(msg);
         } else {
-            throw new ResponseJsonBeanValidationErrorException(msg);
+            throw new ResponseBeanValidationErrorException(msg);
         }
     }
 
-    protected String buildJsonBeanValidationErrorMessage(Object jsonBean, ActionMessages messages) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Validation error for the JSON response.");
-        br.addItem("Advice");
-        br.addElement("Make sure your JSON bean property values.");
-        br.addElement("For example:");
-        br.addElement("  public class SeaBean {");
-        br.addElement("      @Required");
-        br.addElement("      public String dockside;");
-        br.addElement("  }");
-        br.addElement("  (x):");
-        br.addElement("    public class SeaAction {");
-        br.addElement("        @Execute");
-        br.addElement("        public JsonResponse<SeaBean> index() {");
-        br.addElement("            SeaBean bean = new SeaBean();");
-        br.addElement("            reurn asJson(bean); // *Bad");
-        br.addElement("        }");
-        br.addElement("    }");
-        br.addElement("  (o):");
-        br.addElement("    public class SeaAction {");
-        br.addElement("        @Execute");
-        br.addElement("        public JsonResponse<SeaBean> index() {");
-        br.addElement("            SeaBean bean = new SeaBean();");
-        br.addElement("            bean.dockside = \"overthewaves\"; // Good");
-        br.addElement("            reurn asJson(bean);");
-        br.addElement("        }");
-        br.addElement("    }");
-        br.addItem("Action");
-        br.addElement(actionExp);
-        br.addItem("JSON Bean");
-        br.addElement(jsonBean.getClass());
-        final String jsonExp = jsonBean.toString();
+    protected abstract String buildValidationErrorMessage(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder,
+            ActionMessages messages);
+
+    // -----------------------------------------------------
+    //                                        Message Helper
+    //                                        --------------
+    protected void setupItemValidatedBean(ExceptionMessageBuilder br, Object bean) {
+        final Class<?> beanType = bean.getClass();
+        br.addItem("Validated Bean");
+        br.addElement(beanType);
+        final String jsonExp = bean.toString();
         br.addElement(jsonExp);
-        if (jsonExp == null || !jsonExp.contains("\n")) {
+        if ((jsonExp == null || !jsonExp.contains("\n"))
+                && !(List.class.isAssignableFrom(beanType) || Map.class.isAssignableFrom(beanType))) {
             br.addItem("Bean Property");
             try {
-                final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(jsonBean.getClass());
+                final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(beanType);
                 final int propertyDescSize = beanDesc.getPropertyDescSize();
                 for (int i = 0; i < propertyDescSize; i++) {
                     final PropertyDesc pd = beanDesc.getPropertyDesc(i);
-                    br.addElement(pd.getPropertyName() + ": " + pd.getValue(jsonBean));
+                    br.addElement(pd.getPropertyName() + ": " + pd.getValue(bean));
                 }
             } catch (RuntimeException ignored) {
-                br.addElement("*Failed to get field values by BeanDesc");
+                br.addElement("*Failed to get field values by BeanDesc: " + Srl.cut(ignored.getMessage(), 50, "..."));
             }
         }
+    }
+
+    protected void setupItemMessages(ExceptionMessageBuilder br, ActionMessages messages) {
         br.addItem("Messages");
         final Set<String> propertySet = messages.toPropertySet();
         for (String property : propertySet) {
@@ -157,6 +147,5 @@ public class JsonBeanValidator {
                 br.addElement("  " + ite.next());
             }
         }
-        return br.buildExceptionMessage();
     }
 }

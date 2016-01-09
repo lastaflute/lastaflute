@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -280,16 +280,7 @@ public class SimpleResponseManager implements ResponseManager {
 
     protected ResponseDownloadResource createResponseDownloadResource(String fileName) {
         final ResponseDownloadResource resource = new ResponseDownloadResource(fileName);
-        if (resource.getContentType() != null) {
-            return resource;
-        }
-        if (downloadExtensionContentTypeMap != null && fileName.contains(".")) {
-            final String extension = Srl.substringLastRear(fileName, ".");
-            final String contentType = downloadExtensionContentTypeMap.get(extension);
-            if (contentType != null) {
-                resource.contentType(contentType);
-            }
-        }
+        setupContentTypeByExtension(resource);
         return resource; // as default
     }
 
@@ -314,18 +305,35 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     protected void prepareDownloadResponse(ResponseDownloadResource resource, HttpServletResponse response) {
-        if (resource.getContentType() == null) {
-            resource.contentTypeOctetStream(); // as default
-            resource.headerContentDispositionAttachment(); // with header for the type
+        if (!resource.hasContentType()) {
+            setupContentTypeByExtension(resource);
+            if (!resource.hasContentType()) { // retry
+                resource.contentTypeOctetStream(); // as default
+            }
         }
-        final String contentType = resource.getContentType();
-        response.setContentType(contentType);
-        final Map<String, String[]> headerMap = resource.getHeaderMap();
-        headerMap.forEach((key, values) -> {
+        if (!resource.hasContentDisposition()) {
+            resource.headerContentDispositionAttachment(); // as default
+        }
+        response.setContentType(resource.getContentType());
+        resource.getHeaderMap().forEach((key, values) -> {
             for (String value : values) {
                 response.addHeader(key, value); // added as array if already exists
             }
         });
+    }
+
+    protected void setupContentTypeByExtension(ResponseDownloadResource resource) {
+        if (downloadExtensionContentTypeMap == null || downloadExtensionContentTypeMap.isEmpty()) {
+            return;
+        }
+        final String fileName = resource.getFileName();
+        if (fileName.contains(".")) {
+            final String extension = Srl.substringLastRear(fileName, ".");
+            final String contentType = downloadExtensionContentTypeMap.get(extension);
+            if (contentType != null) {
+                resource.contentType(contentType);
+            }
+        }
     }
 
     protected void doDownloadByteData(ResponseDownloadResource resource, HttpServletResponse response, byte[] byteData) {
@@ -416,9 +424,9 @@ public class SimpleResponseManager implements ResponseManager {
 
     @Override
     public void addNoCache() {
-        addHeader("Pragma", "no-cache");
-        addHeader("Cache-Control", "no-cache, no-store");
-        addHeader("Expires", "Thu, 01 Dec 1994 16:00:00 GMT");
+        addHeader(HEADER_PRAGMA, "no-cache");
+        addHeader(HEADER_CACHE_CONTROL, "no-cache, no-store");
+        addHeader(HEADER_EXPIRES, "Thu, 01 Dec 1994 16:00:00 GMT");
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
+import org.lastaflute.web.login.LoginManager;
+import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.scoped.ScopedAttributeHolder;
@@ -65,6 +67,12 @@ public interface RequestManager extends ScopedAttributeHolder {
     //                                     -----------------
     /** The key of SQL count by DBFlute. */
     String DBFLUTE_SQL_COUNT_KEY = "lastaflute.dbflute.SQL_COUNT";
+
+    /** The key of romantic transaction memories by DBFlute. */
+    String DBFLUTE_TRANSACTION_MEMORIES_KEY = "lastaflute.dbflute.TRANSACTION_MEMORIES";
+
+    /** The key of mail count by MailFlute. */
+    String MAILFLUTE_MAIL_COUNT_KEY = "lastaflute.mailflute.MAIL_COUNT";
 
     // ===================================================================================
     //                                                                      Basic Handling
@@ -229,6 +237,38 @@ public interface RequestManager extends ScopedAttributeHolder {
      * @return The optional string as remote user. (NotNull, EmptyAllowed)
      */
     OptionalThing<String> getRemoteUser();
+
+    // ===================================================================================
+    //                                                                      Login Handling
+    //                                                                      ==============
+    /**
+     * Find login manager interface by user bean. <br>
+     * Implementations of login managers may be plural (and smart deploy components), <br>
+     * so you cannot get it from container by type, you need to find it by this method. <br>
+     * And you cannot use same user bean between plural login managers.
+     * @param userBeanType The type of user bean to find. (NotNull)
+     * @return The optional login manager. (NotNull, EmptyAllowed: if not found, not logined)
+     */
+    OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType);
+
+    /**
+     * Find user bean of current request for the type. (basically from session, but unconcern) <br>
+     * Empty optional means not login state, so you can control by optional thing methods. <br>
+     * If your application does not use login, always returns empty.
+     * <pre>
+     * Integer userId = requestManager.findUserBean(SeaUserBean.class).map(userBean -&gt; {
+     *     return userBean.getUserId();
+     * }).orElse(DEFAULT_USER_ID);
+     * </pre>
+     * <p>You can get user bean without login manager.
+     * Login manager is for login control so many functions are provided.
+     * But all cases need only user bean so facade method here.</p>
+     * @param <USER_BEAN> The type of user bean.
+     * @param <ID> The type of user ID.
+     * @param userBeanType The type of user bean to find. (NotNull)
+     * @return The optional user bean. (NotNull, EmptyAllowed: if not found, not logined)
+     */
+    <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> userBeanType);
 
     // ===================================================================================
     //                                                                     Region Handling

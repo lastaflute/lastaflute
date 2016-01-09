@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,15 +106,16 @@ public interface LaActionDocs {
      * <span style="font-size: 130%; color: #553000">[User Info]</span>
      * o getUserBean() <span style="color: #3F7E5E">// get bean of login user</span>
      * 
-     * <span style="font-size: 130%; color: #553000">[Verify]</span>
+     * <span style="font-size: 130%; color: #553000">[Verify Anything]</span>
      * o verifyParameterExists() <span style="color: #3F7E5E">// verify parameter exists or 404 (as default)</span>
      * o verifyParameterTrue() <span style="color: #3F7E5E">// verify parameter's anything is true or 404 (as default)</span>
      * o verifyTrueOr404NotFound() <span style="color: #3F7E5E">// verify true or 404</span>
      * o verifyTrueOrIllegalTransition() <span style="color: #3F7E5E">// verify true or illegal transition exception</span>
      * 
-     * <span style="font-size: 130%; color: #553000">[Small Helper]</span>
+     * <span style="font-size: 130%; color: #553000">[Small Facade]</span>
      * o currentDate() <span style="color: #3F7E5E">// current date as LocalDate</span>
      * o currentDateTime() <span style="color: #3F7E5E">// current date-time as LocalDateTime</span>
+     * o getUserMessage() <span style="color: #3F7E5E">// message for currently-requested user locale</span>
      * o isEmpty() <span style="color: #3F7E5E">// determine empty (or null)</span>
      * o isNotEmpty() <span style="color: #3F7E5E">// determine not empty (and not null)</span>
      * o isCls(cdefType, code) <span style="color: #3F7E5E">// determine the code matches the classification</span>
