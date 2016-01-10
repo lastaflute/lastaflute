@@ -15,6 +15,7 @@
  */
 package org.lastaflute.core.mail;
 
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.magic.ThreadCompleted;
 
 /**
@@ -48,8 +49,7 @@ public class PostedMailCounter implements ThreadCompleted { // thread cached
         return this;
     }
 
-    @Override
-    public String toString() {
+    public String toLineDisp() {
         final StringBuilder sb = new StringBuilder();
         sb.append("{posting=").append(countOfPosting);
         sb.append(", alsoHtml=").append(countOfAlsoHtml);
@@ -57,6 +57,11 @@ public class PostedMailCounter implements ThreadCompleted { // thread cached
         sb.append(", forcedlyDirect=").append(countOfForcedlyDirect);
         sb.append("}");
         return sb.toString();
+    }
+
+    @Override
+    public String toString() {
+        return DfTypeUtil.toClassTitle(this) + "@" + Integer.toHexString(hashCode());
     }
 
     public int getCountOfPosting() {

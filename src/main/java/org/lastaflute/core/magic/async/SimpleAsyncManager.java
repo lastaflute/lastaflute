@@ -264,12 +264,14 @@ public class SimpleAsyncManager implements AsyncManager {
             prepareCallbackContext(call, callbackContext);
             final Object variousPreparedObj = prepareVariousContext(call, variousContextMap);
             final long before = showRunning(keyword);
+            Throwable cause = null;
             try {
                 call.callback();
-            } catch (RuntimeException e) {
+            } catch (Throwable e) {
                 handleAsyncCallbackException(call, before, e);
+                cause = e;
             } finally {
-                showFinishing(keyword, before); // should be before clearing because of using them
+                showFinishing(keyword, before, cause); // should be before clearing because of using them
                 clearVariousContext(call, variousContextMap, variousPreparedObj);
                 clearCallbackContext(call);
                 clearPreparedAccessContext(call);
@@ -288,7 +290,7 @@ public class SimpleAsyncManager implements AsyncManager {
         return System.currentTimeMillis();
     }
 
-    protected void showFinishing(String keyword, long before) {
+    protected void showFinishing(String keyword, long before, Throwable cause) {
         if (logger.isDebugEnabled()) {
             final long after = System.currentTimeMillis();
             final StringBuilder sb = new StringBuilder();
@@ -299,8 +301,11 @@ public class SimpleAsyncManager implements AsyncManager {
                 sb.append(LF).append(" sqlCount: ").append(counter.toLineDisp());
             });
             extractMailCount().ifPresent(counter -> {
-                sb.append(LF).append(" mailCount: ").append(counter);
+                sb.append(LF).append(" mailCount: ").append(counter.toLineDisp());
             });
+            if (cause != null) {
+                sb.append(LF).append(" cause: ").append(cause.getClass().getSimpleName()).append(" *Read the exception message!");
+            }
             logger.debug(sb.toString());
         }
     }
@@ -587,7 +592,7 @@ public class SimpleAsyncManager implements AsyncManager {
 
     protected void setupExceptionMessageSqlCountIfExists(StringBuilder sb) {
         extractSqlCount().ifPresent(counter -> {
-            sb.append(LF).append(EX_IND).append("; sqlCount=").append(counter);
+            sb.append(LF).append(EX_IND).append("; sqlCount=").append(counter.toLineDisp());
         });
     }
 
@@ -621,7 +626,7 @@ public class SimpleAsyncManager implements AsyncManager {
 
     protected void setupExceptionMessageMailCountIfExists(StringBuilder sb) {
         extractMailCount().ifPresent(counter -> {
-            sb.append(LF).append(EX_IND).append("; mailCount=").append(counter);
+            sb.append(LF).append(EX_IND).append("; mailCount=").append(counter.toLineDisp());
         });
     }
 
