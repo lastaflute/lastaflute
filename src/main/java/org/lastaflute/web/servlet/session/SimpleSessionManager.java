@@ -86,7 +86,7 @@ public class SimpleSessionManager implements SessionManager {
     protected OptionalThing<SessionSharedStorage> prepareSessionSharedStorage(SessionResourceProvider provider) {
         SessionSharedStorage specifiedStorage = null;
         if (provider != null) {
-            specifiedStorage = provider.provideSessionSharedStorage();
+            specifiedStorage = provider.provideSharedStorage();
             if (specifiedStorage == null) {
                 final String msg = "No assist for the shared storage of session.";
                 throw new FwRequiredAssistNotFoundException(msg);

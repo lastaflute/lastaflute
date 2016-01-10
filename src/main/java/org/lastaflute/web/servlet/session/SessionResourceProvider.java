@@ -23,5 +23,5 @@ public interface SessionResourceProvider {
     /**
      * @return The storage instance for session sharing. (NotNull)
      */
-    SessionSharedStorage provideSessionSharedStorage();
+    SessionSharedStorage provideSharedStorage();
 }
