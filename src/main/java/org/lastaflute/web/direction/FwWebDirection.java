@@ -37,6 +37,7 @@ import org.lastaflute.web.servlet.filter.mdc.MDCHook;
 import org.lastaflute.web.servlet.request.ResponseHandlingProvider;
 import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
 import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
+import org.lastaflute.web.servlet.session.SessionResourceProvider;
 import org.lastaflute.web.token.CsrfResourceProvider;
 
 /**
@@ -52,6 +53,7 @@ public class FwWebDirection {
     //                                               -------
     protected UserLocaleProcessProvider userLocaleProcessProvider;
     protected UserTimeZoneProcessProvider userTimeZoneProcessProvider;
+    protected SessionResourceProvider sessionResourceProvider;
     protected CookieResourceProvider cookieResourceProvider;
     protected ResponseHandlingProvider responseHandlingProvider;
 
@@ -109,6 +111,11 @@ public class FwWebDirection {
         assertArgumentNotNull("userTimeZoneProcessProvider", userTimeZoneProcessProvider);
         this.userLocaleProcessProvider = userLocaleProcessProvider;
         this.userTimeZoneProcessProvider = userTimeZoneProcessProvider;
+    }
+
+    public void directSession(SessionResourceProvider sessionResourceProvider) {
+        assertArgumentNotNull("sessionResourceProvider", sessionResourceProvider);
+        this.sessionResourceProvider = sessionResourceProvider;
     }
 
     public void directCookie(CookieResourceProvider cookieResourceProvider) {
@@ -239,6 +246,10 @@ public class FwWebDirection {
     public UserTimeZoneProcessProvider assistUserTimeZoneProcessProvider() {
         assertAssistObjectNotNull(userTimeZoneProcessProvider, "Not found the provider for user time-zone process in request.");
         return userTimeZoneProcessProvider;
+    }
+
+    public SessionResourceProvider assistSessionResourceProvider() {
+        return sessionResourceProvider; // not required, it's optional assist
     }
 
     public CookieResourceProvider assistCookieResourceProvider() {

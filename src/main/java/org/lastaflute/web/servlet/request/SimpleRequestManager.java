@@ -262,8 +262,7 @@ public class SimpleRequestManager implements RequestManager {
         });
     }
 
-    @Override
-    public List<String> getAttributeNameList() {
+    protected List<String> getAttributeNameList() {
         final Enumeration<String> attributeNames = getRequest().getAttributeNames();
         final List<String> nameList = new ArrayList<String>();
         while (attributeNames.hasMoreElements()) {

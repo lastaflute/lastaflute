@@ -15,8 +15,6 @@
  */
 package org.lastaflute.web.servlet.request.scoped;
 
-import java.util.List;
-
 import org.dbflute.optional.OptionalThing;
 
 /**
@@ -34,12 +32,6 @@ public interface ScopedAttributeHolder {
      * @return The optional attribute object for the key. (NotNull, EmptyAllowed: when not found)
      */
     <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> attributeType);
-
-    /**
-     * Get the list of existing attribute name.
-     * @return The read-only list of existing attribute name. (NotNull, EmptyAllowed: when no attribute)
-     */
-    List<String> getAttributeNameList();
 
     /**
      * Set the attribute value to the scope by your original key.

@@ -19,6 +19,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.lastaflute.core.direction.FwAssistantDirector;
+import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.core.security.InvertibleCryptographer;
 import org.lastaflute.web.direction.FwWebDirection;
 
@@ -49,6 +50,10 @@ public class SimpleCookieCipher implements CookieCipher {
         final FwWebDirection direction = assistWebDirection();
         CookieResourceProvider provider = direction.assistCookieResourceProvider();
         invertibleCipher = provider.provideCipher();
+        if (invertibleCipher == null) {
+            final String msg = "No assist for the invertible cipher of cookie.";
+            throw new FwRequiredAssistNotFoundException(msg);
+        }
         // no logging here because cookie manager do it
     }
 
