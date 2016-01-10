@@ -7,4 +7,5 @@
 	<component name="assistCreator" class="org.lastaflute.core.smartdeploy.RomanticAssistCreator"/>
 	<component name="logicCreator" class="org.lastaflute.core.smartdeploy.RomanticLogicCreator"/>
 	<component name="serviceCreator" class="org.lastaflute.core.smartdeploy.RomanticServiceCreator"/>
+	<component name="jobCreator" class="org.lastaflute.core.smartdeploy.RomanticJobCreator"/>
 </components>
