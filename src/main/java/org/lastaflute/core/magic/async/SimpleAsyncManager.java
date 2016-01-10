@@ -35,7 +35,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.bhv.core.BehaviorCommandHook;
-import org.dbflute.bhv.proposal.callback.TraceableSqlAdditionalInfoProvider;
+import org.dbflute.bhv.proposal.callback.ExecutedSqlCounter;
 import org.dbflute.hook.AccessContext;
 import org.dbflute.hook.AccessContext.AccessModuleProvider;
 import org.dbflute.hook.AccessContext.AccessProcessProvider;
@@ -45,6 +45,7 @@ import org.dbflute.hook.SqlFireHook;
 import org.dbflute.hook.SqlLogHandler;
 import org.dbflute.hook.SqlResultHandler;
 import org.dbflute.hook.SqlStringFilter;
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.DfTraceViewUtil;
 import org.dbflute.util.DfTypeUtil;
@@ -75,18 +76,18 @@ public class SimpleAsyncManager implements AsyncManager {
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(SimpleAsyncManager.class);
     protected static final String LF = "\n";
-    protected static final String IND = "  ";
+    protected static final String EX_IND = "  "; // indent for exception message
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The translator of exception. (NotNull: after initialization) */
     @Resource
-    protected ExceptionTranslator exceptionTranslator;
+    private ExceptionTranslator exceptionTranslator;
 
     /** The default option of asynchronous process. (NotNull: after initialization) */
     protected ConcurrentAsyncOption defaultConcurrentAsyncOption;
@@ -252,38 +253,86 @@ public class SimpleAsyncManager implements AsyncManager {
     // ===================================================================================
     //                                                                     Create Runnable
     //                                                                     ===============
-    protected Runnable createRunnable(final ConcurrentAsyncCall call, final String keyword) {
+    protected Runnable createRunnable(ConcurrentAsyncCall call, String keyword) {
         final Map<String, Object> threadCacheMap = inheritThreadCacheContext(call);
         final AccessContext accessContext = inheritAccessContext(call);
         final CallbackContext callbackContext = inheritCallbackContext(call);
         final Map<String, Object> variousContextMap = findCallerVariousContextMap();
         return () -> {
-            final long before = showRunning(keyword);
             prepareThreadCacheContext(call, threadCacheMap);
-            prepareAccessContext(call, accessContext);
+            preparePreparedAccessContext(call, accessContext);
             prepareCallbackContext(call, callbackContext);
             final Object variousPreparedObj = prepareVariousContext(call, variousContextMap);
+            final long before = showRunning(keyword);
             try {
                 call.callback();
             } catch (RuntimeException e) {
                 handleAsyncCallbackException(call, before, e);
             } finally {
+                showFinishing(keyword, before); // should be before clearing because of using them
                 clearVariousContext(call, variousContextMap, variousPreparedObj);
-                clearAccessContext(call);
                 clearCallbackContext(call);
+                clearPreparedAccessContext(call);
                 clearThreadCacheContext(call);
-                showFinishing(keyword, before);
             }
         };
     }
 
-    // -----------------------------------------------------
-    //                                       Caller Resource
-    //                                       ---------------
+    // ===================================================================================
+    //                                                                           Show Call
+    //                                                                           =========
+    protected long showRunning(String keyword) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("#flow #async ...Running asynchronous call as {}", keyword);
+        }
+        return System.currentTimeMillis();
+    }
+
+    protected void showFinishing(String keyword, long before) {
+        if (logger.isDebugEnabled()) {
+            final long after = System.currentTimeMillis();
+            final StringBuilder sb = new StringBuilder();
+            sb.append("#flow #async ...Finishing asynchronous call as ").append(keyword).append(":");
+            sb.append(LF).append("[Asynchronous Result]");
+            sb.append(LF).append(" performanceView: ").append(toPerformanceView(before, after));
+            extractSqlCount().ifPresent(counter -> {
+                sb.append(LF).append(" sqlCount: ").append(counter.toLineDisp());
+            });
+            extractMailCount().ifPresent(counter -> {
+                sb.append(LF).append(" mailCount: ").append(counter);
+            });
+            logger.debug(sb.toString());
+        }
+    }
+
+    protected String toPerformanceView(long before, long after) {
+        return DfTraceViewUtil.convertToPerformanceView(after - before);
+    }
+
+    // ===================================================================================
+    //                                                                        Thread Cache
+    //                                                                        ============
     protected Map<String, Object> inheritThreadCacheContext(ConcurrentAsyncCall call) {
         return new HashMap<String, Object>(ThreadCacheContext.getReadOnlyCacheMap());
     }
 
+    protected void prepareThreadCacheContext(ConcurrentAsyncCall call, Map<String, Object> threadCacheMap) {
+        ThreadCacheContext.initialize();
+        threadCacheMap.forEach((key, value) -> {
+            if (value instanceof ThreadCompleted) { // cannot be inherited
+                return;
+            }
+            ThreadCacheContext.setObject(key, value);
+        });
+    }
+
+    protected void clearThreadCacheContext(ConcurrentAsyncCall call) {
+        ThreadCacheContext.clear();
+    }
+
+    // ===================================================================================
+    //                                                                       AccessContext
+    //                                                                       =============
     protected AccessContext inheritAccessContext(ConcurrentAsyncCall call) {
         final AccessContext src = PreparedAccessContext.getAccessContextOnThread(); // null allowed
         if (src == null) {
@@ -338,6 +387,19 @@ public class SimpleAsyncManager implements AsyncManager {
         return new AccessContext();
     }
 
+    protected void preparePreparedAccessContext(ConcurrentAsyncCall call, AccessContext accessContext) {
+        if (accessContext != null) {
+            PreparedAccessContext.setAccessContextOnThread(accessContext);
+        }
+    }
+
+    protected void clearPreparedAccessContext(ConcurrentAsyncCall call) {
+        PreparedAccessContext.clearAccessContextOnThread();
+    }
+
+    // ===================================================================================
+    //                                                                     CallbackContext
+    //                                                                     ===============
     protected CallbackContext inheritCallbackContext(ConcurrentAsyncCall call) {
         final CallbackContext src = CallbackContext.getCallbackContextOnThread(); // null allowed
         if (src == null) {
@@ -416,45 +478,11 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     protected SqlStringFilter newDefaultSqlStringFilter(ConcurrentAsyncCall call, final Method actionMethod, final String additionalInfo) {
-        return new RomanticTraceableSqlStringFilter(actionMethod, new TraceableSqlAdditionalInfoProvider() {
-            public String provide() {
-                return additionalInfo;
-            }
-        });
+        return new RomanticTraceableSqlStringFilter(actionMethod, () -> additionalInfo);
     }
 
     protected SqlResultHandler createDefaultSqlResultHandler(ConcurrentAsyncCall call) {
         return new RomanticTraceableSqlResultHandler();
-    }
-
-    protected Map<String, Object> findCallerVariousContextMap() { // for extension
-        return null;
-    }
-
-    // ===================================================================================
-    //                                                                Asynchronous Process
-    //                                                                ====================
-    protected long showRunning(String keyword) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("#flow #async ...Running asynchronous call as " + keyword);
-        }
-        return System.currentTimeMillis();
-    }
-
-    protected void prepareThreadCacheContext(ConcurrentAsyncCall call, Map<String, Object> threadCacheMap) {
-        ThreadCacheContext.initialize();
-        threadCacheMap.forEach((key, value) -> {
-            if (value instanceof ThreadCompleted) { // cannot be inherited
-                return;
-            }
-            ThreadCacheContext.setObject(key, value);
-        });
-    }
-
-    protected void prepareAccessContext(ConcurrentAsyncCall call, AccessContext accessContext) {
-        if (accessContext != null) {
-            PreparedAccessContext.setAccessContextOnThread(accessContext);
-        }
     }
 
     protected void prepareCallbackContext(ConcurrentAsyncCall call, CallbackContext callbackContext) {
@@ -463,26 +491,30 @@ public class SimpleAsyncManager implements AsyncManager {
         }
     }
 
+    protected void clearCallbackContext(ConcurrentAsyncCall call) {
+        CallbackContext.clearCallbackContextOnThread();
+    }
+
+    // ===================================================================================
+    //                                                                      VariousContext
+    //                                                                      ==============
+    protected Map<String, Object> findCallerVariousContextMap() { // for extension
+        return null;
+    }
+
     protected Object prepareVariousContext(ConcurrentAsyncCall call, Map<String, Object> variousContextMap) { // for extension
         return null;
     }
 
-    // -----------------------------------------------------
-    //                                             Exception
-    //                                             ---------
+    protected void clearVariousContext(ConcurrentAsyncCall call, Map<String, Object> callerVariousContextMap, Object variousPreparedObj) { // for extension
+    }
+
+    // ===================================================================================
+    //                                                                  Exception Handling
+    //                                                                  ==================
     protected void handleAsyncCallbackException(ConcurrentAsyncCall call, long before, Throwable cause) {
-        Throwable handled = null;
-        if (cause instanceof RuntimeException) {
-            try {
-                exceptionTranslator.translateException((RuntimeException) cause);
-            } catch (RuntimeException e) {
-                handled = e;
-            }
-        }
-        if (handled == null) {
-            handled = cause;
-        }
         // not use second argument here, same reason as logging filter
+        final Throwable handled = exceptionTranslator.filterCause(cause);
         logger.error(buildAsyncCallbackExceptionMessage(call, before, handled));
     }
 
@@ -491,7 +523,7 @@ public class SimpleAsyncManager implements AsyncManager {
         final Method entryMethod = ThreadCacheContext.findEntryMethod(); // might be null just in case
         final Object userBean = ThreadCacheContext.findUserBean(); // null allowed when e.g. batch
         final StringBuilder sb = new StringBuilder();
-        sb.append("Failed to callback the asynchronous process.");
+        sb.append("Failed to callback the asynchronous process: #flow #async");
         sb.append(LF);
         sb.append("/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =: ");
         if (requestPath != null) {
@@ -503,12 +535,13 @@ public class SimpleAsyncManager implements AsyncManager {
                 sb.append(call.getClass().getName());
             }
         }
-        sb.append(LF).append(IND);
+        sb.append(LF).append(EX_IND);
         sb.append("callbackInterface=").append(call);
         setupExceptionMessageRequestInfo(sb, requestPath, entryMethod, userBean);
         setupExceptionMessageAccessContext(sb);
         setupExceptionMessageCallbackContext(sb);
-        setupExceptionMessageVariousContext(call, cause, sb);
+        setupExceptionMessageVariousContext(sb, call, cause);
+        setupExceptionMessageSqlCountIfExists(sb);
         setupExceptionMessageTransactionMemoriesIfExists(sb);
         setupExceptionMessageMailCountIfExists(sb);
         final long after = System.currentTimeMillis();
@@ -521,39 +554,41 @@ public class SimpleAsyncManager implements AsyncManager {
 
     protected void setupExceptionMessageRequestInfo(StringBuilder sb, String requestPath, Method entryMethod, Object userBean) {
         if (requestPath != null) {
-            sb.append(LF).append(IND);
-            sb.append("; requestPath=").append(requestPath);
+            sb.append(LF).append(EX_IND).append("; requestPath=").append(requestPath);
         }
         if (entryMethod != null) {
-            sb.append(LF).append(IND);
             final Class<?> declaringClass = entryMethod.getDeclaringClass();
-            sb.append("; entryMethod=").append(declaringClass.getName()).append("@").append(entryMethod.getName()).append("()");
+            sb.append(LF).append(EX_IND).append("; entryMethod=");
+            sb.append(declaringClass.getName()).append("@").append(entryMethod.getName()).append("()");
         }
         if (userBean != null) {
-            sb.append(LF).append(IND);
-            sb.append("; userBean=").append(userBean);
+            sb.append(LF).append(EX_IND).append("; userBean=").append(userBean);
         }
     }
 
     protected void setupExceptionMessageAccessContext(StringBuilder sb) {
-        sb.append(LF).append(IND);
-        final AccessContext accessContext = PreparedAccessContext.getAccessContextOnThread();
-        sb.append("; accessContext=").append(accessContext);
+        sb.append(LF).append(EX_IND).append("; accessContext=").append(PreparedAccessContext.getAccessContextOnThread());
     }
 
     protected void setupExceptionMessageCallbackContext(StringBuilder sb) {
-        sb.append(LF).append(IND);
-        final CallbackContext callbackContext = CallbackContext.getCallbackContextOnThread();
-        sb.append("; callbackContext=").append(callbackContext);
+        sb.append(LF).append(EX_IND).append("; callbackContext=").append(CallbackContext.getCallbackContextOnThread());
     }
 
-    protected void setupExceptionMessageVariousContext(ConcurrentAsyncCall call, Throwable cause, final StringBuilder sb) {
+    protected void setupExceptionMessageVariousContext(StringBuilder sb, ConcurrentAsyncCall call, Throwable cause) {
         final StringBuilder variousContextSb = new StringBuilder();
-        buildVariousContextInAsyncCallbackExceptionMessage(call, cause, variousContextSb);
+        buildVariousContextInAsyncCallbackExceptionMessage(variousContextSb, call, cause);
         if (variousContextSb.length() > 0) {
-            sb.append(LF).append(IND);
-            sb.append(variousContextSb.toString());
+            sb.append(LF).append(EX_IND).append(variousContextSb.toString());
         }
+    }
+
+    protected void buildVariousContextInAsyncCallbackExceptionMessage(StringBuilder sb, ConcurrentAsyncCall call, Throwable cause) {
+    }
+
+    protected void setupExceptionMessageSqlCountIfExists(StringBuilder sb) {
+        extractSqlCount().ifPresent(counter -> {
+            sb.append(LF).append(EX_IND).append("; sqlCount=").append(counter);
+        });
     }
 
     protected void setupExceptionMessageTransactionMemoriesIfExists(StringBuilder sb) {
@@ -575,9 +610,9 @@ public class SimpleAsyncManager implements AsyncManager {
             for (TransactionMemoriesProvider provider : providerList) {
                 provider.provide().ifPresent(result -> {
                     if (txSb.length() == 0) {
-                        txSb.append(LF).append(IND).append("; transactionMemories=wholeShow:");
+                        txSb.append(LF).append(EX_IND).append("; transactionMemories=wholeShow:");
                     }
-                    txSb.append(Srl.indent(IND.length(), LF + "*" + result));
+                    txSb.append(Srl.indent(EX_IND.length(), LF + "*" + result));
                 });
             }
             sb.append(txSb);
@@ -585,14 +620,9 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     protected void setupExceptionMessageMailCountIfExists(StringBuilder sb) {
-        final PostedMailCounter mailCounter = ThreadCacheContext.findMailCounter();
-        if (mailCounter != null) {
-            sb.append(LF).append(IND);
-            sb.append("; mailCount=").append(mailCounter);
-        }
-    }
-
-    protected void buildVariousContextInAsyncCallbackExceptionMessage(ConcurrentAsyncCall call, Throwable cause, StringBuilder sb) {
+        extractMailCount().ifPresent(counter -> {
+            sb.append(LF).append(EX_IND).append("; mailCount=").append(counter);
+        });
     }
 
     protected void buildExceptionStackTrace(Throwable cause, StringBuilder sb) { // similar to logging filter
@@ -616,30 +646,28 @@ public class SimpleAsyncManager implements AsyncManager {
         }
     }
 
-    // -----------------------------------------------------
-    //                                             Finishing
-    //                                             ---------
-    protected void clearVariousContext(ConcurrentAsyncCall call, Map<String, Object> callerVariousContextMap, Object variousPreparedObj) { // for extension
-    }
-
-    protected void clearCallbackContext(ConcurrentAsyncCall call) {
-        CallbackContext.clearCallbackContextOnThread();
-    }
-
-    protected void clearAccessContext(ConcurrentAsyncCall call) {
-        PreparedAccessContext.clearAccessContextOnThread();
-    }
-
-    protected void clearThreadCacheContext(ConcurrentAsyncCall call) {
-        ThreadCacheContext.clear();
-    }
-
-    protected void showFinishing(String keyword, long before) {
-        if (logger.isDebugEnabled()) {
-            final long after = System.currentTimeMillis();
-            final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
-            logger.debug("#flow #async ...Finishing asynchronous call as " + keyword + ": " + performanceView);
+    // ===================================================================================
+    //                                                                           SQL Count
+    //                                                                           =========
+    protected OptionalThing<ExecutedSqlCounter> extractSqlCount() {
+        final CallbackContext context = CallbackContext.getCallbackContextOnThread();
+        if (context == null) {
+            return OptionalThing.empty();
         }
+        final SqlStringFilter filter = context.getSqlStringFilter();
+        if (filter == null || !(filter instanceof ExecutedSqlCounter)) {
+            return OptionalThing.empty();
+        }
+        return OptionalThing.of(((ExecutedSqlCounter) filter));
+    }
+
+    // ===================================================================================
+    //                                                                          Mail Count
+    //                                                                          ==========
+    protected OptionalThing<PostedMailCounter> extractMailCount() {
+        return OptionalThing.ofNullable(ThreadCacheContext.findMailCounter(), () -> {
+            throw new IllegalStateException("Not found the mail count in the thread cache.");
+        });
     }
 
     // ===================================================================================
