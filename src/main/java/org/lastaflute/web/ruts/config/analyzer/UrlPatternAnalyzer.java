@@ -305,7 +305,7 @@ public class UrlPatternAnalyzer {
     //                                                                           to Regexp
     //                                                                           =========
     public UrlPatternRegexpBox toRegexp(Method executeMethod, String urlPattern, List<Class<?>> urlParamTypeList,
-            Map<Integer, Class<?>> optionalGenericTypeList) {
+            Map<Integer, Class<?>> optionalGenericTypeMap) {
         final StringBuilder sb = new StringBuilder(32);
         final char[] chars = urlPattern.toCharArray();
         final int length = chars.length;
@@ -319,7 +319,7 @@ public class UrlPatternAnalyzer {
             } else if (currentChar == '}') { // end brace
                 assertBeginBraceExists(executeMethod, urlPattern, index, i);
                 ++parameterIndex;
-                setupParameterPattern(sb, urlParamTypeList, optionalGenericTypeList, parameterIndex);
+                setupParameterPattern(sb, urlParamTypeList, optionalGenericTypeMap, parameterIndex);
                 final String elementName = urlPattern.substring(index + 1, i);
                 assertNoNameParameter(executeMethod, urlPattern, elementName);
                 if (varList == null) {
@@ -335,16 +335,16 @@ public class UrlPatternAnalyzer {
         return new UrlPatternRegexpBox(buildRegexpPattern(sb.toString()), varList);
     }
 
-    protected void setupParameterPattern(StringBuilder sb, List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeList,
+    protected void setupParameterPattern(StringBuilder sb, List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap,
             int parameterIndex) {
-        if (isNumberTypePattern(urlParamTypeList, optionalGenericTypeList, parameterIndex)) {
+        if (needsNumberTypePattern(urlParamTypeList, optionalGenericTypeMap, parameterIndex)) {
             sb.append(ELEMENT_NUMBER_PATTERN); // to enable mapping index(Integer) and sea()
         } else {
             sb.append(ELEMENT_BASIC_PATTERN);
         }
     }
 
-    protected boolean isNumberTypePattern(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeList,
+    protected boolean needsNumberTypePattern(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap,
             int parameterIndex) {
         if (urlParamTypeList.size() <= parameterIndex) {
             return false; // different count of parameters will be checked later so only avoid out-of-index here
@@ -353,7 +353,7 @@ public class UrlPatternAnalyzer {
         if (Number.class.isAssignableFrom(parameterType)) {
             return true;
         }
-        final Class<?> genericType = optionalGenericTypeList.get(parameterIndex);
+        final Class<?> genericType = optionalGenericTypeMap.get(parameterIndex);
         return genericType != null && Number.class.isAssignableFrom(genericType);
     }
 

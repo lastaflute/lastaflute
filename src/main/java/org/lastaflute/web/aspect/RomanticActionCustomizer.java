@@ -35,6 +35,7 @@ import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.config.ExecuteOption;
+import org.lastaflute.web.ruts.config.UrlParamArgs;
 import org.lastaflute.web.util.LaModuleConfigUtil;
 
 /**
@@ -195,9 +196,11 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         final Map<String, ActionExecute> executeMap = actionMapping.getExecuteMap();
         final ActionExecute index = executeMap.get("index");
         if (index != null && index.getUrlParamArgs().isPresent()) {
-            final List<Class<?>> urlParamTypeList = index.getUrlParamArgs().get().getUrlParamTypeList();
+            final UrlParamArgs urlParamArgs = index.getUrlParamArgs().get();
+            final List<Class<?>> urlParamTypeList = urlParamArgs.getUrlParamTypeList();
             if (!urlParamTypeList.isEmpty()) { // basically true but just in case
-                if (!Number.class.isAssignableFrom(urlParamTypeList.get(0))) { // because of Number has original pattern
+                final Map<Integer, Class<?>> optionalGenericTypeMap = urlParamArgs.getOptionalGenericTypeMap();
+                if (!isNumberTypeFirstArg(urlParamTypeList, optionalGenericTypeMap)) { // because of Number has original pattern
                     for (Entry<String, ActionExecute> entry : executeMap.entrySet()) {
                         final ActionExecute execute = entry.getValue();
                         if (!execute.isIndexMethod() && execute.getUrlParamArgs().isPresent()) {
@@ -207,6 +210,15 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
                 }
             }
         }
+    }
+
+    protected boolean isNumberTypeFirstArg(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap) {
+        final Class<?> parameterType = urlParamTypeList.get(0);
+        if (Number.class.isAssignableFrom(parameterType)) {
+            return true;
+        }
+        final Class<?> genericType = optionalGenericTypeMap.get(0);
+        return genericType != null && Number.class.isAssignableFrom(genericType);
     }
 
     protected void throwUrlParameterCannotUseBothIndexNamedException(final ActionExecute index, final ActionExecute execute) {
