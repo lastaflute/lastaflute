@@ -34,12 +34,12 @@ import org.lastaflute.core.direction.CurtainFinallyHook;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.message.MessageResourcesHolder;
+import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ExternalContext;
 import org.lastaflute.di.core.LaContainer;
 import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
 import org.lastaflute.di.core.smart.hot.HotdeployLock;
-import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.container.WebLastaContainerDestroyer;
 import org.lastaflute.web.container.WebLastaContainerInitializer;
@@ -235,7 +235,7 @@ public class LastaPrepareFilter implements Filter {
     //                                ----------------------
     protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        if (!HotdeployUtil.isHotdeploy()) { // e.g. production, unit-test
+        if (!ManagedHotdeploy.isHotdeploy()) { // e.g. production, unit-test
             toNextFilter(request, response, chain); // #to_action
             return;
         }
@@ -247,7 +247,7 @@ public class LastaPrepareFilter implements Filter {
             return;
         }
         synchronized (HotdeployLock.class) {
-            HotdeployUtil.start();
+            ManagedHotdeploy.start();
             try {
                 final HotdeployHttpServletRequest hotdeployRequest = newHotdeployHttpServletRequest(request);
                 ContainerUtil.overrideExternalRequest(hotdeployRequest); // override formal request
@@ -262,7 +262,7 @@ public class LastaPrepareFilter implements Filter {
                     request.removeAttribute(loaderKey);
                 }
             } finally {
-                HotdeployUtil.stop();
+                ManagedHotdeploy.stop();
             }
         }
     }

@@ -27,12 +27,12 @@ import java.util.stream.Stream;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
 import org.lastaflute.db.jta.romanticist.TransactionMemoriesProvider;
 import org.lastaflute.db.jta.stage.BegunTx;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
-import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.exception.ActionHookReturnNullException;
 import org.lastaflute.web.exception.ActionWrappedCheckedException;
 import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
@@ -587,7 +587,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                       Adviced Error
     //                                                                       =============
     protected void translateToAdvicedErrorIfPossible(Error e) { // to notice reboot timing
-        if (!HotdeployUtil.isHotdeploy()) {
+        if (!ManagedHotdeploy.isHotdeploy()) {
             return;
         }
         final String msg = e.getMessage();

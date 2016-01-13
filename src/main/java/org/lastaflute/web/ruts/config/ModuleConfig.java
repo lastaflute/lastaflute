@@ -23,10 +23,10 @@ import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.di.Disposable;
 import org.lastaflute.di.DisposableUtil;
 import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
-import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -71,7 +71,7 @@ public class ModuleConfig implements Disposable, Serializable {
         if (mapping != null) {
             return OptionalThing.of(mapping);
         }
-        if (HotdeployUtil.isHotdeploy()) {
+        if (ManagedHotdeploy.isHotdeploy()) {
             prepareActionComponent(actionName); // lazy load, put to the map
         }
         return OptionalThing.ofNullable(actionMappingMap.get(actionName), () -> {

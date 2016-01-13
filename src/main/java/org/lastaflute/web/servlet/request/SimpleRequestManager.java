@@ -38,13 +38,13 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.core.exception.ComponentNotFoundException;
 import org.lastaflute.di.core.exception.TooManyRegistrationComponentException;
 import org.lastaflute.di.core.smart.hot.HotdeployLock;
-import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.direction.FwWebDirection;
@@ -500,14 +500,14 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected OptionalThing<LoginManager> handleLoginManagerNotFound(Class<?> userBeanType) {
-        if (!HotdeployUtil.isHotdeploy()) { // e.g. production, unit-test
+        if (!ManagedHotdeploy.isHotdeploy()) { // e.g. production, unit-test
             return OptionalThing.empty();
         }
         // local development only here
         synchronized (HotdeployLock.class) {
             // login assist (concrete class of login manager) may not initialized yet by HotDeploy
             // so find the class forcedly (local development only so tricky allowed)
-            HotdeployUtil.start(); // for login assist (under smart deploy)
+            ManagedHotdeploy.start(); // for login assist (under smart deploy)
             try {
                 // support only-one login #for_now, want to find other pattern login assist classes
                 final String directorName = assistantDirector.getClass().getSimpleName();
@@ -529,7 +529,7 @@ public class SimpleRequestManager implements RequestManager {
                     logger.debug("*Not found the concrete class of login manager: {} for {}", componentName, userBeanType);
                 }
             } finally {
-                HotdeployUtil.stop();
+                ManagedHotdeploy.stop();
             }
         }
         return OptionalThing.ofNullable(null, () -> {
