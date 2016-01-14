@@ -47,6 +47,7 @@ import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.message.MessageResources;
 import org.lastaflute.web.ruts.message.RutsMessageResourceGateway;
 import org.lastaflute.web.ruts.message.objective.ObjectiveMessageResources;
+import org.lastaflute.web.servlet.filter.bowgun.BowgunCurtainBefore;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpServletRequest;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpSession;
 import org.slf4j.Logger;
@@ -109,7 +110,7 @@ public class LastaPrepareFilter implements Filter {
         try {
             hookCurtainBefore(assistantDirector);
         } catch (RuntimeException e) {
-            logger.error("Failed to callback process.", e);
+            logger.error("Failed to hook process.", e);
             throw e;
         }
     }
@@ -187,6 +188,7 @@ public class LastaPrepareFilter implements Filter {
         if (hook != null) {
             hook.hook(assistantDirector);
         }
+        BowgunCurtainBefore.handleBowgunCurtainBefore(assistantDirector);
     }
 
     // ===================================================================================
