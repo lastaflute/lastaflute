@@ -31,6 +31,7 @@ public class BowgunCurtainBefore {
     //                                                                          Definition
     //                                                                          ==========
     protected static List<CurtainBeforeHook> bowgunCurtainBeforeList;
+    protected static boolean locked = true;
 
     public static synchronized void handleBowgunCurtainBefore(FwAssistantDirector assistantDirector) {
         if (bowgunCurtainBeforeList != null) {
@@ -43,9 +44,40 @@ public class BowgunCurtainBefore {
             throw new IllegalArgumentException("The argument 'oneArgLambda' should not be null.");
         }
         // basically for framework, so no info logging here
+        assertUnlocked();
         if (bowgunCurtainBeforeList == null) {
             bowgunCurtainBeforeList = new ArrayList<CurtainBeforeHook>();
         }
         bowgunCurtainBeforeList.add(oneArgLambda);
+        lock(); // auto-lock here, because of deep world
+    }
+
+    // ===================================================================================
+    //                                                                         Config Lock
+    //                                                                         ===========
+    // also no info logging here
+    public static boolean isLocked() {
+        return locked;
+    }
+
+    public static void lock() {
+        if (locked) {
+            return;
+        }
+        locked = true;
+    }
+
+    public static void unlock() {
+        if (!locked) {
+            return;
+        }
+        locked = false;
+    }
+
+    protected static void assertUnlocked() {
+        if (!isLocked()) {
+            return;
+        }
+        throw new IllegalStateException("The bowgun curtain before is locked.");
     }
 }

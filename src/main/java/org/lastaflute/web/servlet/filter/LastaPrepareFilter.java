@@ -93,26 +93,27 @@ public class LastaPrepareFilter implements Filter {
         try {
             initializeContainer(servletContext);
         } catch (Throwable e) {
-            String msg = "Failed to initialize Lasta Di.";
-            logger.error(msg, e);
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            }
-            throw new IllegalStateException(msg, e);
+            handleErrorCause("Failed to initialize Lasta Di.", e);
         }
         try {
             adjustComponent(servletContext);
-        } catch (RuntimeException e) {
-            logger.error("Failed to adjust components.", e);
-            throw e;
+        } catch (Throwable e) {
+            handleErrorCause("Failed to adjust components.", e);
         }
         final FwAssistantDirector assistantDirector = getAssistantDirector();
         try {
             hookCurtainBefore(assistantDirector);
-        } catch (RuntimeException e) {
-            logger.error("Failed to hook process.", e);
-            throw e;
+        } catch (Throwable e) {
+            handleErrorCause("Failed to hook process.", e);
         }
+    }
+
+    protected void handleErrorCause(String msg, Throwable cause) {
+        logger.error(msg, cause);
+        if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
+        }
+        throw new IllegalStateException(msg, cause);
     }
 
     // -----------------------------------------------------
