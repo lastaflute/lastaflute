@@ -135,11 +135,11 @@ public class SimpleSessionManager implements SessionManager {
                 br.addItem("Attribute Key");
                 br.addElement(key);
                 br.addItem("Specified Type");
-                br.addElement(attributeType);
+                br.addElement(attributeType + "@" + Integer.toHexString(attributeType.hashCode()));
                 br.addElement("loader: " + attributeType.getClassLoader());
                 br.addItem("Existing Attribute");
                 final Class<? extends Object> originType = original.getClass();
-                br.addElement(originType);
+                br.addElement(originType + "@" + Integer.toHexString(originType.hashCode()));
                 br.addElement("loader: " + originType.getClassLoader());
                 br.addElement("toString(): " + original.toString());
                 br.addItem("Attribute List");
