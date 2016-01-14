@@ -250,7 +250,7 @@ public class LastaPrepareFilter implements Filter {
             return;
         }
         synchronized (HotdeployLock.class) {
-            ManagedHotdeploy.start();
+            final ClassLoader originalLoader = ManagedHotdeploy.start();
             try {
                 final HotdeployHttpServletRequest hotdeployRequest = newHotdeployHttpServletRequest(request);
                 ContainerUtil.overrideExternalRequest(hotdeployRequest); // override formal request
@@ -265,7 +265,7 @@ public class LastaPrepareFilter implements Filter {
                     request.removeAttribute(loaderKey);
                 }
             } finally {
-                ManagedHotdeploy.stop();
+                ManagedHotdeploy.stop(originalLoader);
             }
         }
     }

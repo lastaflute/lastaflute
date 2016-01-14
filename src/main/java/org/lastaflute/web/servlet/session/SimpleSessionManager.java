@@ -136,13 +136,16 @@ public class SimpleSessionManager implements SessionManager {
                 br.addElement(key);
                 br.addItem("Specified Type");
                 br.addElement(attributeType);
+                br.addElement("loader: " + attributeType.getClassLoader());
                 br.addItem("Existing Attribute");
-                br.addElement(original.getClass());
-                br.addElement(original);
+                final Class<? extends Object> originType = original.getClass();
+                br.addElement(originType);
+                br.addElement("loader: " + originType.getClassLoader());
+                br.addElement("toString(): " + original.toString());
                 br.addItem("Attribute List");
                 br.addElement(getAttributeNameList());
                 final String msg = br.buildExceptionMessage();
-                throw new SessionAttributeCannotCastException(msg);
+                throw new SessionAttributeCannotCastException(msg, e);
             }
             reflectAttributeToSharedStorage(key, attribute);
         } else {

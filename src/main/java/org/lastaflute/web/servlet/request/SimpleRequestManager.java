@@ -507,7 +507,7 @@ public class SimpleRequestManager implements RequestManager {
         synchronized (HotdeployLock.class) {
             // login assist (concrete class of login manager) may not initialized yet by HotDeploy
             // so find the class forcedly (local development only so tricky allowed)
-            ManagedHotdeploy.start(); // for login assist (under smart deploy)
+            final ClassLoader originalLoader = ManagedHotdeploy.start(); // for login assist (under smart deploy)
             try {
                 // support only-one login #for_now, want to find other pattern login assist classes
                 final String directorName = assistantDirector.getClass().getSimpleName();
@@ -529,7 +529,7 @@ public class SimpleRequestManager implements RequestManager {
                     logger.debug("*Not found the concrete class of login manager: {} for {}", componentName, userBeanType);
                 }
             } finally {
-                ManagedHotdeploy.stop();
+                ManagedHotdeploy.stop(originalLoader);
             }
         }
         return OptionalThing.ofNullable(null, () -> {

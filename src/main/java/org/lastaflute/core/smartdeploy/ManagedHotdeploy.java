@@ -16,8 +16,6 @@
 package org.lastaflute.core.smartdeploy;
 
 import org.lastaflute.di.core.smart.hot.HotdeployUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
@@ -26,14 +24,20 @@ import org.slf4j.LoggerFactory;
 public abstract class ManagedHotdeploy {
 
     // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(ManagedHotdeploy.class);
-
-    // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     protected static volatile int hotdeployCount;
+
+    // ===================================================================================
+    //                                                                  HotDeploy Resource
+    //                                                                  ==================
+    public static ClassLoader getLaContainerClassLoader() {
+        return HotdeployUtil.getLaContainerClassLoader();
+    }
+
+    public static ClassLoader getThreadContextClassLoader() {
+        return HotdeployUtil.getThreadContextClassLoader();
+    }
 
     // ===================================================================================
     //                                                                       Determination
@@ -42,27 +46,50 @@ public abstract class ManagedHotdeploy {
         return HotdeployUtil.isHotdeploy();
     }
 
-    public static boolean isAlreadyHotdeploy() {
-        return HotdeployUtil.isAlreadyHotdeploy();
+    public static boolean isLaContainerHotdeploy() {
+        return HotdeployUtil.isLaContainerHotdeploy();
+    }
+
+    public static boolean isThreadContextHotdeploy() {
+        return HotdeployUtil.isThreadContextHotdeploy();
     }
 
     // ===================================================================================
     //                                                                          Start/Stop
     //                                                                          ==========
-    public static synchronized void start() {
+    public static synchronized ClassLoader start() {
         if (isHotdeploy()) {
-            HotdeployUtil.start();
+            final ClassLoader originalLoader = getThreadContextClassLoader();
+            if (isAnotherThreadHotdeploy()) { // e.g. job started
+                inheritAnotherThreadClassLoader(); // to use same loader
+            } else { // normally here
+                if (!isThreadContextHotdeploy()) {
+                    HotdeployUtil.start();
+                }
+            }
             ++hotdeployCount;
+            return originalLoader;
+        } else {
+            return null;
         }
     }
 
-    public static synchronized void stop() {
+    protected static boolean isAnotherThreadHotdeploy() {
+        return isLaContainerHotdeploy() && !isThreadContextHotdeploy();
+    }
+
+    protected static void inheritAnotherThreadClassLoader() {
+        HotdeployUtil.setThreadContextClassLoader(getLaContainerClassLoader());
+    }
+
+    public static synchronized void stop(ClassLoader originalLoader) {
         if (isHotdeploy()) {
             --hotdeployCount;
-            if (hotdeployCount > 0) { // anyone is hot yet, expects stop() called later
-                logger.debug("...Keeping hot deploy for other hot process: {}", hotdeployCount);
-            } else { // last one
-                HotdeployUtil.stop();
+            if (hotdeployCount <= 0) { // nobody is hot (stop or keep hot), also minus just in case
+                HotdeployUtil.stop(); // with restoring thread class loader
+                hotdeployCount = 0; // if minus
+            } else {
+                HotdeployUtil.setThreadContextClassLoader(originalLoader);
             }
         }
     }
@@ -70,7 +97,14 @@ public abstract class ManagedHotdeploy {
     // ===================================================================================
     //                                                                         Deserialize
     //                                                                         ===========
-    public static Object deserializeInternal(final byte[] bytes) throws Exception {
+    public static Object deserializeInternal(byte[] bytes) throws Exception {
         return HotdeployUtil.deserializeInternal(bytes);
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public static synchronized int getHotdeployCount() {
+        return hotdeployCount;
     }
 }
