@@ -213,7 +213,7 @@ public class ActionRuntime {
             }
         }
         // cannot check perfectly e.g. empty list, map's value, nested property in bean,
-        // but only primary patterns are enough, strict check is provided by UTFlute
+        // but only primary patterns are enough, strict check might be provided by UTFlute
     }
 
     protected void throwDirectlyEntityDisplayDataNotAllowedException(String key, Object value) {
