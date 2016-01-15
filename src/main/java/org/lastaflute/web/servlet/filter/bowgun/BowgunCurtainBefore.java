@@ -28,11 +28,14 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 public class BowgunCurtainBefore {
 
     // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
+    //                                                                           Attribute
+    //                                                                           =========
     protected static List<CurtainBeforeHook> bowgunCurtainBeforeList;
     protected static boolean locked = true;
 
+    // ===================================================================================
+    //                                                                             Bowgun
+    //                                                                            ========
     public static synchronized void handleBowgunCurtainBefore(FwAssistantDirector assistantDirector) {
         if (bowgunCurtainBeforeList != null) {
             bowgunCurtainBeforeList.forEach(bowgun -> bowgun.hook(assistantDirector));
@@ -53,8 +56,8 @@ public class BowgunCurtainBefore {
     }
 
     // ===================================================================================
-    //                                                                         Config Lock
-    //                                                                         ===========
+    //                                                                               Lock
+    //                                                                              ======
     // also no info logging here
     public static boolean isLocked() {
         return locked;
@@ -78,6 +81,6 @@ public class BowgunCurtainBefore {
         if (!isLocked()) {
             return;
         }
-        throw new IllegalStateException("The bowgun curtain before is locked.");
+        throw new IllegalStateException("The curtain-before bowgun is locked.");
     }
 }
