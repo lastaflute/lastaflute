@@ -9,22 +9,27 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.cookie;
+package org.lastaflute.core.smartdeploy.exception;
 
-import org.lastaflute.core.security.InvertibleCryptographer;
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
+ * @since 0.7.8 (2016/01/10 Sunday)
  */
-public interface CookieResourceProvider {
+public class JobWebReferenceException extends LaSystemException {
 
-    String provideDefaultPath(); // not null
+    private static final long serialVersionUID = 1L;
 
-    Integer provideDefaultExpire(); // not null
+    public JobWebReferenceException(String msg) {
+        super(msg);
+    }
 
-    InvertibleCryptographer provideCipher(); // not null
+    public JobWebReferenceException(String msg, Throwable e) {
+        super(msg, e);
+    }
 }

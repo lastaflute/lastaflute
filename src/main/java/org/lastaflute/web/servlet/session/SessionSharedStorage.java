@@ -13,18 +13,15 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.cookie;
+package org.lastaflute.web.servlet.session;
 
-import org.lastaflute.core.security.InvertibleCryptographer;
+import org.lastaflute.web.servlet.request.scoped.ScopedAttributeHolder;
 
 /**
  * @author jflute
+ * @since 0.7.8 (2016/01/10 Sunday)
  */
-public interface CookieResourceProvider {
+public interface SessionSharedStorage extends ScopedAttributeHolder {
 
-    String provideDefaultPath(); // not null
-
-    Integer provideDefaultExpire(); // not null
-
-    InvertibleCryptographer provideCipher(); // not null
+    void invalidate();
 }

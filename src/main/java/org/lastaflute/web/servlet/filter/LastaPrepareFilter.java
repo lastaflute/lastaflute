@@ -34,12 +34,12 @@ import org.lastaflute.core.direction.CurtainFinallyHook;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.message.MessageResourcesHolder;
+import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ExternalContext;
 import org.lastaflute.di.core.LaContainer;
 import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
 import org.lastaflute.di.core.smart.hot.HotdeployLock;
-import org.lastaflute.di.core.smart.hot.HotdeployUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.container.WebLastaContainerDestroyer;
 import org.lastaflute.web.container.WebLastaContainerInitializer;
@@ -47,6 +47,7 @@ import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.message.MessageResources;
 import org.lastaflute.web.ruts.message.RutsMessageResourceGateway;
 import org.lastaflute.web.ruts.message.objective.ObjectiveMessageResources;
+import org.lastaflute.web.servlet.filter.bowgun.BowgunCurtainBefore;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpServletRequest;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpSession;
 import org.slf4j.Logger;
@@ -92,26 +93,27 @@ public class LastaPrepareFilter implements Filter {
         try {
             initializeContainer(servletContext);
         } catch (Throwable e) {
-            String msg = "Failed to initialize Lasta Di.";
-            logger.error(msg, e);
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            }
-            throw new IllegalStateException(msg, e);
+            handleErrorCause("Failed to initialize Lasta Di.", e);
         }
         try {
             adjustComponent(servletContext);
-        } catch (RuntimeException e) {
-            logger.error("Failed to adjust components.", e);
-            throw e;
+        } catch (Throwable e) {
+            handleErrorCause("Failed to adjust components.", e);
         }
         final FwAssistantDirector assistantDirector = getAssistantDirector();
         try {
             hookCurtainBefore(assistantDirector);
-        } catch (RuntimeException e) {
-            logger.error("Failed to callback process.", e);
-            throw e;
+        } catch (Throwable e) {
+            handleErrorCause("Failed to hook process.", e);
         }
+    }
+
+    protected void handleErrorCause(String msg, Throwable cause) {
+        logger.error(msg, cause);
+        if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
+        }
+        throw new IllegalStateException(msg, cause);
     }
 
     // -----------------------------------------------------
@@ -187,6 +189,7 @@ public class LastaPrepareFilter implements Filter {
         if (hook != null) {
             hook.hook(assistantDirector);
         }
+        BowgunCurtainBefore.handleBowgunCurtainBefore(assistantDirector);
     }
 
     // ===================================================================================
@@ -235,7 +238,7 @@ public class LastaPrepareFilter implements Filter {
     //                                ----------------------
     protected void viaHotdeploy(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        if (!HotdeployUtil.isHotdeploy()) { // e.g. production, unit-test
+        if (!ManagedHotdeploy.isHotdeploy()) { // e.g. production, unit-test
             toNextFilter(request, response, chain); // #to_action
             return;
         }
@@ -247,7 +250,7 @@ public class LastaPrepareFilter implements Filter {
             return;
         }
         synchronized (HotdeployLock.class) {
-            HotdeployUtil.start();
+            final ClassLoader originalLoader = ManagedHotdeploy.start();
             try {
                 final HotdeployHttpServletRequest hotdeployRequest = newHotdeployHttpServletRequest(request);
                 ContainerUtil.overrideExternalRequest(hotdeployRequest); // override formal request
@@ -262,7 +265,7 @@ public class LastaPrepareFilter implements Filter {
                     request.removeAttribute(loaderKey);
                 }
             } finally {
-                HotdeployUtil.stop();
+                ManagedHotdeploy.stop(originalLoader);
             }
         }
     }

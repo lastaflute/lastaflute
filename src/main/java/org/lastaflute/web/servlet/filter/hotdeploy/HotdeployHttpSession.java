@@ -30,7 +30,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionContext;
 
-import org.lastaflute.di.core.smart.hot.HotdeployUtil;
+import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.di.exception.SessionObjectNotSerializableRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -214,7 +214,7 @@ public class HotdeployHttpSession implements HttpSession {
 
         public Object getDeserializedObject() {
             try {
-                return HotdeployUtil.deserializeInternal(bytes);
+                return ManagedHotdeploy.deserializeInternal(bytes);
             } catch (Exception e) {
                 logger.info("Failed to get deserialized object as HotDeploy: {}" + key, e);
                 return null;

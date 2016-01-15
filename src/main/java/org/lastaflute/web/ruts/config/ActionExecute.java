@@ -65,7 +65,7 @@ public class ActionExecute implements Serializable {
     //                                     Defined Parameter
     //                                     -----------------
     protected final List<Class<?>> urlParamTypeList; // not null, read-only e.g. Integer.class, String.class
-    protected final Map<Integer, Class<?>> optionalGenericTypeList; // not null, read-only, key is argument index
+    protected final Map<Integer, Class<?>> optionalGenericTypeMap; // not null, read-only, key is argument index
     protected final OptionalThing<UrlParamArgs> urlParamArgs;
     protected final OptionalThing<ActionFormMeta> formMeta;
 
@@ -95,7 +95,7 @@ public class ActionExecute implements Serializable {
         final ExecuteArgBox executeArgBox = newExecuteArgBox();
         executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
         this.urlParamTypeList = executeArgBox.getUrlParamTypeList(); // not null, empty allowed
-        this.optionalGenericTypeList = executeArgBox.getOptionalGenericTypeMap();
+        this.optionalGenericTypeMap = executeArgBox.getOptionalGenericTypeMap();
         this.formMeta = analyzeFormMeta(executeMethod, executeArgBox);
 
         // URL pattern (using urlParamTypeList)
@@ -103,12 +103,12 @@ public class ActionExecute implements Serializable {
         final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
         final UrlPatternChosenBox chosenBox = urlPatternAnalyzer.choose(executeMethod, specifiedUrlPattern, this.urlParamTypeList);
         final UrlPatternRegexpBox regexpBox =
-                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getUrlPattern(), this.urlParamTypeList, this.optionalGenericTypeList);
+                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getUrlPattern(), this.urlParamTypeList, this.optionalGenericTypeMap);
         urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), this.urlParamTypeList);
         this.preparedUrlPattern = newPreparedUrlPattern(chosenBox, regexpBox);
 
         // defined parameter again (uses URL pattern result)
-        this.urlParamArgs = prepareUrlParamArgs(this.urlParamTypeList, this.optionalGenericTypeList);
+        this.urlParamArgs = prepareUrlParamArgs(this.urlParamTypeList, this.optionalGenericTypeMap);
 
         // check finally
         checkExecuteMethod(executeArgAnalyzer);
@@ -199,13 +199,13 @@ public class ActionExecute implements Serializable {
     //                               URL Parameter Arguments
     //                               -----------------------
     protected OptionalThing<UrlParamArgs> prepareUrlParamArgs(List<Class<?>> urlParamTypeList,
-            Map<Integer, Class<?>> optionalGenericTypeList) {
-        final UrlParamArgs args = !urlParamTypeList.isEmpty() ? newUrlParamArgs(urlParamTypeList, optionalGenericTypeList) : null;
+            Map<Integer, Class<?>> optionalGenericTypeMap) {
+        final UrlParamArgs args = !urlParamTypeList.isEmpty() ? newUrlParamArgs(urlParamTypeList, optionalGenericTypeMap) : null;
         return OptionalThing.ofNullable(args, () -> throwUrlParamArgsNotFoundException());
     }
 
-    protected UrlParamArgs newUrlParamArgs(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeList) {
-        return new UrlParamArgs(urlParamTypeList, optionalGenericTypeList);
+    protected UrlParamArgs newUrlParamArgs(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap) {
+        return new UrlParamArgs(urlParamTypeList, optionalGenericTypeMap);
     }
 
     protected void throwUrlParamArgsNotFoundException() {

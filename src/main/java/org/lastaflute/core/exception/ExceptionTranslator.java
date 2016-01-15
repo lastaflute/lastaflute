@@ -44,7 +44,7 @@ public class ExceptionTranslator {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The provider of exception translation. (NullAllowed: not required) */
     protected ExceptionTranslationProvider exceptionTranslationProvider;
@@ -68,6 +68,31 @@ public class ExceptionTranslator {
             logger.info("[Exception Translator]");
             logger.info(" exceptionTranslationProvider: " + exceptionTranslationProvider);
         }
+    }
+
+    // ===================================================================================
+    //                                                                        Filter Cause
+    //                                                                        ============
+    /**
+     * @param cause The (might be) translated exception. (NotNull)
+     * @return The filtered cause or specified cause. (NotNull)
+     */
+    public Throwable filterCause(Throwable cause) {
+        if (cause == null) {
+            throw new IllegalArgumentException("The argument 'cause' should not be null.");
+        }
+        Throwable handled = null;
+        if (cause instanceof RuntimeException) {
+            try {
+                translateException((RuntimeException) cause);
+            } catch (RuntimeException e) {
+                handled = e;
+            }
+        }
+        if (handled == null) {
+            handled = cause;
+        }
+        return handled;
     }
 
     // ===================================================================================

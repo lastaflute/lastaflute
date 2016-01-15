@@ -13,18 +13,15 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.cookie;
-
-import org.lastaflute.core.security.InvertibleCryptographer;
+package org.lastaflute.web.servlet.session;
 
 /**
  * @author jflute
  */
-public interface CookieResourceProvider {
+public interface SessionResourceProvider {
 
-    String provideDefaultPath(); // not null
-
-    Integer provideDefaultExpire(); // not null
-
-    InvertibleCryptographer provideCipher(); // not null
+    /**
+     * @return The storage instance for session sharing. (NotNull)
+     */
+    SessionSharedStorage provideSharedStorage();
 }

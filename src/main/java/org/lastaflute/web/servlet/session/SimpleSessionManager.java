@@ -24,12 +24,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.direction.FwAssistantDirector;
+import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.SessionAttributeCannotCastException;
 import org.lastaflute.web.exception.SessionAttributeNotFoundException;
 import org.lastaflute.web.ruts.message.ActionMessages;
@@ -54,6 +58,13 @@ public class SimpleSessionManager implements SessionManager {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    /** The assistant director (AD) for framework. (NotNull: after initialization) */
+    @Resource
+    protected FwAssistantDirector assistantDirector;
+
+    /** The shared storage of session for session sharing. (NotNull, EmptyAllowed: when no storage) */
+    protected OptionalThing<SessionSharedStorage> sessionSharedStorage = OptionalThing.empty(); // not null
+
     protected ScopedMessageHandler errorsHandler; // lazy loaded
     protected ScopedMessageHandler infoHandler; // lazy loaded
 
@@ -65,8 +76,36 @@ public class SimpleSessionManager implements SessionManager {
      * This is basically called by DI setting file.
      */
     @PostConstruct
-    public void initialize() {
-        // empty for now
+    public synchronized void initialize() {
+        final FwWebDirection direction = assistWebDirection();
+        final SessionResourceProvider provider = direction.assistSessionResourceProvider();
+        sessionSharedStorage = prepareSessionSharedStorage(provider);
+        showBootLogging();
+    }
+
+    protected OptionalThing<SessionSharedStorage> prepareSessionSharedStorage(SessionResourceProvider provider) {
+        SessionSharedStorage specifiedStorage = null;
+        if (provider != null) {
+            specifiedStorage = provider.provideSharedStorage();
+            if (specifiedStorage == null) {
+                final String msg = "No assist for the shared storage of session.";
+                throw new FwRequiredAssistNotFoundException(msg);
+            }
+        }
+        return OptionalThing.ofNullable(specifiedStorage, () -> {
+            throw new IllegalStateException("Not found the session shared storage: " + provider);
+        });
+    }
+
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
+    }
+
+    protected void showBootLogging() {
+        if (logger.isInfoEnabled()) {
+            logger.info("[Session Manager]");
+            logger.info(" sessionSharedStorage: " + sessionSharedStorage);
+        }
     }
 
     // ===================================================================================
@@ -75,6 +114,10 @@ public class SimpleSessionManager implements SessionManager {
     @Override
     public <ATTRIBUTE> OptionalThing<ATTRIBUTE> getAttribute(String key, Class<ATTRIBUTE> attributeType) {
         assertArgumentNotNull("key", key);
+        final OptionalThing<ATTRIBUTE> foundShared = findAttributeInShareStorage(key, attributeType);
+        if (foundShared.isPresent()) {
+            return foundShared;
+        }
         final HttpSession session = getSessionExisting();
         final Object original = session != null ? session.getAttribute(key) : null;
         if (original instanceof HotdeployHttpSession.SerializedObjectHolder) { // e.g. hot to cool in Tomcat
@@ -92,15 +135,19 @@ public class SimpleSessionManager implements SessionManager {
                 br.addItem("Attribute Key");
                 br.addElement(key);
                 br.addItem("Specified Type");
-                br.addElement(attributeType);
+                br.addElement(attributeType + "@" + Integer.toHexString(attributeType.hashCode()));
+                br.addElement("loader: " + attributeType.getClassLoader());
                 br.addItem("Existing Attribute");
-                br.addElement(original.getClass());
-                br.addElement(original);
+                final Class<? extends Object> originType = original.getClass();
+                br.addElement(originType + "@" + Integer.toHexString(originType.hashCode()));
+                br.addElement("loader: " + originType.getClassLoader());
+                br.addElement("toString(): " + original.toString());
                 br.addItem("Attribute List");
                 br.addElement(getAttributeNameList());
                 final String msg = br.buildExceptionMessage();
-                throw new SessionAttributeCannotCastException(msg);
+                throw new SessionAttributeCannotCastException(msg, e);
             }
+            reflectAttributeToSharedStorage(key, attribute);
         } else {
             attribute = null;
         }
@@ -111,8 +158,22 @@ public class SimpleSessionManager implements SessionManager {
         });
     }
 
-    @Override
-    public List<String> getAttributeNameList() {
+    protected <ATTRIBUTE> OptionalThing<ATTRIBUTE> findAttributeInShareStorage(String key, Class<ATTRIBUTE> attributeType) {
+        final OptionalThing<ATTRIBUTE> found = sessionSharedStorage.flatMap(storage -> storage.getAttribute(key, attributeType));
+        if (logger.isDebugEnabled() && found.isPresent()) {
+            logger.debug("Found the session attribute in shared storage: {}={}", key, found.get());
+        }
+        return found;
+    }
+
+    protected void reflectAttributeToSharedStorage(String key, Object value) {
+        sessionSharedStorage.ifPresent(storage -> {
+            logger.debug("...Reflecting the session attribute to shared storage: {}={}", key, value);
+            storage.setAttribute(key, value);
+        });
+    }
+
+    protected List<String> getAttributeNameList() {
         final HttpSession session = getSessionExisting();
         if (session == null) {
             return Collections.emptyList();
@@ -129,16 +190,32 @@ public class SimpleSessionManager implements SessionManager {
     public void setAttribute(String key, Object value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
+        saveAttributeToSharedStorage(key, value);
         getSessionOrCreated().setAttribute(key, value);
+    }
+
+    protected void saveAttributeToSharedStorage(String key, Object value) {
+        sessionSharedStorage.ifPresent(storage -> {
+            logger.debug("...Saving the session attribute to shared storage: {}={}", key, value);
+            storage.setAttribute(key, value);
+        });
     }
 
     @Override
     public void removeAttribute(String key) {
         assertArgumentNotNull("key", key);
+        removeAttributeFromSharedStorage(key);
         final HttpSession session = getSessionExisting();
         if (session != null) {
             session.removeAttribute(key);
         }
+    }
+
+    protected void removeAttributeFromSharedStorage(String key) {
+        sessionSharedStorage.ifPresent(storage -> {
+            logger.debug("...Removing the session attribute to shared storage: {}", key);
+            storage.removeAttribute(key);
+        });
     }
 
     protected Map<String, Object> extractSavedSessionMap(HttpSession session) {
@@ -214,10 +291,15 @@ public class SimpleSessionManager implements SessionManager {
 
     @Override
     public void invalidate() {
+        invalidateSharedStorage();
         final HttpSession session = getSessionExisting();
         if (session != null) {
             session.invalidate();
         }
+    }
+
+    protected void invalidateSharedStorage() {
+        sessionSharedStorage.ifPresent(storage -> storage.invalidate());
     }
 
     @Override
