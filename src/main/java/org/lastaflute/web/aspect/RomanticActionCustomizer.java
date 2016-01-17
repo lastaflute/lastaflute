@@ -158,7 +158,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse land(String sea) {");
         br.addElement("    }");
-        br.addElement("Action");
+        br.addItem("Action");
         br.addElement(actionType);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
@@ -187,7 +187,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse index() {");
         br.addElement("    }");
-        br.addElement("Action");
+        br.addItem("Action");
         br.addElement(actionType);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
@@ -257,9 +257,9 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse sea(String land) {");
         br.addElement("    }");
-        br.addElement("Index Execute");
+        br.addItem("Index Execute");
         br.addElement(index);
-        br.addElement("Named Execute");
+        br.addItem("Named Execute");
         br.addElement(execute);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
@@ -296,9 +296,9 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement("        public HtmlResponse index() {");
         br.addElement("        }");
         br.addElement("    }");
-        br.addElement("Super Class");
+        br.addItem("Super Class");
         br.addElement(clazz);
-        br.addElement("Illegal Execute");
+        br.addItem("Illegal Execute");
         br.addElement(declaredMethod);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
@@ -319,7 +319,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
 
     protected void throwExecuteMethodRestfulConflictException(Class<?> actionType, ActionExecute restfulMethod, ActionExecute plainMethod) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Conflict execute methods between restful and plain.");
+        br.addNotice("Conflicted the execute methods between restful and plain.");
         br.addItem("Advice");
         br.addElement("You cannot define restful method with same-name plain method.");
         br.addElement("For example:");
@@ -344,11 +344,11 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse get$sea() { // Good");
         br.addElement("    }");
-        br.addElement("Action");
+        br.addItem("Action");
         br.addElement(actionType);
-        br.addElement("Restful Method");
+        br.addItem("Restful Method");
         br.addElement(restfulMethod);
-        br.addElement("Plain Method");
+        br.addItem("Plain Method");
         br.addElement(plainMethod);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
