@@ -26,9 +26,15 @@ public class UrlParamArgs implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
     protected final List<Class<?>> urlParamTypeList;
     protected final Map<Integer, Class<?>> optionalGenericTypeMap;
 
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
     /**
      * @param urlParamTypeList The list of URL parameter types. (NotNull, EmptyAllowed)
      * @param optionalGenericTypeMap The map of generic type used in URL parameters, keyed by argument index. (NotNull, EmptyAllowed)
@@ -38,6 +44,32 @@ public class UrlParamArgs implements Serializable {
         this.optionalGenericTypeMap = optionalGenericTypeMap;
     }
 
+    // ===================================================================================
+    //                                                                              Facade
+    //                                                                              ======
+    public boolean isNumberTypeParameter(int index) { // contains optional generic type
+        if (urlParamTypeList.size() <= index) { // avoid out of bounds
+            return false;
+        }
+        final Class<?> parameterType = urlParamTypeList.get(index);
+        if (Number.class.isAssignableFrom(parameterType)) {
+            return true;
+        }
+        final Class<?> genericType = optionalGenericTypeMap.get(index);
+        return genericType != null && Number.class.isAssignableFrom(genericType);
+    }
+
+    public boolean isOptionalParameter(int index) {
+        return optionalGenericTypeMap.get(index) != null;
+    }
+
+    public int size() {
+        return urlParamTypeList.size();
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
     public List<Class<?>> getUrlParamTypeList() {
         return urlParamTypeList;
     }

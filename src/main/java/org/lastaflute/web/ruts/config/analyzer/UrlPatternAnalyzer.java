@@ -65,11 +65,11 @@ public class UrlPatternAnalyzer {
         checkSpecifiedUrlPattern(executeMethod, specifiedUrlPattern, urlParamTypeList);
         final UrlPatternChosenBox chosenBox;
         if (specifiedUrlPattern != null && !specifiedUrlPattern.isEmpty()) { // e.g. urlPattern="{}"
-            chosenBox = adjustUrlPatternMethodPrefix(executeMethod, specifiedUrlPattern, mappingMethodName);
+            chosenBox = adjustUrlPatternMethodPrefix(executeMethod, specifiedUrlPattern, mappingMethodName, /*specified*/true);
         } else { // urlPattern=[no definition]
             if (!urlParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
                 final String derivedUrlPattern = buildDerivedUrlPattern(urlParamTypeList);
-                chosenBox = adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, mappingMethodName);
+                chosenBox = adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, mappingMethodName, /*non-specified*/false);
             } else { // e.g. index(), sea() *no parameter
                 chosenBox = adjustUrlPatternByMethodNameWithoutParam(mappingMethodName);
             }
@@ -87,12 +87,17 @@ public class UrlPatternAnalyzer {
 
     public static class UrlPatternChosenBox {
 
-        protected final String urlPattern;
+        protected final String resolvedUrlPattern;
+        protected final String sourceUrlPattern;
+        protected final boolean specified;
         protected boolean methodNamePrefix;
-        protected String httpMethod;
 
-        public UrlPatternChosenBox(String urlPattern) {
-            this.urlPattern = urlPattern;
+        public UrlPatternChosenBox(String resolvedUrlPattern, String sourceUrlPattern, boolean specified) {
+            assertArgumentNotNull("resolvedUrlPattern", resolvedUrlPattern);
+            assertArgumentNotNull("sourceUrlPattern", sourceUrlPattern);
+            this.resolvedUrlPattern = resolvedUrlPattern;
+            this.sourceUrlPattern = sourceUrlPattern;
+            this.specified = specified;
         }
 
         public UrlPatternChosenBox withMethodPrefix() {
@@ -100,16 +105,29 @@ public class UrlPatternAnalyzer {
             return this;
         }
 
-        public String getUrlPattern() {
-            return urlPattern;
+        protected void assertArgumentNotNull(String variableName, Object value) {
+            if (variableName == null) {
+                throw new IllegalArgumentException("The variableName should not be null.");
+            }
+            if (value == null) {
+                throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+            }
+        }
+
+        public String getResolvedUrlPattern() {
+            return resolvedUrlPattern;
+        }
+
+        public String getSourceUrlPattern() {
+            return sourceUrlPattern;
+        }
+
+        public boolean isSpecified() {
+            return specified;
         }
 
         public boolean isMethodNamePrefix() {
             return methodNamePrefix;
-        }
-
-        public String getHttpMethod() {
-            return httpMethod;
         }
     }
 
@@ -216,25 +234,26 @@ public class UrlPatternAnalyzer {
     // -----------------------------------------------------
     //                                        has urlPattern
     //                                        --------------
-    protected UrlPatternChosenBox adjustUrlPatternMethodPrefix(Method executeMethod, String specifiedUrlPattern, String methodName) {
+    protected UrlPatternChosenBox adjustUrlPatternMethodPrefix(Method executeMethod, String sourceUrlPattern, String methodName,
+            boolean specified) {
         final String keywordMark = getMethodKeywordMark();
         if (methodName.equals("index")) { // e.g. index(pageNumber), urlPattern="{}"
-            if (specifiedUrlPattern.contains(keywordMark)) {
-                throwUrlPatternMethodKeywordMarkButIndexMethodException(executeMethod, specifiedUrlPattern, keywordMark);
+            if (sourceUrlPattern.contains(keywordMark)) {
+                throwUrlPatternMethodKeywordMarkButIndexMethodException(executeMethod, sourceUrlPattern, keywordMark);
             }
-            return new UrlPatternChosenBox(specifiedUrlPattern);
+            return new UrlPatternChosenBox(sourceUrlPattern, sourceUrlPattern, specified);
         } else { // e.g. sea(pageNumber), urlPattern="{}"
-            if (specifiedUrlPattern.contains(keywordMark)) { // e.g. @word/{}/@word
+            if (sourceUrlPattern.contains(keywordMark)) { // e.g. @word/{}/@word
                 final List<String> keywordList = splitMethodKeywordList(methodName);
-                if (keywordList.size() != Srl.count(specifiedUrlPattern, keywordMark)) { // e.g. sea() but @word/{}/@word
-                    throwUrlPatternMethodKeywordMarkUnmatchedCountException(executeMethod, specifiedUrlPattern, keywordMark);
+                if (keywordList.size() != Srl.count(sourceUrlPattern, keywordMark)) { // e.g. sea() but @word/{}/@word
+                    throwUrlPatternMethodKeywordMarkUnmatchedCountException(executeMethod, sourceUrlPattern, keywordMark);
                 }
-                final String resolved = keywordList.stream().reduce(specifiedUrlPattern, (first, second) -> {
+                final String resolved = keywordList.stream().reduce(sourceUrlPattern, (first, second) -> {
                     return Srl.substringFirstFront(first, keywordMark) + second + Srl.substringFirstRear(first, keywordMark);
                 }); // e.g. sea/land
-                return new UrlPatternChosenBox(resolved);
+                return new UrlPatternChosenBox(resolved, sourceUrlPattern, specified);
             } else {
-                return new UrlPatternChosenBox(methodName + "/" + specifiedUrlPattern).withMethodPrefix();
+                return new UrlPatternChosenBox(methodName + "/" + sourceUrlPattern, sourceUrlPattern, specified).withMethodPrefix();
             }
         }
     }
@@ -314,9 +333,9 @@ public class UrlPatternAnalyzer {
     //                                         -------------
     protected UrlPatternChosenBox adjustUrlPatternByMethodNameWithoutParam(String methodName) {
         if (methodName.equals("index")) {
-            return new UrlPatternChosenBox(""); // empty if index to avoid '/index/' hit
+            return new UrlPatternChosenBox("", "", /*non-specified*/false); // empty if index to avoid '/index/' hit
         } else {
-            return new UrlPatternChosenBox(methodName).withMethodPrefix();
+            return new UrlPatternChosenBox(methodName, "", /*non-specified*/false).withMethodPrefix();
         }
     }
 
@@ -395,8 +414,18 @@ public class UrlPatternAnalyzer {
         protected final List<String> varList;
 
         public UrlPatternRegexpBox(Pattern regexpPattern, List<String> varList) {
+            assertArgumentNotNull("regexpPattern", regexpPattern);
             this.regexpPattern = regexpPattern;
             this.varList = varList != null ? Collections.unmodifiableList(varList) : Collections.emptyList();
+        }
+
+        protected void assertArgumentNotNull(String variableName, Object value) {
+            if (variableName == null) {
+                throw new IllegalArgumentException("The variableName should not be null.");
+            }
+            if (value == null) {
+                throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+            }
         }
 
         public Pattern getRegexpPattern() {
@@ -552,7 +581,7 @@ public class UrlPatternAnalyzer {
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
-    public String toSimpleMethodExp(Method executeMethod) {
+    protected String toSimpleMethodExp(Method executeMethod) {
         return LaActionExecuteUtil.buildSimpleMethodExp(executeMethod);
     }
 }

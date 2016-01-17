@@ -19,6 +19,9 @@ import java.io.Serializable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternChosenBox;
+import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternRegexpBox;
+
 /**
  * @author jflute
  * @since 0.7.6 (2016/01/05 Tuesday)
@@ -30,27 +33,46 @@ public class PreparedUrlPattern implements Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final String urlPattern; // not null, empty allowed e.g. [method] or [method]/{} or "" (when index())
+    protected final String resolvedUrlPattern; // not null, empty allowed e.g. [method] or [method]/{} or "" (when index())
+    protected final String sourceUrlPattern; // not null, empty allowed, might be derived
+    protected final boolean specified; // true if urlPattern is defined by annotation
     protected final Pattern regexpPattern; // not null e.g. ^([^/]+)$ or ^([^/]+)/([^/]+)$ or ^sea/([^/]+)$
     protected final boolean methodNamePrefix; // true if urlPattern is [method]/...
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public PreparedUrlPattern(String urlPattern, Pattern regexpPattern, boolean methodNamePrefix) {
-        this.urlPattern = urlPattern;
-        this.regexpPattern = regexpPattern;
-        this.methodNamePrefix = methodNamePrefix;
+    public PreparedUrlPattern(UrlPatternChosenBox chosenBox, UrlPatternRegexpBox regexpBox) {
+        assertArgumentNotNull("chosenBox", chosenBox);
+        assertArgumentNotNull("regexpBox", regexpBox);
+        this.resolvedUrlPattern = chosenBox.getResolvedUrlPattern();
+        this.sourceUrlPattern = chosenBox.getSourceUrlPattern();
+        this.specified = chosenBox.isSpecified();
+        this.regexpPattern = regexpBox.getRegexpPattern();
+        this.methodNamePrefix = chosenBox.isMethodNamePrefix();
+        assertArgumentNotNull("resolvedUrlPattern of chosenBox", resolvedUrlPattern);
+        assertArgumentNotNull("sourceUrlPattern of chosenBox", sourceUrlPattern);
+        assertArgumentNotNull("regexpPattern of regexpBox", regexpPattern);
     }
 
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
     public Matcher matcher(String paramPath) {
-        if (paramPath == null) {
-            throw new IllegalArgumentException("The argument 'paramPath' should not be null.");
-        }
+        assertArgumentNotNull("paramPath", paramPath);
         return regexpPattern.matcher(paramPath);
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 
     // ===================================================================================
@@ -58,14 +80,27 @@ public class PreparedUrlPattern implements Serializable {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "urlPattern:{" + urlPattern + ", " + regexpPattern + "}";
+        return "urlPattern:{" + resolvedUrlPattern + ", " + regexpPattern + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public String getUrlPattern() {
-        return urlPattern;
+    public String getResolvedUrlPattern() {
+        return resolvedUrlPattern;
+    }
+
+    public String getSourceUrlPattern() {
+        return sourceUrlPattern;
+    }
+
+    @Deprecated
+    public String getUrlPattern() { // for compatible of UTFlute
+        return resolvedUrlPattern;
+    }
+
+    public boolean isSpecified() {
+        return specified;
     }
 
     public Pattern getRegexpPattern() {

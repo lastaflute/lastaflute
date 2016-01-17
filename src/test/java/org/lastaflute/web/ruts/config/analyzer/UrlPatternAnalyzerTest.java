@@ -49,11 +49,12 @@ public class UrlPatternAnalyzerTest extends UnitLastaFluteTestCase {
         Method dummyMethod = getClass().getMethods()[0];
 
         // ## Act ##
-        UrlPatternChosenBox chosenBox = analyzer.adjustUrlPatternMethodPrefix(dummyMethod, "@word/{}/@word", "seaLand");
+        UrlPatternChosenBox chosenBox = analyzer.adjustUrlPatternMethodPrefix(dummyMethod, "@word/{}/@word", "seaLand", true);
 
         // ## Assert ##
-        log(chosenBox.getUrlPattern());
-        assertEquals("sea/{}/land", chosenBox.getUrlPattern());
+        log(chosenBox.getResolvedUrlPattern());
+        assertEquals("sea/{}/land", chosenBox.getResolvedUrlPattern());
         assertFalse(chosenBox.isMethodNamePrefix());
+        assertTrue(chosenBox.isSpecified());
     }
 }

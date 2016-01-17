@@ -118,8 +118,8 @@ public class ActionExecute implements Serializable {
         final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
         final UrlPatternChosenBox chosenBox =
                 urlPatternAnalyzer.choose(executeMethod, this.mappingMethodName, specifiedUrlPattern, this.urlParamTypeList);
-        final UrlPatternRegexpBox regexpBox =
-                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getUrlPattern(), this.urlParamTypeList, this.optionalGenericTypeMap);
+        final UrlPatternRegexpBox regexpBox = urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getResolvedUrlPattern(),
+                this.urlParamTypeList, this.optionalGenericTypeMap);
         urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), this.urlParamTypeList);
         this.preparedUrlPattern = newPreparedUrlPattern(chosenBox, regexpBox);
 
@@ -171,7 +171,7 @@ public class ActionExecute implements Serializable {
     }
 
     protected PreparedUrlPattern newPreparedUrlPattern(UrlPatternChosenBox chosenBox, UrlPatternRegexpBox regexpBox) {
-        return new PreparedUrlPattern(chosenBox.getUrlPattern(), regexpBox.getRegexpPattern(), chosenBox.isMethodNamePrefix());
+        return new PreparedUrlPattern(chosenBox, regexpBox);
     }
 
     // -----------------------------------------------------
@@ -452,7 +452,7 @@ public class ActionExecute implements Serializable {
      * @deprecated use getPreparedUrlPattern()
      */
     public String getUrlPattern() { // for compatible, already UTFlute uses
-        return preparedUrlPattern.getUrlPattern();
+        return preparedUrlPattern.getResolvedUrlPattern();
     }
 
     // -----------------------------------------------------

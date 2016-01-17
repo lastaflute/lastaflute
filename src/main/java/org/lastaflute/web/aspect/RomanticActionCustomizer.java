@@ -16,7 +16,6 @@
 package org.lastaflute.web.aspect;
 
 import java.lang.reflect.Method;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -35,7 +34,6 @@ import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.config.ExecuteOption;
-import org.lastaflute.web.ruts.config.UrlParamArgs;
 import org.lastaflute.web.util.LaModuleConfigUtil;
 
 /**
@@ -132,7 +130,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
             actionMapping.registerExecute(createActionExecute(actionMapping, declaredMethod));
         }
         verifyExecuteMethodSize(actionMapping, actionType);
-        verifyExecuteMethodEitherIndexAndNamedUsingUrlParameter(actionMapping, actionType);
+        verifyExecuteMethodNotShadowingOthers(actionMapping, actionType);
         verifyExecuteMethodDefinedInConcreteClassOnly(actionMapping, actionType);
         verifyExecuteMethodRestfulIndependent(actionMapping, actionType);
     }
@@ -193,69 +191,80 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
 
-    protected void verifyExecuteMethodEitherIndexAndNamedUsingUrlParameter(ActionMapping actionMapping, Class<?> actionType) {
+    protected void verifyExecuteMethodNotShadowingOthers(ActionMapping actionMapping, Class<?> actionType) {
         final Map<String, ActionExecute> executeMap = actionMapping.getExecuteMap();
-        final ActionExecute index = executeMap.get("index");
-        if (index != null && index.getUrlParamArgs().isPresent()) {
-            final UrlParamArgs urlParamArgs = index.getUrlParamArgs().get();
-            final List<Class<?>> urlParamTypeList = urlParamArgs.getUrlParamTypeList();
-            if (!urlParamTypeList.isEmpty()) { // basically true but just in case
-                final Map<Integer, Class<?>> optionalGenericTypeMap = urlParamArgs.getOptionalGenericTypeMap();
-                if (!isNumberTypeFirstArg(urlParamTypeList, optionalGenericTypeMap)) { // because of Number has original pattern
-                    for (Entry<String, ActionExecute> entry : executeMap.entrySet()) {
-                        final ActionExecute execute = entry.getValue();
-                        if (!execute.isIndexMethod() && execute.getUrlParamArgs().isPresent()) {
-                            throwUrlParameterCannotUseBothIndexNamedException(index, execute);
-                        }
-                    }
-                }
+        executeMap.values().stream().filter(execute -> {
+            // if urlPattern is specified, cannot determine shadowing so skip checking
+            return execute.isIndexMethod() // e.g. index() or get$index() or ...
+                    && execute.getUrlParamArgs().isPresent() // no shadowing if no parameter
+                    && !execute.getPreparedUrlPattern().isSpecified();// cannot determine shadowing if specified
+        }).forEach(index -> {
+            if (index.getUrlParamArgs().get().isNumberTypeParameter(0)) { // Number has original pattern
+                return;
             }
-        }
+            // index may have String as the first argument without urlPattern here
+            // e.g.
+            //  index(String sea) or get$index(String sea) or index(String sea, Integer ...)
+            //  or index(LocalDate sea) or index(CDef.MemberStatus sea) or ...
+            executeMap.values().stream().filter(execute -> !execute.isIndexMethod()).filter(named -> { // named execute
+                return !isDifferentRestfulHttpMethod(index, named); // except e.g. index:GET, named:POST
+            }).forEach(named -> { // e.g. dockside() or dockside(String hangar) or ...
+                if (isShadowingExecuteMethod(index, named)) {
+                    throwExecuteMethodShadowedByOtherExecuteMethodException(index, named);
+                }
+            });
+        });
     }
 
-    protected boolean isNumberTypeFirstArg(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap) {
-        final Class<?> parameterType = urlParamTypeList.get(0);
-        if (Number.class.isAssignableFrom(parameterType)) {
-            return true;
+    protected boolean isShadowingExecuteMethod(ActionExecute index, ActionExecute named) {
+        // index() has one or more parameter(s) here
+        // and the first argument is not number and no urlPattern
+        //  e.g.
+        //   index(String sea)
+        //   index(String sea, Integer land) 
+        // and should return true if 100% shadowing only
+        if (named.getPreparedUrlPattern().isSpecified()) {
+            return false; // #giveup cannot determine shadowing for urlPattern
         }
-        final Class<?> genericType = optionalGenericTypeMap.get(0);
-        return genericType != null && Number.class.isAssignableFrom(genericType);
+        // both no urlPattern here
+        if (!named.getUrlParamArgs().isPresent()) { // no parameter e.g. dockside()
+            return true; // shadowing if no urlPattern
+        }
+        // both has any parameters
+        return false; // #giveup also cannot determine shadowing for optional parameters
     }
 
-    protected void throwUrlParameterCannotUseBothIndexNamedException(final ActionExecute index, final ActionExecute execute) {
+    protected boolean isDifferentRestfulHttpMethod(ActionExecute index, ActionExecute named) {
+        return index.getRestfulHttpMethod().isPresent() && named.getRestfulHttpMethod().isPresent() // both has it
+                && !index.getRestfulHttpMethod().get().equals(named.getRestfulHttpMethod().get()); // different
+    }
+
+    protected void throwExecuteMethodShadowedByOtherExecuteMethodException(final ActionExecute index, final ActionExecute execute) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Cannot use URL parameter both index() and named execute.");
+        br.addNotice("Shadowed the execute method by the other execute method.");
         br.addItem("Advice");
-        br.addElement("URL parameter can be used either index() or named execute method.");
-        br.addElement("Or you can use Integer type as first argument of index().");
+        br.addElement("Remove your the execute method shadowing others.");
         br.addElement("For example:");
         br.addElement("  (x):");
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse index(String name) {");
         br.addElement("    }");
         br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse sea(String land) {");
+        br.addElement("    public HtmlResponse sea() {");
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse index() {");
-        br.addElement("    }");
-        br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse sea(String land) {");
-        br.addElement("    }");
-        br.addElement("  (o):");
-        br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse index(String land) {");
+        br.addElement("    public HtmlResponse index(Integer id) {");
         br.addElement("    }");
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse sea() {");
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse index(Integer pageNumber) {");
+        br.addElement("    public HtmlResponse index() {");
         br.addElement("    }");
         br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse sea(String land) {");
+        br.addElement("    public HtmlResponse sea() {");
         br.addElement("    }");
         br.addItem("Index Execute");
         br.addElement(index);
