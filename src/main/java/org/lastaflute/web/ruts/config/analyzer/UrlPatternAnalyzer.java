@@ -44,23 +44,37 @@ public class UrlPatternAnalyzer {
     public static final String ELEMENT_BASIC_PATTERN = "([^/]+)";
     public static final String ELEMENT_NUMBER_PATTERN = "([^/&&\\-\\.\\d]+)";
     public static final String METHOD_KEYWORD_MARK = "@word";
+    public static final String REST_DELIMITER = "$";
+
+    // ===================================================================================
+    //                                                                             Extract
+    //                                                                             =======
+    public OptionalThing<String> extractRestfulHttpMethod(Method executeMethod) {
+        final String methodName = executeMethod.getName();
+        final String extracted = methodName.contains(REST_DELIMITER) ? Srl.substringFirstFront(methodName, REST_DELIMITER) : null;
+        return OptionalThing.ofNullable(extracted, () -> {
+            throw new IllegalStateException("Not found RESTful HTTP method: " + toSimpleMethodExp(executeMethod));
+        });
+    }
 
     // ===================================================================================
     //                                                                              Choose
     //                                                                              ======
-    public UrlPatternChosenBox choose(Method executeMethod, String specifiedUrlPattern, List<Class<?>> urlParamTypeList) {
+    public UrlPatternChosenBox choose(Method executeMethod, String mappingMethodName, String specifiedUrlPattern,
+            List<Class<?>> urlParamTypeList) {
         checkSpecifiedUrlPattern(executeMethod, specifiedUrlPattern, urlParamTypeList);
-        final String methodName = executeMethod.getName();
+        final UrlPatternChosenBox chosenBox;
         if (specifiedUrlPattern != null && !specifiedUrlPattern.isEmpty()) { // e.g. urlPattern="{}"
-            return adjustUrlPatternMethodPrefix(executeMethod, specifiedUrlPattern, methodName);
+            chosenBox = adjustUrlPatternMethodPrefix(executeMethod, specifiedUrlPattern, mappingMethodName);
         } else { // urlPattern=[no definition]
             if (!urlParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
                 final String derivedUrlPattern = buildDerivedUrlPattern(urlParamTypeList);
-                return adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, methodName);
+                chosenBox = adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, mappingMethodName);
             } else { // e.g. index(), sea() *no parameter
-                return adjustUrlPatternByMethodNameWithoutParam(methodName);
+                chosenBox = adjustUrlPatternByMethodNameWithoutParam(mappingMethodName);
             }
         }
+        return chosenBox;
     }
 
     protected String buildDerivedUrlPattern(List<Class<?>> urlParamTypeList) {
@@ -75,6 +89,7 @@ public class UrlPatternAnalyzer {
 
         protected final String urlPattern;
         protected boolean methodNamePrefix;
+        protected String httpMethod;
 
         public UrlPatternChosenBox(String urlPattern) {
             this.urlPattern = urlPattern;
@@ -91,6 +106,10 @@ public class UrlPatternAnalyzer {
 
         public boolean isMethodNamePrefix() {
             return methodNamePrefix;
+        }
+
+        public String getHttpMethod() {
+            return httpMethod;
         }
     }
 
@@ -362,7 +381,12 @@ public class UrlPatternAnalyzer {
     }
 
     protected Pattern buildRegexpPattern(String pattern) {
-        return Pattern.compile("^" + pattern + "$");
+        return Pattern.compile("^" + escapeRegexpPattern(pattern) + "$");
+    }
+
+    protected String escapeRegexpPattern(String pattern) {
+        // if e.g. get$sea$land(), the pattern is 'sea$land' so you can use '$' in URL if restful
+        return Srl.replace(pattern, "$", "\\$");
     }
 
     public static class UrlPatternRegexpBox {

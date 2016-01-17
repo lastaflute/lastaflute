@@ -134,6 +134,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         verifyExecuteMethodSize(actionMapping, actionType);
         verifyExecuteMethodEitherIndexAndNamedUsingUrlParameter(actionMapping, actionType);
         verifyExecuteMethodDefinedInConcreteClassOnly(actionMapping, actionType);
+        verifyExecuteMethodRestfulIndependent(actionMapping, actionType);
     }
 
     protected void throwOverloadMethodCannotDefinedException(final Class<?> actionType) {
@@ -299,6 +300,56 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement(clazz);
         br.addElement("Illegal Execute");
         br.addElement(declaredMethod);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    protected void verifyExecuteMethodRestfulIndependent(ActionMapping actionMapping, Class<?> actionType) {
+        final Map<String, ActionExecute> executeMap = actionMapping.getExecuteMap();
+        for (Entry<String, ActionExecute> entry : executeMap.entrySet()) {
+            final ActionExecute execute = entry.getValue();
+            if (execute.getRestfulHttpMethod().isPresent()) { // e.g. get$index
+                final ActionExecute plainMethod = executeMap.get(execute.getMappingMethodName()); // e.g. index
+                if (plainMethod != null) { // conflict, e.g. both index() and get$index() exist
+                    throwExecuteMethodRestfulConflictException(actionType, execute, plainMethod);
+                }
+            }
+        }
+    }
+
+    protected void throwExecuteMethodRestfulConflictException(Class<?> actionType, ActionExecute restfulMethod, ActionExecute plainMethod) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Conflict execute methods between restful and plain.");
+        br.addItem("Advice");
+        br.addElement("You cannot define restful method with same-name plain method.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index() { // *Bad");
+        br.addElement("    }");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse get$index() { // *Bad");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse sea() { // Good");
+        br.addElement("    }");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse get$index() {");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse index() {");
+        br.addElement("    }");
+        br.addElement("    @Execute");
+        br.addElement("    public HtmlResponse get$sea() { // Good");
+        br.addElement("    }");
+        br.addElement("Action");
+        br.addElement(actionType);
+        br.addElement("Restful Method");
+        br.addElement(restfulMethod);
+        br.addElement("Plain Method");
+        br.addElement(plainMethod);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
