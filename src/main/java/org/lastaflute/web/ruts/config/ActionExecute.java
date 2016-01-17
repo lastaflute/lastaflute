@@ -69,8 +69,6 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                     Defined Parameter
     //                                     -----------------
-    protected final List<Class<?>> urlParamTypeList; // not null, read-only e.g. Integer.class, String.class
-    protected final Map<Integer, Class<?>> optionalGenericTypeMap; // not null, read-only, key is argument index
     protected final OptionalThing<UrlParamArgs> urlParamArgs; // not null, empty allowed
     protected final OptionalThing<ActionFormMeta> formMeta; // not null, empty allowed
 
@@ -109,22 +107,22 @@ public class ActionExecute implements Serializable {
         final ExecuteArgAnalyzer executeArgAnalyzer = newExecuteArgAnalyzer();
         final ExecuteArgBox executeArgBox = newExecuteArgBox();
         executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
-        this.urlParamTypeList = executeArgBox.getUrlParamTypeList(); // not null, empty allowed
-        this.optionalGenericTypeMap = executeArgBox.getOptionalGenericTypeMap();
         this.formMeta = analyzeFormMeta(executeMethod, executeArgBox);
 
         // URL pattern (using urlParamTypeList)
+        final List<Class<?>> urlParamTypeList = executeArgBox.getUrlParamTypeList(); // not null, empty allowed
+        final Map<Integer, Class<?>> optionalGenericTypeMap = executeArgBox.getOptionalGenericTypeMap();
         final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
         final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
         final UrlPatternChosenBox chosenBox =
-                urlPatternAnalyzer.choose(executeMethod, this.mappingMethodName, specifiedUrlPattern, this.urlParamTypeList);
-        final UrlPatternRegexpBox regexpBox = urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getResolvedUrlPattern(),
-                this.urlParamTypeList, this.optionalGenericTypeMap);
-        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), this.urlParamTypeList);
+                urlPatternAnalyzer.choose(executeMethod, this.mappingMethodName, specifiedUrlPattern, urlParamTypeList);
+        final UrlPatternRegexpBox regexpBox =
+                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getResolvedUrlPattern(), urlParamTypeList, optionalGenericTypeMap);
+        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), urlParamTypeList);
         this.preparedUrlPattern = newPreparedUrlPattern(chosenBox, regexpBox);
 
         // defined parameter again (uses URL pattern result)
-        this.urlParamArgs = prepareUrlParamArgs(this.urlParamTypeList, this.optionalGenericTypeMap);
+        this.urlParamArgs = prepareUrlParamArgs(urlParamTypeList, optionalGenericTypeMap);
 
         // check finally
         checkExecuteMethod(executeArgAnalyzer);
@@ -269,6 +267,8 @@ public class ActionExecute implements Serializable {
     }
 
     protected boolean handleOptionalParameterMapping(String paramPath) {
+        // #for_now no considering type difference: index(String, OptionalThing<Integer>) but 'sea/land'
+        // so cannot mapping to dockside(String hangar) if the index() exists now
         if (hasOptionalUrlParameter()) { // e.g. any parameters are optional type
             if (indexMethod) { // e.g. index(String first, OptionalThing<String> second) with 'sea' or 'sea/land'
                 final int paramCount = Srl.count(Srl.trim(paramPath, "/"), "/") + 1; // e.g. sea/land => 2
@@ -422,10 +422,6 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                     Defined Parameter
     //                                     -----------------
-    public List<Class<?>> getUrlParamTypeList() {
-        return urlParamTypeList;
-    }
-
     /**
      * @return The optional arguments of URL parameter for the method. (NotNull, EmptyAllowed: when no URL parameter)
      */

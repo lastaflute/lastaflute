@@ -19,6 +19,8 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
+import org.dbflute.util.DfTypeUtil;
+
 /**
  * @author jflute
  */
@@ -29,19 +31,21 @@ public class UrlParamArgs implements Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final List<Class<?>> urlParamTypeList;
-    protected final Map<Integer, Class<?>> optionalGenericTypeMap;
+    protected final List<Class<?>> urlParamTypeList; // not null, read-only e.g. Integer.class, String.class
+    protected final Map<Integer, Class<?>> optionalGenericTypeMap; // not null, read-only, has same size as parameters
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     /**
-     * @param urlParamTypeList The list of URL parameter types. (NotNull, EmptyAllowed)
-     * @param optionalGenericTypeMap The map of generic type used in URL parameters, keyed by argument index. (NotNull, EmptyAllowed)
+     * @param urlParamTypeList The read-only list of URL parameter types. (NotNull, EmptyAllowed)
+     * @param optionalGenericTypeMap The read-only map of generic type used in URL parameters, keyed by argument index. (NotNull, EmptyAllowed)
      */
     public UrlParamArgs(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap) {
-        this.urlParamTypeList = urlParamTypeList;
-        this.optionalGenericTypeMap = optionalGenericTypeMap;
+        assertArgumentNotNull("urlParamTypeList", urlParamTypeList);
+        assertArgumentNotNull("optionalGenericTypeMap", optionalGenericTypeMap);
+        this.urlParamTypeList = urlParamTypeList; // already read-only
+        this.optionalGenericTypeMap = optionalGenericTypeMap; // already read-only
     }
 
     // ===================================================================================
@@ -65,6 +69,43 @@ public class UrlParamArgs implements Serializable {
 
     public int size() {
         return urlParamTypeList.size();
+    }
+
+    public String toDisp() {
+        final StringBuilder sb = new StringBuilder();
+        int index = 0;
+        for (Class<?> urlParamType : urlParamTypeList) {
+            if (index > 0) {
+                sb.append(", ");
+            }
+            sb.append(urlParamType.getSimpleName());
+            final Class<?> genericType = optionalGenericTypeMap.get(index);
+            if (genericType != null) {
+                sb.append("<").append(genericType.getSimpleName()).append(">");
+            }
+            ++index;
+        }
+        return sb.toString();
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
+    }
+
+    // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        return DfTypeUtil.toClassTitle(this) + ":{" + toDisp() + "}";
     }
 
     // ===================================================================================

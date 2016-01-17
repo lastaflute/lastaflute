@@ -285,7 +285,7 @@ public class RequestUrlParamAnalyzer {
         }
     }
 
-    protected void throwOptionalGenericTypeNotFoundException(ActionExecute execute, int index, Class<?> urlParamType,
+    protected void throwOptionalGenericTypeNotFoundException(ActionExecute execute, int index, Class<?> paramType,
             Map<Integer, Class<?>> optionalGenericTypeMap, Object filtered) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the optional generic type for the parameter.");
@@ -294,13 +294,18 @@ public class RequestUrlParamAnalyzer {
         br.addItem("Parameter Index");
         br.addElement(index);
         br.addItem("Parameter Type");
-        br.addElement(urlParamType);
+        br.addElement(paramType + buildOptionalGenericDisp(optionalGenericTypeMap, index));
         br.addItem("OptionalGenericType Map");
         br.addElement(optionalGenericTypeMap);
         br.addItem("Filtered Value");
         br.addElement(filtered);
         final String msg = br.buildExceptionMessage();
         throw new IllegalStateException(msg);
+    }
+
+    protected String buildOptionalGenericDisp(Map<Integer, Class<?>> optionalGenericTypeMap, int index) {
+        final Class<?> genericType = optionalGenericTypeMap.get(index);
+        return genericType != null ? "<" + genericType.getName() + ">" : "";
     }
 
     // -----------------------------------------------------
@@ -321,13 +326,20 @@ public class RequestUrlParamAnalyzer {
         br.addItem("Parameter Index");
         br.addElement(index);
         br.addItem("Parameter Type");
-        br.addElement(paramType);
+        br.addElement(paramType.getName() + buildOptionalGenericDisp(execute, index));
         br.addItem("Parameter Value");
         br.addElement("plain   : " + plainValue);
         br.addElement("decoded : " + decoded);
         br.addItem("Cause");
         br.addElement(cause.getMessage());
         return br.buildExceptionMessage();
+    }
+
+    protected String buildOptionalGenericDisp(ActionExecute execute, int index) {
+        return execute.getUrlParamArgs().map(args -> {
+            final Class<?> genericType = args.getOptionalGenericTypeMap().get(index);
+            return genericType != null ? "<" + genericType.getName() + ">" : "";
+        }).orElse("");
     }
 
     // ===================================================================================
