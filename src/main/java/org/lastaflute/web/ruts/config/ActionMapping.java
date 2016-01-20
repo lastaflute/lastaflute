@@ -60,6 +60,7 @@ public class ActionMapping {
     //                                      Register Execute
     //                                      ----------------
     public void registerExecute(ActionExecute execute) {
+        // plain name here, may contain restful http method e.g. get$index
         executeMap.put(execute.getExecuteMethod().getName(), execute);
     }
 
@@ -89,13 +90,21 @@ public class ActionMapping {
                 return execute;
             }
         }
-        return doFindFixedActionExecute(); // e.g. index() for /sea/land/
+        return doFindFixedActionExecute(request); // e.g. index() for /sea/land/
     }
 
-    protected ActionExecute doFindFixedActionExecute() {
+    protected ActionExecute doFindFixedActionExecute(HttpServletRequest request) {
         final ActionExecute indexFound = executeMap.get("index");
         if (indexFound != null) {
             return indexFound;
+        }
+        final String httpMethod = request.getMethod();
+        if (httpMethod != null) { // just in case
+            final String restIndex = httpMethod.toLowerCase() + "$index"; // e.g. get$index()
+            final ActionExecute restFound = executeMap.get(restIndex); // retry as restful
+            if (restFound != null) {
+                return restFound;
+            }
         }
         // remove it on LastaFlute, more strict mapping as possible
         //if (executeMap.size() == 1) { // e.g. no index() but only-one method exists
@@ -105,7 +114,7 @@ public class ActionMapping {
     }
 
     public ActionExecute getActionExecute(Method method) { // null allowed when not found
-        return executeMap.get(method.getName());
+        return executeMap.get(method.getName()); // find plainly, key may contain restful HTTP method
     }
 
     // ===================================================================================

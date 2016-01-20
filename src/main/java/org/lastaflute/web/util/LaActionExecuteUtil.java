@@ -17,10 +17,16 @@ package org.lastaflute.web.util;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
@@ -79,6 +85,12 @@ public class LaActionExecuteUtil {
     //                                                                         ===========
     public static String buildSimpleMethodExp(Method executeMethod) {
         final StringBuilder sb = new StringBuilder();
+        doBuildSimpleMethodNameDefExp(sb, executeMethod);
+        doBuildSimpleMethodParameterExp(sb, executeMethod);
+        return sb.toString();
+    }
+
+    protected static void doBuildSimpleMethodNameDefExp(StringBuilder sb, Method executeMethod) {
         final int modifiers = executeMethod.getModifiers();
         if (Modifier.isPublic(modifiers)) {
             sb.append("public ");
@@ -90,7 +102,12 @@ public class LaActionExecuteUtil {
         final Class<?> returnType = executeMethod.getReturnType();
         sb.append(returnType.getSimpleName()).append(" ");
         sb.append(executeMethod.getDeclaringClass().getSimpleName());
-        sb.append("@").append(executeMethod.getName()).append("(");
+        sb.append("@").append(executeMethod.getName());
+    }
+
+    protected static void doBuildSimpleMethodParameterExp(StringBuilder sb, Method executeMethod) {
+        sb.append("(");
+        final Map<Integer, Class<?>> optionalGenericTypeMap = prepareOptionalGenericTypeMap(executeMethod);
         final Class<?>[] parameterTypes = executeMethod.getParameterTypes();
         int index = 0;
         for (Class<?> parameterType : parameterTypes) {
@@ -98,10 +115,31 @@ public class LaActionExecuteUtil {
                 sb.append(", ");
             }
             sb.append(parameterType.getSimpleName());
+            final Class<?> genericType = optionalGenericTypeMap.get(index);
+            if (genericType != null) {
+                sb.append("<").append(genericType.getSimpleName()).append(">");
+            }
             ++index;
         }
         sb.append(")");
-        return sb.toString();
+    }
+
+    protected static Map<Integer, Class<?>> prepareOptionalGenericTypeMap(Method executeMethod) {
+        final Parameter[] parameters = executeMethod.getParameters();
+        if (parameters.length == 0) {
+            return Collections.emptyMap();
+        }
+        final Map<Integer, Class<?>> optionalGenericTypeMap = new LinkedHashMap<Integer, Class<?>>(4);
+        int index = 0;
+        for (Parameter parameter : parameters) {
+            if (isOptionalParameterType(parameter.getType())) {
+                final Type paramedType = parameter.getParameterizedType();
+                final Class<?> genericType = DfReflectionUtil.getGenericFirstClass(paramedType);
+                optionalGenericTypeMap.put(index, genericType);
+            }
+            ++index;
+        }
+        return Collections.unmodifiableMap(optionalGenericTypeMap);
     }
 
     // ===================================================================================

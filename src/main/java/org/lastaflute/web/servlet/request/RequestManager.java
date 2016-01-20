@@ -93,21 +93,40 @@ public interface RequestManager extends ScopedAttributeHolder {
 
     /**
      * Get the character encoding of the request.
-     * @return The optional character encoding as string. (NullAllowed)
+     * @return The optional character encoding as string. (EmptyAllowed: if no setting)
      */
     OptionalThing<String> getCharacterEncoding();
 
     /**
      * Get the content type of the request.
-     * @return The optional content type as string. (NullAllowed: if unknown)
+     * @return The optional content type as string. (EmptyAllowed: if unknown)
      */
     OptionalThing<String> getContentType();
 
     /**
-     * Is the request POST?
+     * Get the HTTP method of the request.
+     * @return The optional content type as string. (EmptyAllowed: if unknown, just in case)
+     */
+    OptionalThing<String> getHttpMethod();
+
+    /**
+     * Does the specified HTTP method match with requested one? (case insensitive)
+     * @param httpMethod The specified HTTP method, which may match with. (NotNull)
      * @return The determination, true or false.
      */
-    boolean isPost();
+    boolean isHttpMethod(String httpMethod);
+
+    /**
+     * Is the HTTP method of the request GET?
+     * @return The determination, true or false.
+     */
+    boolean isHttpMethodGet();
+
+    /**
+     * Is the HTTP method of the request POST?
+     * @return The determination, true or false.
+     */
+    boolean isHttpMethodPost();
 
     // ===================================================================================
     //                                                                  Parameter Handling

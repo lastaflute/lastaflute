@@ -167,7 +167,7 @@ public class ActionFormMapper {
 
     protected boolean isMultipartRequest() {
         return requestManager.getContentType().map(contentType -> {
-            return contentType.startsWith(MULTIPART_CONTENT_TYPE) && requestManager.isPost();
+            return contentType.startsWith(MULTIPART_CONTENT_TYPE) && requestManager.isHttpMethodPost();
         }).orElse(false);
     }
 

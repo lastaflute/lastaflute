@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.exception.ActionFormNotFoundException;
@@ -35,10 +36,12 @@ import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer.ExecuteArgBox;
+import org.lastaflute.web.ruts.config.analyzer.MethodNameAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternChosenBox;
 import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternRegexpBox;
 import org.lastaflute.web.ruts.config.checker.ExecuteMethodChecker;
+import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
 /**
@@ -56,23 +59,30 @@ public class ActionExecute implements Serializable {
     //                                                                           =========
     protected final ActionMapping actionMapping; // not null
     protected final Method executeMethod; // not null
+    protected final String mappingMethodName; // not null
+    protected final OptionalThing<String> restfulHttpMethod; // not null, empty allowed
     protected final boolean indexMethod;
     protected final TransactionGenre transactionGenre; // not null
     protected final boolean suppressValidatorCallCheck;
-    protected final OptionalThing<Integer> sqlExecutionCountLimit;
+    protected final OptionalThing<Integer> sqlExecutionCountLimit; // not null, empty allowed
 
     // -----------------------------------------------------
     //                                     Defined Parameter
     //                                     -----------------
-    protected final List<Class<?>> urlParamTypeList; // not null, read-only e.g. Integer.class, String.class
-    protected final Map<Integer, Class<?>> optionalGenericTypeMap; // not null, read-only, key is argument index
-    protected final OptionalThing<UrlParamArgs> urlParamArgs;
-    protected final OptionalThing<ActionFormMeta> formMeta;
+    protected final OptionalThing<UrlParamArgs> urlParamArgs; // not null, empty allowed
+    protected final OptionalThing<ActionFormMeta> formMeta; // not null, empty allowed
 
     // -----------------------------------------------------
     //                                           URL Pattern
     //                                           -----------
     protected final PreparedUrlPattern preparedUrlPattern; // not null
+
+    // -----------------------------------------------------
+    //                                     Lazy-Loaded Cache
+    //                                     -----------------
+    // don't use directly
+    /** The cache of request manager, just same as cachedAssistantDirector. (NotNull: after lazy-load) */
+    protected RequestManager cachedRequestManager; // null allowed until lazy-loaded
 
     // ===================================================================================
     //                                                                         Constructor
@@ -85,7 +95,10 @@ public class ActionExecute implements Serializable {
     public ActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {
         this.actionMapping = actionMapping;
         this.executeMethod = executeMethod;
-        this.indexMethod = executeMethod.getName().equals("index");
+        final MethodNameAnalyzer methodNameAnalyzer = newMethodNameAnalyzer();
+        this.mappingMethodName = methodNameAnalyzer.analyzeMappingMethodName(executeMethod);
+        this.restfulHttpMethod = methodNameAnalyzer.analyzeRestfulHttpMethod(executeMethod);
+        this.indexMethod = this.mappingMethodName.equals("index");
         this.transactionGenre = chooseTransactionGenre(executeOption);
         this.suppressValidatorCallCheck = executeOption.isSuppressValidatorCallCheck();
         this.sqlExecutionCountLimit = createOptionalSqlExecutionCountLimit(executeOption);
@@ -94,21 +107,22 @@ public class ActionExecute implements Serializable {
         final ExecuteArgAnalyzer executeArgAnalyzer = newExecuteArgAnalyzer();
         final ExecuteArgBox executeArgBox = newExecuteArgBox();
         executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
-        this.urlParamTypeList = executeArgBox.getUrlParamTypeList(); // not null, empty allowed
-        this.optionalGenericTypeMap = executeArgBox.getOptionalGenericTypeMap();
         this.formMeta = analyzeFormMeta(executeMethod, executeArgBox);
 
         // URL pattern (using urlParamTypeList)
+        final List<Class<?>> urlParamTypeList = executeArgBox.getUrlParamTypeList(); // not null, empty allowed
+        final Map<Integer, Class<?>> optionalGenericTypeMap = executeArgBox.getOptionalGenericTypeMap();
         final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
         final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
-        final UrlPatternChosenBox chosenBox = urlPatternAnalyzer.choose(executeMethod, specifiedUrlPattern, this.urlParamTypeList);
+        final UrlPatternChosenBox chosenBox =
+                urlPatternAnalyzer.choose(executeMethod, this.mappingMethodName, specifiedUrlPattern, urlParamTypeList);
         final UrlPatternRegexpBox regexpBox =
-                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getUrlPattern(), this.urlParamTypeList, this.optionalGenericTypeMap);
-        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), this.urlParamTypeList);
+                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getResolvedUrlPattern(), urlParamTypeList, optionalGenericTypeMap);
+        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), urlParamTypeList);
         this.preparedUrlPattern = newPreparedUrlPattern(chosenBox, regexpBox);
 
         // defined parameter again (uses URL pattern result)
-        this.urlParamArgs = prepareUrlParamArgs(this.urlParamTypeList, this.optionalGenericTypeMap);
+        this.urlParamArgs = prepareUrlParamArgs(urlParamTypeList, optionalGenericTypeMap);
 
         // check finally
         checkExecuteMethod(executeArgAnalyzer);
@@ -138,6 +152,10 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                              Analyzer
     //                                              --------
+    protected MethodNameAnalyzer newMethodNameAnalyzer() {
+        return new MethodNameAnalyzer();
+    }
+
     protected ExecuteArgAnalyzer newExecuteArgAnalyzer() {
         return new ExecuteArgAnalyzer();
     }
@@ -151,7 +169,7 @@ public class ActionExecute implements Serializable {
     }
 
     protected PreparedUrlPattern newPreparedUrlPattern(UrlPatternChosenBox chosenBox, UrlPatternRegexpBox regexpBox) {
-        return new PreparedUrlPattern(chosenBox.getUrlPattern(), regexpBox.getRegexpPattern(), chosenBox.isMethodNamePrefix());
+        return new PreparedUrlPattern(chosenBox, regexpBox);
     }
 
     // -----------------------------------------------------
@@ -187,7 +205,7 @@ public class ActionExecute implements Serializable {
     }
 
     protected String buildFormKey() {
-        return actionMapping.getActionDef().getComponentName() + "_" + executeMethod.getName() + "_Form";
+        return actionMapping.getActionDef().getComponentName() + "_" + mappingMethodName + "_Form";
     }
 
     protected ActionFormMeta newActionFormMeta(String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter,
@@ -231,6 +249,9 @@ public class ActionExecute implements Serializable {
     //                                      by URL Parameter
     //                                      ----------------
     public boolean determineTargetByUrlParameter(String paramPath) {
+        if (restfulHttpMethod.filter(httpMethod -> !matchesWithRequestedHttpMethod(httpMethod)).isPresent()) {
+            return false;
+        }
         if (!isParameterEmpty(paramPath)) {
             return handleOptionalParameterMapping(paramPath) || preparedUrlPattern.matcher(paramPath).find();
         } else {
@@ -241,7 +262,13 @@ public class ActionExecute implements Serializable {
         }
     }
 
+    protected boolean matchesWithRequestedHttpMethod(String httpMethod) {
+        return getRequestManager().isHttpMethod(httpMethod);
+    }
+
     protected boolean handleOptionalParameterMapping(String paramPath) {
+        // #for_now no considering type difference: index(String, OptionalThing<Integer>) but 'sea/land'
+        // so cannot mapping to dockside(String hangar) if the index() exists now
         if (hasOptionalUrlParameter()) { // e.g. any parameters are optional type
             if (indexMethod) { // e.g. index(String first, OptionalThing<String> second) with 'sea' or 'sea/land'
                 final int paramCount = Srl.count(Srl.trim(paramPath, "/"), "/") + 1; // e.g. sea/land => 2
@@ -249,7 +276,7 @@ public class ActionExecute implements Serializable {
             } else { // e.g. sea(String first, OptionalThing<String> second) with 'sea/dockside' or 'sea/dockside/hangar'
                 // required parameter may not be specified but checked later as 404
                 final String firstElement = Srl.substringFirstFront(paramPath, "/"); // e.g. sea (from sea/dockside)
-                if (firstElement.equals(getExecuteMethod().getName())) { // e.g. sea(first) with sea/dockside
+                if (firstElement.equals(mappingMethodName)) { // e.g. sea(first) with sea/dockside
                     final int paramCount = Srl.count(Srl.trim(paramPath, "/"), "/"); // e.g. sea/dockside => 1
                     return matchesParameterCount(paramCount);
                 }
@@ -291,7 +318,7 @@ public class ActionExecute implements Serializable {
     //                                  by Request Parameter
     //                                  --------------------
     public boolean determineTargetByRequestParameter(HttpServletRequest request) {
-        final String methodName = executeMethod.getName();
+        final String methodName = mappingMethodName;
         return !isParameterEmpty(request.getParameter(methodName)) // e.g. doUpdate=update
                 || !isParameterEmpty(request.getParameter(methodName + ".x")) // e.g. doUpdate.x=update
                 || !isParameterEmpty(request.getParameter(methodName + ".y")); // e.g. doUpdate.y=update
@@ -368,6 +395,14 @@ public class ActionExecute implements Serializable {
         return executeMethod;
     }
 
+    public String getMappingMethodName() {
+        return mappingMethodName;
+    }
+
+    public OptionalThing<String> getRestfulHttpMethod() {
+        return restfulHttpMethod;
+    }
+
     public boolean isIndexMethod() {
         return indexMethod;
     }
@@ -387,10 +422,6 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                     Defined Parameter
     //                                     -----------------
-    public List<Class<?>> getUrlParamTypeList() {
-        return urlParamTypeList;
-    }
-
     /**
      * @return The optional arguments of URL parameter for the method. (NotNull, EmptyAllowed: when no URL parameter)
      */
@@ -417,6 +448,23 @@ public class ActionExecute implements Serializable {
      * @deprecated use getPreparedUrlPattern()
      */
     public String getUrlPattern() { // for compatible, already UTFlute uses
-        return preparedUrlPattern.getUrlPattern();
+        return preparedUrlPattern.getResolvedUrlPattern();
+    }
+
+    // -----------------------------------------------------
+    //                                     Lazy-Loaded Cache
+    //                                     -----------------
+    // #hope no use DI container here
+    protected RequestManager getRequestManager() {
+        if (cachedRequestManager != null) {
+            return cachedRequestManager;
+        }
+        synchronized (this) {
+            if (cachedRequestManager != null) {
+                return cachedRequestManager;
+            }
+            cachedRequestManager = ContainerUtil.getComponent(RequestManager.class);
+        }
+        return cachedRequestManager;
     }
 }

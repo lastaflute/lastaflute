@@ -415,25 +415,25 @@ public class GodHandableAction implements VirtualAction {
             throw (Error) cause;
         }
         // checked exception e.g. IOException
-        final String msg = setupMethodExceptionMessage("Found the exception in the method invoking.", executeMethod, requestArgs);
+        final String msg = setupMethodExceptionMessage("Found the exception in the method invoking.", requestArgs);
         throw new ActionWrappedCheckedException(msg, cause);
     }
 
     protected void throwExecuteMethodAccessFailureException(Method executeMethod, Object[] requestArgs, IllegalAccessException cause) {
-        final String msg = setupMethodExceptionMessage("Cannot access the execute method.", executeMethod, requestArgs);
+        final String msg = setupMethodExceptionMessage("Cannot access the execute method.", requestArgs);
         throw new ExecuteMethodAccessFailureException(msg, cause);
     }
 
     protected void throwExecuteMethodArgumentMismatchException(Method executeMethod, Object[] requestArgs, IllegalArgumentException cause) {
-        final String msg = setupMethodExceptionMessage("Mismatch the argument for the execute method.", executeMethod, requestArgs);
+        final String msg = setupMethodExceptionMessage("Mismatch the argument for the execute method.", requestArgs);
         throw new ExecuteMethodArgumentMismatchException(msg, cause);
     }
 
-    protected String setupMethodExceptionMessage(String notice, Method executeMethod, Object[] requestArgs) {
+    protected String setupMethodExceptionMessage(String notice, Object[] requestArgs) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice(notice);
         br.addItem("Execute Method");
-        br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(executeMethod));
+        br.addElement(LaActionExecuteUtil.buildSimpleMethodExp(execute.getExecuteMethod()));
         br.addItem("Request Arguments");
         br.addElement(Arrays.asList(requestArgs));
         return br.buildExceptionMessage();

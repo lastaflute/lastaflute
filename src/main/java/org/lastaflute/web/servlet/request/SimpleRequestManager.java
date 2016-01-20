@@ -177,8 +177,25 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public boolean isPost() {
-        return "post".equalsIgnoreCase(getRequest().getMethod());
+    public OptionalThing<String> getHttpMethod() {
+        return OptionalThing.ofNullable(getRequest().getMethod(), () -> {
+            throw new IllegalStateException("Not found the HTTP method for the request: " + getRequestPath());
+        });
+    }
+
+    @Override
+    public boolean isHttpMethod(String httpMethod) {
+        return getHttpMethod().filter(requested -> httpMethod.equalsIgnoreCase(requested)).isPresent();
+    }
+
+    @Override
+    public boolean isHttpMethodGet() {
+        return isHttpMethod("get");
+    }
+
+    @Override
+    public boolean isHttpMethodPost() {
+        return isHttpMethod("post");
     }
 
     // ===================================================================================

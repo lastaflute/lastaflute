@@ -57,6 +57,7 @@ public class ActionRequestProcessor {
     // -----------------------------------------------------
     //                                     Lazy-Loaded Cache
     //                                     -----------------
+    // don't use directly
     /**
      * The cache of assistant director, which can be lazy-loaded when you get it.
      * Don't use these variables directly, you should use the getter. (NotNull: after lazy-load)

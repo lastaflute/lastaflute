@@ -73,7 +73,22 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
-    public boolean isPost() {
+    public OptionalThing<String> getHttpMethod() {
+        return null;
+    }
+
+    @Override
+    public boolean isHttpMethod(String httpMethod) {
+        return false;
+    }
+
+    @Override
+    public boolean isHttpMethodGet() {
+        return false;
+    }
+
+    @Override
+    public boolean isHttpMethodPost() {
         return false;
     }
 
