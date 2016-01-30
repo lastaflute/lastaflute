@@ -232,7 +232,7 @@ public class ThreadCacheContext {
             failureMap = new HashMap<Class<?>, Object>();
             setObject(FW_VALIDATOR_TYPE_FAILURE, failureMap);
         }
-        failureMap.put(keyType, failureMap);
+        failureMap.put(keyType, failureBean);
     }
 
     public static void removeValidatorTypeFailure(Class<?> keyType) {
