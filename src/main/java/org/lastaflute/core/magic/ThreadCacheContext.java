@@ -217,12 +217,34 @@ public class ThreadCacheContext {
         setObject(FW_VALIDATOR_CALLED, MARK_OBJ);
     }
 
-    public static Object findValidatorTypeFailure() { // object not to depend on web
-        return exists() ? getObject(FW_VALIDATOR_TYPE_FAILURE) : null;
+    public static Object findValidatorTypeFailure(Class<?> keyType) { // object not to depend on web
+        if (exists()) {
+            final Map<Class<?>, Object> failureMap = getObject(FW_VALIDATOR_TYPE_FAILURE);
+            return failureMap != null ? failureMap.get(keyType) : null;
+        } else {
+            return null;
+        }
     }
 
-    public static void registerValidatorTypeFailure(Object failureBean) {
-        setObject(FW_VALIDATOR_TYPE_FAILURE, failureBean);
+    public static void registerValidatorTypeFailure(Class<?> keyType, Object failureBean) {
+        Map<Class<?>, Object> failureMap = getObject(FW_VALIDATOR_TYPE_FAILURE);
+        if (failureMap == null) {
+            failureMap = new HashMap<Class<?>, Object>();
+            setObject(FW_VALIDATOR_TYPE_FAILURE, failureMap);
+        }
+        failureMap.put(keyType, failureMap);
+    }
+
+    public static void removeValidatorTypeFailure(Class<?> keyType) {
+        if (exists()) {
+            Map<Class<?>, Object> failureMap = getObject(FW_VALIDATOR_TYPE_FAILURE);
+            if (failureMap != null && failureMap.get(keyType) != null) {
+                failureMap.remove(keyType);
+            }
+            if (failureMap.isEmpty()) {
+                removeObject(FW_VALIDATOR_TYPE_FAILURE);
+            }
+        }
     }
 
     // -----------------------------------------------------

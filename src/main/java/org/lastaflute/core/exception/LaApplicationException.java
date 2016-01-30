@@ -46,7 +46,7 @@ public abstract class LaApplicationException extends RuntimeException {
     //                                                                             Message
     //                                                                             =======
     public List<LaApplicationMessage> getMessageList() {
-        return messageList != null ? messageList : Collections.emptyList();
+        return messageList != null ? Collections.unmodifiableList(messageList) : Collections.emptyList();
     }
 
     public void saveMessage(String messageKey, Object... values) {

@@ -243,7 +243,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         if (!implicitGroup) {
             verifyExplicitGroupClientError(form, vioSet);
         }
-        final MESSAGES messages = resolveTypeFailure(toUserMessages(form, vioSet));
+        final MESSAGES messages = resolveTypeFailure(form, toUserMessages(form, vioSet));
         moreValidationLambda.more(messages);
         if (!messages.isEmpty()) {
             throwValidationErrorException(messages, validationErrorLambda);
@@ -555,11 +555,8 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // ===================================================================================
     //                                                                        Type Failure
     //                                                                        ============
-    protected MESSAGES resolveTypeFailure(MESSAGES messages) {
-        if (!ThreadCacheContext.exists()) { // basically no way, just in case
-            return messages;
-        }
-        final TypeFailureBean failureBean = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
+    protected MESSAGES resolveTypeFailure(Object form, MESSAGES messages) {
+        final TypeFailureBean failureBean = findFailureBeanOnThread(form);
         if (failureBean == null || !failureBean.hasFailure()) {
             return messages;
         }
@@ -593,6 +590,16 @@ public class ActionValidator<MESSAGES extends UserMessages> {
             }
         }
         return newMsgs;
+    }
+
+    protected TypeFailureBean findFailureBeanOnThread(Object form) {
+        if (!ThreadCacheContext.exists()) { // basically no way, just in case
+            return null;
+        }
+        final Class<? extends Object> keyType = form.getClass();
+        final TypeFailureBean failureBean = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure(keyType);
+        ThreadCacheContext.removeValidatorTypeFailure(keyType);
+        return failureBean;
     }
 
     protected void handleTypeFailureGroups(TypeFailureElement element) {
