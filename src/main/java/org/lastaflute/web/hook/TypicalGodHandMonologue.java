@@ -25,7 +25,7 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
-import org.lastaflute.core.exception.LaApplicationMessageItem;
+import org.lastaflute.core.exception.LaApplicationMessage;
 import org.lastaflute.core.message.exception.MessagingApplicationException;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
@@ -158,11 +158,11 @@ public class TypicalGodHandMonologue {
     }
 
     protected void reflectEmbeddedApplicationMessagesIfExists(ActionRuntime runtime, LaApplicationException appEx) {
-        final List<LaApplicationMessageItem> messageItemList = appEx.getMessageItemList();
-        if (!messageItemList.isEmpty()) {
-            logger.debug("...Saving embedded application message as action error: {}", messageItemList);
+        final List<LaApplicationMessage> messageList = appEx.getMessageList();
+        if (!messageList.isEmpty()) {
+            logger.debug("...Saving embedded application message as action error: {}", messageList);
             sessionManager.errors().clear(); // for overriding
-            messageItemList.forEach(item -> sessionManager.errors().add(item.getMessageKey(), item.getValues()));
+            messageList.forEach(msg -> sessionManager.errors().add(msg.getMessageKey(), msg.getValues()));
         }
     }
 

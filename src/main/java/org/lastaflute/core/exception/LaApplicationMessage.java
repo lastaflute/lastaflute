@@ -20,12 +20,12 @@ import java.util.Arrays;
 /**
  * @author jflute
  */
-public class LaApplicationMessageItem {
+public class LaApplicationMessage {
 
     protected final String messageKey; // not null
     protected final Object[] values; // not null
 
-    public LaApplicationMessageItem(String messageKey, Object[] values) {
+    public LaApplicationMessage(String messageKey, Object[] values) {
         if (messageKey == null) {
             throw new IllegalArgumentException("The argument 'messageKey' should not be null.");
         }

@@ -20,7 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.lastaflute.core.exception.LaApplicationException;
-import org.lastaflute.core.exception.LaApplicationMessageItem;
+import org.lastaflute.core.exception.LaApplicationMessage;
 import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
 
@@ -55,11 +55,11 @@ public class MessagingApplicationException extends LaApplicationException {
         if (messages.isEmpty()) {
             throw new IllegalArgumentException("The messages should not be empty: " + messages);
         }
-        saveMessages(toItemList(messages));
+        saveMessages(toMessageList(messages));
     }
 
-    protected List<LaApplicationMessageItem> toItemList(UserMessages messages) {
-        final List<LaApplicationMessageItem> convertedList = new ArrayList<LaApplicationMessageItem>(messages.size());
+    protected List<LaApplicationMessage> toMessageList(UserMessages messages) {
+        final List<LaApplicationMessage> convertedList = new ArrayList<LaApplicationMessage>(messages.size());
         for (Iterator<UserMessage> ite = messages.accessByFlatIterator(); ite.hasNext();) {
             final UserMessage message = ite.next();
             verifyResourceMessage(messages, message);
@@ -74,7 +74,7 @@ public class MessagingApplicationException extends LaApplicationException {
         }
     }
 
-    protected LaApplicationMessageItem newApplicationMessageItem(UserMessage message) {
-        return new LaApplicationMessageItem(message.getMessageKey(), message.getValues());
+    protected LaApplicationMessage newApplicationMessageItem(UserMessage message) {
+        return new LaApplicationMessage(message.getMessageKey(), message.getValues());
     }
 }

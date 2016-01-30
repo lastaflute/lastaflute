@@ -25,12 +25,11 @@ import java.util.List;
 public abstract class LaApplicationException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
-    protected static final Object[] EMPTY_ARGS = new Object[] {};
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected List<LaApplicationMessageItem> itemList; // lazy loaded
+    protected List<LaApplicationMessage> messageList; // lazy loaded
 
     // ===================================================================================
     //                                                                         Constructor
@@ -44,26 +43,33 @@ public abstract class LaApplicationException extends RuntimeException {
     }
 
     // ===================================================================================
-    //                                                                            Accessor
-    //                                                                            ========
-    public List<LaApplicationMessageItem> getMessageItemList() {
-        return itemList != null ? itemList : Collections.emptyList();
+    //                                                                             Message
+    //                                                                             =======
+    public List<LaApplicationMessage> getMessageList() {
+        return messageList != null ? messageList : Collections.emptyList();
     }
 
     public void saveMessage(String messageKey, Object... values) {
         if (messageKey == null) {
             throw new IllegalArgumentException("The argument 'messageKey' should not be null.");
         }
-        if (itemList == null) {
-            itemList = new ArrayList<LaApplicationMessageItem>(1);
+        if (values == null) {
+            throw new IllegalArgumentException("The argument 'values' should not be null.");
         }
-        itemList.add(new LaApplicationMessageItem(messageKey, values != null ? values : EMPTY_ARGS));
+        if (messageList == null) {
+            messageList = new ArrayList<LaApplicationMessage>(1);
+        }
+        messageList.add(newApplicationMessage(messageKey, values));
     }
 
-    public void saveMessages(List<LaApplicationMessageItem> itemList) {
+    protected LaApplicationMessage newApplicationMessage(String messageKey, Object... values) {
+        return new LaApplicationMessage(messageKey, values);
+    }
+
+    public void saveMessages(List<LaApplicationMessage> itemList) {
         if (itemList == null) {
             throw new IllegalArgumentException("The argument 'itemList' should not be null.");
         }
-        this.itemList = itemList;
+        this.messageList = itemList;
     }
 }
