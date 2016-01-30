@@ -24,11 +24,11 @@ import java.util.Set;
 import javax.validation.ConstraintViolation;
 import javax.validation.constraints.NotNull;
 
+import org.lastaflute.core.message.UserMessage;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.unit.UnitLastaFluteTestCase;
 import org.lastaflute.unit.mock.web.MockRequestManager;
 import org.lastaflute.unit.mock.web.validation.MockConstraintViolation;
-import org.lastaflute.web.ruts.message.ActionMessage;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.validation.theme.typed.TypeBigDecimal;
 import org.lastaflute.web.validation.theme.typed.TypeDouble;
 import org.lastaflute.web.validation.theme.typed.TypeFloat;
@@ -40,9 +40,9 @@ import org.lastaflute.web.validation.theme.typed.TypeLong;
  */
 public class ActionValidatorTest extends UnitLastaFluteTestCase {
 
-    public void test_toActionMessages() throws Exception {
+    public void test_toUserMessages() throws Exception {
         // ## Arrange ##
-        ActionValidator<ActionMessages> validator = createValidator();
+        ActionValidator<UserMessages> validator = createValidator();
         MockForm form = new MockForm();
         Set<ConstraintViolation<Object>> vioSet = new HashSet<ConstraintViolation<Object>>();
         vioSet.add(createViolation("sea"));
@@ -56,27 +56,27 @@ public class ActionValidatorTest extends UnitLastaFluteTestCase {
         vioSet.add(createViolation("iks[5].dstore"));
 
         // ## Act ##
-        ActionMessages messages = validator.toActionMessages(form, vioSet);
+        UserMessages messages = validator.toUserMessages(form, vioSet);
 
         // ## Assert ##
         Set<String> propertySet = messages.toPropertySet();
         assertHasAnyElement(propertySet);
         log(propertySet);
         assertEquals(vioSet.size(), propertySet.size());
-        List<ActionMessage> messageList = new ArrayList<ActionMessage>();
+        List<UserMessage> messageList = new ArrayList<UserMessage>();
         for (String property : propertySet) {
-            for (Iterator<ActionMessage> iterator = messages.accessByIteratorOf(property); iterator.hasNext();) {
+            for (Iterator<UserMessage> iterator = messages.accessByIteratorOf(property); iterator.hasNext();) {
                 messageList.add(iterator.next());
             }
         }
-        for (ActionMessage message : messageList) {
+        for (UserMessage message : messageList) {
             log(message);
         }
     }
 
-    protected ActionValidator<ActionMessages> createValidator() {
+    protected ActionValidator<UserMessages> createValidator() {
         MockRequestManager requestManager = new MockRequestManager();
-        return new ActionValidator<ActionMessages>(requestManager, () -> new ActionMessages(), new Class<?>[0]);
+        return new ActionValidator<UserMessages>(requestManager, () -> new UserMessages(), new Class<?>[0]);
     }
 
     protected MockConstraintViolation createViolation(String propertyPath) {

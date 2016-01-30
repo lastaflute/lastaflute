@@ -15,18 +15,22 @@
  */
 package org.lastaflute.core.exception;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * @author jflute
  */
 public abstract class LaApplicationException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
+    protected static final Object[] EMPTY_ARGS = new Object[] {};
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected String messageKey;
-    protected Object[] args;
+    protected List<LaApplicationMessageItem> itemList; // lazy loaded
 
     // ===================================================================================
     //                                                                         Constructor
@@ -42,19 +46,24 @@ public abstract class LaApplicationException extends RuntimeException {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public String getErrorKey() {
-        return messageKey;
+    public List<LaApplicationMessageItem> getMessageItemList() {
+        return itemList != null ? itemList : Collections.emptyList();
     }
 
-    public Object[] getErrorArgs() {
-        return args;
-    }
-
-    public void saveErrors(String messageKey, Object... args) {
+    public void saveMessage(String messageKey, Object... values) {
         if (messageKey == null) {
             throw new IllegalArgumentException("The argument 'messageKey' should not be null.");
         }
-        this.messageKey = messageKey;
-        this.args = args;
+        if (itemList == null) {
+            itemList = new ArrayList<LaApplicationMessageItem>(1);
+        }
+        itemList.add(new LaApplicationMessageItem(messageKey, values != null ? values : EMPTY_ARGS));
+    }
+
+    public void saveMessages(List<LaApplicationMessageItem> itemList) {
+        if (itemList == null) {
+            throw new IllegalArgumentException("The argument 'itemList' should not be null.");
+        }
+        this.itemList = itemList;
     }
 }

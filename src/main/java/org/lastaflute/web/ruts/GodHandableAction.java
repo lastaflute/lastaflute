@@ -27,6 +27,8 @@ import java.util.stream.Stream;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.message.UserMessage;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
 import org.lastaflute.db.jta.romanticist.TransactionMemoriesProvider;
@@ -47,8 +49,6 @@ import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.error.RebootAfterFreeGenError;
 import org.lastaflute.web.ruts.error.RebootAfterGenerateError;
-import org.lastaflute.web.ruts.message.ActionMessage;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
@@ -440,7 +440,7 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected ActionResponse handleValidationErrorException(ValidationErrorException cause) {
-        final ActionMessages messages = cause.getMessages();
+        final UserMessages messages = cause.getMessages();
         assertValidationErrorMessagesExists(messages, cause);
         if (logger.isDebugEnabled()) {
             final StringBuilder sb = new StringBuilder();
@@ -451,7 +451,7 @@ public class GodHandableAction implements VirtualAction {
             }).collect(Collectors.toList()));
             messages.toPropertySet().forEach(property -> {
                 sb.append(LF).append(" ").append(property);
-                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                for (Iterator<UserMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
                     sb.append(LF).append("   ").append(ite.next());
                 }
             });
@@ -472,7 +472,7 @@ public class GodHandableAction implements VirtualAction {
         return response;
     }
 
-    protected void assertValidationErrorMessagesExists(ActionMessages errors, ValidationErrorException cause) {
+    protected void assertValidationErrorMessagesExists(UserMessages errors, ValidationErrorException cause) {
         if (errors.isEmpty()) {
             throw new IllegalStateException("Empty message even if validation error: " + buildActionDisp(runtime), cause);
         }

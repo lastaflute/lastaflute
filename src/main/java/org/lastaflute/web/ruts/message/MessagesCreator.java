@@ -15,13 +15,15 @@
  */
 package org.lastaflute.web.ruts.message;
 
+import org.lastaflute.core.message.UserMessages;
+
 /**
  * @param <MESSAGES> The type of messages.
  * @author jflute
  * @since 0.6.0 (2015/05/17 Sunday at higashi-ginza)
  */
 @FunctionalInterface
-public interface MessagesCreator<MESSAGES extends ActionMessages> {
+public interface MessagesCreator<MESSAGES extends UserMessages> {
 
     MESSAGES provide();
 }

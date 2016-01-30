@@ -13,16 +13,16 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.validation.exception;
+package org.lastaflute.web.exception;
 
-import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
+import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.message.exception.MessagingApplicationException;
+import org.lastaflute.web.response.ActionResponse;
 
 /**
  * @author jflute
- * @since 0.6.0 (2015/08/08 Saturday at Showbase)
  */
-public class ClientErrorByValidatorException extends ForcedRequest400BadRequestException {
+public class MessageResponseApplicationException extends MessagingApplicationException {
 
     // ===================================================================================
     //                                                                          Definition
@@ -32,28 +32,37 @@ public class ClientErrorByValidatorException extends ForcedRequest400BadRequestE
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final UserMessages messages; // not null
+    protected MessageResponseHook responseHook;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ClientErrorByValidatorException(String msg, UserMessages messages) {
-        super(msg);
-        this.messages = messages;
+    public MessageResponseApplicationException(String msg, MessageResponseHook responseHook, String messageKey, Object... args) {
+        super(msg, messageKey);
+        this.responseHook = responseHook;
+    }
+
+    public MessageResponseApplicationException(String msg, Throwable cause, MessageResponseHook responseHook, String messageKey,
+            Object... args) {
+        super(msg, cause, messageKey, args);
+        this.responseHook = responseHook;
     }
 
     // ===================================================================================
-    //                                                                      Basic Override
-    //                                                                      ==============
-    @Override
-    public String toString() {
-        return "validationClientError:{messages=" + messages + "}";
+    //                                                                       Response Hook
+    //                                                                       =============
+    public OptionalThing<MessageResponseHook> getResponseHook() {
+        return OptionalThing.ofNullable(responseHook, () -> {
+            throw new IllegalStateException("Not found the response hook.");
+        });
     }
 
-    // ===================================================================================
-    //                                                                            Accessor
-    //                                                                            ========
-    public UserMessages getMessages() {
-        return messages;
+    @FunctionalInterface
+    public static interface MessageResponseHook {
+
+        /**
+         * @return The action response for application exception. (NotNull)
+         */
+        ActionResponse hook();
     }
 }

@@ -27,6 +27,7 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.LaDBFluteUtil;
@@ -49,7 +50,6 @@ import org.lastaflute.web.hook.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.response.ActionResponse;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
@@ -73,7 +73,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(TypicalAction.class);
-    protected static final String GLOBAL = ActionMessages.GLOBAL_PROPERTY_KEY;
+    protected static final String GLOBAL = UserMessages.GLOBAL_PROPERTY_KEY;
 
     // ===================================================================================
     //                                                                           Attribute

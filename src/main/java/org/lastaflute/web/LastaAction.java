@@ -22,6 +22,7 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.magic.async.ConcurrentAsyncCall;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionShow;
 import org.lastaflute.db.jta.stage.TransactionStage;
@@ -32,7 +33,6 @@ import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.response.StreamResponse;
 import org.lastaflute.web.response.XmlResponse;
 import org.lastaflute.web.response.next.ForwardNext;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
@@ -94,12 +94,12 @@ public abstract class LastaAction {
     // ===================================================================================
     //                                                                          Validation
     //                                                                          ==========
-    protected <MESSAGES extends ActionMessages> ActionValidator<MESSAGES> createValidator() { // overridden as type-safe
+    protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> createValidator() { // overridden as type-safe
         return createValidator(myValidationGroups());
     }
 
     @SuppressWarnings("unchecked")
-    protected <MESSAGES extends ActionMessages> ActionValidator<MESSAGES> createValidator(Class<?>... groups) { // for explicit groups
+    protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> createValidator(Class<?>... groups) { // for explicit groups
         return new ActionValidator<MESSAGES>(requestManager, () -> (MESSAGES) createMessages(), groups);
     }
 
@@ -108,11 +108,11 @@ public abstract class LastaAction {
     }
 
     /**
-     * Create the action messages basically for session errors or messages. (for application)
-     * @return The new-created action messages provided from Struts. (NotNull)
+     * Create the user messages basically for session errors or messages. (for application)
+     * @return The new-created user messages provided from Struts. (NotNull)
      */
-    protected ActionMessages createMessages() { // overridden as type-safe
-        return new ActionMessages();
+    protected UserMessages createMessages() { // overridden as type-safe
+        return new UserMessages();
     }
 
     // ===================================================================================

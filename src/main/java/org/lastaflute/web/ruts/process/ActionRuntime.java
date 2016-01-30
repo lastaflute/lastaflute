@@ -26,13 +26,13 @@ import org.dbflute.Entity;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.exception.DirectlyEntityDisplayDataNotAllowedException;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**
@@ -56,7 +56,7 @@ public class ActionRuntime {
     protected OptionalThing<VirtualForm> form;
     protected ActionResponse actionResponse;
     protected RuntimeException failureCause;
-    protected ActionMessages validationErrors;
+    protected UserMessages validationErrors;
     protected Map<String, Object> displayDataMap; // lazy loaded
     protected DisplayDataValidator displayDataValidator; // is set when html responce reflecting
 
@@ -361,11 +361,11 @@ public class ActionRuntime {
      * Get the messages as validation error.
      * @return The messages as validation error. (NullAllowed: when no validation error)
      */
-    public ActionMessages getValidationErrors() {
+    public UserMessages getValidationErrors() {
         return validationErrors;
     }
 
-    public void manageValidationErrors(ActionMessages validationErrors) {
+    public void manageValidationErrors(UserMessages validationErrors) {
         assertArgumentNotNull("validationErrors", validationErrors);
         this.validationErrors = validationErrors;
     }

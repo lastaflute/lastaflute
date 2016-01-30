@@ -32,11 +32,11 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.SessionAttributeCannotCastException;
 import org.lastaflute.web.exception.SessionAttributeNotFoundException;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.filter.hotdeploy.HotdeployHttpSession;
 import org.lastaflute.web.servlet.request.scoped.ScopedMessageHandler;
 import org.lastaflute.web.util.LaRequestUtil;
@@ -347,7 +347,7 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     protected ScopedMessageHandler createScopedMessageHandler(String messagesKey) {
-        return new ScopedMessageHandler(this, ActionMessages.GLOBAL_PROPERTY_KEY, messagesKey);
+        return new ScopedMessageHandler(this, UserMessages.GLOBAL_PROPERTY_KEY, messagesKey);
     }
 
     protected String getInfoMessagesKey() {

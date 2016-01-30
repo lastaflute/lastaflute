@@ -15,10 +15,12 @@
  */
 package org.lastaflute.web.exception;
 
+import org.lastaflute.core.message.exception.MessagingApplicationException;
+
 /**
  * @author jflute
  */
-public class ForcedIllegalTransitionException extends MessageKeyApplicationException {
+public class ForcedIllegalTransitionException extends MessagingApplicationException {
 
     private static final long serialVersionUID = 1L;
 

@@ -32,8 +32,6 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
-import org.lastaflute.web.ruts.message.ActionMessage;
-import org.lastaflute.web.ruts.message.ActionMessages;
 
 /**
  * @author jflute
@@ -178,14 +176,14 @@ public class SimpleMessageManager implements MessageManager {
     //                                                                    Resolved Message
     //                                                                    ================
     @Override
-    public List<String> toMessageList(Locale locale, ActionMessages errors) {
+    public List<String> toMessageList(Locale locale, UserMessages messages) {
         assertArgumentNotNull("locale", locale);
-        assertArgumentNotNull("errors", errors);
-        if (errors.isEmpty()) {
+        assertArgumentNotNull("errors", messages);
+        if (messages.isEmpty()) {
             return Collections.emptyList();
         }
         final List<String> messageList = new ArrayList<String>();
-        final Iterator<ActionMessage> ite = errors.accessByFlatIterator();
+        final Iterator<UserMessage> ite = messages.accessByFlatIterator();
         while (ite.hasNext()) {
             messageList.add(resolveMessageText(locale, ite.next()));
         }
@@ -193,17 +191,17 @@ public class SimpleMessageManager implements MessageManager {
     }
 
     @Override
-    public Map<String, List<String>> toPropertyMessageMap(Locale locale, ActionMessages errors) {
+    public Map<String, List<String>> toPropertyMessageMap(Locale locale, UserMessages messages) {
         assertArgumentNotNull("locale", locale);
-        assertArgumentNotNull("errors", errors);
-        if (errors.isEmpty()) {
+        assertArgumentNotNull("errors", messages);
+        if (messages.isEmpty()) {
             return Collections.emptyMap();
         }
         final Map<String, List<String>> messageMap = new LinkedHashMap<String, List<String>>();
-        final Set<String> propertySet = errors.toPropertySet();
+        final Set<String> propertySet = messages.toPropertySet();
         for (String property : propertySet) {
             final List<String> messageList = new ArrayList<String>();
-            for (Iterator<ActionMessage> ite = errors.accessByIteratorOf(property); ite.hasNext();) {
+            for (Iterator<UserMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
                 messageList.add(resolveMessageText(locale, ite.next()));
             }
             messageMap.put(property, Collections.unmodifiableList(messageList));
@@ -211,9 +209,9 @@ public class SimpleMessageManager implements MessageManager {
         return Collections.unmodifiableMap(messageMap);
     }
 
-    protected String resolveMessageText(Locale locale, ActionMessage message) {
-        final String key = message.getKey();
-        return message.isResource() ? doGetMessage(locale, key, message.getValues()) : key;
+    protected String resolveMessageText(Locale locale, UserMessage message) {
+        final String messageKey = message.getMessageKey();
+        return message.isResource() ? doGetMessage(locale, messageKey, message.getValues()) : messageKey;
     }
 
     // ===================================================================================

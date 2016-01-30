@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.hook;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 import org.dbflute.exception.EntityAlreadyDeletedException;
@@ -24,10 +25,12 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
+import org.lastaflute.core.exception.LaApplicationMessageItem;
+import org.lastaflute.core.message.exception.MessagingApplicationException;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
-import org.lastaflute.web.exception.MessageKeyApplicationException;
+import org.lastaflute.web.exception.MessageResponseApplicationException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.exception.LoginFailureException;
 import org.lastaflute.web.login.exception.LoginUnauthorizedException;
@@ -145,8 +148,8 @@ public class TypicalGodHandMonologue {
         ActionResponse response = ActionResponse.undefined();
         if (appEx instanceof LoginUnauthorizedException) {
             response = handleLoginUnauthorizedException(runtime, (LoginUnauthorizedException) appEx);
-        } else if (appEx instanceof MessageKeyApplicationException) {
-            response = handleMessageKeyApplicationException(runtime, (MessageKeyApplicationException) appEx);
+        } else if (appEx instanceof MessagingApplicationException) {
+            response = handleMessagingApplicationException(runtime, (MessagingApplicationException) appEx);
         }
         if (response.isUndefined()) {
             response = handleUnknownApplicationException(appEx);
@@ -155,10 +158,11 @@ public class TypicalGodHandMonologue {
     }
 
     protected void reflectEmbeddedApplicationMessagesIfExists(ActionRuntime runtime, LaApplicationException appEx) {
-        final String errorsKey = appEx.getErrorKey();
-        if (errorsKey != null) {
-            logger.debug("...Saving embedded application message as action error: {}", errorsKey);
-            sessionManager.errors().save(errorsKey, appEx.getErrorArgs());
+        final List<LaApplicationMessageItem> messageItemList = appEx.getMessageItemList();
+        if (!messageItemList.isEmpty()) {
+            logger.debug("...Saving embedded application message as action error: {}", messageItemList);
+            sessionManager.errors().clear(); // for overriding
+            messageItemList.forEach(item -> sessionManager.errors().add(item.getMessageKey(), item.getValues()));
         }
     }
 
@@ -285,10 +289,16 @@ public class TypicalGodHandMonologue {
     // -----------------------------------------------------
     //                                           Message Key
     //                                           -----------
-    protected ActionResponse handleMessageKeyApplicationException(ActionRuntime runtime, MessageKeyApplicationException appEx) {
+    protected ActionResponse handleMessagingApplicationException(ActionRuntime runtime, MessagingApplicationException appEx) {
         // no save here because of saved as embedded message later
         //saveErrors(appEx.getErrors());
-        return appEx.getResponseHook().map(hook -> hook.hook()).orElseGet(() -> prepareShowErrorsForward(runtime));
+        if (appEx instanceof MessageResponseApplicationException) {
+            return ((MessageResponseApplicationException) appEx).getResponseHook().map(hook -> {
+                return hook.hook();
+            }).orElseGet(() -> prepareShowErrorsForward(runtime));
+        } else {
+            return prepareShowErrorsForward(runtime);
+        }
     }
 
     protected HtmlResponse prepareShowErrorsForward(ActionRuntime runtime) {

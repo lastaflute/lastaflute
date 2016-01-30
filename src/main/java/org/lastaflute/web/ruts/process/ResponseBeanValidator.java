@@ -25,11 +25,11 @@ import java.util.function.Consumer;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.message.UserMessage;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
-import org.lastaflute.web.ruts.message.ActionMessage;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
@@ -72,7 +72,7 @@ public abstract class ResponseBeanValidator {
         if (bean == null) {
             throw new IllegalStateException("The argument 'bean' should not be null.");
         }
-        final ActionValidator<ActionMessages> validator = createActionValidator();
+        final ActionValidator<UserMessages> validator = createActionValidator();
         try {
             executeValidator(validator, bean);
         } catch (ValidationErrorException e) {
@@ -82,15 +82,15 @@ public abstract class ResponseBeanValidator {
         }
     }
 
-    protected ActionValidator<ActionMessages> createActionValidator() {
+    protected ActionValidator<UserMessages> createActionValidator() {
         return new ActionValidator<>(requestManager, () -> {
-            return new ActionMessages();
+            return new UserMessages();
         } , getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS));
     }
 
     protected abstract OptionalThing<Class<?>[]> getValidatorGroups();
 
-    protected void executeValidator(ActionValidator<ActionMessages> validator, Object bean) {
+    protected void executeValidator(ActionValidator<UserMessages> validator, Object bean) {
         validator.validate(bean, more -> {} , () -> {
             throw new IllegalStateException("unused here, no way");
         });
@@ -100,7 +100,7 @@ public abstract class ResponseBeanValidator {
     //                                                                    Validation Error
     //                                                                    ================
     protected void handleResponseBeanValidationErrorException(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder,
-            ActionMessages messages, RuntimeException cause) {
+            UserMessages messages, RuntimeException cause) {
         // cause is completely framework info so not show it
         final String msg = buildValidationErrorMessage(bean, locationBuilder, messages);
         if (warning) {
@@ -111,7 +111,7 @@ public abstract class ResponseBeanValidator {
     }
 
     protected abstract String buildValidationErrorMessage(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder,
-            ActionMessages messages);
+            UserMessages messages);
 
     // -----------------------------------------------------
     //                                        Message Helper
@@ -138,12 +138,12 @@ public abstract class ResponseBeanValidator {
         }
     }
 
-    protected void setupItemMessages(ExceptionMessageBuilder br, ActionMessages messages) {
+    protected void setupItemMessages(ExceptionMessageBuilder br, UserMessages messages) {
         br.addItem("Messages");
         final Set<String> propertySet = messages.toPropertySet();
         for (String property : propertySet) {
             br.addElement(property);
-            for (Iterator<ActionMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
+            for (Iterator<UserMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
                 br.addElement("  " + ite.next());
             }
         }

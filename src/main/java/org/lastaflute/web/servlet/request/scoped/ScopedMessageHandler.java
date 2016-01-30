@@ -16,8 +16,8 @@
 package org.lastaflute.web.servlet.request.scoped;
 
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.ruts.message.ActionMessage;
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.core.message.UserMessage;
+import org.lastaflute.core.message.UserMessages;
 
 /**
  * @author jflute
@@ -44,27 +44,27 @@ public class ScopedMessageHandler {
     //                                                                               Save
     //                                                                              ======
     /**
-     * Save message as (global) action messages. (overriding existing messages) <br>
+     * Save message as (global) user messages. (overriding existing messages) <br>
      * This message will be deleted immediately after display if you use e.g. la:errors.
      * @param messageKey The message key to be saved. (NotNull)
      * @param args The varying array of arguments for the message. (NullAllowed, EmptyAllowed)
      */
     public void save(String messageKey, Object... args) {
         assertObjectNotNull("messageKey", messageKey);
-        doSaveInfo(prepareActionMessages(messageKey, args));
+        doSaveInfo(prepareUserMessages(messageKey, args));
     }
 
     /**
-     * Save message as (global) action messages. (overriding existing messages) <br>
+     * Save message as (global) user messages. (overriding existing messages) <br>
      * This message will be deleted immediately after display if you use e.g. la:errors.
      * @param messages The action message for messages. (NotNull, EmptyAllowed)
      */
-    public void save(ActionMessages messages) {
+    public void save(UserMessages messages) {
         assertObjectNotNull("messages", messages);
         doSaveInfo(messages);
     }
 
-    protected void doSaveInfo(ActionMessages messages) {
+    protected void doSaveInfo(UserMessages messages) {
         attributeHolder.setAttribute(getMessagesKey(), messages);
     }
 
@@ -72,52 +72,49 @@ public class ScopedMessageHandler {
     //                                                                                Add
     //                                                                               =====
     /**
-     * Add message as (global) action messages to rear of existing messages. <br>
+     * Add message as (global) user messages to rear of existing messages. <br>
      * This message will be deleted immediately after display if you use e.g. la:errors.
      * @param messageKey The message key to be added. (NotNull)
      * @param args The varying array of arguments for the message. (NullAllowed, EmptyAllowed)
      */
     public void add(String messageKey, Object... args) {
         assertObjectNotNull("messageKey", messageKey);
-        doAddMessages(prepareActionMessages(messageKey, args));
+        doAddMessages(prepareUserMessages(messageKey, args));
     }
 
-    protected void doAddMessages(ActionMessages messages) {
-        if (messages == null) {
-            return;
-        }
-        final ActionMessages existingOrCreated = get().orElseGet(() -> newActionMessages());
+    protected void doAddMessages(UserMessages messages) {
+        final UserMessages existingOrCreated = get().orElseGet(() -> newUserMessages());
         existingOrCreated.add(messages);
         doSaveInfo(existingOrCreated);
     }
 
-    protected ActionMessages newActionMessages() {
-        return new ActionMessages();
+    protected UserMessages newUserMessages() {
+        return new UserMessages();
     }
 
     // ===================================================================================
     //                                                                  Has, Get and Clear
     //                                                                  ==================
     /**
-     * Does it have messages as (global or specified property) action messages at least one?
+     * Does it have messages as (global or specified property) user messages at least one?
      * @return The determination, true or false.
      */
     public boolean has() {
-        return attributeHolder.getAttribute(getMessagesKey(), ActionMessages.class).filter(messages -> {
+        return attributeHolder.getAttribute(getMessagesKey(), UserMessages.class).filter(messages -> {
             return !messages.isEmpty();
         }).isPresent();
     }
 
     /**
-     * Get action message from (global) action messages.
+     * Get action message from (global) user messages.
      * @return The optional action message. (NotNull)
      */
-    public OptionalThing<ActionMessages> get() {
-        return attributeHolder.getAttribute(getMessagesKey(), ActionMessages.class);
+    public OptionalThing<UserMessages> get() {
+        return attributeHolder.getAttribute(getMessagesKey(), UserMessages.class);
     }
 
     /**
-     * Clear (global) action messages from the scope.
+     * Clear (global) user messages from the scope.
      */
     public void clear() {
         attributeHolder.removeAttribute(getMessagesKey());
@@ -130,9 +127,9 @@ public class ScopedMessageHandler {
         return messagesKey;
     }
 
-    protected ActionMessages prepareActionMessages(String messageKey, Object[] args) {
-        final ActionMessages messages = newActionMessages();
-        messages.add(globalPropertyKey, new ActionMessage(messageKey, args));
+    protected UserMessages prepareUserMessages(String messageKey, Object[] args) {
+        final UserMessages messages = newUserMessages();
+        messages.add(globalPropertyKey, new UserMessage(messageKey, args));
         return messages;
     }
 

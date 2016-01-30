@@ -20,8 +20,8 @@ import java.util.function.Consumer;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.response.HtmlResponse;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 
@@ -56,7 +56,7 @@ public class ResponseHtmlBeanValidator extends ResponseBeanValidator {
     }
 
     @Override
-    protected String buildValidationErrorMessage(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder, ActionMessages messages) {
+    protected String buildValidationErrorMessage(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder, UserMessages messages) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Validation error for the HTML response.");
         br.addItem("Advice");
