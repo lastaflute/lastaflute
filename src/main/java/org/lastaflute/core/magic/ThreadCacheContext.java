@@ -240,9 +240,9 @@ public class ThreadCacheContext {
             Map<Class<?>, Object> failureMap = getObject(FW_VALIDATOR_TYPE_FAILURE);
             if (failureMap != null && failureMap.get(keyType) != null) {
                 failureMap.remove(keyType);
-            }
-            if (failureMap.isEmpty()) {
-                removeObject(FW_VALIDATOR_TYPE_FAILURE);
+                if (failureMap.isEmpty()) {
+                    removeObject(FW_VALIDATOR_TYPE_FAILURE);
+                }
             }
         }
     }
