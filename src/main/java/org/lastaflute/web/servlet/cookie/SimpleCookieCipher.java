@@ -21,7 +21,9 @@ import javax.annotation.Resource;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.core.security.InvertibleCryptographer;
+import org.lastaflute.core.security.exception.CipherFailureException;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.servlet.cookie.exception.CookieCipherDecryptFailureException;
 
 /**
  * @author jflute
@@ -64,12 +66,19 @@ public class SimpleCookieCipher implements CookieCipher {
     // ===================================================================================
     //                                                                     Encrypt/Decrypt
     //                                                                     ===============
+    @Override
     public String encrypt(String plainText) {
         return invertibleCipher.encrypt(plainText);
     }
 
-    public String decrypt(String cryptedText) {
-        return invertibleCipher.decrypt(cryptedText);
+    @Override
+    public String decrypt(String cryptedText) throws CookieCipherDecryptFailureException {
+        try {
+            return invertibleCipher.decrypt(cryptedText);
+        } catch (CipherFailureException e) {
+            String msg = "Failed to decrypt the crypted text by the cipher: " + cryptedText;
+            throw new CookieCipherDecryptFailureException(msg, e); // checked exception
+        }
     }
 
     // ===================================================================================

@@ -15,13 +15,13 @@
  */
 package org.lastaflute.web.validation;
 
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.core.message.UserMessages;
 
 /**
- * @param <MESSAGES> The type of action messages.
+ * @param <MESSAGES> The type of user messages.
  * @author jflute
  */
-public interface LaValidatable<MESSAGES extends ActionMessages> {
+public interface LaValidatable<MESSAGES extends UserMessages> {
 
     // ===================================================================================
     //                                                                            Validate

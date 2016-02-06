@@ -21,7 +21,6 @@ import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
-import org.lastaflute.web.ruts.message.ActionMessages;
 
 /**
  * The manager of message. <br>
@@ -70,18 +69,18 @@ public interface MessageManager {
     /**
      * Convert to the list of message text for the errors.
      * @param locale The locale for the message. (NotNull)
-     * @param errors The action messages for the errors. (NotNull)
+     * @param messages The user messages saving message keys. (NotNull)
      * @return The read-only list of message, resolved by resource. (NotNull, EmptyAllowed)
      */
-    List<String> toMessageList(Locale locale, ActionMessages errors);
+    List<String> toMessageList(Locale locale, UserMessages messages);
 
     /**
      * Convert to the map (property : list of message text) of message for the errors.
      * @param locale The locale for the message. (NotNull)
-     * @param errors The action messages for the errors. (NotNull)
+     * @param messages The user messages saving message keys. (NotNull)
      * @return The read-only map of message, resolved by resource. (NotNull, EmptyAllowed)
      */
-    Map<String, List<String>> toPropertyMessageMap(Locale locale, ActionMessages errors);
+    Map<String, List<String>> toPropertyMessageMap(Locale locale, UserMessages messages);
 
     /**
      * Get the gateway for message resources managed in request handling.

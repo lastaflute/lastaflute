@@ -15,14 +15,14 @@
  */
 package org.lastaflute.web.validation;
 
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.core.message.UserMessages;
 
 /**
  * @param <MESSAGES> The type of messages.
  * @author jflute
  */
 @FunctionalInterface
-public interface VaMessenger<MESSAGES extends ActionMessages> {
+public interface VaMessenger<MESSAGES extends UserMessages> {
 
     void message(MESSAGES messages);
 }

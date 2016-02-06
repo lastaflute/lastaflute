@@ -23,12 +23,12 @@ import org.dbflute.hook.CallbackContext;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.magic.TransactionTimeContext;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.ruts.config.ModuleConfig;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -156,14 +156,14 @@ public class ActionCoinHelper {
 
     protected void removeErrorsUsedMessage(SessionManager sessionManager) {
         final String key = LastaWebKey.ACTION_ERRORS_KEY;
-        sessionManager.getAttribute(key, ActionMessages.class).filter(messages -> messages.isAccessed()).ifPresent(messages -> {
+        sessionManager.getAttribute(key, UserMessages.class).filter(messages -> messages.isAccessed()).ifPresent(messages -> {
             sessionManager.removeAttribute(key);
         });
     }
 
     protected void removeInformationUsedMessage(SessionManager sessionManager) {
         final String key = LastaWebKey.ACTION_INFO_KEY;
-        sessionManager.getAttribute(key, ActionMessages.class).filter(messages -> messages.isAccessed()).ifPresent(messages -> {
+        sessionManager.getAttribute(key, UserMessages.class).filter(messages -> messages.isAccessed()).ifPresent(messages -> {
             sessionManager.removeAttribute(key);
         });
     }

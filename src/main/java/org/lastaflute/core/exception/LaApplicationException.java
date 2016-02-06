@@ -15,6 +15,10 @@
  */
 package org.lastaflute.core.exception;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * @author jflute
  */
@@ -25,8 +29,7 @@ public abstract class LaApplicationException extends RuntimeException {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected String messageKey;
-    protected Object[] args;
+    protected List<LaApplicationMessage> messageList; // lazy loaded
 
     // ===================================================================================
     //                                                                         Constructor
@@ -40,21 +43,33 @@ public abstract class LaApplicationException extends RuntimeException {
     }
 
     // ===================================================================================
-    //                                                                            Accessor
-    //                                                                            ========
-    public String getErrorKey() {
-        return messageKey;
+    //                                                                             Message
+    //                                                                             =======
+    public List<LaApplicationMessage> getMessageList() {
+        return messageList != null ? Collections.unmodifiableList(messageList) : Collections.emptyList();
     }
 
-    public Object[] getErrorArgs() {
-        return args;
-    }
-
-    public void saveErrors(String messageKey, Object... args) {
+    public void saveMessage(String messageKey, Object... values) {
         if (messageKey == null) {
             throw new IllegalArgumentException("The argument 'messageKey' should not be null.");
         }
-        this.messageKey = messageKey;
-        this.args = args;
+        if (values == null) {
+            throw new IllegalArgumentException("The argument 'values' should not be null.");
+        }
+        if (messageList == null) {
+            messageList = new ArrayList<LaApplicationMessage>(1);
+        }
+        messageList.add(newApplicationMessage(messageKey, values));
+    }
+
+    protected LaApplicationMessage newApplicationMessage(String messageKey, Object... values) {
+        return new LaApplicationMessage(messageKey, values);
+    }
+
+    public void saveMessages(List<LaApplicationMessage> itemList) {
+        if (itemList == null) {
+            throw new IllegalArgumentException("The argument 'itemList' should not be null.");
+        }
+        this.messageList = itemList;
     }
 }

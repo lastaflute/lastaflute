@@ -24,7 +24,7 @@ import javax.annotation.Resource;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.message.MessageManager;
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.token.exception.DoubleSubmitMessageNotFoundException;
 import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
@@ -178,7 +178,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         doVerifyToken(groupType, errorHook, true);
     }
 
-    protected <MESSAGES extends ActionMessages> void doVerifyToken(Class<?> groupType, TokenErrorHook errorHook, boolean keep) {
+    protected <MESSAGES extends UserMessages> void doVerifyToken(Class<?> groupType, TokenErrorHook errorHook, boolean keep) {
         final boolean matched;
         if (keep) { // no reset (intermediate request)
             matched = determineToken(groupType);
@@ -190,7 +190,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         }
     }
 
-    protected <MESSAGES extends ActionMessages> String throwDoubleSubmitRequestException(Class<?> groupType, TokenErrorHook errorHook) {
+    protected <MESSAGES extends UserMessages> String throwDoubleSubmitRequestException(Class<?> groupType, TokenErrorHook errorHook) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("The request was born from double submit.");
         br.addItem("Advice");
@@ -208,7 +208,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         br.addElement(getSessionTokenMap());
         final String msg = br.buildExceptionMessage();
         final String messageKey = getDoubleSubmitMessageKey();
-        throw new DoubleSubmitRequestException(msg, messageKey).response(() -> errorHook.hook());
+        throw new DoubleSubmitRequestException(msg, () -> errorHook.hook(), messageKey);
     }
 
     // ===================================================================================

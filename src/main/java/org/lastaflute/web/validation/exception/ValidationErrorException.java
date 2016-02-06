@@ -15,7 +15,7 @@
  */
 package org.lastaflute.web.validation.exception;
 
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.validation.VaErrorHook;
 
 /**
@@ -32,13 +32,13 @@ public class ValidationErrorException extends RuntimeException {
     //                                                                           Attribute
     //                                                                           =========
     protected final Class<?>[] runtimeGroups; // not null
-    protected final ActionMessages messages; // not null
+    protected final UserMessages messages; // not null
     protected final VaErrorHook errorHook; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ValidationErrorException(Class<?>[] runtimeGroups, ActionMessages messages, VaErrorHook errorHook) {
+    public ValidationErrorException(Class<?>[] runtimeGroups, UserMessages messages, VaErrorHook errorHook) {
         if (runtimeGroups == null) {
             throw new IllegalArgumentException("The argument 'runtimeGroups' should not be null.");
         }
@@ -68,7 +68,7 @@ public class ValidationErrorException extends RuntimeException {
         return runtimeGroups;
     }
 
-    public ActionMessages getMessages() {
+    public UserMessages getMessages() {
         return messages;
     }
 

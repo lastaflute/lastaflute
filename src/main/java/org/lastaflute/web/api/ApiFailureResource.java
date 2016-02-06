@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 
@@ -33,13 +33,13 @@ public class ApiFailureResource {
     //                                                                           Attribute
     //                                                                           =========
     protected final ActionRuntime runtime;
-    protected final OptionalThing<ActionMessages> messages;
+    protected final OptionalThing<UserMessages> messages;
     protected final RequestManager requestManager;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ApiFailureResource(ActionRuntime runtime, OptionalThing<ActionMessages> messages, RequestManager requestManager) {
+    public ApiFailureResource(ActionRuntime runtime, OptionalThing<UserMessages> messages, RequestManager requestManager) {
         this.runtime = runtime;
         this.messages = messages;
         this.requestManager = requestManager;
@@ -75,7 +75,7 @@ public class ApiFailureResource {
         return runtime;
     }
 
-    public OptionalThing<ActionMessages> getMessages() {
+    public OptionalThing<UserMessages> getMessages() {
         return messages;
     }
 

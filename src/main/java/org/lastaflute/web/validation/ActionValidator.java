@@ -56,13 +56,13 @@ import org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpo
 import org.hibernate.validator.spi.resourceloading.ResourceBundleLocator;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.message.UserMessage;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.response.ApiResponse;
-import org.lastaflute.web.ruts.message.ActionMessage;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.message.MessagesCreator;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -83,10 +83,10 @@ import org.lastaflute.web.validation.theme.typed.TypeLocalTime;
 import org.lastaflute.web.validation.theme.typed.TypeLong;
 
 /**
- * @param <MESSAGES> The type of action messages.
+ * @param <MESSAGES> The type of user messages.
  * @author jflute
  */
-public class ActionValidator<MESSAGES extends ActionMessages> {
+public class ActionValidator<MESSAGES extends UserMessages> {
 
     // ===================================================================================
     //                                                                          Definition
@@ -207,7 +207,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return requestManager.getApiManager().handleValidationError(resource);
     }
 
-    protected ApiFailureResource createApiFailureResource(OptionalThing<ActionMessages> errors, RequestManager requestManager) {
+    protected ApiFailureResource createApiFailureResource(OptionalThing<UserMessages> errors, RequestManager requestManager) {
         return new ApiFailureResource(getActionRuntime(), errors, requestManager);
     }
 
@@ -243,7 +243,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         if (!implicitGroup) {
             verifyExplicitGroupClientError(form, vioSet);
         }
-        final MESSAGES messages = resolveTypeFailure(toActionMessages(form, vioSet));
+        final MESSAGES messages = resolveTypeFailure(form, toUserMessages(form, vioSet));
         moreValidationLambda.more(messages);
         if (!messages.isEmpty()) {
             throwValidationErrorException(messages, validationErrorLambda);
@@ -344,9 +344,9 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     }
 
     // ===================================================================================
-    //                                                                     Action Messages
-    //                                                                     ===============
-    protected MESSAGES toActionMessages(Object form, Set<ConstraintViolation<Object>> vioSet) {
+    //                                                                       User Messages
+    //                                                                       =============
+    protected MESSAGES toUserMessages(Object form, Set<ConstraintViolation<Object>> vioSet) {
         final TreeMap<String, Object> orderedMap = prepareOrderedMap(form, vioSet);
         final MESSAGES messages = prepareActionMessages();
         for (Entry<String, Object> entry : orderedMap.entrySet()) {
@@ -430,7 +430,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return messageCreator.provide();
     }
 
-    protected void registerActionMessage(ActionMessages messages, ConstraintViolation<Object> vio) {
+    protected void registerActionMessage(UserMessages messages, ConstraintViolation<Object> vio) {
         final String propertyPath = extractPropertyPath(vio);
         final String message = filterMessageItem(extractMessage(vio), propertyPath);
         final ConstraintDescriptor<?> descriptor = vio.getConstraintDescriptor();
@@ -541,10 +541,10 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         sb.append(Stream.of(runtimeGroups).map(tp -> {
             return tp.getSimpleName() + ".class";
         }).collect(Collectors.toList()));
-        final MESSAGES messages = toActionMessages(form, clientErrorSet);
+        final MESSAGES messages = toUserMessages(form, clientErrorSet);
         messages.toPropertySet().forEach(property -> {
             sb.append(LF).append(" ").append(property);
-            for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+            for (Iterator<UserMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
                 sb.append(LF).append("   ").append(ite.next());
             }
         });
@@ -555,11 +555,8 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
     // ===================================================================================
     //                                                                        Type Failure
     //                                                                        ============
-    protected MESSAGES resolveTypeFailure(MESSAGES messages) {
-        if (!ThreadCacheContext.exists()) { // basically no way, just in case
-            return messages;
-        }
-        final TypeFailureBean failureBean = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure();
+    protected MESSAGES resolveTypeFailure(Object form, MESSAGES messages) {
+        final TypeFailureBean failureBean = findFailureBeanOnThread(form);
         if (failureBean == null || !failureBean.hasFailure()) {
             return messages;
         }
@@ -569,17 +566,18 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
             final TypeFailureElement element = elementMap.get(property);
             if (element != null) { // already exists except type failure
                 handleTypeFailureGroups(element); // may be bad request
-                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
-                    final ActionMessage current = ite.next();
-                    final Annotation anno = current.getValidatorAnnotation();
-                    if (anno instanceof NotNull || anno instanceof Required) {
+                for (Iterator<UserMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                    final UserMessage current = ite.next();
+                    if (current.getValidatorAnnotation().filter(anno -> {
+                        return anno instanceof NotNull || anno instanceof Required;
+                    }).isPresent()) {
                         continue; // remove required annotations because they were born by type failure's null
                     }
                     newMsgs.add(property, current);
                 }
                 newMsgs.add(property, createTypeFailureActionMessage(element)); // add to existing property
             } else { // properties not related with type failures
-                for (Iterator<ActionMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                for (Iterator<UserMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
                     newMsgs.add(property, ite.next()); // add no-related property
                 }
             }
@@ -592,6 +590,16 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
             }
         }
         return newMsgs;
+    }
+
+    protected TypeFailureBean findFailureBeanOnThread(Object form) {
+        if (!ThreadCacheContext.exists()) { // basically no way, just in case
+            return null;
+        }
+        final Class<? extends Object> keyType = form.getClass();
+        final TypeFailureBean failureBean = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure(keyType);
+        ThreadCacheContext.removeValidatorTypeFailure(keyType);
+        return failureBean;
     }
 
     protected void handleTypeFailureGroups(TypeFailureElement element) {
@@ -609,7 +617,7 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         }
     }
 
-    protected ActionMessage createTypeFailureActionMessage(TypeFailureElement element) {
+    protected UserMessage createTypeFailureActionMessage(TypeFailureElement element) {
         final String propertyPath = element.getPropertyPath();
         final Class<?> propertyType = element.getPropertyType();
         final String messageKey = typeMessageMap.get(propertyType);
@@ -675,8 +683,8 @@ public class ActionValidator<MESSAGES extends ActionMessages> {
         return requestManager.getMessageManager().findMessage(requestManager.getUserLocale(), messageKey);
     }
 
-    protected ActionMessage newDirectActionMessage(String msg, Annotation annotation, Class<?>[] groups) {
-        return ActionMessage.asDirectMessage(msg, annotation, groups);
+    protected UserMessage newDirectActionMessage(String msg, Annotation annotation, Class<?>[] groups) {
+        return UserMessage.asDirectMessage(msg, annotation, groups);
     }
 
     // ===================================================================================

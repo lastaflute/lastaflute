@@ -20,7 +20,7 @@ import java.util.Set;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.validation.exception.ValidationSuccessAttributeCannotCastException;
 import org.lastaflute.web.validation.exception.ValidationSuccessAttributeNotFoundException;
 
@@ -33,12 +33,12 @@ public class ValidationSuccess {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionMessages messages;
+    protected final UserMessages messages;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ValidationSuccess(ActionMessages messages) {
+    public ValidationSuccess(UserMessages messages) {
         assertArgumentNotNull("messages", messages);
         this.messages = messages;
     }

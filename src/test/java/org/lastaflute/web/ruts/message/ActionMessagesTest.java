@@ -16,6 +16,8 @@
 package org.lastaflute.web.ruts.message;
 
 import org.dbflute.utflute.core.PlainTestCase;
+import org.lastaflute.core.message.UserMessage;
+import org.lastaflute.core.message.UserMessages;
 
 /**
  * @author jflute
@@ -24,9 +26,9 @@ public class ActionMessagesTest extends PlainTestCase {
 
     public void test_hasMessageOf() throws Exception {
         // ## Arrange ##
-        ActionMessages messages = new ActionMessages();
+        UserMessages messages = new UserMessages();
         assertFalse(messages.hasMessageOf("sea"));
-        ActionMessage message = new ActionMessage("dockside", "over");
+        UserMessage message = new UserMessage("dockside", "over");
         assertFalse(messages.isAccessed());
         messages.add("sea", message);
 
@@ -39,9 +41,9 @@ public class ActionMessagesTest extends PlainTestCase {
 
     public void test_hasMessageOf_key() throws Exception {
         // ## Arrange ##
-        ActionMessages messages = new ActionMessages();
+        UserMessages messages = new UserMessages();
         assertFalse(messages.hasMessageOf("sea"));
-        ActionMessage message = new ActionMessage("dockside", "over");
+        UserMessage message = new UserMessage("dockside", "over");
         assertFalse(messages.isAccessed());
         messages.add("sea", message);
 

@@ -26,6 +26,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.core.security.exception.CipherFailureException;
 
 /**
@@ -117,8 +118,21 @@ public class InvertibleCryptographer {
         } catch (NoSuchPaddingException e) {
             throw new CipherFailureException("Failed by no such padding: " + algorithm, e);
         } catch (InvalidKeyException e) {
-            throw new CipherFailureException("Failed by invalid key. (cannot show it for security)", e);
+            throwCipherFailureInvalidKeyException(e); // frequently ocurred
         }
+    }
+
+    protected void throwCipherFailureInvalidKeyException(InvalidKeyException e) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Failed to initialize the cipher by the invalid key.");
+        br.addItem("Advice");
+        br.addElement("Make sure your key for your algorithm.");
+        br.addElement("The algorithms may require own patterns of key.");
+        br.addElement("(cannot show the key for security so read your program)");
+        br.addItem("Algorithm");
+        br.addElement(algorithm);
+        final String msg = br.buildExceptionMessage();
+        throw new CipherFailureException(msg, e);
     }
 
     // ===================================================================================

@@ -17,7 +17,7 @@ package org.lastaflute.web.login;
 
 import java.lang.reflect.Method;
 
-import org.lastaflute.web.ruts.message.ActionMessages;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 
 /**
@@ -111,7 +111,7 @@ public class LoginHandlingResource {
      * Get the messages as validation error.
      * @return The messages as validation error. (NullAllowed: when no validation error)
      */
-    public ActionMessages getValidationErrors() {
+    public UserMessages getValidationErrors() {
         return runtime.getValidationErrors();
     }
 }

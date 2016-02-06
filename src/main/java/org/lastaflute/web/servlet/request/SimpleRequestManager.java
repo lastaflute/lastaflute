@@ -38,6 +38,8 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
+import org.lastaflute.core.message.UserMessage;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.ContainerUtil;
@@ -53,8 +55,6 @@ import org.lastaflute.web.exception.RequestAttributeNotFoundException;
 import org.lastaflute.web.exception.RequestInfoNotFoundException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
-import org.lastaflute.web.ruts.message.ActionMessage;
-import org.lastaflute.web.ruts.message.ActionMessages;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.scoped.ScopedMessageHandler;
@@ -850,7 +850,7 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected ScopedMessageHandler createScopedMessageHandler(String messagesKey) {
-        return new ScopedMessageHandler(this, ActionMessages.GLOBAL_PROPERTY_KEY, messagesKey);
+        return new ScopedMessageHandler(this, UserMessages.GLOBAL_PROPERTY_KEY, messagesKey);
     }
 
     protected String getInfoMessagesKey() {
@@ -860,11 +860,11 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public void saveErrorsToSession() {
         errors().get().ifPresent(messages -> {
-            final Iterator<ActionMessage> ite = messages.accessByFlatIterator();
+            final Iterator<UserMessage> ite = messages.accessByFlatIterator();
             sessionManager.errors().clear(); /* means overriding */
             while (ite.hasNext()) {
-                final ActionMessage message = ite.next();
-                sessionManager.errors().add(message.getKey(), message.getValues());
+                final UserMessage message = ite.next();
+                sessionManager.errors().add(message.getMessageKey(), message.getValues());
             }
         });
     }
