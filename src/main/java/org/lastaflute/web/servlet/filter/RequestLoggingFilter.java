@@ -90,6 +90,8 @@ public class RequestLoggingFilter implements Filter {
     protected Pattern requestUriTitleUrlPattern;
     protected Pattern subRequestUrlPattern;
     protected String requestCharacterEncoding;
+    protected Set<String> maskParamSet;
+    protected String maskedString;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -102,6 +104,8 @@ public class RequestLoggingFilter implements Filter {
         setupRequestUriTitleUrlPattern(filterConfig);
         setupSubRequestUrlPatternUrlPattern(filterConfig);
         setupRequestCharacterEncoding(filterConfig);
+        setupMaskParamSet(filterConfig);
+        setupMaskedString(filterConfig);
     }
 
     protected boolean isBooleanParameter(FilterConfig filterConfig, String name, boolean defaultValue) {
@@ -153,6 +157,28 @@ public class RequestLoggingFilter implements Filter {
 
     protected void setupRequestCharacterEncoding(FilterConfig filterConfig) {
         this.requestCharacterEncoding = filterConfig.getInitParameter("requestCharacterEncoding");
+    }
+
+    protected void setupMaskParamSet(FilterConfig filterConfig) {
+        final String value = filterConfig.getInitParameter("maskParamSet");
+        if (value != null) {
+            final String[] splitAry = value.split(","); // e.g. password,pass
+            maskParamSet = new LinkedHashSet<>();
+            for (String element : splitAry) {
+                maskParamSet.add(element.trim());
+            }
+        } else { // as default
+            maskParamSet = new LinkedHashSet<>();
+        }
+    }
+
+    protected void setupMaskedString(FilterConfig filterConfig) {
+        final String value = filterConfig.getInitParameter("maskedString");
+        if (value != null) {
+            maskedString = value;
+        } else {
+            maskedString = "********";
+        }
     }
 
     // ===================================================================================
@@ -456,10 +482,18 @@ public class RequestLoggingFilter implements Filter {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                sb.append(values[i]);
+                if (isMaskParam(name)) {
+                    sb.append(maskedString);
+                } else {
+                    sb.append(values[i]);
+                }
             }
             sb.append(LF);
         }
+    }
+
+    protected boolean isMaskParam(String name) {
+        return maskParamSet.contains(name);
     }
 
     protected void buildRequestAttributes(StringBuilder sb, HttpServletRequest request) {
