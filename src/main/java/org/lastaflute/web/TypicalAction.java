@@ -38,6 +38,7 @@ import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.docs.LaActionDocs;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
 import org.lastaflute.web.exception.ForcedIllegalTransitionException;
+import org.lastaflute.web.exception.ForcedRequest403ForbiddenException;
 import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
 import org.lastaflute.web.hook.ActionHook;
 import org.lastaflute.web.hook.TooManySqlOption;
@@ -355,6 +356,34 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      */
     protected void throw404(String msg) { // e.g. used by error handling of validation for GET parameter
         throw of404(msg);
+    }
+
+    /**
+     * Throw 403 exception, and show 403 error page.
+     * <pre>
+     * if (...) {
+     *     <span style="color: #CC4747">throw403</span>("...");
+     * }
+     * </pre>
+     * @param msg The debug message for developer (not user message). (NotNull)
+     */
+    protected void throw403(String msg) {
+        throw of403(msg);
+    }
+
+    /**
+     * Create exception of 403, for e.g. orElseThrow() of Optional.
+     * <pre>
+     * }).orElseThrow(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     return <span style="color: #CC4747">of403</span>("Not found the product: " + productId);
+     * });
+     * </pre>
+     * @param msg The debug message for developer (not user message). (NotNull)
+     * @return The new-created exception of 403. (NotNull)
+     */
+    protected ForcedRequest403ForbiddenException of403(String msg) {
+        assertArgumentNotNull("msg for 403", msg);
+        return new ForcedRequest403ForbiddenException(msg);
     }
 
     /**
