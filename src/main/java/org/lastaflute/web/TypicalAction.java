@@ -67,6 +67,7 @@ import org.slf4j.LoggerFactory;
  * You should extend this class when making your project-base action. <br>
  * And you can add methods for all applications.
  * @author jflute
+ * @author yu1ro (pull request)
  */
 public abstract class TypicalAction extends LastaAction implements ActionHook, LaActionDocs {
 
@@ -346,19 +347,6 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     /**
-     * Throw 404 exception, and show 404 error page.
-     * <pre>
-     * if (...) {
-     *     <span style="color: #CC4747">throw404</span>("...");
-     * }
-     * </pre>
-     * @param msg The debug message for developer (not user message). (NotNull)
-     */
-    protected void throw404(String msg) { // e.g. used by error handling of validation for GET parameter
-        throw of404(msg);
-    }
-
-    /**
      * Throw 403 exception, and show 403 error page.
      * <pre>
      * if (...) {
@@ -369,6 +357,19 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      */
     protected void throw403(String msg) {
         throw of403(msg);
+    }
+
+    /**
+     * Throw 404 exception, and show 404 error page.
+     * <pre>
+     * if (...) {
+     *     <span style="color: #CC4747">throw404</span>("...");
+     * }
+     * </pre>
+     * @param msg The debug message for developer (not user message). (NotNull)
+     */
+    protected void throw404(String msg) { // e.g. used by error handling of validation for GET parameter
+        throw of404(msg);
     }
 
     /**
