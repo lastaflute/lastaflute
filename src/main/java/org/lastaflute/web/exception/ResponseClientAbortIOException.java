@@ -9,20 +9,26 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.request;
+package org.lastaflute.web.exception;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * @author jflute
  */
-@FunctionalInterface
-public interface WritternStreamOut {
+public class ResponseClientAbortIOException extends IOException {
 
-    void write(InputStream ins) throws IOException;
+    private static final long serialVersionUID = 1L;
+
+    public ResponseClientAbortIOException(String msg) {
+        super(msg);
+    }
+
+    public ResponseClientAbortIOException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

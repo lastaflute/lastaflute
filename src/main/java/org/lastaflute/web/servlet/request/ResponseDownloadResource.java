@@ -137,8 +137,16 @@ public class ResponseDownloadResource {
         this.streamCall = streamCall;
     }
 
+    public boolean hasByteData() {
+        return byteData != null;
+    }
+
     public byte[] getByteData() {
         return byteData;
+    }
+
+    public boolean hasStreamCall() {
+        return streamCall != null;
     }
 
     public WritternStreamCall getStreamCall() {

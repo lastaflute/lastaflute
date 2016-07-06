@@ -16,7 +16,6 @@
 package org.lastaflute.web.servlet.request;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Map;
@@ -31,8 +30,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.di.util.LdiInputStreamUtil;
-import org.lastaflute.di.util.LdiOutputStreamUtil;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.util.LaRequestUtil;
@@ -49,6 +46,7 @@ public class SimpleResponseManager implements ResponseManager {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(SimpleResponseManager.class);
+    protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -296,9 +294,8 @@ public class SimpleResponseManager implements ResponseManager {
         if (resource.isReturnAsEmptyBody()) {
             return;
         }
-        final byte[] byteData = resource.getByteData();
-        if (byteData != null) {
-            doDownloadByteData(resource, response, byteData);
+        if (resource.hasByteData()) {
+            doDownloadByteData(resource, response);
         } else {
             doDownloadStreamCall(resource, response);
         }
@@ -336,80 +333,16 @@ public class SimpleResponseManager implements ResponseManager {
         }
     }
 
-    protected void doDownloadByteData(ResponseDownloadResource resource, HttpServletResponse response, byte[] byteData) {
-        try {
-            final OutputStream out = response.getOutputStream();
-            try {
-                out.write(byteData);
-            } finally {
-                LdiOutputStreamUtil.close(out);
-            }
-        } catch (RuntimeException e) {
-            String msg = "Failed to download the byte data: " + resource;
-            throw new IllegalStateException(msg, e);
-        } catch (IOException e) {
-            String msg = "Failed to download the byte data: " + resource;
-            throw new IllegalStateException(msg, e);
-        }
+    protected void doDownloadByteData(ResponseDownloadResource resource, HttpServletResponse response) {
+        createResponseDownloadPerformer().downloadByteData(resource, response);
     }
 
-    // *switch to stream call way for closing headache
-    //protected void doDownloadInputStream(ResponseDownloadResource resource, HttpServletResponse response) {
-    //    final InputStream ins = resource.getInputStream();
-    //    if (ins == null) {
-    //        String msg = "Either byte data or input stream is required: " + resource;
-    //        throw new IllegalArgumentException(msg);
-    //    }
-    //    try {
-    //        final Integer contentLength = resource.getContentLength();
-    //        if (contentLength != null) {
-    //            response.setContentLength(contentLength);
-    //        }
-    //        final OutputStream out = response.getOutputStream();
-    //        try {
-    //            LdiInputStreamUtil.copy(ins, out);
-    //            LdiOutputStreamUtil.flush(out);
-    //        } finally {
-    //            LdiOutputStreamUtil.close(out);
-    //        }
-    //    } catch (RuntimeException e) {
-    //        String msg = "Failed to download the input stream: " + resource;
-    //        throw new IllegalStateException(msg, e);
-    //    } catch (IOException e) {
-    //        String msg = "Failed to download the input stream: " + resource;
-    //        throw new IllegalStateException(msg, e);
-    //    } finally {
-    //        LdiInputStreamUtil.close(ins);
-    //    }
-    //}
-
     protected void doDownloadStreamCall(ResponseDownloadResource resource, HttpServletResponse response) {
-        WritternStreamCall streamCall = resource.getStreamCall();
-        if (streamCall == null) {
-            String msg = "Either byte data or input stream is required: " + resource;
-            throw new IllegalArgumentException(msg);
-        }
-        try {
-            final Integer contentLength = resource.getContentLength();
-            if (contentLength != null) {
-                response.setContentLength(contentLength);
-            }
-            final OutputStream out = response.getOutputStream();
-            try {
-                streamCall.callback(ins -> {
-                    LdiInputStreamUtil.copy(ins, out);
-                });
-                LdiOutputStreamUtil.flush(out);
-            } finally {
-                LdiOutputStreamUtil.close(out);
-            }
-        } catch (RuntimeException e) {
-            String msg = "Failed to download the input stream: " + resource;
-            throw new IllegalStateException(msg, e);
-        } catch (IOException e) {
-            String msg = "Failed to download the input stream: " + resource;
-            throw new IllegalStateException(msg, e);
-        }
+        createResponseDownloadPerformer().downloadStreamCall(resource, response);
+    }
+
+    protected ResponseDownloadPerformer createResponseDownloadPerformer() {
+        return new ResponseDownloadPerformer();
     }
 
     // ===================================================================================
