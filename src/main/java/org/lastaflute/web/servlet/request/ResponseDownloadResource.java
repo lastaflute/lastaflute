@@ -15,7 +15,9 @@
  */
 package org.lastaflute.web.servlet.request;
 
+import java.io.OutputStream;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.dbflute.helper.StringKeyMap;
 
@@ -32,6 +34,7 @@ public class ResponseDownloadResource {
     protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected byte[] byteData;
     protected WritternStreamCall streamCall;
+    protected Map<String, Consumer<OutputStream>> consumerMap;
     protected Integer contentLength;
     protected boolean returnAsEmptyBody;
 
@@ -134,7 +137,18 @@ public class ResponseDownloadResource {
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists.");
         }
+        if (consumerMap != null) {
+            throw new IllegalStateException("The consumer already exists.");
+        }
         this.streamCall = streamCall;
+    }
+
+    public ResponseDownloadResource consumerMap(Map<String, Consumer<OutputStream>> consumerMap) {
+        if (consumerMap == null) {
+            throw new IllegalArgumentException("The argument 'consumerMap' should not be null.");
+        }
+        this.consumerMap = consumerMap;
+        return this;
     }
 
     public boolean hasByteData() {
@@ -151,6 +165,10 @@ public class ResponseDownloadResource {
 
     public WritternStreamCall getStreamCall() {
         return streamCall;
+    }
+
+    public Map<String, Consumer<OutputStream>> getConsumerMap() {
+        return consumerMap;
     }
 
     public Integer getContentLength() {

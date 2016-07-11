@@ -15,10 +15,16 @@
  */
 package org.lastaflute.web.servlet.request;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -296,6 +302,8 @@ public class SimpleResponseManager implements ResponseManager {
         }
         if (resource.hasByteData()) {
             doDownloadByteData(resource, response);
+        } else if (resource.consumerMap != null) {
+            doDownloadZipWriter(resource);
         } else {
             doDownloadStreamCall(resource, response);
         }
@@ -343,6 +351,32 @@ public class SimpleResponseManager implements ResponseManager {
 
     protected ResponseDownloadPerformer createResponseDownloadPerformer() {
         return new ResponseDownloadPerformer();
+    }
+
+    public void doDownloadZipWriter(ResponseDownloadResource resource) {
+        Map<String, Consumer<OutputStream>> consumerMap = resource.getConsumerMap();
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(getResponse().getOutputStream(), Charset.forName("UTF-8"))) {
+            consumerMap.forEach((fileName, consumer) -> {
+                try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+                    consumer.accept(outputStream);
+                    zipOutputStream.putNextEntry(new ZipEntry(fileName));
+                    outputStream.writeTo(zipOutputStream);
+                } catch (IOException e) {
+                    String msg = "Failed to write a ZIP: " + fileName;
+                    throw new IllegalStateException(msg, e);
+                } finally {
+                    try {
+                        zipOutputStream.closeEntry();
+                    } catch (IOException e) {
+                        String msg = "Failed to write a ZIP: " + fileName;
+                        throw new IllegalStateException(msg, e);
+                    }
+                }
+            });
+        } catch (IOException e) {
+            String msg = "Failed to close a ZIP";
+            throw new IllegalStateException(msg, e);
+        }
     }
 
     // ===================================================================================
