@@ -15,9 +15,11 @@
  */
 package org.lastaflute.web.response;
 
+import java.io.OutputStream;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 
 import org.dbflute.helper.StringKeyMap;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
@@ -55,6 +57,7 @@ public class StreamResponse implements ActionResponse {
     protected Integer httpStatus;
     protected byte[] byteData;
     protected WritternStreamCall streamCall;
+    protected Map<String, Consumer<OutputStream>> consumerMap;
     protected Integer contentLength;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
@@ -209,12 +212,35 @@ public class StreamResponse implements ActionResponse {
         streamCall = writtenStreamLambda;
     }
 
+    /**
+     * <pre>
+     * Map&lt;String, Consumer&lt;OutputStream&gt;&gt; <span style="color: #553000">consumerMap</span> = DfCollectionUtil.newHashMap();
+     * <span style="color: #553000">consumerMap</span>.put(
+     *     "land.pdf",
+     *     <span style="color: #553000">baos</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         executeQuery(<span style="color: #553000">baos</span>);
+     *     });
+     * <span style="color: #70226C">return</span> asStream("sea.zip").<span style="color: #CC4747">zipStreamChunked</span>(<span style="color: #553000">consumerMap</span>);
+     * </pre>
+     * @param consumerMap
+     * @return this. (NotNull)
+     */
+    public StreamResponse zipStreamChunked(Map<String, Consumer<OutputStream>> consumerMap) {
+        this.consumerMap = consumerMap;
+        contentType = "application/zip";
+        return this;
+    }
+
     public byte[] getByteData() {
         return byteData;
     }
 
     public WritternStreamCall getStreamCall() {
         return streamCall;
+    }
+
+    public Map<String, Consumer<OutputStream>> getConsumerMap() {
+        return consumerMap;
     }
 
     public Integer getContentLength() {
@@ -268,7 +294,7 @@ public class StreamResponse implements ActionResponse {
         for (Entry<String, String[]> entry : headerMap.entrySet()) {
             resource.header(entry.getKey(), entry.getValue());
         }
-        if (!returnAsEmptyBody && byteData == null && streamCall == null) {
+        if (!returnAsEmptyBody && byteData == null && streamCall == null && consumerMap == null) {
             throwStreamByteDataInputStreamNotFoundException();
         }
         if (byteData != null) {
@@ -280,6 +306,9 @@ public class StreamResponse implements ActionResponse {
             } else {
                 resource.stream(streamCall);
             }
+        }
+        if (consumerMap != null) {
+            resource.consumerMap(consumerMap);
         }
         if (returnAsEmptyBody) {
             resource.asEmptyBody();
@@ -307,6 +336,8 @@ public class StreamResponse implements ActionResponse {
         br.addElement("            out.write(ins);");
         br.addElement("        }");
         br.addElement("    });");
+        br.addElement("  (o):");
+        br.addElement("    return asStream(\"sea.zip\").zipStreamChunked(consumerMap); // Good");
         br.addItem("File Name");
         br.addElement(fileName);
         final String msg = br.buildExceptionMessage();
