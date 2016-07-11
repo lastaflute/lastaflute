@@ -9,7 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
@@ -17,7 +17,6 @@ package org.lastaflute.web.response;
 
 import java.io.OutputStream;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
@@ -35,7 +34,7 @@ import org.lastaflute.web.servlet.request.WritternStreamCall;
  * <pre>
  * e.g. simple (content-type is octet-stream or found by extension mapping)
  *  <span style="color: #70226C">return new</span> StreamResponse("classificationDefinitionMap.dfprop").stream(ins);
- * 
+ *
  * e.g. specify content-type
  *  <span style="color: #70226C">return new</span> StreamResponse("jflute.jpg").contentTypeJpeg().stream(ins);
  * </pre>
@@ -59,8 +58,6 @@ public class StreamResponse implements ActionResponse {
     protected byte[] byteData;
     protected WritternStreamCall streamCall;
     protected Map<String, Consumer<OutputStream>> consumerMap;
-    protected List<String> list;
-    protected Consumer<OutputStream> consumer;
     protected Integer contentLength;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
@@ -230,13 +227,6 @@ public class StreamResponse implements ActionResponse {
      */
     public StreamResponse zipStreamChunked(Map<String, Consumer<OutputStream>> consumerMap) {
         this.consumerMap = consumerMap;
-        contentType = "application/zip";
-        return this;
-    }
-
-    public StreamResponse zipStreamChunked(List<String> list, Consumer<OutputStream> consumer) {
-        this.list = list;
-        this.consumer = consumer;
         contentType = "application/zip";
         return this;
     }
