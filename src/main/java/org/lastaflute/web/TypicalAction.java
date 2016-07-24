@@ -325,24 +325,24 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     /**
      * Check the condition is true or it throws 404 not found forcedly. <br>
      * You can use this in your action process against invalid URL parameters.
-     * @param msg The message for exception message. (NotNull)
+     * @param debugMsg The debug message for developer. (NotNull)
      * @param expectedBool The expected determination for your business, true or false. (false: 404 not found)
      */
-    protected void verifyTrueOr404NotFound(String msg, boolean expectedBool) { // application may call
+    protected void verifyTrueOr404NotFound(String debugMsg, boolean expectedBool) { // application may call
         if (!expectedBool) {
-            throw404(msg);
+            throw404(debugMsg);
         }
     }
 
     /**
      * Check the condition is true or it throws illegal transition forcedly. <br>
      * You can use this in your action process against strange request parameters.
-     * @param msg The message for exception message. (NotNull)
+     * @param debugMsg The message for exception message. (NotNull)
      * @param expectedBool The expected determination for your business, true or false. (false: illegal transition)
      */
-    protected void verifyTrueOrIllegalTransition(String msg, boolean expectedBool) { // application may call
+    protected void verifyTrueOrIllegalTransition(String debugMsg, boolean expectedBool) { // application may call
         if (!expectedBool) {
-            throwIllegalTransition(msg);
+            throwIllegalTransition(debugMsg);
         }
     }
 
@@ -353,10 +353,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      *     <span style="color: #CC4747">throw403</span>("...");
      * }
      * </pre>
-     * @param msg The debug message for developer (not user message). (NotNull)
+     * @param debugMsg The debug message for developer (not user message). (NotNull)
      */
-    protected void throw403(String msg) {
-        throw of403(msg);
+    protected void throw403(String debugMsg) {
+        throw of403(debugMsg);
     }
 
     /**
@@ -366,10 +366,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      *     <span style="color: #CC4747">throw404</span>("...");
      * }
      * </pre>
-     * @param msg The debug message for developer (not user message). (NotNull)
+     * @param debugMsg The debug message for developer (not user message). (NotNull)
      */
-    protected void throw404(String msg) { // e.g. used by error handling of validation for GET parameter
-        throw of404(msg);
+    protected void throw404(String debugMsg) { // e.g. used by error handling of validation for GET parameter
+        throw of404(debugMsg);
     }
 
     /**
@@ -379,12 +379,12 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      *     return <span style="color: #CC4747">of403</span>("Not found the product: " + productId);
      * });
      * </pre>
-     * @param msg The debug message for developer (not user message). (NotNull)
+     * @param debugMsg The debug message for developer (not user message). (NotNull)
      * @return The new-created exception of 403. (NotNull)
      */
-    protected ForcedRequest403ForbiddenException of403(String msg) {
-        assertArgumentNotNull("msg for 403", msg);
-        return new ForcedRequest403ForbiddenException(msg);
+    protected ForcedRequest403ForbiddenException of403(String debugMsg) {
+        assertArgumentNotNull("msg for 403", debugMsg);
+        return new ForcedRequest403ForbiddenException(debugMsg);
     }
 
     /**
@@ -394,12 +394,12 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      *     return <span style="color: #CC4747">of404</span>("Not found the product: " + productId);
      * });
      * </pre>
-     * @param msg The debug message for developer (not user message). (NotNull)
+     * @param debugMsg The debug message for developer (not user message). (NotNull)
      * @return The new-created exception of 404. (NotNull)
      */
-    protected ForcedRequest404NotFoundException of404(String msg) {
-        assertArgumentNotNull("msg for 404", msg);
-        return new ForcedRequest404NotFoundException(msg);
+    protected ForcedRequest404NotFoundException of404(String debugMsg) {
+        assertArgumentNotNull("msg for 404", debugMsg);
+        return new ForcedRequest404NotFoundException(debugMsg);
     }
 
     /**
@@ -409,10 +409,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      *     <span style="color: #CC4747">throwIllegalTransition</span>("...");
      * }
      * </pre>
-     * @param msg The debug message for developer (not user message). (NotNull)
+     * @param debugMsg The debug message for developer (not user message). (NotNull)
      */
-    protected void throwIllegalTransition(String msg) {
-        throw ofIllegalTransition(msg);
+    protected void throwIllegalTransition(String debugMsg) {
+        throw ofIllegalTransition(debugMsg);
     }
 
     /**
@@ -422,13 +422,13 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      *     return <span style="color: #CC4747">ofIllegalTransition</span>("Not found the product: " + productId);
      * });
      * </pre>
-     * @param msg The debug message for developer (not user message). (NotNull)
+     * @param debugMsg The debug message for developer (not user message). (NotNull)
      * @return The new-created exception of 404. (NotNull)
      */
-    protected ForcedIllegalTransitionException ofIllegalTransition(String msg) {
-        assertArgumentNotNull("msg for illegal transition", msg);
+    protected ForcedIllegalTransitionException ofIllegalTransition(String debugMsg) {
+        assertArgumentNotNull("msg for illegal transition", debugMsg);
         final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
-        return new ForcedIllegalTransitionException(msg, transitionKey);
+        return new ForcedIllegalTransitionException(debugMsg, transitionKey);
     }
 
     // ===================================================================================

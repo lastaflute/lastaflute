@@ -37,27 +37,40 @@ public class MessagingApplicationException extends LaApplicationException {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public MessagingApplicationException(String msg, String messageKey, Object... args) {
-        super(msg + ": " + messageKey);
+    public MessagingApplicationException(String debugMsg, String messageKey, Object... args) {
+        super(debugMsg + ": " + messageKey);
         saveMessage(messageKey, args);
     }
 
-    public MessagingApplicationException(String msg, Throwable cause, String messageKey, Object... args) {
-        super(msg + ": " + messageKey, cause);
+    public MessagingApplicationException(String debugMsg, UserMessages messages) {
+        super(debugMsg + ": " + messages);
+        assertUserMessages(messages);
+        saveMessages(toMessageList(messages));
+    }
+
+    public MessagingApplicationException(String debugMsg, Throwable cause, String messageKey, Object... args) {
+        super(debugMsg + ": " + messageKey, cause);
         saveMessage(messageKey, args);
     }
 
-    public MessagingApplicationException(String msg, UserMessages messages) {
-        super(msg + ": " + messages);
+    public MessagingApplicationException(String debugMsg, Throwable cause, UserMessages messages) {
+        super(debugMsg + ": " + messages, cause);
+        assertUserMessages(messages);
+        saveMessages(toMessageList(messages));
+    }
+
+    private void assertUserMessages(UserMessages messages) {
         if (messages == null) {
             throw new IllegalArgumentException("The argument 'messages' should not be null.");
         }
         if (messages.isEmpty()) {
             throw new IllegalArgumentException("The messages should not be empty: " + messages);
         }
-        saveMessages(toMessageList(messages));
     }
 
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
     protected List<LaApplicationMessage> toMessageList(UserMessages messages) {
         final List<LaApplicationMessage> convertedList = new ArrayList<LaApplicationMessage>(messages.size());
         for (Iterator<UserMessage> ite = messages.accessByFlatIterator(); ite.hasNext();) {
