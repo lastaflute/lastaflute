@@ -150,7 +150,9 @@ public class Postbox {
     protected void requestHotDeploy() { // called when request ending if HotDeploy
         // no sync to avoid disposable thread locking this (or deadlock)
         // should be synchronized in office process
-        postOffice.workingDispose(); // actual dispose
+        if (postOffice != null) { // if mailflute is used
+            postOffice.workingDispose(); // actual dispose
+        }
         hotDeployRequested = true;
     }
 
