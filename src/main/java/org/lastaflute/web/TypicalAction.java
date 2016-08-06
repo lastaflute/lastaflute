@@ -30,7 +30,6 @@ import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.docs.LaActionDocs;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
-import org.lastaflute.web.exception.Forced404NotFoundException;
 import org.lastaflute.web.exception.RequestIllegalTransitionException;
 import org.lastaflute.web.hook.ActionHook;
 import org.lastaflute.web.hook.TooManySqlOption;
@@ -302,7 +301,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     protected void handleVerifiedClientError(String debugMsg) {
-        throw new Forced404NotFoundException(debugMsg, UserMessages.empty());
+        throw responseManager.new404(debugMsg);
     }
 
     /**

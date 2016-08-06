@@ -35,8 +35,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.exception.Forced400BadRequestException;
+import org.lastaflute.web.exception.Forced403ForbiddenException;
+import org.lastaflute.web.exception.Forced404NotFoundException;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.util.LaRequestUtil;
 import org.lastaflute.web.util.LaResponseUtil;
@@ -406,6 +410,75 @@ public class SimpleResponseManager implements ResponseManager {
     @Override
     public void setResponseStatus(int sc) {
         getResponse().setStatus(sc);
+    }
+
+    // ===================================================================================
+    //                                                                        Client Error
+    //                                                                        ============
+    @Override
+    public RuntimeException new400(String debugMsg) {
+        return doNew400(debugMsg, op -> {});
+    }
+
+    @Override
+    public RuntimeException new400(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        return doNew400(debugMsg, opLambda);
+    }
+
+    protected RuntimeException doNew400(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        final ForcedClientErrorOption option = createClientErrorOption(opLambda);
+        final UserMessages messages = option.getMessages().orElseGet(() -> UserMessages.empty());
+        return option.getCause().map(cause -> {
+            return new Forced400BadRequestException(debugMsg, messages, cause);
+        }).orElseGet(() -> {
+            return new Forced400BadRequestException(debugMsg, messages);
+        });
+    }
+
+    @Override
+    public RuntimeException new403(String debugMsg) {
+        return doNew403(debugMsg, op -> {});
+    }
+
+    @Override
+    public RuntimeException new403(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        return doNew403(debugMsg, opLambda);
+    }
+
+    protected RuntimeException doNew403(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        final ForcedClientErrorOption option = createClientErrorOption(opLambda);
+        final UserMessages messages = option.getMessages().orElseGet(() -> UserMessages.empty());
+        return option.getCause().map(cause -> {
+            return new Forced403ForbiddenException(debugMsg, messages, cause);
+        }).orElseGet(() -> {
+            return new Forced403ForbiddenException(debugMsg, messages);
+        });
+    }
+
+    @Override
+    public RuntimeException new404(String debugMsg) {
+        return doNew404(debugMsg, op -> {});
+    }
+
+    @Override
+    public RuntimeException new404(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        return doNew404(debugMsg, opLambda);
+    }
+
+    protected RuntimeException doNew404(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        final ForcedClientErrorOption option = createClientErrorOption(opLambda);
+        final UserMessages messages = option.getMessages().orElseGet(() -> UserMessages.empty());
+        return option.getCause().map(cause -> {
+            return new Forced404NotFoundException(debugMsg, messages, cause);
+        }).orElseGet(() -> {
+            return new Forced404NotFoundException(debugMsg, messages);
+        });
+    }
+
+    protected ForcedClientErrorOption createClientErrorOption(ForcedClientErrorOpCall opLambda) {
+        final ForcedClientErrorOption option = new ForcedClientErrorOption();
+        opLambda.callback(option);
+        return option;
     }
 
     // ===================================================================================

@@ -24,11 +24,11 @@ public class RequestPropertyMappingFailureException extends Forced400BadRequestE
 
     private static final long serialVersionUID = 1L;
 
-    public RequestPropertyMappingFailureException(String msg, UserMessages messages) {
-        super(msg, messages);
+    public RequestPropertyMappingFailureException(String debugMsg, UserMessages messages) {
+        super(debugMsg, messages);
     }
 
-    public RequestPropertyMappingFailureException(String msg, UserMessages messages, Throwable cause) {
-        super(msg, messages, cause);
+    public RequestPropertyMappingFailureException(String debugMsg, UserMessages messages, Throwable cause) {
+        super(debugMsg, messages, cause);
     }
 }

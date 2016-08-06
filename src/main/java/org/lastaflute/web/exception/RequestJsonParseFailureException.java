@@ -30,12 +30,12 @@ public class RequestJsonParseFailureException extends Forced400BadRequestExcepti
 
     protected List<JsonDebugChallenge> challengeList;
 
-    public RequestJsonParseFailureException(String msg, UserMessages messages) {
-        super(msg, messages);
+    public RequestJsonParseFailureException(String debugMsg, UserMessages messages) {
+        super(debugMsg, messages);
     }
 
-    public RequestJsonParseFailureException(String msg, UserMessages messages, Throwable cause) {
-        super(msg, messages, cause);
+    public RequestJsonParseFailureException(String debugMsg, UserMessages messages, Throwable cause) {
+        super(debugMsg, messages, cause);
     }
 
     public RequestJsonParseFailureException withChallengeList(List<JsonDebugChallenge> challengeList) {

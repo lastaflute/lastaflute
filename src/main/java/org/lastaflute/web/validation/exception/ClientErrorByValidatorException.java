@@ -32,8 +32,8 @@ public class ClientErrorByValidatorException extends Forced400BadRequestExceptio
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ClientErrorByValidatorException(String msg, UserMessages messages) {
-        super(msg, messages);
+    public ClientErrorByValidatorException(String debugMsg, UserMessages messages) {
+        super(debugMsg, messages);
     }
 
     // ===================================================================================
