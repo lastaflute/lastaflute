@@ -15,20 +15,21 @@
  */
 package org.lastaflute.web.ruts.process.exception;
 
-import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
+import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.web.exception.Forced400BadRequestException;
 
 /**
  * @author jflute
  */
-public class RequestUndefinedParameterInFormException extends ForcedRequest400BadRequestException {
+public class RequestUndefinedParameterInFormException extends Forced400BadRequestException {
 
     private static final long serialVersionUID = 1L;
 
-    public RequestUndefinedParameterInFormException(String msg) {
-        super(msg);
+    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages) {
+        super(debugMsg, messages);
     }
 
-    public RequestUndefinedParameterInFormException(String msg, Throwable cause) {
-        super(msg, cause);
+    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages, Throwable cause) {
+        super(debugMsg, messages, cause);
     }
 }

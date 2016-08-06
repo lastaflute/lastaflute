@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.token.exception;
 
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.exception.MessageResponseApplicationException;
 
 /**
@@ -24,11 +25,11 @@ public class DoubleSubmitRequestException extends MessageResponseApplicationExce
 
     private static final long serialVersionUID = 1L;
 
-    public DoubleSubmitRequestException(String msg, MessageResponseHook responseHook, String messageKey) {
-        super(msg, responseHook, messageKey);
+    public DoubleSubmitRequestException(String msg, MessageResponseHook responseHook, UserMessages messages) {
+        super(msg, responseHook, messages);
     }
 
-    public DoubleSubmitRequestException(String msg, Throwable cause, MessageResponseHook responseHook, String messageKey) {
-        super(msg, cause, responseHook, messageKey);
+    public DoubleSubmitRequestException(String msg, MessageResponseHook responseHook, UserMessages messages, Throwable cause) {
+        super(msg, responseHook, messages, cause);
     }
 }

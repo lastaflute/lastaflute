@@ -108,9 +108,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     //                                              --------
     @Override
     public synchronized String generateToken(Class<?> groupType) {
-        if (groupType == null) {
-            throw new IllegalArgumentException("The argument 'groupType' should not be null.");
-        }
+        assertArgumentNotNull("groupType", groupType);
         final byte[] idBytes = requestManager.getSessionManager().getSessionId().getBytes();
         long current = System.currentTimeMillis();
         if (current == previous) {
@@ -179,6 +177,8 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     }
 
     protected <MESSAGES extends UserMessages> void doVerifyToken(Class<?> groupType, TokenErrorHook errorHook, boolean keep) {
+        assertArgumentNotNull("groupType", groupType);
+        assertArgumentNotNull("errorHook", errorHook);
         final boolean matched;
         if (keep) { // no reset (intermediate request)
             matched = determineToken(groupType);
@@ -208,7 +208,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         br.addElement(getSessionTokenMap());
         final String msg = br.buildExceptionMessage();
         final String messageKey = getDoubleSubmitMessageKey();
-        throw new DoubleSubmitRequestException(msg, () -> errorHook.hook(), messageKey);
+        throw new DoubleSubmitRequestException(msg, () -> errorHook.hook(), UserMessages.createAsOneGlobal(messageKey));
     }
 
     // ===================================================================================
@@ -248,5 +248,19 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     //                                                                        ============
     protected String getTokenKey() {
         return TOKEN_KEY;
+    }
+
+    // ===================================================================================
+    //                                                                       Assert Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            String msg = "The value should not be null: variableName=null value=" + value;
+            throw new IllegalArgumentException(msg);
+        }
+        if (value == null) {
+            String msg = "The value should not be null: variableName=" + variableName;
+            throw new IllegalArgumentException(msg);
+        }
     }
 }

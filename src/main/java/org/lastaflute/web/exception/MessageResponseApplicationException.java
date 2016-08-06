@@ -16,6 +16,7 @@
 package org.lastaflute.web.exception;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.message.exception.MessagingApplicationException;
 import org.lastaflute.web.response.ActionResponse;
 
@@ -37,14 +38,13 @@ public class MessageResponseApplicationException extends MessagingApplicationExc
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public MessageResponseApplicationException(String msg, MessageResponseHook responseHook, String messageKey, Object... args) {
-        super(msg, messageKey);
+    public MessageResponseApplicationException(String msg, MessageResponseHook responseHook, UserMessages messages) {
+        super(msg, messages);
         this.responseHook = responseHook;
     }
 
-    public MessageResponseApplicationException(String msg, Throwable cause, MessageResponseHook responseHook, String messageKey,
-            Object... args) {
-        super(msg, cause, messageKey, args);
+    public MessageResponseApplicationException(String msg, MessageResponseHook responseHook, UserMessages messages, Throwable cause) {
+        super(msg, messages, cause);
         this.responseHook = responseHook;
     }
 

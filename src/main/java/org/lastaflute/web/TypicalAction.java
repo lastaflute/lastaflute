@@ -15,31 +15,23 @@
  */
 package org.lastaflute.web;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.function.Supplier;
 
 import javax.annotation.Resource;
 
-import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
 import org.lastaflute.core.time.TimeManager;
-import org.lastaflute.core.util.LaDBFluteUtil;
-import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
-import org.lastaflute.core.util.LaStringUtil;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.docs.LaActionDocs;
 import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
-import org.lastaflute.web.exception.ForcedIllegalTransitionException;
-import org.lastaflute.web.exception.ForcedRequest403ForbiddenException;
-import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
+import org.lastaflute.web.exception.Forced404NotFoundException;
+import org.lastaflute.web.exception.RequestIllegalTransitionException;
 import org.lastaflute.web.hook.ActionHook;
 import org.lastaflute.web.hook.TooManySqlOption;
 import org.lastaflute.web.hook.TypicalEmbeddedKeySupplier;
@@ -59,8 +51,6 @@ import org.lastaflute.web.token.DoubleSubmitManager;
 import org.lastaflute.web.token.TokenErrorHook;
 import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The typical action for your project. <br>
@@ -74,7 +64,6 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TypicalAction.class);
     protected static final String GLOBAL = UserMessages.GLOBAL_PROPERTY_KEY;
 
     // ===================================================================================
@@ -299,39 +288,21 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     // ===================================================================================
     //                                                                     Verify Anything
     //                                                                     ===============
-    // -----------------------------------------------------
-    //                                      Verify Parameter
-    //                                      ----------------
-    protected void verifyParameterExists(Object parameter) { // application may call
-        if (parameter == null || (parameter instanceof String && ((String) parameter).isEmpty())) {
-            handleParameterFailure("Not found the parameter: " + parameter);
-        }
-    }
-
-    protected void verifyParameterTrue(String msg, boolean expectedBool) { // application may call
-        if (!expectedBool) {
-            handleParameterFailure(msg);
-        }
-    }
-
-    protected void handleParameterFailure(String msg) {
-        // no server error because it can occur by user's trick easily e.g. changing GET parameter
-        throw404(msg);
-    }
-
-    // -----------------------------------------------------
-    //                                         Verify or ...
-    //                                         -------------
     /**
-     * Check the condition is true or it throws 404 not found forcedly. <br>
+     * Check the condition is true or it throws client error (e.g. 404 not found) forcedly. <br>
      * You can use this in your action process against invalid URL parameters.
      * @param debugMsg The debug message for developer. (NotNull)
-     * @param expectedBool The expected determination for your business, true or false. (false: 404 not found)
+     * @param expectedBool The expected determination for your business, true or false. (false: e.g. 404 not found)
      */
-    protected void verifyTrueOr404NotFound(String debugMsg, boolean expectedBool) { // application may call
+    protected void verifyOrClientError(String debugMsg, boolean expectedBool) { // application may call
+        assertArgumentNotNull("debugMsg", debugMsg);
         if (!expectedBool) {
-            throw404(debugMsg);
+            handleVerifiedClientError(debugMsg);
         }
+    }
+
+    protected void handleVerifiedClientError(String debugMsg) {
+        throw new Forced404NotFoundException(debugMsg, UserMessages.empty());
     }
 
     /**
@@ -340,195 +311,14 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * @param debugMsg The message for exception message. (NotNull)
      * @param expectedBool The expected determination for your business, true or false. (false: illegal transition)
      */
-    protected void verifyTrueOrIllegalTransition(String debugMsg, boolean expectedBool) { // application may call
+    protected void verifyOrIllegalTransition(String debugMsg, boolean expectedBool) { // application may call
+        assertArgumentNotNull("debugMsg", debugMsg);
         if (!expectedBool) {
-            throwIllegalTransition(debugMsg);
+            handleVerifiedIllegalTransition(debugMsg);
         }
     }
 
-    /**
-     * Throw 403 exception, and show 403 error page.
-     * <pre>
-     * if (...) {
-     *     <span style="color: #CC4747">throw403</span>("...");
-     * }
-     * </pre>
-     * @param debugMsg The debug message for developer (not user message). (NotNull)
-     */
-    protected void throw403(String debugMsg) {
-        throw of403(debugMsg);
-    }
-
-    /**
-     * Throw 404 exception, and show 404 error page.
-     * <pre>
-     * if (...) {
-     *     <span style="color: #CC4747">throw404</span>("...");
-     * }
-     * </pre>
-     * @param debugMsg The debug message for developer (not user message). (NotNull)
-     */
-    protected void throw404(String debugMsg) { // e.g. used by error handling of validation for GET parameter
-        throw of404(debugMsg);
-    }
-
-    /**
-     * Create exception of 403, for e.g. orElseThrow() of Optional.
-     * <pre>
-     * }).orElseThrow(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
-     *     return <span style="color: #CC4747">of403</span>("Not found the product: " + productId);
-     * });
-     * </pre>
-     * @param debugMsg The debug message for developer (not user message). (NotNull)
-     * @return The new-created exception of 403. (NotNull)
-     */
-    protected ForcedRequest403ForbiddenException of403(String debugMsg) {
-        assertArgumentNotNull("msg for 403", debugMsg);
-        return new ForcedRequest403ForbiddenException(debugMsg);
-    }
-
-    /**
-     * Create exception of 404, for e.g. orElseThrow() of Optional.
-     * <pre>
-     * }).orElseThrow(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
-     *     return <span style="color: #CC4747">of404</span>("Not found the product: " + productId);
-     * });
-     * </pre>
-     * @param debugMsg The debug message for developer (not user message). (NotNull)
-     * @return The new-created exception of 404. (NotNull)
-     */
-    protected ForcedRequest404NotFoundException of404(String debugMsg) {
-        assertArgumentNotNull("msg for 404", debugMsg);
-        return new ForcedRequest404NotFoundException(debugMsg);
-    }
-
-    /**
-     * Throw illegal transition exception, as application exception.
-     * <pre>
-     * if (...) {
-     *     <span style="color: #CC4747">throwIllegalTransition</span>("...");
-     * }
-     * </pre>
-     * @param debugMsg The debug message for developer (not user message). (NotNull)
-     */
-    protected void throwIllegalTransition(String debugMsg) {
-        throw ofIllegalTransition(debugMsg);
-    }
-
-    /**
-     * Create exception of illegal transition as application exception, for e.g. orElseThrow() of Optional.
-     * <pre>
-     * }).orElseThrow(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
-     *     return <span style="color: #CC4747">ofIllegalTransition</span>("Not found the product: " + productId);
-     * });
-     * </pre>
-     * @param debugMsg The debug message for developer (not user message). (NotNull)
-     * @return The new-created exception of 404. (NotNull)
-     */
-    protected ForcedIllegalTransitionException ofIllegalTransition(String debugMsg) {
-        assertArgumentNotNull("msg for illegal transition", debugMsg);
-        final String transitionKey = newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey();
-        return new ForcedIllegalTransitionException(debugMsg, transitionKey);
-    }
-
-    // ===================================================================================
-    //                                                                        Small Facade
-    //                                                                        ============
-    // -----------------------------------------------------
-    //                                          Current Date
-    //                                          ------------
-    /**
-     * Get the date that specifies current date for business. <br>
-     * The word 'current' means transaction beginning in transaction if default setting of Framework. <br>
-     * You can get the same date (but different instances) in the same transaction.
-     * @return The local date that has current date. (NotNull)
-     */
-    protected LocalDate currentDate() {
-        return timeManager.currentDate();
-    }
-
-    /**
-     * Get the date-time that specifies current time for business. <br>
-     * The word 'current' means transaction beginning in transaction if default setting of Framework. <br>
-     * You can get the same date (but different instances) in the same transaction.
-     * @return The local date-time that has current time. (NotNull)
-     */
-    protected LocalDateTime currentDateTime() {
-        return timeManager.currentDateTime();
-    }
-
-    /**
-     * Get the message for currently-requested user locale from message resources.
-     * @param key The key of message managed by message resources. (NotNull)
-     * @return The found message, specified locale resolved. (NotNull: if not found, throws exception)
-     * @throws MessageKeyNotFoundException When the message is not found.
-     */
-    protected String getUserMessage(String key) {
-        return messageManager.getMessage(requestManager.getUserLocale(), key);
-    }
-
-    /**
-     * Get the message for currently-requested user locale from message resources.
-     * @param key The key of message managed by message resources. (NotNull)
-     * @param args The varying arguments for the message. (NotNull, EmptyAllowed)
-     * @return The found message, specified locale resolved. (NotNull: if not found, throws exception)
-     * @throws MessageKeyNotFoundException When the message is not found.
-     */
-    protected String getUserMessage(String key, Object... args) {
-        return messageManager.getMessage(requestManager.getUserLocale(), key, args);
-    }
-
-    // -----------------------------------------------------
-    //                                        Empty Handling
-    //                                        --------------
-    /**
-     * @param str might be empty. (NullAllowed: if null, return true)
-     * @return true if null or empty, false if blank or has characters.
-     */
-    protected boolean isEmpty(String str) {
-        return LaStringUtil.isEmpty(str);
-    }
-
-    /**
-     * @param str might not be empty. (NullAllowed: if null, return false)
-     * @return true if blank or has characters, false if null or empty.
-     */
-    protected boolean isNotEmpty(String str) {
-        return LaStringUtil.isNotEmpty(str);
-    }
-
-    // -----------------------------------------------------
-    //                                        Classification
-    //                                        --------------
-    protected boolean isCls(Class<? extends Classification> cdefType, Object code) {
-        assertArgumentNotNull("cdefType", cdefType);
-        return LaDBFluteUtil.invokeClassificationCodeOf(cdefType, code) != null;
-    }
-
-    protected <CLS extends Classification> OptionalThing<CLS> toCls(Class<CLS> cdefType, Object code) {
-        assertArgumentNotNull("cdefType", cdefType);
-        if (code == null || (code instanceof String && isEmpty((String) code))) {
-            return OptionalThing.ofNullable(null, () -> {
-                throw new IllegalStateException("Not found the classification code for " + cdefType.getName() + ": " + code);
-            });
-        }
-        try {
-            @SuppressWarnings("unchecked")
-            final CLS cls = (CLS) LaDBFluteUtil.toVerifiedClassification(cdefType, code);
-            return OptionalThing.of(cls);
-        } catch (ClassificationUnknownCodeException e) {
-            final StringBuilder sb = new StringBuilder();
-            sb.append("Cannot convert the code to the classification:");
-            sb.append("\n[Classification Convert Failure]");
-            try {
-                sb.append("\n").append(LaActionRuntimeUtil.getActionRuntime());
-            } catch (RuntimeException continued) { // just in case
-                logger.info("Not found the action runtime when toCls() called: " + cdefType.getName() + ", " + code, continued);
-            }
-            sb.append("\ncode=").append(code);
-            //sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-            final String msg = sb.toString();
-            throw new ForcedRequest404NotFoundException(msg, e);
-        }
+    protected void handleVerifiedIllegalTransition(String debugMsg) {
+        throw new RequestIllegalTransitionException(debugMsg, newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey());
     }
 }

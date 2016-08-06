@@ -17,23 +17,23 @@ package org.lastaflute.web.exception;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
+import org.lastaflute.core.message.UserMessages;
 
 /**
  * @author jflute
  */
-public class ForcedRequest404NotFoundException extends RequestClientErrorException {
+public class Forced403ForbiddenException extends MessagingClientErrorException {
 
     private static final long serialVersionUID = 1L;
 
-    protected static final String TITLE = "404 Not Found";
-    protected static final int STATUS = HttpServletResponse.SC_NOT_FOUND;
+    protected static final String TITLE = "403 Forbidden";
+    protected static final int STATUS = HttpServletResponse.SC_FORBIDDEN;
 
-    public ForcedRequest404NotFoundException(String msg) {
-        super(msg, TITLE, STATUS);
+    public Forced403ForbiddenException(String debugMsg, UserMessages messages) {
+        super(debugMsg, TITLE, STATUS, messages);
     }
 
-    public ForcedRequest404NotFoundException(String msg, Throwable cause) {
-        super(msg, TITLE, STATUS, cause);
+    public Forced403ForbiddenException(String debugMsg, UserMessages messages, Throwable cause) {
+        super(debugMsg, TITLE, STATUS, messages, cause);
     }
 }

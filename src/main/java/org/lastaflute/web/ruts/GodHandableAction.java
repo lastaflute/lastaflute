@@ -451,7 +451,7 @@ public class GodHandableAction implements VirtualAction {
             }).collect(Collectors.toList()));
             messages.toPropertySet().forEach(property -> {
                 sb.append(LF).append(" ").append(property);
-                for (Iterator<UserMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                for (Iterator<UserMessage> ite = messages.silentAccessByIteratorOf(property); ite.hasNext();) {
                     sb.append(LF).append("   ").append(ite.next());
                 }
             });

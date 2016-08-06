@@ -17,14 +17,11 @@ package org.lastaflute.web;
 
 import javax.annotation.Resource;
 
-import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.magic.async.AsyncManager;
-import org.lastaflute.core.magic.async.ConcurrentAsyncCall;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.time.TimeManager;
-import org.lastaflute.db.jta.stage.TransactionShow;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.path.ActionPathResolver;
@@ -538,84 +535,6 @@ public abstract class LastaAction {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
         return actionPathResolver.toActionUrl(actionType, chain);
-    }
-
-    // ===================================================================================
-    //                                                                             Advance
-    //                                                                             =======
-    /**
-     * Execute asynchronous process by other thread. <br>
-     * <pre>
-     * <span style="color: #CC4747">async</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
-     *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
-     * });
-     * 
-     * <span style="color: #3F7E5E">// begin asynchronous process after action transaction finished</span>
-     * return asHtml(...).<span style="color: #994747">afterTxCommit</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
-     *     async(() <span style="font-size: 120%">-</span>&gt;</span> {
-     *         ...
-     *     });
-     * });
-     * </pre>
-     * You can inherit...
-     * <pre>
-     * o ThreadCacheContext (copied plainly)
-     * o AccessContext (copied as fixed value)
-     * o CallbackContext (optional)
-     * 
-     * *attention: possibility of multiply threads access
-     * </pre>
-     * <p>Also you can change it from caller thread's one by interface default methods.</p>
-     * @param noArgLambda The callback for asynchronous process. (NotNull)
-     */
-    protected void async(ConcurrentAsyncCall noArgLambda) {
-        asycnManager.async(noArgLambda);
-    }
-
-    /**
-     * Perform the show in transaction (new or inherited transaction), roll-backed if exception.
-     * <pre>
-     * <span style="color: #3F7E5E">// if no return</span> 
-     * <span style="color: #CC4747">required</span>(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
-     *     update(...); <span style="color: #3F7E5E">// already in transaction</span>
-     *     insert(...); <span style="color: #3F7E5E">// also here</span>
-     * });
-     * 
-     * <span style="color: #3F7E5E">// if returns anything to caller</span> 
-     * <span style="color: #994747">Member member</span> = (Member)required(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
-     *     update(...);
-     *     Member member = select(...);
-     *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
-     * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
-     * </pre>
-     * @param txLambda The callback for your transaction show on the stage. (NotNull)
-     * @return The result of the transaction show. (NotNull, EmptyAllowed: when no result)
-     */
-    protected <RESULT> OptionalThing<RESULT> required(TransactionShow<RESULT> txLambda) {
-        return transactionStage.required(txLambda);
-    }
-
-    /**
-     * Perform the show in transaction (always new transaction), roll-backed if exception.
-     * <pre>
-     * <span style="color: #3F7E5E">// if no return</span> 
-     * <span style="color: #CC4747">requiresNew</span>(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
-     *     update(...); <span style="color: #3F7E5E">// already in transaction</span>
-     *     insert(...); <span style="color: #3F7E5E">// also here</span>
-     * });
-     * 
-     * <span style="color: #3F7E5E">// if returns anything to caller</span> 
-     * <span style="color: #994747">Member member</span> = (Member)requiresNew(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
-     *     update(...);
-     *     Member member = select(...);
-     *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
-     * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
-     * </pre>
-     * @param txLambda The callback for your transaction show on the stage. (NotNull)
-     * @return The result of the transaction show. (NotNull, EmptyAllowed: when no result)
-     */
-    protected <RESULT> OptionalThing<RESULT> requiresNew(TransactionShow<RESULT> txLambda) {
-        return transactionStage.requiresNew(txLambda);
     }
 
     // ===================================================================================

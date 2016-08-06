@@ -85,13 +85,13 @@ public abstract class ResponseBeanValidator {
     protected ActionValidator<UserMessages> createActionValidator() {
         return new ActionValidator<>(requestManager, () -> {
             return new UserMessages();
-        } , getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS));
+        }, getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS));
     }
 
     protected abstract OptionalThing<Class<?>[]> getValidatorGroups();
 
     protected void executeValidator(ActionValidator<UserMessages> validator, Object bean) {
-        validator.validate(bean, more -> {} , () -> {
+        validator.validate(bean, more -> {}, () -> {
             throw new IllegalStateException("unused here, no way");
         });
     }

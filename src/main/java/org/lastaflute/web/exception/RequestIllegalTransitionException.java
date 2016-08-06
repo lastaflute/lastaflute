@@ -15,20 +15,21 @@
  */
 package org.lastaflute.web.exception;
 
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.message.exception.MessagingApplicationException;
 
 /**
  * @author jflute
  */
-public class ForcedIllegalTransitionException extends MessagingApplicationException {
+public class RequestIllegalTransitionException extends MessagingApplicationException {
 
     private static final long serialVersionUID = 1L;
 
-    public ForcedIllegalTransitionException(String msg, String transitionKey) {
-        super(msg, transitionKey);
+    public RequestIllegalTransitionException(String debugMsg, String messageKey) {
+        super(debugMsg, UserMessages.createAsOneGlobal(messageKey));
     }
 
-    public ForcedIllegalTransitionException(String msg, String transitionKey, Throwable cause) {
-        super(msg, transitionKey, cause);
+    public RequestIllegalTransitionException(String debugMsg, String messageKey, Throwable cause) {
+        super(debugMsg, UserMessages.createAsOneGlobal(messageKey), cause);
     }
 }

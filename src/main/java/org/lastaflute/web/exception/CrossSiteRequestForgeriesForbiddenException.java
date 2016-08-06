@@ -15,18 +15,20 @@
  */
 package org.lastaflute.web.exception;
 
+import org.lastaflute.core.message.UserMessages;
+
 /**
  * @author jflute
  */
-public class CrossSiteRequestForgeriesForbiddenException extends ForcedRequest403ForbiddenException {
+public class CrossSiteRequestForgeriesForbiddenException extends Forced403ForbiddenException {
 
     private static final long serialVersionUID = 1L;
 
     public CrossSiteRequestForgeriesForbiddenException(String msg) {
-        super(msg);
+        super(msg, UserMessages.empty());
     }
 
     public CrossSiteRequestForgeriesForbiddenException(String msg, Throwable cause) {
-        super(msg, cause);
+        super(msg, UserMessages.empty(), cause);
     }
 }

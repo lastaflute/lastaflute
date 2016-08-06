@@ -25,6 +25,7 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.exception.LaApplicationMessage;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.message.exception.MessagingApplicationException;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
@@ -98,12 +99,12 @@ public class TypicalApplicationExceptionResolver {
             final LaApplicationException appEx = (LaApplicationException) cause;
             final ActionResponse specified = asSpecifiedApplicationException(runtime, appEx);
             response = specified.isDefined() ? specified : asEmbeddedApplicationException(runtime, appEx);
-            reflectEmbeddedApplicationMessagesIfExists(runtime, appEx); // override existing messages if exists
+            reflectEmbeddedApplicationMessagesIfExists(runtime, appEx); // saving messages to session
         } else { // e.g. framework exception
-            response = asDBFluteApplicationException(runtime, cause);
+            response = asDBFluteApplicationException(runtime, cause); // saving messages to session
         }
-        if (response.isDefined()) {
-            if (needsApplicationExceptionApiDispatch(runtime, cause, response)) {
+        if (response.isDefined()) { // #hope no session gateway when API by jflute (2016/08/06)
+            if (needsApplicationExceptionApiDispatch(runtime, cause, response)) { // clearing session messages (basically)
                 final ApiResponse dispatched = dispatchApiApplicationException(runtime, cause, response);
                 showApplicationExceptionHandling(runtime, cause, response);
                 return dispatched;
@@ -131,10 +132,10 @@ public class TypicalApplicationExceptionResolver {
     }
 
     protected void reflectEmbeddedApplicationMessagesIfExists(ActionRuntime runtime, LaApplicationException appEx) {
-        final List<LaApplicationMessage> messageList = appEx.getMessageList();
+        final List<LaApplicationMessage> messageList = appEx.getApplicationMessageList();
         if (!messageList.isEmpty()) {
             logger.debug("...Saving embedded application message as action error: {}", messageList);
-            sessionManager.errors().clear(); // for overriding
+            sessionManager.errors().clear(); // overriding existing messages if exists
             messageList.forEach(msg -> sessionManager.errors().add(msg.getMessageKey(), msg.getValues()));
         }
     }
@@ -221,18 +222,29 @@ public class TypicalApplicationExceptionResolver {
     }
 
     protected ApiResponse dispatchApiApplicationException(ActionRuntime runtime, RuntimeException cause, ActionResponse response) {
-        final ApiResponse handled = apiManager.handleApplicationException(createApiFailureResource(runtime), cause);
-        clearUnneededSessionErrorsForApi(handled);
+        final ApiResponse handled;
+        try {
+            handled = apiManager.handleApplicationException(createApiFailureResource(runtime), cause);
+        } catch (RuntimeException e) {
+            clearUnneededSessionErrorsForApiForcedly();
+            throw e;
+        }
+        clearUnneededSessionErrorsForApiIfDefined(handled);
         return handled;
     }
 
-    protected ApiFailureResource createApiFailureResource(ActionRuntime runtime) { // pick up errors from session here
-        return new ApiFailureResource(runtime, sessionManager.errors().get(), requestManager);
+    protected ApiFailureResource createApiFailureResource(ActionRuntime runtime) {
+        final OptionalThing<UserMessages> messages = sessionManager.errors().get(); // pick up session errors here
+        return new ApiFailureResource(runtime, messages, requestManager);
     }
 
-    protected void clearUnneededSessionErrorsForApi(ApiResponse handled) { // clear errors from session here
+    protected void clearUnneededSessionErrorsForApiForcedly() {
+        sessionManager.errors().clear(); // already unneeded
+    }
+
+    protected void clearUnneededSessionErrorsForApiIfDefined(ApiResponse handled) {
         if (handled.isDefined()) { // basically true, should be handled in hook
-            sessionManager.errors().clear(); // already unneeded
+            clearUnneededSessionErrorsForApiForcedly();
         }
     }
 
