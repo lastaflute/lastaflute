@@ -103,10 +103,12 @@ public class TypicalApplicationExceptionResolver {
             response = asDBFluteApplicationException(runtime, cause);
         }
         if (response.isDefined()) {
-            showApplicationExceptionHandling(runtime, cause, response);
             if (needsApplicationExceptionApiDispatch(runtime, cause, response)) {
-                return dispatchApiApplicationException(runtime, cause, response);
+                final ApiResponse dispatched = dispatchApiApplicationException(runtime, cause, response);
+                showApplicationExceptionHandling(runtime, cause, response);
+                return dispatched;
             }
+            showApplicationExceptionHandling(runtime, cause, response);
         }
         return response;
     }
