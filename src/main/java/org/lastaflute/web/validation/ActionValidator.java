@@ -48,6 +48,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.groups.Default;
 import javax.validation.metadata.ConstraintDescriptor;
 
+import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
@@ -220,6 +221,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                               -------
 
     protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
+        verifyFormType(form);
         return actuallyValidate(wrapAsValidIfNeeds(form), moreValidationLambda, validationErrorLambda);
     }
 
@@ -675,6 +677,17 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
+    protected void verifyFormType(Object form) {
+        if (isOutOfFormType(form)) {
+            String msg = "The argument 'form' should be form type but: " + form.getClass().getName() + ", " + form;
+            throw new IllegalArgumentException(msg);
+        }
+    }
+
+    protected boolean isOutOfFormType(Object form) {
+        return form instanceof String || form instanceof Number || DfTypeUtil.isAnyLocalDate(form) || form instanceof Classification;
+    }
+
     protected String convertToLabelKey(String name) {
         return LABELS_PREFIX + name;
     }
