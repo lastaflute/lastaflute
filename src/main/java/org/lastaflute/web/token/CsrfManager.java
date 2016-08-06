@@ -15,13 +15,24 @@
  */
 package org.lastaflute.web.token;
 
+import org.lastaflute.web.exception.CrossSiteRequestForgeriesForbiddenException;
+
 /**
  * @author jflute
  * @since 0.4.0 (2015/06/22 Monday)
  */
 public interface CsrfManager {
 
+    /**
+     * Begin token for CSRF. (e.g. saving the token to request header, session) <br>
+     * You should call this when e.g. first access, login, ...
+     */
     void beginToken();
 
+    /**
+     * Verify token for CSRF. (e.g. checking the token in request header) <br>
+     * You can call this in e.g. action hook.
+     * @throws CrossSiteRequestForgeriesForbiddenException When the token is invalid or not found.
+     */
     void verifyToken();
 }
