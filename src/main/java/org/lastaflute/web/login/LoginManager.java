@@ -18,6 +18,7 @@ package org.lastaflute.web.login;
 import org.dbflute.Entity;
 import org.dbflute.optional.OptionalEntity;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.web.login.credential.LoginCredential;
 import org.lastaflute.web.login.exception.LoginFailureException;
 import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.login.option.LoginOpCall;
@@ -36,19 +37,17 @@ public interface LoginManager {
     //                                                                           =========
     /**
      * Check the user is login-able. (basically for validation)
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @param credential The login credential for the login user. (NotNull)
      * @return true if the user is login-able.
      */
-    boolean checkUserLoginable(String email, String password);
+    boolean checkUserLoginable(LoginCredential credential);
 
     /**
      * Find the login user in the database.
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @param credential The login credential for the login user. (NotNull)
      * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
      */
-    OptionalEntity<? extends Object> findLoginUser(String email, String password);
+    OptionalEntity<? extends Object> findLoginUser(LoginCredential credential);
 
     /**
      * Find the login user in the database.
@@ -62,25 +61,23 @@ public interface LoginManager {
     //                                                                         ===========
     /**
      * Do login for the user by account and password.
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @param credential The login credential for the login user. (NotNull)
      * @param opLambda The callback for option of login. e.g. useAutoLogin (NotNull)
      * @throws LoginFailureException When it fails to login by the user info.
      */
-    void login(String email, String password, LoginOpCall opLambda) throws LoginFailureException;
+    void login(LoginCredential credential, LoginOpCall opLambda) throws LoginFailureException;
 
     /**
      * Do login for the user by account and password. <br>
      * You should specify normal response in the last callback argument. <br>
      * But the response may be switched to response of previously requested action if exists.
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
+     * @param credential The login credential for the login user. (NotNull)
      * @param opLambda The callback for option of login. e.g. useAutoLogin (NotNull)
      * @param oneArgLambda The callback for login redirect when success of login, normal response is returned. (NotNull)
      * @return The response of action, controlled as login-redirect, previously requested response or normal response. (NotNull)
      * @throws LoginFailureException When it fails to login by the user info.
      */
-    HtmlResponse loginRedirect(String email, String password, LoginOpCall opLambda, LoginRedirectSuccessCall oneArgLambda)
+    HtmlResponse loginRedirect(LoginCredential credential, LoginOpCall opLambda, LoginRedirectSuccessCall oneArgLambda)
             throws LoginFailureException;
 
     /**
