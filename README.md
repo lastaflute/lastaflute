@@ -29,9 +29,9 @@ public HtmlResponse index(OptionalThing<Integer> pageNumber, ProductSearchForm f
         return asHtml(path_Product_ProductListJsp);
     });
     PagingResultBean<Product> page = selectProductPage(pageNumber.orElse(1), form);
-    List<ProductSearchRowBean> beans = page.mappingList(product -> {
+    List<ProductSearchRowBean> beans = page.stream().map(product -> {
         return mappingToBean(product);
-    });
+    }).collect(Collectors.toList());
     return asHtml(path_Product_ProductListJsp).renderWith(data -> {
         data.register("beans", beans);
         registerPagingNavi(data, page, form);
@@ -72,7 +72,7 @@ public class HarborBoot {
 <dependency>
     <groupId>org.lastaflute</groupId>
     <artifactId>lastaflute</artifactId>
-    <version>0.7.9</version>
+    <version>0.8.2</version>
 </dependency>
 ```
 
