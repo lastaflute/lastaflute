@@ -224,6 +224,18 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     // ===================================================================================
     //                                                                           User Info
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                      Application Info
+    //                                      ----------------
+    /**
+     * Get the application type, e.g. for common column.
+     * @return The application type basically fixed string. (NotNull) 
+     */
+    protected abstract String myAppType();
+
+    // -----------------------------------------------------
+    //                                            Login Info
+    //                                            ----------
     /**
      * Get the bean of login user on session as interface type. (for application)
      * @return The optional thing of found user bean. (NotNull, EmptyAllowed: when not login)
@@ -231,22 +243,16 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     protected abstract OptionalThing<? extends UserBean<?>> getUserBean();
 
     /**
-     * Get the application type, e.g. for common column.
-     * @return The application type basically fixed string. (NotNull) 
+     * Get my (application's) login manager. (for framework)
+     * @return The optional instance of login manager. (NotNull, EmptyAllowed: if no login handling)
      */
-    protected abstract String myAppType();
+    protected abstract OptionalThing<LoginManager> myLoginManager();
 
     /**
      * Get the user type of this applicatoin's login.
      * @return The optional expression of user type. (NotNull, EmptyAllowed: if no login handling) 
      */
     protected abstract OptionalThing<String> myUserType();
-
-    /**
-     * Get my (application's) login manager. (for framework)
-     * @return The optional instance of login manager. (NotNull, EmptyAllowed: if no login handling)
-     */
-    protected abstract OptionalThing<LoginManager> myLoginManager();
 
     // ===================================================================================
     //                                                                       Double Submit
