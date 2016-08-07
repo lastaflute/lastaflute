@@ -15,11 +15,9 @@
  */
 package org.lastaflute.web.response;
 
-import java.io.OutputStream;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
 
 import org.dbflute.helper.StringKeyMap;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
@@ -27,7 +25,8 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
 import org.lastaflute.web.servlet.request.ResponseManager;
-import org.lastaflute.web.servlet.request.WritternStreamCall;
+import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
+import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
 
 /**
  * The response of stream for action.
@@ -57,7 +56,7 @@ public class StreamResponse implements ActionResponse {
     protected Integer httpStatus;
     protected byte[] byteData;
     protected WritternStreamCall streamCall;
-    protected Map<String, Consumer<OutputStream>> consumerMap;
+    protected WritternZipStreamCall zipStreamCall;
     protected Integer contentLength;
     protected boolean undefined;
     protected boolean returnAsEmptyBody;
@@ -91,6 +90,11 @@ public class StreamResponse implements ActionResponse {
 
     public StreamResponse contentTypeJpeg() {
         contentType = "image/jpeg";
+        return this;
+    }
+
+    public StreamResponse contentTypeZip() { // for e.g. zip stream
+        contentType = "application/zip";
         return this;
     }
 
@@ -155,21 +159,31 @@ public class StreamResponse implements ActionResponse {
     //                                                                       Download Data
     //                                                                       =============
     /**
+     * Download the file as byte data.
      * @param data The download data as bytes. (NotNull)
      * @return this. (NotNull)
      */
     public StreamResponse data(byte[] data) {
-        assertArgumentNotNull("data", data);
-        assertDefinedState("data");
-        if (streamCall != null) {
-            String msg = "The stream call already exists, so cannot call data(): " + data;
-            throw new IllegalStateException(msg);
-        }
-        this.byteData = data;
+        doData(data);
         return this;
     }
 
+    protected void doData(byte[] data) {
+        assertArgumentNotNull("data", data);
+        assertDefinedState("data");
+        if (streamCall != null) {
+            String msg = "The stream call already exists, so cannot call data(): " + streamCall;
+            throw new IllegalStateException(msg);
+        }
+        if (zipStreamCall != null) {
+            String msg = "The zip stream call already exists, so cannot call data(): " + zipStreamCall;
+            throw new IllegalStateException(msg);
+        }
+        this.byteData = data;
+    }
+
     /**
+     * Download the file as stream.
      * <pre>
      * <span style="color: #70226C">return</span> asStream("sea.txt").<span style="color: #CC4747">stream</span>(<span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
      *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
@@ -186,6 +200,7 @@ public class StreamResponse implements ActionResponse {
     }
 
     /**
+     * Download the file as stream with content-length.
      * <pre>
      * <span style="color: #70226C">return</span> asStream("sea.txt").<span style="color: #CC4747">stream</span>(<span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
      *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
@@ -206,29 +221,50 @@ public class StreamResponse implements ActionResponse {
         assertArgumentNotNull("writtenStreamLambda", writtenStreamLambda);
         assertDefinedState("stream");
         if (byteData != null) {
-            String msg = "The byte data already exists, so cannot call stream(): " + writtenStreamLambda;
+            String msg = "The byte data already exists, so cannot call stream(): " + byteData;
+            throw new IllegalStateException(msg);
+        }
+        if (zipStreamCall != null) {
+            String msg = "The zip stream call already exists, so cannot call data(): " + zipStreamCall;
             throw new IllegalStateException(msg);
         }
         streamCall = writtenStreamLambda;
     }
 
     /**
+     * Download the file as chunked zip stream. <br>
+     * The content-type is forcedly set as 'application/zip' in this method.
      * <pre>
-     * Map&lt;String, Consumer&lt;OutputStream&gt;&gt; <span style="color: #553000">consumerMap</span> = DfCollectionUtil.newHashMap();
-     * <span style="color: #553000">consumerMap</span>.put(
-     *     "land.pdf",
-     *     <span style="color: #553000">baos</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
-     *         executeQuery(<span style="color: #553000">baos</span>);
-     *     });
-     * <span style="color: #70226C">return</span> asStream("sea.zip").<span style="color: #CC4747">zipStreamChunked</span>(<span style="color: #553000">consumerMap</span>);
+     * <span style="color: #70226C">return</span> asStream("sea.zip").<span style="color: #CC4747">zipStreamChunked</span>(out <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     out.write("land.pdf", stream <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> writeSeaPdf(stream));
+     *     out.write("piary.pdf", stream <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> writeLandPdf(stream));
+     * });
      * </pre>
-     * @param consumerMap
+     * @param oneArgLambda The callback for writing chunked zip stream. (NotNull)
      * @return this. (NotNull)
      */
-    public StreamResponse zipStreamChunked(Map<String, Consumer<OutputStream>> consumerMap) {
-        this.consumerMap = consumerMap;
-        contentType = "application/zip";
+    public StreamResponse zipStreamChunked(WritternZipStreamCall oneArgLambda) {
+        doZipStreamChunked(oneArgLambda);
         return this;
+    }
+
+    protected void doZipStreamChunked(WritternZipStreamCall oneArgLambda) {
+        assertArgumentNotNull("oneArgLambda", oneArgLambda);
+        assertDefinedState("zipStreamChunked");
+        if (byteData != null) {
+            String msg = "The byte data already exists, so cannot call stream(): " + byteData;
+            throw new IllegalStateException(msg);
+        }
+        if (streamCall != null) {
+            String msg = "The stream call already exists, so cannot call data(): " + streamCall;
+            throw new IllegalStateException(msg);
+        }
+        this.zipStreamCall = oneArgLambda;
+        setupZipStreamChunkedContentType();
+    }
+
+    protected void setupZipStreamChunkedContentType() {
+        contentTypeZip(); // forcedly
     }
 
     public byte[] getByteData() {
@@ -239,8 +275,8 @@ public class StreamResponse implements ActionResponse {
         return streamCall;
     }
 
-    public Map<String, Consumer<OutputStream>> getConsumerMap() {
-        return consumerMap;
+    public WritternZipStreamCall getZipStreamCall() {
+        return zipStreamCall;
     }
 
     public Integer getContentLength() {
@@ -294,7 +330,7 @@ public class StreamResponse implements ActionResponse {
         for (Entry<String, String[]> entry : headerMap.entrySet()) {
             resource.header(entry.getKey(), entry.getValue());
         }
-        if (!returnAsEmptyBody && byteData == null && streamCall == null && consumerMap == null) {
+        if (!returnAsEmptyBody && byteData == null && streamCall == null && zipStreamCall == null) {
             throwStreamByteDataInputStreamNotFoundException();
         }
         if (byteData != null) {
@@ -307,8 +343,8 @@ public class StreamResponse implements ActionResponse {
                 resource.stream(streamCall);
             }
         }
-        if (consumerMap != null) {
-            resource.consumerMap(consumerMap);
+        if (zipStreamCall != null) {
+            resource.zipStreamChunked(zipStreamCall);
         }
         if (returnAsEmptyBody) {
             resource.asEmptyBody();

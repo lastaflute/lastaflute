@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
 
 /**
  * The manager of response. (response facade)

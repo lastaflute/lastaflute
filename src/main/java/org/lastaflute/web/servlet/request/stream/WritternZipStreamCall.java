@@ -13,16 +13,15 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.request;
+package org.lastaflute.web.servlet.request.stream;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * @author jflute
  */
 @FunctionalInterface
-public interface WritternStreamOut {
+public interface WritternZipStreamCall {
 
-    void write(InputStream ins) throws IOException;
+    void callback(WritternZipStreamOut out) throws IOException;
 }

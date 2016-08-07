@@ -15,14 +15,23 @@
  */
 package org.lastaflute.web.servlet.request;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.servlet.http.HttpServletResponse;
 
 import org.lastaflute.web.exception.ResponseClientAbortIOException;
 import org.lastaflute.web.exception.ResponseDownloadFailureException;
+import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
+import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
+import org.lastaflute.web.servlet.request.stream.WritternZipStreamWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,6 +98,51 @@ public class ResponseDownloadPerformer {
         } catch (IOException e) {
             handleDownloadIOException(resource, e);
         }
+    }
+
+    // ===================================================================================
+    //                                                                          Zip Stream
+    //                                                                          ==========
+    public void downloadZipStreamCall(ResponseDownloadResource resource, HttpServletResponse response) {
+        final Charset charset = Charset.forName(getZipWritingEncoding());
+        try (ZipOutputStream zipOus = new ZipOutputStream(response.getOutputStream(), charset)) {
+            final Map<String, WritternZipStreamWriter> zipWriterMap = createZipWriterMap(resource);
+            zipWriterMap.forEach((fileName, writer) -> {
+                try (ByteArrayOutputStream byteOus = new ByteArrayOutputStream()) {
+                    writer.write(byteOus);
+                    zipOus.putNextEntry(new ZipEntry(fileName));
+                    byteOus.writeTo(zipOus);
+                } catch (IOException e) {
+                    handleDownloadIOException(resource, fileName, e);
+                } finally {
+                    try {
+                        zipOus.closeEntry();
+                    } catch (IOException e) {
+                        handleDownloadIOException(resource, fileName, e);
+                    }
+                }
+            });
+        } catch (IOException e) {
+            handleDownloadIOException(resource, e);
+        }
+    }
+
+    protected String getZipWritingEncoding() {
+        return "UTF-8";
+    }
+
+    protected Map<String, WritternZipStreamWriter> createZipWriterMap(ResponseDownloadResource resource) throws IOException {
+        final WritternZipStreamCall zipStreamCall = resource.getZipStreamCall();
+        final Map<String, WritternZipStreamWriter> writerMap = new LinkedHashMap<String, WritternZipStreamWriter>();
+        zipStreamCall.callback((fileName, writer) -> {
+            assertArgumentNotNull("fileName", fileName);
+            assertArgumentNotNull("writer", writer);
+            writerMap.put(fileName, writer);
+        });
+        if (writerMap.isEmpty()) {
+            throw new IllegalStateException("The callback of zip stream should have at least one writer: " + zipStreamCall);
+        }
+        return writerMap;
     }
 
     // ===================================================================================
@@ -162,10 +216,18 @@ public class ResponseDownloadPerformer {
     //                                                                  Handle IOException
     //                                                                  ==================
     protected void handleDownloadIOException(ResponseDownloadResource resource, IOException e) {
+        doHandleDownloadIOException(resource, null, e);
+    }
+
+    protected void handleDownloadIOException(ResponseDownloadResource resource, String nestedFile, IOException e) {
+        doHandleDownloadIOException(resource, nestedFile, e);
+    }
+
+    protected void doHandleDownloadIOException(ResponseDownloadResource resource, String nestedFile, IOException e) {
         if (e instanceof ResponseClientAbortIOException) {
             handleClientAbortIOException(resource, (ResponseClientAbortIOException) e);
         } else {
-            String msg = "Failed to download the file: " + resource;
+            String msg = "Failed to download the file: " + (nestedFile != null ? nestedFile + " in " : "") + resource;
             throw new ResponseDownloadFailureException(msg, e);
         }
     }
