@@ -584,7 +584,7 @@ public class SimpleRequestManager implements RequestManager {
     public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> userBeanType) {
         @SuppressWarnings("unchecked")
         final OptionalThing<USER_BEAN> userBean = (OptionalThing<USER_BEAN>) findLoginManager(userBeanType).flatMap(manager -> {
-            return manager.getSessionUserBean();
+            return manager.getSavedUserBean();
         });
         return userBean;
     }
