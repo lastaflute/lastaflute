@@ -50,6 +50,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
 
     protected long previous; // keep for unique token
 
+    // #hope can use at JSON API (needs header handling)
     // ===================================================================================
     //                                                                  Token Manipulation
     //                                                                  ==================
