@@ -271,7 +271,7 @@ public interface RequestManager extends ScopedAttributeHolder {
     OptionalThing<LoginManager> findLoginManager(Class<?> userBeanType);
 
     /**
-     * Find user bean of current request for the type. (basically from session, but unconcern) <br>
+     * Find user bean of current request for the type from e.g. session. <br>
      * Empty optional means not login state, so you can control by optional thing methods. <br>
      * If your application does not use login, always returns empty.
      * <pre>

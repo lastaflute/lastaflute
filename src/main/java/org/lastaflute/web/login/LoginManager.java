@@ -149,10 +149,16 @@ public interface LoginManager {
     boolean isLoginRequiredAction(LoginHandlingResource resource);
 
     /**
-     * Get the user bean in session. (you can determine login or not) <br>
-     * Also you can use lookupSessionUserBean() from concrete type instance,
-     * which provides user bean as generic type.
+     * Get the user bean in saved scope (e.g. session). <br>
+     * You can determine login or not by optional.
      * @return The user bean in session. (NotNull, EmptyAllowed: means not-login)
+     */
+    OptionalThing<? extends UserBean<?>> getSavedUserBean(); // thanks, feedback of "? extends" way
+
+    /**
+     * Get the user bean in session. (you can determine login or not)
+     * @return The user bean in session. (NotNull, EmptyAllowed: means not-login)
+     * @deprecated use getSavedUserBean()
      */
     OptionalThing<? extends UserBean<?>> getSessionUserBean(); // thanks, feedback of "? extends" way
 

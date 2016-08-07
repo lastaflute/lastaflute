@@ -307,7 +307,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
 
     @Override
     public void reselectSessionUserBeanIfExists() throws LoginFailureException {
-        getSessionUserBean().ifPresent(oldBean -> {
+        getSavedUserBean().ifPresent(oldBean -> {
             inheritUserBeanAdditionalInfo(oldBean);
             final ID userId = oldBean.getUserId();
             logger.debug("...Re-selecting user bean in session: userId={}", userId);
@@ -648,7 +648,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     }
 
     protected boolean doTryAlreadyLogin(LoginHandlingResource resource) {
-        return getSessionUserBean().map(userBean -> {
+        return getSavedUserBean().map(userBean -> {
             if (!syncCheckLoginSessionIfNeeds(userBean)) {
                 return false;
             }
@@ -662,7 +662,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         final boolean updateToken = isUpdateTokenWhenRememberMe(resource);
         final boolean silently = isSilentlyWhenRememberMe(resource);
         final boolean success = rememberMe(op -> op.updateToken(updateToken).silentLogin(silently));
-        return success && getSessionUserBean().map(userBean -> {
+        return success && getSavedUserBean().map(userBean -> {
             clearLoginRedirectBean();
             logger.debug("...Passing login check as remember-me");
             return true;
@@ -749,11 +749,19 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     //                                      Session UserBean
     //                                      ----------------
     @Override
-    public OptionalThing<USER_BEAN> getSessionUserBean() { // use covariant generic type
+    public OptionalThing<USER_BEAN> getSavedUserBean() { // use covariant generic type
         final String key = getUserBeanKey();
         return OptionalThing.ofNullable(sessionManager.getAttribute(key, getUserBeanType()).orElse(null), () -> {
             throwLoginRequiredException("Not found the user in session by the key:" + key); // to login action
         });
+    }
+
+    /**
+     * @deprecated use getSavedUserBean()
+     */
+    @Override
+    public OptionalThing<USER_BEAN> getSessionUserBean() { // use covariant generic type
+        return getSavedUserBean();
     }
 
     @Override
