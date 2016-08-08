@@ -679,54 +679,66 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                                                        Assist Logic
     //                                                                        ============
     protected void verifyFormType(Object form) {
-        if (isOutOfFormType(form)) {
-            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-            br.addNotice("The validate() argument 'form' should be form type.");
-            br.addItem("Advice");
-            br.addElement("The validate() or validateApi() first argument");
-            br.addElement("should be object type. (not be e.g. String, Integer)");
-            br.addElement("For example:");
-            br.addElement("  (x): validate(\"sea\", ...) // *No");
-            br.addElement("  (x): validate(1, ...) // *No");
-            br.addElement("  (x): validate(date, ...) // *No");
-            br.addElement("");
-            br.addElement("  (o):");
-            br.addElement("    public HtmlResponse index(SeaForm form) {");
-            br.addElement("        validate(form, ...) // OK");
-            br.addElement("    }");
-            br.addElement("  (o):");
-            br.addElement("    public JsonResponse<SeaBean> index(SeaBody body) {");
-            br.addElement("        validate(body, ...) // OK");
-            br.addElement("    }");
-            br.addElement("");
-            br.addElement("If that helps, URL parameters on execute method arguments");
-            br.addElement("are unneeded to validate().");
-            br.addElement("If the parameter type is not OptionalThing (e.g. String, Integer),");
-            br.addElement("It has been already checked as required parameter in framework.");
-            br.addElement("For example:");
-            br.addElement("  (x):");
-            br.addElement("    public HtmlResponse index(String sea) {");
-            br.addElement("        validate(sea, ...) // *No");
-            br.addElement("        if (sea.length() > 3) ...");
-            br.addElement("    }");
-            br.addElement("  (o):");
-            br.addElement("    public HtmlResponse index(String sea) {");
-            br.addElement("        if (sea.length() > 3) ... // OK");
-            br.addElement("    }");
-            br.addElement("  (o):");
-            br.addElement("    public HtmlResponse index(OptionalThing<String> sea) {");
-            br.addElement("        sea.filter(...).map(...) // OK");
-            br.addElement("    }");
-            br.addItem("Specified Form");
-            br.addElement(form.getClass().getName());
-            br.addElement(form);
-            final String msg = br.buildExceptionMessage();
-            throw new IllegalArgumentException(msg);
+        if (mightBeValidable(form)) {
+            return;
         }
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The validate() argument 'form' should be form type.");
+        br.addItem("Advice");
+        br.addElement("The validate() or validateApi() first argument");
+        br.addElement("should be object type. (not be e.g. String, Integer)");
+        br.addElement("For example:");
+        br.addElement("  (x): validate(\"sea\", ...) // *No");
+        br.addElement("  (x): validate(1, ...) // *No");
+        br.addElement("  (x): validate(date, ...) // *No");
+        br.addElement("");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse index(SeaForm form) {");
+        br.addElement("        validate(form, ...) // OK");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public JsonResponse<SeaBean> index(SeaBody body) {");
+        br.addElement("        validate(body, ...) // OK");
+        br.addElement("    }");
+        br.addElement("");
+        br.addElement("If that helps, URL parameters on execute method arguments");
+        br.addElement("are unneeded to validate().");
+        br.addElement("If the parameter type is not OptionalThing (e.g. String, Integer),");
+        br.addElement("It has been already checked as required parameter in framework.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public HtmlResponse index(String sea) {");
+        br.addElement("        validate(sea, ...) // *No");
+        br.addElement("        if (sea.length() > 3) ...");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse index(String sea) {");
+        br.addElement("        if (sea.length() > 3) ... // OK");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse index(OptionalThing<String> sea) {");
+        br.addElement("        sea.filter(...).map(...) // OK");
+        br.addElement("    }");
+        br.addItem("Specified Form");
+        br.addElement(form.getClass().getName());
+        br.addElement(form);
+        final String msg = br.buildExceptionMessage();
+        throw new IllegalArgumentException(msg);
     }
 
-    protected boolean isOutOfFormType(Object form) {
-        return form instanceof String || form instanceof Number || DfTypeUtil.isAnyLocalDate(form) || form instanceof Classification;
+    protected boolean mightBeValidable(Object form) {
+        return !cannotBeValidatable(form);
+    }
+
+    // similar logic is on action response reflector
+    protected boolean cannotBeValidatable(Object value) {
+        return value instanceof String // yes-yes-yes 
+                || value instanceof Number // e.g. Integer
+                || DfTypeUtil.isAnyLocalDate(value) // e.g. LocalDate
+                || value instanceof Boolean // of course
+                || value instanceof Classification // e.g. CDef
+                || value.getClass().isPrimitive() // probably no way, just in case
+        ;
     }
 
     protected String convertToLabelKey(String name) {
