@@ -23,9 +23,9 @@ import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeUnknownException;
 import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
-import org.lastaflute.core.util.LaDBFluteUtil;
-import org.lastaflute.core.util.LaDBFluteUtil.ClassificationCodeOfMethodNotFoundException;
-import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
+import org.lastaflute.core.util.LaClassificationUtil;
+import org.lastaflute.core.util.LaClassificationUtil.ClassificationCodeOfMethodNotFoundException;
+import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
 
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
@@ -54,7 +54,7 @@ public interface DBFluteGsonAdaptable {
         @Override
         public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
             final Class<? super T> rawType = type.getRawType();
-            if (rawType != null && LaDBFluteUtil.isClassificationType(rawType)) {
+            if (rawType != null && LaClassificationUtil.isCls(rawType)) {
                 @SuppressWarnings("unchecked")
                 final TypeAdapter<T> pter = (TypeAdapter<T>) createTypeAdapterClassification(rawType);
                 return pter;
@@ -91,7 +91,7 @@ public interface DBFluteGsonAdaptable {
                 return null;
             }
             try {
-                return LaDBFluteUtil.toVerifiedClassification(clsType, code);
+                return LaClassificationUtil.toCls(clsType, code);
             } catch (ClassificationCodeOfMethodNotFoundException e) {
                 throwJsonPropertyClassificationCodeOfMethodNotFoundException(code, in, e);
                 return null; // unreachable

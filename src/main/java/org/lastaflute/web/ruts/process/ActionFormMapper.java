@@ -52,8 +52,8 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.core.util.LaDBFluteUtil;
-import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
+import org.lastaflute.core.util.LaClassificationUtil;
+import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
 import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
@@ -829,12 +829,12 @@ public class ActionFormMapper {
     //                                        Classification
     //                                        --------------
     protected boolean isClassificationProperty(Class<?> propertyType) {
-        return LaDBFluteUtil.isClassificationType(propertyType);
+        return LaClassificationUtil.isCls(propertyType);
     }
 
     protected Classification toVerifiedClassification(Object bean, String name, Object code, Class<?> propertyType) {
         try {
-            return LaDBFluteUtil.toVerifiedClassification(propertyType, code);
+            return LaClassificationUtil.toCls(propertyType, code);
         } catch (ClassificationUnknownCodeException e) { // simple message because of catched later
             String msg = "Cannot convert the code to the classification: " + code + " to " + propertyType.getSimpleName();
             throwRequestClassifiationConvertFailureException(msg, e);

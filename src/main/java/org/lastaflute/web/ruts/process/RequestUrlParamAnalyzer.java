@@ -35,8 +35,8 @@ import org.dbflute.util.DfTypeUtil.ParseBooleanException;
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.core.util.LaDBFluteUtil;
-import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
+import org.lastaflute.core.util.LaClassificationUtil;
+import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
 import org.lastaflute.web.exception.Forced404NotFoundException;
 import org.lastaflute.web.exception.UrlParamArgsDifferentCountException;
 import org.lastaflute.web.exception.UrlParamOptionalParameterEmptyAccessException;
@@ -254,7 +254,7 @@ public class RequestUrlParamAnalyzer {
             filtered = DfTypeUtil.toLocalTime(exp);
         } else if (Boolean.class.isAssignableFrom(paramType)) {
             filtered = DfTypeUtil.toBoolean(exp);
-        } else if (LaDBFluteUtil.isClassificationType(paramType)) {
+        } else if (LaClassificationUtil.isCls(paramType)) {
             filtered = toVerifiedClassification(execute, paramType, exp);
         } else if (isOptionalParameterType(paramType)) {
             final Class<?> optGenType = optGenTypeMap.get(index);
@@ -273,7 +273,7 @@ public class RequestUrlParamAnalyzer {
 
     protected Object toVerifiedClassification(ActionExecute execute, Class<?> paramType, Object filtered) {
         try {
-            return LaDBFluteUtil.toVerifiedClassification(paramType, filtered);
+            return LaClassificationUtil.toCls(paramType, filtered);
         } catch (ClassificationUnknownCodeException e) {
             handleClassificationUnknownCodeException(execute, filtered, e);
             return null; // unreachable
