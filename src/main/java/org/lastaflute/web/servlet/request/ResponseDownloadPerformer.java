@@ -104,8 +104,7 @@ public class ResponseDownloadPerformer {
     //                                                                          Zip Stream
     //                                                                          ==========
     public void downloadZipStreamCall(ResponseDownloadResource resource, HttpServletResponse response) {
-        final Charset charset = Charset.forName(getZipWritingEncoding());
-        try (ZipOutputStream zipOus = new ZipOutputStream(response.getOutputStream(), charset)) {
+        try (ZipOutputStream zipOus = new ZipOutputStream(response.getOutputStream(), getZipOutputCharset(resource))) {
             final Map<String, WritternZipStreamWriter> zipWriterMap = createZipWriterMap(resource);
             zipWriterMap.forEach((fileName, writer) -> {
                 try (ByteArrayOutputStream byteOus = new ByteArrayOutputStream()) {
@@ -127,8 +126,8 @@ public class ResponseDownloadPerformer {
         }
     }
 
-    protected String getZipWritingEncoding() {
-        return "UTF-8";
+    protected Charset getZipOutputCharset(ResponseDownloadResource resource) {
+        return Charset.forName(resource.getZipStreamCall().zipStreamEncoding());
     }
 
     protected Map<String, WritternZipStreamWriter> createZipWriterMap(ResponseDownloadResource resource) throws IOException {

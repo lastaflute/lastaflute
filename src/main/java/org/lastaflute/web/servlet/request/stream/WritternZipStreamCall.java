@@ -24,4 +24,8 @@ import java.io.IOException;
 public interface WritternZipStreamCall {
 
     void callback(WritternZipStreamOut out) throws IOException;
+
+    default String zipStreamEncoding() {
+        return "UTF-8";
+    }
 }
