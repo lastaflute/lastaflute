@@ -18,9 +18,7 @@ package org.lastaflute.web.ruts.process;
 import java.lang.reflect.Parameter;
 import java.util.function.Consumer;
 
-import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ResponseReflectingOption;
@@ -183,29 +181,12 @@ public class ActionResponseReflector {
         }
         final ResponseHtmlBeanValidator validator = createHtmlBeanValidator(response, option);
         return (key, value) -> { // registered data cannot be null
-            if (mightBeValidable(key, value)) { // for performance
-                validator.validate(key, value);
-            }
+            validator.validate(key, value); // cannot-be-validatable skip is embedded in the response validator
         };
     }
 
     protected ResponseHtmlBeanValidator createHtmlBeanValidator(HtmlResponse response, ResponseReflectingOption option) {
         return new ResponseHtmlBeanValidator(requestManager, runtime, option.isHtmlBeanValidationErrorWarned(), response);
-    }
-
-    protected boolean mightBeValidable(String key, Object value) { // parameter 'key' for override logic
-        return !cannotBeValidatable(value);
-    }
-
-    // similar logic is on action validator
-    protected boolean cannotBeValidatable(Object value) {
-        return value instanceof String // yes-yes-yes 
-                || value instanceof Number // e.g. Integer
-                || DfTypeUtil.isAnyLocalDate(value) // e.g. LocalDate
-                || value instanceof Boolean // of course
-                || value instanceof Classification // e.g. CDef
-                || value.getClass().isPrimitive() // probably no way, just in case
-        ;
     }
 
     // ===================================================================================
@@ -253,6 +234,7 @@ public class ActionResponseReflector {
         if (option.isJsonBeanValidatorSuppressed()) { // by project policy
             return;
         }
+        // cannot-be-validatable skip is embedded in the response validator
         doValidateJsonBean(jsonBean, response, option);
     }
 

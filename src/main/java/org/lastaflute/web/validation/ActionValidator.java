@@ -731,7 +731,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     // similar logic is on action response reflector
-    protected boolean cannotBeValidatable(Object value) {
+    public static boolean cannotBeValidatable(Object value) { // called by e.g. ResponseBeanValidator
         return value instanceof String // yes-yes-yes 
                 || value instanceof Number // e.g. Integer
                 || DfTypeUtil.isAnyLocalDate(value) // e.g. LocalDate

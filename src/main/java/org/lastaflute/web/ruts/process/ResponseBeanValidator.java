@@ -72,14 +72,20 @@ public abstract class ResponseBeanValidator {
         if (bean == null) {
             throw new IllegalStateException("The argument 'bean' should not be null.");
         }
-        final ActionValidator<UserMessages> validator = createActionValidator();
-        try {
-            executeValidator(validator, bean);
-        } catch (ValidationErrorException e) {
-            handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
-        } catch (ClientErrorByValidatorException e) {
-            handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
+        if (mightBeValidatable(bean)) {
+            final ActionValidator<UserMessages> validator = createActionValidator();
+            try {
+                executeValidator(validator, bean);
+            } catch (ValidationErrorException e) {
+                handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
+            } catch (ClientErrorByValidatorException e) {
+                handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
+            }
         }
+    }
+
+    protected boolean mightBeValidatable(Object value) {
+        return !ActionValidator.cannotBeValidatable(value);
     }
 
     protected ActionValidator<UserMessages> createActionValidator() {
