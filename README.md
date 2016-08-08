@@ -72,7 +72,7 @@ public class HarborBoot {
 <dependency>
     <groupId>org.lastaflute</groupId>
     <artifactId>lastaflute</artifactId>
-    <version>0.8.2</version>
+    <version>0.8.3</version>
 </dependency>
 ```
 
