@@ -35,7 +35,7 @@ import org.lastaflute.web.ruts.wrapper.BeanWrapper;
 import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**
- * @author modified by jflute (originated in Struts and Seasar)
+ * @author jflute
  */
 public class VirtualForm implements Serializable {
 

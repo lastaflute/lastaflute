@@ -28,7 +28,7 @@ public interface UserTimeZoneProcessProvider {
 
     /**
      * Does it use time-zone handling? <br>
-     * The time-zone handling is option (not related to Struts) so you need to choose.
+     * The time-zone handling is option so you need to choose.
      * @return The determination, true or false.
      */
     boolean isUseTimeZoneHandling();

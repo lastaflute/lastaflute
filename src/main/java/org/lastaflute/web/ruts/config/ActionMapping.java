@@ -32,7 +32,7 @@ import org.lastaflute.web.ruts.NextJourney;
 import org.lastaflute.web.util.LaServletContextUtil;
 
 /**
- * @author modified by jflute (originated in Struts and Seasar)
+ * @author modified by jflute (originated in Seasar and Struts)
  */
 public class ActionMapping {
 

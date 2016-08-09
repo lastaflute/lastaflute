@@ -106,7 +106,7 @@ public abstract class LastaAction {
 
     /**
      * Create the user messages basically for session errors or messages. (for application)
-     * @return The new-created user messages provided from Struts. (NotNull)
+     * @return The new-created user messages. (NotNull)
      */
     protected UserMessages createMessages() { // overridden as type-safe
         return new UserMessages();

@@ -86,7 +86,6 @@ public class TypicalApplicationExceptionResolver {
     //                                                                             =======
     /**
      * Resolve the application exception thrown by (basically) action execute. <br>
-     * Though this is same as global-exceptions settings of Struts, <br>
      * There is more flexibility than the function so you can set it here. <br>
      * This is called by callback process so you should NOT call this directly in your action.
      * @param runtime The runtime meta of action execute. (NotNull)

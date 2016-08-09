@@ -37,24 +37,9 @@ import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 
 /**
- * @author modified by jflute (originated in Seasar and Struts)
+ * @author jflute
  */
 public class ActionCoinHelper {
-
-    // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    /**
-     * <p>The request attribute under which the path information is stored for
-     * processing during a <code>RequestDispatcher.include</code> call.</p>
-     */
-    public static final String INCLUDE_PATH_INFO = "javax.servlet.include.path_info";
-
-    /**
-     * <p>The request attribute under which the servlet path information is stored
-     * for processing during a <code>RequestDispatcher.include</code> call.</p>
-     */
-    public static final String INCLUDE_SERVLET_PATH = "javax.servlet.include.servlet_path";
 
     // ===================================================================================
     //                                                                           Attribute

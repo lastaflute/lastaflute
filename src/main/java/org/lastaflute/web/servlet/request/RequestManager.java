@@ -320,8 +320,7 @@ public interface RequestManager extends ScopedAttributeHolder {
     void saveUserLocaleToCookie(Locale locale);
 
     /**
-     * Save the locale for user of current request to session. <br>
-     * The session key is same as Struts so messages process can use it.
+     * Save the locale for user of current request to session.
      * @param locale The saved locale to session. (NullAllowed: if null, remove it from session)
      */
     void saveUserLocaleToSession(Locale locale);
