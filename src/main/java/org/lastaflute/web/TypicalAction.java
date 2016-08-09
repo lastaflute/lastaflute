@@ -259,28 +259,50 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                                                       =============
     /**
      * Save the transaction token to session, using this action as group type.
+     * <pre>
+     * public HtmlResponse index() {
+     *     ...
+     *     <span style="color: #CC4747">saveToken()</span>;
+     *     return asHtml(path_...);
+     * }
+     * 
+     * e.g. Thymeleaf template
+     *  &lt;input type="hidden" <span style="color: #CC4747">la:token="true"</span>/&gt;
+     * </pre>
      */
     protected void saveToken() { // no return because automatically output by e.g. template framework
         doubleSubmitManager.saveToken(myTokenGroupType());
     }
 
     /**
-     * Verify the request token (whether the request token is same as saved token) <br>
+     * Verify the request token (whether the requested token is same as saved token). <br>
      * And reset the saved token, it can be used only one-time. <br> 
-     * Using this action as group type.
+     * It uses this action as group type. <br>
+     * It should be after validate() or may be token-not-found exception if validation error.
+     * <pre>
+     * public HtmlResponse index(Integer memberId) {
+     *     validate(form, messages <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {}, () <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         return asHtml(path_...); <span style="color: #3F7E5E">// the html may use token...</span>
+     *     });
+     *     verifyToken(() <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> { <span style="color: #3F7E5E">// so should be called after validate()</span>
+     *         return asHtml(path_...);
+     *     });
+     *     ...
+     * }
+     * </pre>
      * @param errorResponseLambda The hook to return action response when token error. (NotNull)
-     * @throws DoubleSubmitRequestException When the token is invalid.
+     * @throws DoubleSubmitRequestException When the token is invalid. That has specified error hook.
      */
     protected void verifyToken(TokenErrorHook errorResponseLambda) {
         doubleSubmitManager.verifyToken(myTokenGroupType(), errorResponseLambda);
     }
 
     /**
-     * Verify the request token (whether the request token is same as saved token) <br>
+     * Verify the request token (whether the requested token is same as saved token) <br>
      * Keep the saved token, so this method is basically for intermediate request. <br>
-     * Using this action as group type.
+     * It uses this action as group type. <br>
      * @param errorResponseLambda The hook to return action response when token error. (NotNull)
-     * @throws DoubleSubmitRequestException When the token is invalid.
+     * @throws DoubleSubmitRequestException When the token is invalid. That has specified error hook.
      */
     protected void verifyTokenKeep(TokenErrorHook errorResponseLambda) {
         doubleSubmitManager.verifyTokenKeep(myTokenGroupType(), errorResponseLambda);
@@ -296,6 +318,9 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     /**
      * Check the condition is true or it throws client error (e.g. 404 not found) forcedly. <br>
      * You can use this in your action process against invalid URL parameters.
+     * <pre>
+     * verifyOrClientError("The pageNumber should be positive number: " + pageNumber, pageNumber &gt; 0);
+     * </pre>
      * @param debugMsg The debug message for developer. (NotNull)
      * @param expectedBool The expected determination for your business, true or false. (false: e.g. 404 not found)
      */
@@ -313,6 +338,9 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     /**
      * Check the condition is true or it throws illegal transition forcedly. <br>
      * You can use this in your action process against strange request parameters.
+     * <pre>
+     * verifyOrIllegalTransition("The pageNumber should be positive number: " + pageNumber, pageNumber &gt; 0);
+     * </pre>
      * @param debugMsg The message for exception message. (NotNull)
      * @param expectedBool The expected determination for your business, true or false. (false: illegal transition)
      */

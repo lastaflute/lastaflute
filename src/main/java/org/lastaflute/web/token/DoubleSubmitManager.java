@@ -65,11 +65,11 @@ public interface DoubleSubmitManager {
     //                                                                  Token Verification
     //                                                                  ==================
     /**
-     * Verify the request token (whether the request token is same as saved token) <br>
+     * Verify the request token (whether the requested token is same as saved token) <br>
      * And reset the saved token, it can be used only one-time.
      * @param groupType The class type to identify group of transaction. (NotNull)
      * @param errorHook The hook to return action response when token error. (NotNull)
-     * @throws DoubleSubmitRequestException When the token is invalid.
+     * @throws DoubleSubmitRequestException When the token is invalid. That has specified error hook.
      */
     void verifyToken(Class<?> groupType, TokenErrorHook errorHook);
 
