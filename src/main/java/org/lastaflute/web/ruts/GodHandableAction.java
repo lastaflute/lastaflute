@@ -34,6 +34,7 @@ import org.lastaflute.db.jta.romanticist.TransactionMemoriesProvider;
 import org.lastaflute.db.jta.stage.BegunTx;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
+import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.exception.ActionWrappedCheckedException;
 import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
 import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
@@ -218,12 +219,10 @@ public class GodHandableAction implements VirtualAction {
             final List<TransactionMemoriesProvider> providerList = memories.getOrderedProviderList();
             final StringBuilder sb = new StringBuilder();
             for (TransactionMemoriesProvider provider : providerList) {
-                provider.provide().ifPresent(result -> {
-                    sb.append("\n*").append(result);
-                });
+                provider.provide().ifPresent(result -> sb.append("\n*").append(result));
             }
             final WholeShowRequestAttribute attribute = new WholeShowRequestAttribute(sb.toString());
-            requestManager.setAttribute(RequestManager.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
+            requestManager.setAttribute(LastaWebKey.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
         }
     }
 

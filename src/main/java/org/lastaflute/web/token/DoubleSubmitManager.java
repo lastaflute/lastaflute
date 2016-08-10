@@ -16,15 +16,12 @@
 package org.lastaflute.web.token;
 
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.web.LastaWebKey;
-import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
+import org.lastaflute.web.token.exception.DoubleSubmittedRequestException;
 
 /**
  * @author modified by jflute (originated in Struts)
  */
 public interface DoubleSubmitManager {
-
-    String TOKEN_KEY = LastaWebKey.TRANSACTION_TOKEN_KEY;
 
     // ===================================================================================
     //                                                                  Token Manipulation
@@ -69,7 +66,7 @@ public interface DoubleSubmitManager {
      * And reset the saved token, it can be used only one-time.
      * @param groupType The class type to identify group of transaction. (NotNull)
      * @param errorHook The hook to return action response when token error. (NotNull)
-     * @throws DoubleSubmitRequestException When the token is invalid. That has specified error hook.
+     * @throws DoubleSubmittedRequestException When the token is invalid. That has specified error hook.
      */
     void verifyToken(Class<?> groupType, TokenErrorHook errorHook);
 
@@ -78,7 +75,7 @@ public interface DoubleSubmitManager {
      * Keep the saved token, so this method is basically for intermediate request.
      * @param groupType The class type to identify group of transaction. (NotNull)
      * @param errorHook The hook to return action response when token error. (NotNull)
-     * @throws DoubleSubmitRequestException When the token is invalid.
+     * @throws DoubleSubmittedRequestException When the token is invalid.
      */
     void verifyTokenKeep(Class<?> groupType, TokenErrorHook errorHook);
 
@@ -93,4 +90,6 @@ public interface DoubleSubmitManager {
     OptionalThing<String> getRequestedToken();
 
     OptionalThing<DoubleSubmitTokenMap> getSessionTokenMap();
+
+    boolean isDoubleSubmittedRequest();
 }

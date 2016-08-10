@@ -193,15 +193,15 @@ public class RedCardableAssist {
     //                                                                    Validator Called
     //                                                                    ================
     public void checkValidatorCalled() {
-        if (!execute.isSuppressValidatorCallCheck() && isValidatorCalled()) {
+        if (!execute.isSuppressValidatorCallCheck() && certainlyNotBeValidatorCalled()) {
             execute.getFormMeta().filter(meta -> isValidatorAnnotated(meta)).ifPresent(meta -> {
                 throwLonelyValidatorAnnotationException(meta); // #hope see fields in nested element
             });
         }
     }
 
-    protected boolean isValidatorCalled() {
-        return ActionValidator.isValidatorCalled();
+    protected boolean certainlyNotBeValidatorCalled() {
+        return ActionValidator.certainlyValidatorNotCalled();
     }
 
     protected boolean isValidatorAnnotated(ActionFormMeta meta) {
@@ -245,7 +245,7 @@ public class RedCardableAssist {
             br.addElement("    @Execute");
             br.addElement("    public HtmlResponse index(SeaForm form) {");
             br.addElement("        " + expectedMethod + "(form, message -> {}, () -> { // Good");
-            br.addElement("            return asHtml(path_LandJsp);");
+            br.addElement("            return asHtml(path_LandHtml);");
             br.addElement("        });");
             br.addElement("        return asHtml(...);");
             br.addElement("    }");

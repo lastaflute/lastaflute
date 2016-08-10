@@ -694,11 +694,11 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected String getReqeustUserLocaleKey() {
-        return USER_LOCALE_KEY;
+        return LastaWebKey.USER_LOCALE_KEY;
     }
 
     protected String getSessionUserLocaleKey() {
-        return USER_LOCALE_KEY;
+        return LastaWebKey.USER_LOCALE_KEY;
     }
 
     protected String getCookieUserLocaleKey() {
@@ -807,11 +807,11 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected String getReqeustUserTimeZoneKey() {
-        return USER_TIMEZONE_KEY;
+        return LastaWebKey.USER_TIMEZONE_KEY;
     }
 
     protected String getSessionUserTimeZoneKey() {
-        return USER_TIMEZONE_KEY;
+        return LastaWebKey.USER_TIMEZONE_KEY;
     }
 
     protected String getCookieUserTimeZoneKey() {

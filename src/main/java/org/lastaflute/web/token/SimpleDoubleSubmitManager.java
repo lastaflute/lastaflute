@@ -25,11 +25,12 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.token.exception.DoubleSubmitMessageNotFoundException;
-import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
 import org.lastaflute.web.token.exception.DoubleSubmitVerifyTokenBeforeValidationException;
+import org.lastaflute.web.token.exception.DoubleSubmittedRequestException;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.ActionValidator;
@@ -69,7 +70,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         checkDoubleSubmitPreconditionExists(groupType);
         final DoubleSubmitTokenMap tokenMap = getSessionTokenMap().orElseGet(() -> {
             final DoubleSubmitTokenMap firstMap = new DoubleSubmitTokenMap();
-            requestManager.getSessionManager().setAttribute(getTokenKey(), firstMap);
+            requestManager.getSessionManager().setAttribute(getTransactionTokenKey(), firstMap);
             return firstMap;
         });
         final String generated = generateToken(groupType);
@@ -192,16 +193,20 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
             matched = determineTokenWithReset(groupType);
         }
         if (!matched) {
-            throwDoubleSubmitRequestException(groupType, errorHook);
+            saveDoubleSubmittedMark();
+            throwDoubleSubmittedRequestException(groupType, errorHook);
         }
     }
 
-    protected <MESSAGES extends UserMessages> String throwDoubleSubmitRequestException(Class<?> groupType, TokenErrorHook errorHook) {
+    protected void saveDoubleSubmittedMark() {
+        requestManager.setAttribute(getDoubleSubmittedKey(), new Object());
+    }
+
+    protected <MESSAGES extends UserMessages> String throwDoubleSubmittedRequestException(Class<?> groupType, TokenErrorHook errorHook) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("The request was born from double submit.");
         br.addItem("Advice");
-        br.addElement("Double submit by user operation");
-        br.addElement("or not saved token but validate it.");
+        br.addElement("Double submit by user operation or no saved token.");
         br.addElement("Default scope of token is action type");
         br.addElement("so SAVE and VERIFY should be in same action.");
         br.addItem("Requested Action");
@@ -214,7 +219,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         br.addElement(getSessionTokenMap());
         final String msg = br.buildExceptionMessage();
         final String messageKey = getDoubleSubmitMessageKey();
-        throw new DoubleSubmitRequestException(msg, () -> errorHook.hook(), UserMessages.createAsOneGlobal(messageKey));
+        throw new DoubleSubmittedRequestException(msg, () -> errorHook.hook(), UserMessages.createAsOneGlobal(messageKey));
     }
 
     // -----------------------------------------------------
@@ -223,19 +228,20 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     protected void checkVerifyTokenAfterValidatorCall() {
         if (LaActionExecuteUtil.hasActionExecute()) { // just in case
             final ActionExecute execute = LaActionExecuteUtil.getActionExecute();
-            if (certainlyCanBeValidated(execute) && !isValidatorCalled()) {
+            if (certainlyCanBeValidated(execute) && certainlyValidatorNotCalled()) {
                 throwDoubleSubmitVerifyTokenBeforeValidationException(execute);
             }
         }
     }
 
     protected boolean certainlyCanBeValidated(ActionExecute execute) {
-        // if validation without annotation, returns false so not exactly
+        // if annotations exist, validator is supposed to be called (checked in framework)
+        // but if validation without annotation, returns false so not exactly
         return execute.getFormMeta().filter(meta -> meta.isValidatorAnnotated()).isPresent();
     }
 
-    protected boolean isValidatorCalled() {
-        return ActionValidator.isValidatorCalled();
+    protected boolean certainlyValidatorNotCalled() {
+        return ActionValidator.certainlyValidatorNotCalled();
     }
 
     protected void throwDoubleSubmitVerifyTokenBeforeValidationException(ActionExecute execute) {
@@ -289,7 +295,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     }
 
     protected void removeTokenFromSession() {
-        requestManager.getSessionManager().removeAttribute(getTokenKey());
+        requestManager.getSessionManager().removeAttribute(getTransactionTokenKey());
     }
 
     // ===================================================================================
@@ -297,19 +303,29 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     //                                                                        ============
     @Override
     public OptionalThing<String> getRequestedToken() {
-        return requestManager.getParameter(getTokenKey());
+        return requestManager.getParameter(getTransactionTokenKey());
     }
 
     @Override
     public OptionalThing<DoubleSubmitTokenMap> getSessionTokenMap() {
-        return requestManager.getSessionManager().getAttribute(getTokenKey(), DoubleSubmitTokenMap.class);
+        return requestManager.getSessionManager().getAttribute(getTransactionTokenKey(), DoubleSubmitTokenMap.class);
+    }
+
+    @Override
+    public boolean isDoubleSubmittedRequest() {
+        return requestManager.getAttribute(getDoubleSubmittedKey(), Object.class).isPresent();
     }
 
     // ===================================================================================
-    //                                                                        Assist Logic
+    //                                                                        Key Provider
     //                                                                        ============
-    protected String getTokenKey() {
-        return TOKEN_KEY;
+    // but cannot change it because thymeleaf or taglib sees LastaWebKey directly
+    protected String getTransactionTokenKey() {
+        return LastaWebKey.TRANSACTION_TOKEN_KEY;
+    }
+
+    protected String getDoubleSubmittedKey() {
+        return LastaWebKey.DOUBLE_SUBMITTED_KEY;
     }
 
     // ===================================================================================

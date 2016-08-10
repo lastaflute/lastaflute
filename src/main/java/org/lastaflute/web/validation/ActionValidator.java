@@ -264,7 +264,8 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         }
     }
 
-    public static boolean isValidatorCalled() { // called by e.g. various process
+    // unknown if thread cache does not exist, so 'not' method is prepared like this
+    public static boolean certainlyValidatorNotCalled() { // called by e.g. red-cardable assist
         return ThreadCacheContext.exists() && !ThreadCacheContext.isValidatorCalled();
     }
 

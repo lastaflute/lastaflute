@@ -48,7 +48,7 @@ import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.token.DoubleSubmitManager;
 import org.lastaflute.web.token.TokenErrorHook;
-import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
+import org.lastaflute.web.token.exception.DoubleSubmittedRequestException;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 
 /**
@@ -291,7 +291,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * }
      * </pre>
      * @param errorResponseLambda The hook to return action response when token error. (NotNull)
-     * @throws DoubleSubmitRequestException When the token is invalid. That has specified error hook.
+     * @throws DoubleSubmittedRequestException When the token is invalid. That has specified error hook.
      */
     protected void verifyToken(TokenErrorHook errorResponseLambda) {
         doubleSubmitManager.verifyToken(myTokenGroupType(), errorResponseLambda);
@@ -302,7 +302,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * Keep the saved token, so this method is basically for intermediate request. <br>
      * It uses this action as group type. <br>
      * @param errorResponseLambda The hook to return action response when token error. (NotNull)
-     * @throws DoubleSubmitRequestException When the token is invalid. That has specified error hook.
+     * @throws DoubleSubmittedRequestException When the token is invalid. That has specified error hook.
      */
     protected void verifyTokenKeep(TokenErrorHook errorResponseLambda) {
         doubleSubmitManager.verifyTokenKeep(myTokenGroupType(), errorResponseLambda);

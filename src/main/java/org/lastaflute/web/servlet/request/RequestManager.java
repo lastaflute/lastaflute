@@ -25,7 +25,6 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
-import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
@@ -44,35 +43,11 @@ public interface RequestManager extends ScopedAttributeHolder {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    // -----------------------------------------------------
-    //                                           User Locale
-    //                                           -----------
-    /** The key of user locale to cache it in request attribute. */
-    String USER_LOCALE_KEY = LastaWebKey.USER_LOCALE_KEY;
-
     /** The key of user locale to cache it in cookie attribute. */
     String USER_LOCALE_COOKIE = "LALCL";
 
-    // -----------------------------------------------------
-    //                                         User TimeZone
-    //                                         -------------
-    /** The key of user time-zone to cache it in request attribute. */
-    String USER_TIMEZONE_KEY = LastaWebKey.USER_TIMEZONE_KEY;
-
     /** The key of user time-zone to cache it in cookie attribute. */
     String USER_TIMEZONE_COOKIE = "LATZN";
-
-    // -----------------------------------------------------
-    //                                     Various Attribute
-    //                                     -----------------
-    /** The key of SQL count by DBFlute. */
-    String DBFLUTE_SQL_COUNT_KEY = "lastaflute.dbflute.SQL_COUNT";
-
-    /** The key of romantic transaction memories by DBFlute. */
-    String DBFLUTE_TRANSACTION_MEMORIES_KEY = "lastaflute.dbflute.TRANSACTION_MEMORIES";
-
-    /** The key of mail count by MailFlute. */
-    String MAILFLUTE_MAIL_COUNT_KEY = "lastaflute.mailflute.MAIL_COUNT";
 
     // ===================================================================================
     //                                                                      Basic Handling

@@ -38,4 +38,9 @@ public interface LastaWebKey {
 
     String CSRF_TOKEN_KEY = "lastaflute.action.CSRF_TOKEN"; // Session
     String TRANSACTION_TOKEN_KEY = "lastaflute.action.TRANSACTION_TOKEN"; // Parameter and Session
+    String DOUBLE_SUBMITTED_KEY = "lastaflute.action.DOUBLE_SUBMITTED_MARK"; // Request
+
+    String DBFLUTE_SQL_COUNT_KEY = "lastaflute.dbflute.SQL_COUNT"; // Request
+    String DBFLUTE_TRANSACTION_MEMORIES_KEY = "lastaflute.dbflute.TRANSACTION_MEMORIES"; // Request
+    String MAILFLUTE_MAIL_COUNT_KEY = "lastaflute.mailflute.MAIL_COUNT"; // Request
 }

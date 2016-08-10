@@ -21,15 +21,15 @@ import org.lastaflute.web.exception.MessageResponseApplicationException;
 /**
  * @author jflute
  */
-public class DoubleSubmitRequestException extends MessageResponseApplicationException {
+public class DoubleSubmittedRequestException extends MessageResponseApplicationException {
 
     private static final long serialVersionUID = 1L;
 
-    public DoubleSubmitRequestException(String msg, MessageResponseHook responseHook, UserMessages messages) {
+    public DoubleSubmittedRequestException(String msg, MessageResponseHook responseHook, UserMessages messages) {
         super(msg, responseHook, messages);
     }
 
-    public DoubleSubmitRequestException(String msg, MessageResponseHook responseHook, UserMessages messages, Throwable cause) {
+    public DoubleSubmittedRequestException(String msg, MessageResponseHook responseHook, UserMessages messages, Throwable cause) {
         super(msg, responseHook, messages, cause);
     }
 }
