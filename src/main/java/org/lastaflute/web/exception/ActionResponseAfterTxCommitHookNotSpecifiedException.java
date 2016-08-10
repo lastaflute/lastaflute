@@ -13,20 +13,22 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.error;
+package org.lastaflute.web.exception;
+
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
  */
-public class RebootAfterGenerateError extends Error {
+public class ActionResponseAfterTxCommitHookNotSpecifiedException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public RebootAfterGenerateError(String msg) {
+    public ActionResponseAfterTxCommitHookNotSpecifiedException(String msg) {
         super(msg);
     }
 
-    public RebootAfterGenerateError(String msg, Throwable cause) {
+    public ActionResponseAfterTxCommitHookNotSpecifiedException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

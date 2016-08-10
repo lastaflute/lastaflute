@@ -13,20 +13,20 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.error;
+package org.lastaflute.web.exception;
 
 /**
  * @author jflute
  */
-public class RebootAfterFreeGenError extends Error {
+public class RebootAfterGenerateError extends Error {
 
     private static final long serialVersionUID = 1L;
 
-    public RebootAfterFreeGenError(String msg) {
+    public RebootAfterGenerateError(String msg) {
         super(msg);
     }
 
-    public RebootAfterFreeGenError(String msg, Throwable cause) {
+    public RebootAfterGenerateError(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

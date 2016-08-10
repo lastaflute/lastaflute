@@ -25,10 +25,14 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.token.exception.DoubleSubmitMessageNotFoundException;
 import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
+import org.lastaflute.web.token.exception.DoubleSubmitVerifyTokenBeforeValidationException;
+import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
+import org.lastaflute.web.validation.ActionValidator;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -180,6 +184,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     protected <MESSAGES extends UserMessages> void doVerifyToken(Class<?> groupType, TokenErrorHook errorHook, boolean keep) {
         assertArgumentNotNull("groupType", groupType);
         assertArgumentNotNull("errorHook", errorHook);
+        checkVerifyTokenAfterValidatorCall(); // precisely unneeded if keep, but coherence
         final boolean matched;
         if (keep) { // no reset (intermediate request)
             matched = determineToken(groupType);
@@ -210,6 +215,62 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         final String msg = br.buildExceptionMessage();
         final String messageKey = getDoubleSubmitMessageKey();
         throw new DoubleSubmitRequestException(msg, () -> errorHook.hook(), UserMessages.createAsOneGlobal(messageKey));
+    }
+
+    // -----------------------------------------------------
+    //                                       Validation Call
+    //                                       ---------------
+    protected void checkVerifyTokenAfterValidatorCall() {
+        if (LaActionExecuteUtil.hasActionExecute()) { // just in case
+            final ActionExecute execute = LaActionExecuteUtil.getActionExecute();
+            if (certainlyCanBeValidated(execute) && !isValidatorCalled()) {
+                throwDoubleSubmitVerifyTokenBeforeValidationException(execute);
+            }
+        }
+    }
+
+    protected boolean certainlyCanBeValidated(ActionExecute execute) {
+        // if validation without annotation, returns false so not exactly
+        return execute.getFormMeta().filter(meta -> meta.isValidatorAnnotated()).isPresent();
+    }
+
+    protected boolean isValidatorCalled() {
+        return ActionValidator.isValidatorCalled();
+    }
+
+    protected void throwDoubleSubmitVerifyTokenBeforeValidationException(ActionExecute execute) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The verifyToken() was called before validate() in action.");
+        br.addItem("Advice");
+        br.addElement("The verifyToken() should be after validate().");
+        br.addElement("The verifyToken() deletes session token if success,");
+        br.addElement("so it may be token-not-found exception if validation error.");
+        br.addElement("(validation error's response may need session token)");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public HtmlResponse update(Integer memberId) {");
+        br.addElement("        verifyToken(...); // *Bad: session token is deleted here");
+        br.addElement("        validate(form, messages -> {}, () -> { // may be this exception if validation error");
+        br.addElement("            return asHtml(path_...); // the html may need token...");
+        br.addElement("        });");
+        br.addElement("        ...");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse update(Integer memberId) {");
+        br.addElement("        validate(form, messages -> {}, () -> {");
+        br.addElement("            return asHtml(path_...); // session token remains");
+        br.addElement("        });");
+        br.addElement("        verifyToken(...); // Good");
+        br.addElement("        ...");
+        br.addElement("    }");
+        br.addItem("Execute Method");
+        br.addElement(execute.toSimpleMethodExp());
+        br.addItem("Requested Token");
+        br.addElement(getRequestedToken());
+        br.addItem("Saved Token");
+        br.addElement(getSessionTokenMap());
+        final String msg = br.buildExceptionMessage();
+        throw new DoubleSubmitVerifyTokenBeforeValidationException(msg);
     }
 
     // ===================================================================================

@@ -264,6 +264,10 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         }
     }
 
+    public static boolean isValidatorCalled() { // called by e.g. various process
+        return ThreadCacheContext.exists() && !ThreadCacheContext.isValidatorCalled();
+    }
+
     protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
         throw new ValidationErrorException(runtimeGroups, messages, validationErrorLambda);
     }
