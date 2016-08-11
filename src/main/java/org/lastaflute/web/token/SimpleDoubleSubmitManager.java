@@ -19,13 +19,16 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.token.exception.DoubleSubmitMessageNotFoundException;
@@ -34,6 +37,8 @@ import org.lastaflute.web.token.exception.DoubleSubmittedRequestException;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.ActionValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -43,17 +48,53 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(SimpleDoubleSubmitManager.class);
     protected static final String ERRORS_APP_DOUBLE_SUBMIT_REQUEST = "errors.app.double.submit.request";
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    /** The assistant director (AD) for framework. (NotNull: after initialization) */
+    @Resource
+    protected FwAssistantDirector assistantDirector;
+
     @Resource
     protected MessageManager messageManager;
+
     @Resource
     protected RequestManager requestManager;
 
-    protected long previous; // keep for unique token
+    /** Does it allow to call verifyToken() before validate()? */
+    protected boolean allowsVerifyTokenBeforeValidation;
+
+    /** The time of previous process to keep for unique token */
+    protected long previousTimeMillis;
+
+    // ===================================================================================
+    //                                                                          Initialize
+    //                                                                          ==========
+    /**
+     * Initialize this component. <br>
+     * This is basically called by DI setting file.
+     */
+    @PostConstruct
+    public synchronized void initialize() {
+        final FwWebDirection direction = assistWebDirection();
+        final DoubleSubmitResourceProvider provider = direction.assistDoubleSubmitResourceProvider();
+        allowsVerifyTokenBeforeValidation = provider != null && provider.allowsVerifyTokenBeforeValidation();
+        showBootLogging();
+    }
+
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
+    }
+
+    protected void showBootLogging() {
+        if (logger.isInfoEnabled()) {
+            logger.info("[DoubleSubmit Manager]");
+            logger.info(" allowsVerifyTokenBeforeValidation: " + allowsVerifyTokenBeforeValidation);
+        }
+    }
 
     // #hope can use at JSON API (needs header handling)
     // ===================================================================================
@@ -115,17 +156,17 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     @Override
     public synchronized String generateToken(Class<?> groupType) {
         assertArgumentNotNull("groupType", groupType);
-        final byte[] idBytes = requestManager.getSessionManager().getSessionId().getBytes();
-        long current = System.currentTimeMillis();
-        if (current == previous) {
-            current++;
-        }
-        previous = current;
-        final byte[] now = Long.valueOf(current).toString().getBytes();
+        final byte[] sessionIdBytes = prepareSessionIdBytes();
+        final byte[] currentBytes = prepareCurrentBytes();
+        final byte[] groupTypeBytes = prepareGroupTypeBytes(groupType);
+        return buildHex(sessionIdBytes, currentBytes, groupTypeBytes);
+    }
+
+    protected String buildHex(byte[] sessionIdBytes, byte[] currentBytes, byte[] groupTypeBytes) {
         final MessageDigest md = getMessageDigest();
-        md.update(idBytes);
-        md.update(now);
-        md.update(groupType.getName().getBytes());
+        md.update(sessionIdBytes);
+        md.update(currentBytes);
+        md.update(groupTypeBytes);
         return toHex(md.digest());
     }
 
@@ -145,6 +186,24 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
             sb.append(Character.forDigit(bt[i] & 0x0f, 16));
         }
         return sb.toString();
+    }
+
+    protected byte[] prepareSessionIdBytes() {
+        return requestManager.getSessionManager().getSessionId().getBytes();
+    }
+
+    protected byte[] prepareCurrentBytes() {
+        long currentTimeMillis = System.currentTimeMillis();
+        if (currentTimeMillis == previousTimeMillis) {
+            currentTimeMillis++;
+        }
+        previousTimeMillis = currentTimeMillis;
+        byte[] currentBytes = Long.valueOf(currentTimeMillis).toString().getBytes();
+        return currentBytes;
+    }
+
+    protected byte[] prepareGroupTypeBytes(Class<?> groupType) {
+        return groupType.getName().getBytes();
     }
 
     // ===================================================================================
@@ -226,6 +285,9 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     //                                       Validation Call
     //                                       ---------------
     protected void checkVerifyTokenAfterValidatorCall() {
+        if (allowsVerifyTokenBeforeValidation) {
+            return;
+        }
         if (LaActionExecuteUtil.hasActionExecute()) { // just in case
             final ActionExecute execute = LaActionExecuteUtil.getActionExecute();
             if (certainlyCanBeValidated(execute) && certainlyValidatorNotCalled()) {

@@ -39,6 +39,7 @@ import org.lastaflute.web.servlet.request.UserLocaleProcessProvider;
 import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
 import org.lastaflute.web.servlet.session.SessionResourceProvider;
 import org.lastaflute.web.token.CsrfResourceProvider;
+import org.lastaflute.web.token.DoubleSubmitResourceProvider;
 
 /**
  * @author jflute
@@ -88,6 +89,7 @@ public class FwWebDirection {
     //                                                 Token
     //                                                 -----
     protected CsrfResourceProvider csrfResourceProvider;
+    protected DoubleSubmitResourceProvider doubleSubmitResourceProvider;
 
     // -----------------------------------------------------
     //                                             Multipart
@@ -218,6 +220,11 @@ public class FwWebDirection {
         this.csrfResourceProvider = csrfResourceProvider;
     }
 
+    public void directDoubleSubmit(DoubleSubmitResourceProvider doubleSubmitResourceProvider) {
+        assertArgumentNotNull("doubleSubmitResourceProvider", doubleSubmitResourceProvider);
+        this.doubleSubmitResourceProvider = doubleSubmitResourceProvider;
+    }
+
     // -----------------------------------------------------
     //                                             Multipart
     //                                             ---------
@@ -312,6 +319,10 @@ public class FwWebDirection {
     //                                                 -----
     public CsrfResourceProvider assistCsrfResourceProvider() {
         return csrfResourceProvider; // not required, it's optional assist
+    }
+
+    public DoubleSubmitResourceProvider assistDoubleSubmitResourceProvider() {
+        return doubleSubmitResourceProvider; // not required, it's optional assist
     }
 
     // -----------------------------------------------------
