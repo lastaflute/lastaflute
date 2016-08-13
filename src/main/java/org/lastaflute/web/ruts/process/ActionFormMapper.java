@@ -318,7 +318,6 @@ public class ActionFormMapper {
             }
             challengeList.addAll(nestedList);
         }
-        sb.append(LF).append(e.getClass().getName()).append(LF).append(e.getMessage());
         throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
     }
 
