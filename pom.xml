@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.lastaflute</groupId>
 	<artifactId>lastaflute</artifactId>
-	<version>0.8.3-RCA</version>
+	<version>0.8.3-RCB</version>
 	<packaging>jar</packaging>
 
 	<name>LastaFlute</name>
