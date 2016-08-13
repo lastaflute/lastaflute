@@ -45,6 +45,18 @@ public class FwAssistDirection {
         nameList.addAll(Arrays.asList(commonNames));
         appConfig = nameList.remove(0);
         extendsConfigList.addAll(nameList);
+        adjustTrialConfigIfExists();
+    }
+
+    protected void adjustTrialConfigIfExists() {
+        createIgnoredTrialConfig().trial().ifPresent(path -> {
+            extendsConfigList.add(0, appConfig);
+            appConfig = path;
+        });
+    }
+
+    protected IgnoredTrialConfig createIgnoredTrialConfig() {
+        return new IgnoredTrialConfig();
     }
 
     public void directPropertyFilter(PropertyFilter configPropertyFilter) {
