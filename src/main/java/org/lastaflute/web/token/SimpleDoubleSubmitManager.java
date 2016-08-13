@@ -50,6 +50,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(SimpleDoubleSubmitManager.class);
     protected static final String ERRORS_APP_DOUBLE_SUBMIT_REQUEST = "errors.app.double.submit.request";
+    protected static final Object DOUBLE_SUBMITTED_OBJ = new Object();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -115,6 +116,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
             return firstMap;
         });
         final String generated = generateToken(groupType);
+        showSavingToken(groupType, generated);
         tokenMap.put(groupType, generated);
         return generated;
     }
@@ -148,6 +150,12 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
 
     protected String getDoubleSubmitMessageKey() {
         return ERRORS_APP_DOUBLE_SUBMIT_REQUEST;
+    }
+
+    protected void showSavingToken(Class<?> groupType, final String generated) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("...Saving double-submit token: group={}, token={}", groupType.getClass().getSimpleName(), generated);
+        }
     }
 
     // -----------------------------------------------------
@@ -258,7 +266,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     }
 
     protected void saveDoubleSubmittedMark() {
-        requestManager.setAttribute(getDoubleSubmittedKey(), new Object());
+        requestManager.setAttribute(getDoubleSubmittedKey(), DOUBLE_SUBMITTED_OBJ);
     }
 
     protected <MESSAGES extends UserMessages> String throwDoubleSubmittedRequestException(Class<?> groupType, TokenErrorHook errorHook) {
@@ -347,6 +355,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     @Override
     public synchronized void resetToken(Class<?> groupType) {
         getSessionTokenMap().ifPresent(tokenMap -> {
+            showRemovingToken(groupType);
             tokenMap.remove(groupType);
             if (tokenMap.isEmpty()) {
                 removeTokenFromSession();
@@ -354,6 +363,12 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         }).orElse(() -> {
             removeTokenFromSession();
         });
+    }
+
+    protected void showRemovingToken(Class<?> groupType) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("...Removing double-submit token: group={}, token={}", groupType.getClass().getSimpleName());
+        }
     }
 
     protected void removeTokenFromSession() {
