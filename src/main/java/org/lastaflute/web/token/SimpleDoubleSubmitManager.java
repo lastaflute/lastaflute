@@ -152,9 +152,9 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         return ERRORS_APP_DOUBLE_SUBMIT_REQUEST;
     }
 
-    protected void showSavingToken(Class<?> groupType, final String generated) {
+    protected void showSavingToken(Class<?> groupType, String generated) {
         if (logger.isDebugEnabled()) {
-            logger.debug("...Saving double-submit token: group={}, token={}", groupType.getClass().getSimpleName(), generated);
+            logger.debug("...Saving double-submit token: group={}, token={}", groupType.getSimpleName(), generated);
         }
     }
 
@@ -355,7 +355,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     @Override
     public synchronized void resetToken(Class<?> groupType) {
         getSessionTokenMap().ifPresent(tokenMap -> {
-            showRemovingToken(groupType);
+            showRemovingToken(groupType, tokenMap);
             tokenMap.remove(groupType);
             if (tokenMap.isEmpty()) {
                 removeTokenFromSession();
@@ -365,9 +365,10 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         });
     }
 
-    protected void showRemovingToken(Class<?> groupType) {
+    protected void showRemovingToken(Class<?> groupType, DoubleSubmitTokenMap tokenMap) {
         if (logger.isDebugEnabled()) {
-            logger.debug("...Removing double-submit token: group={}, token={}", groupType.getClass().getSimpleName());
+            final String token = tokenMap.get(groupType).orElse(null); // just in case
+            logger.debug("...Removing double-submit token: group={}, token={}", groupType.getSimpleName(), token);
         }
     }
 
