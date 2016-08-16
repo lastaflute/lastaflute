@@ -13,20 +13,16 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.error;
+package org.lastaflute.web.servlet.request.stream;
+
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * @author jflute
  */
-public class RebootAfterFreeGenError extends Error {
+@FunctionalInterface
+public interface WritternZipStreamWriter {
 
-    private static final long serialVersionUID = 1L;
-
-    public RebootAfterFreeGenError(String msg) {
-        super(msg);
-    }
-
-    public RebootAfterFreeGenError(String msg, Throwable cause) {
-        super(msg, cause);
-    }
+    void write(OutputStream stream) throws IOException;
 }

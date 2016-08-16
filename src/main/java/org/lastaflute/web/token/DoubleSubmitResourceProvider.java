@@ -13,15 +13,15 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.request;
-
-import java.io.IOException;
+package org.lastaflute.web.token;
 
 /**
  * @author jflute
+ * @since 0.8.3 (2016/08/11 Thursday)
  */
-@FunctionalInterface
-public interface WritternStreamCall {
+public interface DoubleSubmitResourceProvider {
 
-    void callback(WritternStreamOut out) throws IOException;
+    default boolean allowsVerifyTokenBeforeValidation() {
+        return false; // as default
+    }
 }

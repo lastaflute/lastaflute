@@ -29,7 +29,7 @@ import org.lastaflute.di.DisposableUtil;
 import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
 
 /**
- * @author modified by jflute (originated in Struts)
+ * @author modified by jflute (originated in Seasar and Struts)
  */
 public class ModuleConfig implements Disposable, Serializable {
 

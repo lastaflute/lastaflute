@@ -22,6 +22,18 @@ public interface AsyncManager {
 
     /**
      * Execute asynchronous process by other thread. <br>
+     * <pre>
+     * <span style="color: #CC4747">async</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
+     * });
+     * 
+     * <span style="color: #3F7E5E">// begin asynchronous process after action transaction finished</span>
+     * return asHtml(...).<span style="color: #994747">afterTxCommit</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *     async(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *         ...
+     *     });
+     * });
+     * </pre>
      * You can inherit...
      * <pre>
      * o ThreadCacheContext (copied plainly)

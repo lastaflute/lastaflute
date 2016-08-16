@@ -13,22 +13,16 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
+package org.lastaflute.web.servlet.request.stream;
 
-import org.lastaflute.core.message.exception.MessagingApplicationException;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * @author jflute
  */
-public class ForcedIllegalTransitionException extends MessagingApplicationException {
+@FunctionalInterface
+public interface WritternStreamOut {
 
-    private static final long serialVersionUID = 1L;
-
-    public ForcedIllegalTransitionException(String msg, String transitionKey) {
-        super(msg, transitionKey);
-    }
-
-    public ForcedIllegalTransitionException(String msg, String transitionKey, Throwable cause) {
-        super(msg, transitionKey, cause);
-    }
+    void write(InputStream ins) throws IOException;
 }

@@ -23,6 +23,7 @@ import org.lastaflute.core.mail.PostedMailCounter;
 import org.lastaflute.core.mail.RequestedMailCount;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RequestedSqlCount;
+import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
@@ -128,7 +129,7 @@ public class TypicalGodHandEpilogue {
     }
 
     protected void saveRequestedSqlCount(ExecutedSqlCounter counter) {
-        requestManager.setAttribute(RequestManager.DBFLUTE_SQL_COUNT_KEY, createRequestedSqlCount(counter)); // logged by logging filter
+        requestManager.setAttribute(LastaWebKey.DBFLUTE_SQL_COUNT_KEY, createRequestedSqlCount(counter)); // logged by logging filter
     }
 
     protected RequestedSqlCount createRequestedSqlCount(ExecutedSqlCounter counter) {
@@ -152,7 +153,7 @@ public class TypicalGodHandEpilogue {
     }
 
     protected void saveRequestedMailCount(PostedMailCounter counter) {
-        requestManager.setAttribute(RequestManager.MAILFLUTE_MAIL_COUNT_KEY, createRequestedMailCount(counter));
+        requestManager.setAttribute(LastaWebKey.MAILFLUTE_MAIL_COUNT_KEY, createRequestedMailCount(counter));
     }
 
     protected RequestedMailCount createRequestedMailCount(PostedMailCounter counter) {

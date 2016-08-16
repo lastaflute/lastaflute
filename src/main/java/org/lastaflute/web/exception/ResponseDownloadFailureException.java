@@ -9,26 +9,26 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.token.exception;
+package org.lastaflute.web.exception;
 
-import org.lastaflute.web.exception.MessageResponseApplicationException;
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
  */
-public class DoubleSubmitRequestException extends MessageResponseApplicationException {
+public class ResponseDownloadFailureException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public DoubleSubmitRequestException(String msg, MessageResponseHook responseHook, String messageKey) {
-        super(msg, responseHook, messageKey);
+    public ResponseDownloadFailureException(String msg) {
+        super(msg);
     }
 
-    public DoubleSubmitRequestException(String msg, Throwable cause, MessageResponseHook responseHook, String messageKey) {
-        super(msg, cause, responseHook, messageKey);
+    public ResponseDownloadFailureException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

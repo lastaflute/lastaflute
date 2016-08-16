@@ -15,18 +15,20 @@
  */
 package org.lastaflute.web.exception;
 
+import org.lastaflute.core.message.UserMessages;
+
 /**
  * @author jflute
  */
-public class RequestPropertyMappingFailureException extends ForcedRequest400BadRequestException {
+public class RequestPropertyMappingFailureException extends Forced400BadRequestException {
 
     private static final long serialVersionUID = 1L;
 
-    public RequestPropertyMappingFailureException(String msg) {
-        super(msg);
+    public RequestPropertyMappingFailureException(String debugMsg, UserMessages messages) {
+        super(debugMsg, messages);
     }
 
-    public RequestPropertyMappingFailureException(String msg, Throwable cause) {
-        super(msg, cause);
+    public RequestPropertyMappingFailureException(String debugMsg, UserMessages messages, Throwable cause) {
+        super(debugMsg, messages, cause);
     }
 }

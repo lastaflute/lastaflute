@@ -29,33 +29,24 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
 import org.lastaflute.db.jta.romanticist.TransactionMemoriesProvider;
 import org.lastaflute.db.jta.stage.BegunTx;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.db.jta.stage.TransactionStage;
-import org.lastaflute.web.exception.ActionHookReturnNullException;
+import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.exception.ActionWrappedCheckedException;
 import org.lastaflute.web.exception.ExecuteMethodAccessFailureException;
 import org.lastaflute.web.exception.ExecuteMethodArgumentMismatchException;
-import org.lastaflute.web.exception.ExecuteMethodLonelyValidatorAnnotationException;
-import org.lastaflute.web.exception.ExecuteMethodReturnNullException;
-import org.lastaflute.web.exception.ExecuteMethodReturnTypeNotResponseException;
-import org.lastaflute.web.exception.ExecuteMethodReturnUndefinedResponseException;
 import org.lastaflute.web.hook.ActionHook;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.config.ActionFormMeta;
-import org.lastaflute.web.ruts.error.RebootAfterFreeGenError;
-import org.lastaflute.web.ruts.error.RebootAfterGenerateError;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.WholeShowRequestAttribute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
-import org.lastaflute.web.validation.LaValidatable;
 import org.lastaflute.web.validation.VaErrorHook;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.slf4j.Logger;
@@ -84,6 +75,7 @@ public class GodHandableAction implements VirtualAction {
     protected final TransactionStage stage; // singleton
     protected final RequestManager requestManager; // singleton
     protected final Object action; // created here
+    protected final RedCardableAssist redCardableAssist; // created here
 
     // ===================================================================================
     //                                                                         Constructor
@@ -96,6 +88,7 @@ public class GodHandableAction implements VirtualAction {
         this.stage = stage;
         this.requestManager = requestManager;
         this.action = createAction();
+        this.redCardableAssist = createRedCardableAssist();
     }
 
     protected Object createAction() {
@@ -104,6 +97,10 @@ public class GodHandableAction implements VirtualAction {
         } catch (RuntimeException e) {
             throw new ActionCreateFailureException("Failed to create the action: " + execute, e);
         }
+    }
+
+    protected RedCardableAssist createRedCardableAssist() {
+        return new RedCardableAssist(execute, runtime, requestManager);
     }
 
     // ===================================================================================
@@ -133,7 +130,7 @@ public class GodHandableAction implements VirtualAction {
             final ActionResponse monologue = tellExceptionMonologue(hook, e);
             return reflect(monologue);
         } catch (Error e) {
-            translateToAdvicedErrorIfPossible(e);
+            redCardableAssist.translateToHotdeployErrorIfPossible(e);
             throw e;
         } finally {
             processHookFinally(hook);
@@ -147,8 +144,8 @@ public class GodHandableAction implements VirtualAction {
 
     protected NextJourney transactionalExecute(OptionalThing<VirtualForm> form, ActionHook hook) {
         final ExecuteTransactionResult result = (ExecuteTransactionResult) stage.selectable(tx -> {
-            doExecute(form, hook, tx); /* #to_action */
-        } , getExecuteTransactionGenre()).get(); // because of not null
+            doExecute(form, hook, tx); // #to_action
+        }, getExecuteTransactionGenre()).get(); // because of not null
         if (!result.isRollbackOnly()) {
             hookAfterTxCommitIfExists(result);
         }
@@ -156,9 +153,9 @@ public class GodHandableAction implements VirtualAction {
     }
 
     protected void doExecute(OptionalThing<VirtualForm> form, ActionHook hook, BegunTx<Object> tx) {
-        final ActionResponse response = actuallyExecute(form, hook); /* #to_action */
-        assertExecuteMethodResponseDefined(response);
-        final NextJourney journey = reflect(response); /* also response handling in transaction */
+        final ActionResponse response = actuallyExecute(form, hook); // #to_action
+        redCardableAssist.assertExecuteMethodResponseDefined(response);
+        final NextJourney journey = reflect(response); // also response handling in transaction
         final boolean rollbackOnly;
         if (runtime.hasValidationError()) {
             tx.rollbackOnly();
@@ -198,33 +195,12 @@ public class GodHandableAction implements VirtualAction {
         }
     }
 
-    protected void assertExecuteMethodResponseDefined(ActionResponse response) {
-        if (response.isUndefined()) {
-            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-            br.addNotice("Cannot return undefined resopnse from the execute method.");
-            br.addItem("Advice");
-            br.addElement("Not allowed to return undefined() in execute method.");
-            br.addElement("If you want to return response as empty body,");
-            br.addElement("use asEmptyBody() like this:");
-            br.addElement("  @Execute");
-            br.addElement("  public HtmlResponse index() {");
-            br.addElement("      return HtmlResponse.asEmptyBody();");
-            br.addElement("  }");
-            br.addItem("Action Execute");
-            br.addElement(execute);
-            final String msg = br.buildExceptionMessage();
-            throw new ExecuteMethodReturnUndefinedResponseException(msg);
-        }
-    }
-
     protected TransactionGenre getExecuteTransactionGenre() {
         return execute.getTransactionGenre();
     }
 
-    protected void hookAfterTxCommitIfExists(final ExecuteTransactionResult result) {
-        result.getResponse().getAfterTxCommitHook().ifPresent(afterTx -> {
-            afterTx.hook();
-        });
+    protected void hookAfterTxCommitIfExists(ExecuteTransactionResult result) {
+        result.getResponse().getAfterTxCommitHook().ifPresent(afterTx -> afterTx.hook());
     }
 
     // -----------------------------------------------------
@@ -243,12 +219,10 @@ public class GodHandableAction implements VirtualAction {
             final List<TransactionMemoriesProvider> providerList = memories.getOrderedProviderList();
             final StringBuilder sb = new StringBuilder();
             for (TransactionMemoriesProvider provider : providerList) {
-                provider.provide().ifPresent(result -> {
-                    sb.append("\n*").append(result);
-                });
+                provider.provide().ifPresent(result -> sb.append("\n*").append(result));
             }
             final WholeShowRequestAttribute attribute = new WholeShowRequestAttribute(sb.toString());
-            requestManager.setAttribute(RequestManager.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
+            requestManager.setAttribute(LastaWebKey.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
         }
     }
 
@@ -270,7 +244,7 @@ public class GodHandableAction implements VirtualAction {
         if (isDefined(response)) {
             runtime.manageActionResponse(response);
         }
-        assertAfterTxCommitHookNotSpecified("before", response);
+        redCardableAssist.assertAfterTxCommitHookNotSpecified("before", response);
         return response;
     }
 
@@ -291,7 +265,7 @@ public class GodHandableAction implements VirtualAction {
         final ActionResponse response = hook.godHandMonologue(runtime);
         if (isDefined(response)) {
             runtime.manageActionResponse(response);
-            assertAfterTxCommitHookNotSpecified("monologue", response);
+            redCardableAssist.assertAfterTxCommitHookNotSpecified("monologue", response);
             return response;
         } else {
             throw e;
@@ -324,36 +298,13 @@ public class GodHandableAction implements VirtualAction {
     //                                    Undefined Response
     //                                    ------------------
     protected boolean isUndefined(ActionResponse response) {
-        assertHookReturnNotNull(response);
+        redCardableAssist.assertHookReturnNotNull(response);
         return response.isUndefined();
     }
 
     protected boolean isDefined(ActionResponse response) {
-        assertHookReturnNotNull(response);
+        redCardableAssist.assertHookReturnNotNull(response);
         return response.isDefined();
-    }
-
-    // -----------------------------------------------------
-    //                                          Assist Logic
-    //                                          ------------
-    protected void assertAfterTxCommitHookNotSpecified(String actionHookTitle, ActionResponse response) {
-        response.getAfterTxCommitHook().ifPresent(hook -> {
-            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-            br.addNotice("The afterTxCommit() cannot be used in action hook.");
-            br.addItem("Advice");
-            br.addElement("The method only can be in action execute.");
-            br.addElement("Make sure your action hook response.");
-            br.addItem("Specified ActionResponse");
-            br.addElement(response);
-            br.addItem("Specified ResponseHook");
-            br.addElement(hook);
-            br.addItem("Action Execute");
-            br.addElement(execute);
-            br.addItem("ActionHook Type");
-            br.addElement(actionHookTitle);
-            final String msg = br.buildExceptionMessage();
-            throw new IllegalStateException(msg);
-        });
     }
 
     // ===================================================================================
@@ -363,8 +314,8 @@ public class GodHandableAction implements VirtualAction {
         showAction(runtime);
         final Object[] requestArgs = toRequestArgs(optForm);
         final Object result = invokeExecuteMethod(execute.getExecuteMethod(), requestArgs); // #to_action
-        assertExecuteReturnNotNull(requestArgs, result);
-        assertExecuteMethodReturnTypeActionResponse(requestArgs, result);
+        redCardableAssist.assertExecuteReturnNotNull(requestArgs, result);
+        redCardableAssist.assertExecuteMethodReturnTypeActionResponse(requestArgs, result);
         final ActionResponse response = (ActionResponse) result;
         runtime.manageActionResponse(response); // always set here because of main
         return response;
@@ -392,7 +343,7 @@ public class GodHandableAction implements VirtualAction {
         Object result = null;
         try {
             result = executeMethod.invoke(action, requestArgs); // #to_action just here
-            checkValidatorCalled();
+            redCardableAssist.checkValidatorCalled();
         } catch (InvocationTargetException e) { // e.g. exception in the method
             return handleExecuteMethodInvocationTargetException(executeMethod, requestArgs, e);
         } catch (IllegalAccessException e) { // e.g. private invoking
@@ -451,7 +402,7 @@ public class GodHandableAction implements VirtualAction {
             }).collect(Collectors.toList()));
             messages.toPropertySet().forEach(property -> {
                 sb.append(LF).append(" ").append(property);
-                for (Iterator<UserMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                for (Iterator<UserMessage> ite = messages.silentAccessByIteratorOf(property); ite.hasNext();) {
                     sb.append(LF).append("   ").append(ite.next());
                 }
             });
@@ -509,249 +460,5 @@ public class GodHandableAction implements VirtualAction {
         final Method method = runtime.getExecuteMethod();
         final Class<?> declaringClass = method.getDeclaringClass();
         return declaringClass.getSimpleName();
-    }
-
-    // ===================================================================================
-    //                                                                    Validator Called
-    //                                                                    ================
-    protected void checkValidatorCalled() {
-        if (!execute.isSuppressValidatorCallCheck() && isValidatorCalled()) {
-            execute.getFormMeta().filter(meta -> isValidatorAnnotated(meta)).ifPresent(meta -> {
-                throwLonelyValidatorAnnotationException(meta); // #hope see fields in nested element
-            });
-        }
-    }
-
-    protected boolean isValidatorCalled() {
-        return ThreadCacheContext.exists() && !ThreadCacheContext.isValidatorCalled();
-    }
-
-    protected boolean isValidatorAnnotated(ActionFormMeta meta) {
-        return meta.isValidatorAnnotated();
-    }
-
-    protected void throwLonelyValidatorAnnotationException(ActionFormMeta meta) {
-        final boolean apiExecute = execute.isApiExecute();
-        final boolean hybrid = LaValidatable.class.isAssignableFrom(execute.getActionType());
-        final String expectedMethod;
-        if (apiExecute) {
-            expectedMethod = hybrid ? "validateApi" : "validate";
-        } else {
-            expectedMethod = "validate";
-        }
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Lonely validator annotations, so call " + expectedMethod + "().");
-        br.addItem("Advice");
-        br.addElement("The " + expectedMethod + "() method should be called in execute method of action");
-        br.addElement("because the validator annotations are specified in the form (or body).");
-        br.addElement("For example:");
-        if (apiExecute) {
-            br.addElement("  (x):");
-            br.addElement("    @Execute");
-            br.addElement("    public JsonResponse index(SeaForm form) { // *Bad");
-            br.addElement("        return asJson(...);");
-            br.addElement("    }");
-            br.addElement("  (o):");
-            br.addElement("    @Execute");
-            br.addElement("    public JsonResponse index(SeaForm form) {");
-            br.addElement("        " + expectedMethod + "(form, message -> {}); // Good");
-            br.addElement("        return asJson(...);");
-            br.addElement("    }");
-        } else {
-            br.addElement("  (x):");
-            br.addElement("    @Execute");
-            br.addElement("    public HtmlResponse index(SeaForm form) { // *Bad");
-            br.addElement("        return asHtml(...);");
-            br.addElement("    }");
-            br.addElement("  (o):");
-            br.addElement("    @Execute");
-            br.addElement("    public HtmlResponse index(SeaForm form) {");
-            br.addElement("        " + expectedMethod + "(form, message -> {}, () -> { // Good");
-            br.addElement("            return asHtml(path_LandJsp);");
-            br.addElement("        });");
-            br.addElement("        return asHtml(...);");
-            br.addElement("    }");
-        }
-        br.addElement("");
-        br.addElement("Or remove validator annotations from the form (or body)");
-        br.addElement("if the annotations are unneeded.");
-        br.addItem("Action Execute");
-        br.addElement(execute.toSimpleMethodExp());
-        br.addItem("Action Form (or Body)");
-        br.addElement(meta.getFormType());
-        final String msg = br.buildExceptionMessage();
-        throw new ExecuteMethodLonelyValidatorAnnotationException(msg);
-    }
-
-    // ===================================================================================
-    //                                                                       Adviced Error
-    //                                                                       =============
-    protected void translateToAdvicedErrorIfPossible(Error e) { // to notice reboot timing
-        if (!ManagedHotdeploy.isHotdeploy()) {
-            return;
-        }
-        final String msg = e.getMessage();
-        if (msg == null) {
-            return;
-        }
-        // only frequent patterns
-        if (e instanceof NoSuchFieldError) {
-            if (isNoSuchFieldOfHtmlPath(msg)) {
-                throwRebootAfterFreeGenError(e);
-            }
-        }
-        if (e instanceof NoSuchMethodError) {
-            if (isNoSuchMethodOfMessages(msg) || isNoSuchMethodOfConfig(msg)) {
-                throwRebootAfterFreeGenError(e);
-            }
-            if (isNoSuchMethodOfDBFlute(msg)) {
-                throwRebootAfterGenerateError(e);
-            }
-        }
-    }
-
-    protected boolean isNoSuchFieldOfHtmlPath(String msg) {
-        return msg.contains("path_");
-    }
-
-    protected boolean isNoSuchMethodOfMessages(String msg) {
-        return msg.contains("Messages.add") || msg.contains("Lables.add");
-    }
-
-    protected boolean isNoSuchMethodOfConfig(String msg) {
-        return msg.contains("Config.get") || msg.contains("Env.get");
-    }
-
-    protected void throwRebootAfterFreeGenError(Error e) throws RebootAfterFreeGenError {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Reboot after FreeGen.");
-        br.addItem("Advice");
-        br.addElement("Sorry...");
-        br.addElement("Auto-generated classes (e.g. HtmlPath, Messages, Config)");
-        br.addElement(" are not HotDeploy target.");
-        br.addElement("so please reboot your application.");
-        br.addElement("");
-        br.addElement("Execute your main() of the boot class like this:");
-        br.addElement("  public static void main(String[] args) {");
-        br.addElement("      new JettyBoot(8090, \"/harbor\").asDevelopment(isNoneEnv()).bootAwait();");
-        br.addElement("  }");
-        br.addItem("Occurred Error");
-        br.addElement(e.getClass());
-        br.addElement(e.getMessage());
-        final String msg = br.buildExceptionMessage();
-        throw new RebootAfterFreeGenError(msg, e);
-    }
-
-    protected boolean isNoSuchMethodOfDBFlute(String msg) {
-        return msg.contains(".allcommon.") // e.g. CDef
-                || msg.contains(".bsbhv.") || msg.contains(".exbhv.") // Behavior
-                || msg.contains(".cbean.") // ConditionBean, ConditionQuery
-                || msg.contains(".bsentity.") || msg.contains(".exentity."); // Entity, DBMeta
-    }
-
-    protected void throwRebootAfterGenerateError(Error e) throws RebootAfterFreeGenError {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Reboot after DBFlute Generate.");
-        br.addItem("Advice");
-        br.addElement("Sorry...");
-        br.addElement("Auto-generated classes (e.g. Behavior, ConditionBean)");
-        br.addElement(" are not HotDeploy target.");
-        br.addElement("so please reboot your application.");
-        br.addElement("");
-        br.addElement("Execute your main() of the boot class like this:");
-        br.addElement("  public static void main(String[] args) {");
-        br.addElement("      new JettyBoot(8090, \"/harbor\").asDevelopment(isNoneEnv()).bootAwait();");
-        br.addElement("  }");
-        br.addItem("Occurred Error");
-        br.addElement(e.getClass());
-        br.addElement(e.getMessage());
-        final String msg = br.buildExceptionMessage();
-        throw new RebootAfterGenerateError(msg, e);
-    }
-
-    // ===================================================================================
-    //                                                                       Assert Helper
-    //                                                                       =============
-    protected void assertHookReturnNotNull(ActionResponse response) {
-        if (response == null) {
-            throwActionHookReturnNullException();
-        }
-    }
-
-    protected void throwActionHookReturnNullException() {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Not allowed to return null from ActionCallback methods.");
-        br.addItem("Advice");
-        br.addElement("ActionHook methods should return response instance.");
-        br.addElement("For example, if callbackBefore():");
-        br.addElement("  (x):");
-        br.addElement("    public ActionResponse callbackBefore(...) {");
-        br.addElement("        return null; // *Bad");
-        br.addElement("    }");
-        br.addElement("  (o):");
-        br.addElement("    public ActionResponse callbackBefore(...) {");
-        br.addElement("        return ActionResponse.empty(); // Good");
-        br.addElement("    }");
-        br.addElement("    public ActionResponse callbackBefore(...) {");
-        br.addElement("        return asHtml(...); // Good");
-        br.addElement("    }");
-        br.addItem("Action Execute");
-        br.addElement(execute);
-        br.addItem("Action Object");
-        br.addElement(action);
-        final String msg = br.buildExceptionMessage();
-        throw new ActionHookReturnNullException(msg);
-    }
-
-    protected void assertExecuteReturnNotNull(Object[] requestArgs, Object result) {
-        if (result == null) {
-            throwExecuteMethodReturnNullException(requestArgs);
-        }
-    }
-
-    protected void throwExecuteMethodReturnNullException(Object[] requestArgs) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Not allowed to return null from the execute method.");
-        br.addItem("Advice");
-        br.addElement("Execute method should return response instance.");
-        br.addElement("For example:");
-        br.addElement("  (x):");
-        br.addElement("    public HtmlResponse index(...) {");
-        br.addElement("        return null; // *Bad");
-        br.addElement("    }");
-        br.addElement("  (o):");
-        br.addElement("    public HtmlResponse index(...) {");
-        br.addElement("        return asHtml(...); // Good");
-        br.addElement("    }");
-        br.addItem("Action Execute");
-        br.addElement(execute);
-        br.addItem("Action Object");
-        br.addElement(action);
-        br.addItem("Request Arguments");
-        br.addElement(Arrays.asList(requestArgs));
-        final String msg = br.buildExceptionMessage();
-        throw new ExecuteMethodReturnNullException(msg);
-    }
-
-    protected void assertExecuteMethodReturnTypeActionResponse(Object[] requestArgs, Object result) {
-        if (!(result instanceof ActionResponse)) {
-            throwExecuteMethodReturnTypeNotResponseException(requestArgs, result);
-        }
-    }
-
-    protected void throwExecuteMethodReturnTypeNotResponseException(Object[] requestArgs, Object result) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Not action response type was returned from your action.");
-        br.addItem("Action Execute");
-        br.addElement(execute);
-        br.addItem("Action Object");
-        br.addElement(action);
-        br.addItem("Request Arguments");
-        br.addElement(Arrays.asList(requestArgs));
-        br.addItem("Unknoww Return");
-        br.addElement(result != null ? result.getClass() : null);
-        br.addElement(result);
-        final String msg = br.buildExceptionMessage();
-        throw new ExecuteMethodReturnTypeNotResponseException(msg);
     }
 }

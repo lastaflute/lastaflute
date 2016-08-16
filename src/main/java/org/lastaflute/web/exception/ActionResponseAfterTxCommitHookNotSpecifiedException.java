@@ -15,25 +15,20 @@
  */
 package org.lastaflute.web.exception;
 
-import javax.servlet.http.HttpServletResponse;
-
-import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
  */
-public class ForcedRequest403ForbiddenException extends RequestClientErrorException {
+public class ActionResponseAfterTxCommitHookNotSpecifiedException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    protected static final String TITLE = "403 Forbidden";
-    protected static final int STATUS = HttpServletResponse.SC_FORBIDDEN;
-
-    public ForcedRequest403ForbiddenException(String msg) {
-        super(msg, TITLE, STATUS);
+    public ActionResponseAfterTxCommitHookNotSpecifiedException(String msg) {
+        super(msg);
     }
 
-    public ForcedRequest403ForbiddenException(String msg, Throwable cause) {
-        super(msg, TITLE, STATUS, cause);
+    public ActionResponseAfterTxCommitHookNotSpecifiedException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

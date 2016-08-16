@@ -13,27 +13,23 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
+package org.lastaflute.web.token.exception;
 
-import javax.servlet.http.HttpServletResponse;
-
-import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
+import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.web.exception.MessageResponseApplicationException;
 
 /**
  * @author jflute
  */
-public class ForcedRequest404NotFoundException extends RequestClientErrorException {
+public class DoubleSubmittedRequestException extends MessageResponseApplicationException {
 
     private static final long serialVersionUID = 1L;
 
-    protected static final String TITLE = "404 Not Found";
-    protected static final int STATUS = HttpServletResponse.SC_NOT_FOUND;
-
-    public ForcedRequest404NotFoundException(String msg) {
-        super(msg, TITLE, STATUS);
+    public DoubleSubmittedRequestException(String msg, MessageResponseHook responseHook, UserMessages messages) {
+        super(msg, responseHook, messages);
     }
 
-    public ForcedRequest404NotFoundException(String msg, Throwable cause) {
-        super(msg, TITLE, STATUS, cause);
+    public DoubleSubmittedRequestException(String msg, MessageResponseHook responseHook, UserMessages messages, Throwable cause) {
+        super(msg, responseHook, messages, cause);
     }
 }

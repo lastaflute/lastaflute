@@ -18,7 +18,7 @@ package org.lastaflute.web.ruts;
 import org.dbflute.optional.OptionalThing;
 
 /**
- * @author modified by jflute (originated in Struts)
+ * @author jflute
  */
 public interface VirtualAction {
 

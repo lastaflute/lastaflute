@@ -13,23 +13,20 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process.exception;
-
-import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.web.exception.Forced400BadRequestException;
+package org.lastaflute.web.exception;
 
 /**
  * @author jflute
  */
-public class RequestUndefinedParameterInFormException extends Forced400BadRequestException {
+public class RebootAfterGenerateError extends Error {
 
     private static final long serialVersionUID = 1L;
 
-    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages) {
-        super(debugMsg, messages);
+    public RebootAfterGenerateError(String msg) {
+        super(msg);
     }
 
-    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages, Throwable cause) {
-        super(debugMsg, messages, cause);
+    public RebootAfterGenerateError(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

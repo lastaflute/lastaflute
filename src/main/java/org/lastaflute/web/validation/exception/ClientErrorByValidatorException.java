@@ -16,13 +16,13 @@
 package org.lastaflute.web.validation.exception;
 
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
+import org.lastaflute.web.exception.Forced400BadRequestException;
 
 /**
  * @author jflute
  * @since 0.6.0 (2015/08/08 Saturday at Showbase)
  */
-public class ClientErrorByValidatorException extends ForcedRequest400BadRequestException {
+public class ClientErrorByValidatorException extends Forced400BadRequestException {
 
     // ===================================================================================
     //                                                                          Definition
@@ -30,16 +30,10 @@ public class ClientErrorByValidatorException extends ForcedRequest400BadRequestE
     private static final long serialVersionUID = 1L;
 
     // ===================================================================================
-    //                                                                           Attribute
-    //                                                                           =========
-    protected final UserMessages messages; // not null
-
-    // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ClientErrorByValidatorException(String msg, UserMessages messages) {
-        super(msg);
-        this.messages = messages;
+    public ClientErrorByValidatorException(String debugMsg, UserMessages messages) {
+        super(debugMsg, messages);
     }
 
     // ===================================================================================
@@ -47,13 +41,6 @@ public class ClientErrorByValidatorException extends ForcedRequest400BadRequestE
     //                                                                      ==============
     @Override
     public String toString() {
-        return "validationClientError:{messages=" + messages + "}";
-    }
-
-    // ===================================================================================
-    //                                                                            Accessor
-    //                                                                            ========
-    public UserMessages getMessages() {
-        return messages;
+        return "validationClientError:{messages=" + userMessages + "}";
     }
 }

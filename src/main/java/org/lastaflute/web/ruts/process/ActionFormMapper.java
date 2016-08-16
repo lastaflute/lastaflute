@@ -50,9 +50,10 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.core.util.LaDBFluteUtil;
-import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
+import org.lastaflute.core.util.LaClassificationUtil;
+import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
 import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
@@ -64,7 +65,7 @@ import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.web.api.JsonParameter;
 import org.lastaflute.web.direction.FwWebDirection;
-import org.lastaflute.web.exception.ForcedRequest400BadRequestException;
+import org.lastaflute.web.exception.Forced400BadRequestException;
 import org.lastaflute.web.exception.IndexedPropertyNonParameterizedListException;
 import org.lastaflute.web.exception.IndexedPropertyNotListArrayException;
 import org.lastaflute.web.exception.JsonBodyCannotReadFromRequestException;
@@ -317,7 +318,6 @@ public class ActionFormMapper {
             }
             challengeList.addAll(nestedList);
         }
-        sb.append(LF).append(e.getClass().getName()).append(LF).append(e.getMessage());
         throwRequestJsonParseFailureException(sb.toString(), challengeList, e);
     }
 
@@ -828,12 +828,12 @@ public class ActionFormMapper {
     //                                        Classification
     //                                        --------------
     protected boolean isClassificationProperty(Class<?> propertyType) {
-        return LaDBFluteUtil.isClassificationType(propertyType);
+        return LaClassificationUtil.isCls(propertyType);
     }
 
     protected Classification toVerifiedClassification(Object bean, String name, Object code, Class<?> propertyType) {
         try {
-            return LaDBFluteUtil.toVerifiedClassification(propertyType, code);
+            return LaClassificationUtil.toCls(propertyType, code);
         } catch (ClassificationUnknownCodeException e) { // simple message because of catched later
             String msg = "Cannot convert the code to the classification: " + code + " to " + propertyType.getSimpleName();
             throwRequestClassifiationConvertFailureException(msg, e);
@@ -976,7 +976,7 @@ public class ActionFormMapper {
     }
 
     protected void throwTypeFailureBadRequest(Object bean, String propertyPath, Class<?> propertyType, Object exp, RuntimeException cause) {
-        if (cause instanceof ForcedRequest400BadRequestException) { // already bad request so no need to new
+        if (cause instanceof Forced400BadRequestException) { // already bad request so no need to new
             throw cause; // e.g. classification's exception
         }
         final StringBuilder sb = new StringBuilder();
@@ -1016,7 +1016,7 @@ public class ActionFormMapper {
                 || cause instanceof ParseDateException // e.g. LocalDate
                 || cause instanceof ParseBooleanException // e.g. Boolean
                 || cause instanceof RequestClassifiationConvertFailureException // e.g. CDef
-                ;
+        ;
     }
 
     // -----------------------------------------------------
@@ -1402,16 +1402,24 @@ public class ActionFormMapper {
 
     // no server error because it can occur by user's trick
     // while, is likely to due to client bugs (or server) so request client error
-    protected void throwRequestJsonParseFailureException(String msg, List<JsonDebugChallenge> challengeList, RuntimeException e) {
-        throw new RequestJsonParseFailureException(msg, e).withChallengeList(challengeList);
+    protected void throwRequestJsonParseFailureException(String msg, List<JsonDebugChallenge> challengeList, RuntimeException cause) {
+        throw new RequestJsonParseFailureException(msg, getRequestJsonParseFailureMessages(), cause).withChallengeList(challengeList);
+    }
+
+    protected UserMessages getRequestJsonParseFailureMessages() {
+        return UserMessages.empty();
     }
 
     protected void throwRequestPropertyMappingFailureException(String msg) {
-        throw new RequestPropertyMappingFailureException(msg);
+        throw new RequestPropertyMappingFailureException(msg, getRequestPropertyMappingFailureMessages());
     }
 
-    protected void throwRequestPropertyMappingFailureException(String msg, RuntimeException e) {
-        throw new RequestPropertyMappingFailureException(msg, e);
+    protected void throwRequestPropertyMappingFailureException(String msg, RuntimeException cause) {
+        throw new RequestPropertyMappingFailureException(msg, getRequestPropertyMappingFailureMessages(), cause);
+    }
+
+    protected UserMessages getRequestPropertyMappingFailureMessages() {
+        return UserMessages.empty();
     }
 
     protected void throwRequestUndefinedParameterInFormException(Object bean, String name, Object value, FormMappingOption option,
@@ -1448,7 +1456,11 @@ public class ActionFormMapper {
         br.addItem("Mapping Option");
         br.addElement(option);
         final String msg = br.buildExceptionMessage();
-        throw new RequestUndefinedParameterInFormException(msg);
+        throw new RequestUndefinedParameterInFormException(msg, getRequestUndefinedParameterInFormMessages());
+    }
+
+    protected UserMessages getRequestUndefinedParameterInFormMessages() {
+        return UserMessages.empty();
     }
 
     // ===================================================================================

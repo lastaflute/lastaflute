@@ -52,7 +52,7 @@ public class MessageResourcesHolder {
     //                                                                              Accept
     //                                                                              ======
     /**
-     * Accept the gateway for message resources of e.g. Struts. <br>
+     * Accept the gateway for message resources. <br>
      * You should call this immediately after your application is initialized. <br>
      * And only one setting is allowed.
      * @param specified The instance of gateway. (NotNull)
@@ -82,7 +82,7 @@ public class MessageResourcesHolder {
     //                                                                            Accessor
     //                                                                            ========
     /**
-     * Get the gateway for message resources of e.g. Struts.
+     * Get the gateway for message resources.
      * @return The instance of gateway. (NotNull: if accepted)
      */
     public MessageResourcesGateway getGateway() {

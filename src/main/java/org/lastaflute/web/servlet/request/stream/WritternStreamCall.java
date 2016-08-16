@@ -13,23 +13,15 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process.exception;
+package org.lastaflute.web.servlet.request.stream;
 
-import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.web.exception.Forced400BadRequestException;
+import java.io.IOException;
 
 /**
  * @author jflute
  */
-public class RequestUndefinedParameterInFormException extends Forced400BadRequestException {
+@FunctionalInterface
+public interface WritternStreamCall {
 
-    private static final long serialVersionUID = 1L;
-
-    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages) {
-        super(debugMsg, messages);
-    }
-
-    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages, Throwable cause) {
-        super(debugMsg, messages, cause);
-    }
+    void callback(WritternStreamOut out) throws IOException;
 }

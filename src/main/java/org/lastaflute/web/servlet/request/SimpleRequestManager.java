@@ -584,7 +584,7 @@ public class SimpleRequestManager implements RequestManager {
     public <USER_BEAN extends UserBean<ID>, ID> OptionalThing<USER_BEAN> findUserBean(Class<USER_BEAN> userBeanType) {
         @SuppressWarnings("unchecked")
         final OptionalThing<USER_BEAN> userBean = (OptionalThing<USER_BEAN>) findLoginManager(userBeanType).flatMap(manager -> {
-            return manager.getSessionUserBean();
+            return manager.getSavedUserBean();
         });
         return userBean;
     }
@@ -694,11 +694,11 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected String getReqeustUserLocaleKey() {
-        return USER_LOCALE_KEY;
+        return LastaWebKey.USER_LOCALE_KEY;
     }
 
     protected String getSessionUserLocaleKey() {
-        return USER_LOCALE_KEY;
+        return LastaWebKey.USER_LOCALE_KEY;
     }
 
     protected String getCookieUserLocaleKey() {
@@ -807,11 +807,11 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected String getReqeustUserTimeZoneKey() {
-        return USER_TIMEZONE_KEY;
+        return LastaWebKey.USER_TIMEZONE_KEY;
     }
 
     protected String getSessionUserTimeZoneKey() {
-        return USER_TIMEZONE_KEY;
+        return LastaWebKey.USER_TIMEZONE_KEY;
     }
 
     protected String getCookieUserTimeZoneKey() {

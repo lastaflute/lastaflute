@@ -13,20 +13,19 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.error;
+package org.lastaflute.web.servlet.request.stream;
+
+import java.io.IOException;
 
 /**
  * @author jflute
  */
-public class RebootAfterGenerateError extends Error {
+@FunctionalInterface
+public interface WritternZipStreamCall {
 
-    private static final long serialVersionUID = 1L;
+    void callback(WritternZipStreamOut out) throws IOException;
 
-    public RebootAfterGenerateError(String msg) {
-        super(msg);
-    }
-
-    public RebootAfterGenerateError(String msg, Throwable cause) {
-        super(msg, cause);
+    default String zipStreamEncoding() {
+        return "UTF-8";
     }
 }

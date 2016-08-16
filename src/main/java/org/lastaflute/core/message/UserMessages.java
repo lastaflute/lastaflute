@@ -38,6 +38,8 @@ public class UserMessages implements Serializable {
     /** The property key for global property (non-specific property) for protocol with HTML, JavaScipt. */
     public static final String GLOBAL_PROPERTY_KEY = "_global";
 
+    protected static final UserMessages EMPTY_MESSAGES = new UserMessages().lock();
+
     protected static final Comparator<UserMessageItem> actionItemComparator = (item1, item2) -> {
         return item1.getItemOrder() - item2.getItemOrder();
     };
@@ -49,11 +51,22 @@ public class UserMessages implements Serializable {
     protected boolean accessed;
     protected int itemCount;
     protected Map<String, Object> successAttributeMap; // lazy loaded
+    protected boolean locked;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public UserMessages() {
+    }
+
+    public static UserMessages createAsOneGlobal(String messageKey, Object... args) {
+        final UserMessages messages = new UserMessages();
+        messages.add(GLOBAL_PROPERTY_KEY, new UserMessage(messageKey, args));
+        return messages;
+    }
+
+    public static UserMessages empty() {
+        return EMPTY_MESSAGES;
     }
 
     // ===================================================================================
@@ -62,6 +75,7 @@ public class UserMessages implements Serializable {
     public void add(String property, UserMessage message) {
         assertArgumentNotNull("property", property);
         assertArgumentNotNull("message", message);
+        assertLocked();
         final UserMessageItem item = messageMap.get(property);
         final List<UserMessage> messageList;
         if (item == null) {
@@ -80,6 +94,7 @@ public class UserMessages implements Serializable {
 
     public void add(UserMessages messages) {
         assertArgumentNotNull("messages", messages);
+        assertLocked();
         for (String property : messages.toPropertySet()) {
             for (Iterator<UserMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
                 add(property, ite.next());
@@ -91,14 +106,31 @@ public class UserMessages implements Serializable {
     //                                                                      Access Message
     //                                                                      ==============
     public Iterator<UserMessage> accessByFlatIterator() {
+        assertLocked();
         accessed = true;
-        if (messageMap.isEmpty()) {
-            return Collections.emptyIterator();
-        }
         return doAccessByFlatIterator();
     }
 
+    public Iterator<UserMessage> accessByIteratorOf(String property) {
+        assertArgumentNotNull("property", property);
+        assertLocked();
+        accessed = true;
+        return doAccessByIteratorOf(property);
+    }
+
+    public Iterator<UserMessage> silentAccessByFlatIterator() { // e.g. for logging
+        return doAccessByFlatIterator();
+    }
+
+    public Iterator<UserMessage> silentAccessByIteratorOf(String property) { // e.g. for logging
+        assertArgumentNotNull("property", property);
+        return doAccessByIteratorOf(property);
+    }
+
     protected Iterator<UserMessage> doAccessByFlatIterator() {
+        if (messageMap.isEmpty()) {
+            return Collections.emptyIterator();
+        }
         final List<UserMessage> msgList = new ArrayList<UserMessage>();
         final List<UserMessageItem> itemList = new ArrayList<UserMessageItem>(messageMap.size());
         for (Iterator<UserMessageItem> ite = messageMap.values().iterator(); ite.hasNext();) {
@@ -113,18 +145,10 @@ public class UserMessages implements Serializable {
         return msgList.iterator();
     }
 
-    public Iterator<UserMessage> accessByIteratorOf(String property) {
-        assertArgumentNotNull("property", property);
-        accessed = true;
-        return doAccessByIteratorOf(property);
-    }
-
-    public Iterator<UserMessage> nonAccessByIteratorOf(String property) { // e.g. for logging
-        assertArgumentNotNull("property", property);
-        return doAccessByIteratorOf(property);
-    }
-
     protected Iterator<UserMessage> doAccessByIteratorOf(String property) {
+        if (messageMap.isEmpty()) {
+            return Collections.emptyIterator();
+        }
         final UserMessageItem item = messageMap.get(property);
         return item != null ? item.getMessageList().iterator() : Collections.emptyIterator();
     }
@@ -150,6 +174,7 @@ public class UserMessages implements Serializable {
     //                                                                   Various Operation
     //                                                                   =================
     public void clear() {
+        assertLocked();
         messageMap.clear();
     }
 
@@ -203,6 +228,7 @@ public class UserMessages implements Serializable {
     public void saveSuccessAttribute(String key, Object value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
+        assertLocked();
         if (successAttributeMap == null) {
             successAttributeMap = new LinkedHashMap<String, Object>(4);
         }
@@ -214,6 +240,20 @@ public class UserMessages implements Serializable {
      */
     public Map<String, Object> getSuccessAttributeMap() {
         return successAttributeMap != null ? Collections.unmodifiableMap(successAttributeMap) : Collections.emptyMap();
+    }
+
+    // ===================================================================================
+    //                                                                               Lock
+    //                                                                              ======
+    protected UserMessages lock() {
+        locked = true;
+        return this;
+    }
+
+    protected void assertLocked() {
+        if (locked) {
+            throw new IllegalStateException("Cannot change the status of the user messages: " + this);
+        }
     }
 
     // ===================================================================================

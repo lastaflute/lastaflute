@@ -19,16 +19,26 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.token.exception.DoubleSubmitMessageNotFoundException;
-import org.lastaflute.web.token.exception.DoubleSubmitRequestException;
+import org.lastaflute.web.token.exception.DoubleSubmitVerifyTokenBeforeValidationException;
+import org.lastaflute.web.token.exception.DoubleSubmittedRequestException;
+import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
+import org.lastaflute.web.validation.ActionValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -38,18 +48,56 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(SimpleDoubleSubmitManager.class);
     protected static final String ERRORS_APP_DOUBLE_SUBMIT_REQUEST = "errors.app.double.submit.request";
+    protected static final Object DOUBLE_SUBMITTED_OBJ = new Object();
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    /** The assistant director (AD) for framework. (NotNull: after initialization) */
+    @Resource
+    protected FwAssistantDirector assistantDirector;
+
     @Resource
     protected MessageManager messageManager;
+
     @Resource
     protected RequestManager requestManager;
 
-    protected long previous; // keep for unique token
+    /** Does it allow to call verifyToken() before validate()? */
+    protected boolean allowsVerifyTokenBeforeValidation;
 
+    /** The time of previous process to keep for unique token */
+    protected long previousTimeMillis;
+
+    // ===================================================================================
+    //                                                                          Initialize
+    //                                                                          ==========
+    /**
+     * Initialize this component. <br>
+     * This is basically called by DI setting file.
+     */
+    @PostConstruct
+    public synchronized void initialize() {
+        final FwWebDirection direction = assistWebDirection();
+        final DoubleSubmitResourceProvider provider = direction.assistDoubleSubmitResourceProvider();
+        allowsVerifyTokenBeforeValidation = provider != null && provider.allowsVerifyTokenBeforeValidation();
+        showBootLogging();
+    }
+
+    protected FwWebDirection assistWebDirection() {
+        return assistantDirector.assistWebDirection();
+    }
+
+    protected void showBootLogging() {
+        if (logger.isInfoEnabled()) {
+            logger.info("[DoubleSubmit Manager]");
+            logger.info(" allowsVerifyTokenBeforeValidation: " + allowsVerifyTokenBeforeValidation);
+        }
+    }
+
+    // #hope can use at JSON API (needs header handling)
     // ===================================================================================
     //                                                                  Token Manipulation
     //                                                                  ==================
@@ -64,10 +112,11 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         checkDoubleSubmitPreconditionExists(groupType);
         final DoubleSubmitTokenMap tokenMap = getSessionTokenMap().orElseGet(() -> {
             final DoubleSubmitTokenMap firstMap = new DoubleSubmitTokenMap();
-            requestManager.getSessionManager().setAttribute(getTokenKey(), firstMap);
+            requestManager.getSessionManager().setAttribute(getTransactionTokenKey(), firstMap);
             return firstMap;
         });
         final String generated = generateToken(groupType);
+        showSavingToken(groupType, generated);
         tokenMap.put(groupType, generated);
         return generated;
     }
@@ -103,25 +152,29 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         return ERRORS_APP_DOUBLE_SUBMIT_REQUEST;
     }
 
+    protected void showSavingToken(Class<?> groupType, String generated) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("...Saving double-submit token: group={}, token={}", groupType.getSimpleName(), generated);
+        }
+    }
+
     // -----------------------------------------------------
     //                                              Generate
     //                                              --------
     @Override
     public synchronized String generateToken(Class<?> groupType) {
-        if (groupType == null) {
-            throw new IllegalArgumentException("The argument 'groupType' should not be null.");
-        }
-        final byte[] idBytes = requestManager.getSessionManager().getSessionId().getBytes();
-        long current = System.currentTimeMillis();
-        if (current == previous) {
-            current++;
-        }
-        previous = current;
-        final byte[] now = Long.valueOf(current).toString().getBytes();
+        assertArgumentNotNull("groupType", groupType);
+        final byte[] sessionIdBytes = prepareSessionIdBytes();
+        final byte[] currentBytes = prepareCurrentBytes();
+        final byte[] groupTypeBytes = prepareGroupTypeBytes(groupType);
+        return buildHex(sessionIdBytes, currentBytes, groupTypeBytes);
+    }
+
+    protected String buildHex(byte[] sessionIdBytes, byte[] currentBytes, byte[] groupTypeBytes) {
         final MessageDigest md = getMessageDigest();
-        md.update(idBytes);
-        md.update(now);
-        md.update(groupType.getName().getBytes());
+        md.update(sessionIdBytes);
+        md.update(currentBytes);
+        md.update(groupTypeBytes);
         return toHex(md.digest());
     }
 
@@ -141,6 +194,24 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
             sb.append(Character.forDigit(bt[i] & 0x0f, 16));
         }
         return sb.toString();
+    }
+
+    protected byte[] prepareSessionIdBytes() {
+        return requestManager.getSessionManager().getSessionId().getBytes();
+    }
+
+    protected byte[] prepareCurrentBytes() {
+        long currentTimeMillis = System.currentTimeMillis();
+        if (currentTimeMillis == previousTimeMillis) {
+            currentTimeMillis++;
+        }
+        previousTimeMillis = currentTimeMillis;
+        byte[] currentBytes = Long.valueOf(currentTimeMillis).toString().getBytes();
+        return currentBytes;
+    }
+
+    protected byte[] prepareGroupTypeBytes(Class<?> groupType) {
+        return groupType.getName().getBytes();
     }
 
     // ===================================================================================
@@ -179,6 +250,9 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     }
 
     protected <MESSAGES extends UserMessages> void doVerifyToken(Class<?> groupType, TokenErrorHook errorHook, boolean keep) {
+        assertArgumentNotNull("groupType", groupType);
+        assertArgumentNotNull("errorHook", errorHook);
+        checkVerifyTokenAfterValidatorCall(); // precisely unneeded if keep, but coherence
         final boolean matched;
         if (keep) { // no reset (intermediate request)
             matched = determineToken(groupType);
@@ -186,16 +260,20 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
             matched = determineTokenWithReset(groupType);
         }
         if (!matched) {
-            throwDoubleSubmitRequestException(groupType, errorHook);
+            saveDoubleSubmittedMark();
+            throwDoubleSubmittedRequestException(groupType, errorHook);
         }
     }
 
-    protected <MESSAGES extends UserMessages> String throwDoubleSubmitRequestException(Class<?> groupType, TokenErrorHook errorHook) {
+    protected void saveDoubleSubmittedMark() {
+        requestManager.setAttribute(getDoubleSubmittedKey(), DOUBLE_SUBMITTED_OBJ);
+    }
+
+    protected <MESSAGES extends UserMessages> String throwDoubleSubmittedRequestException(Class<?> groupType, TokenErrorHook errorHook) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("The request was born from double submit.");
         br.addItem("Advice");
-        br.addElement("Double submit by user operation");
-        br.addElement("or not saved token but validate it.");
+        br.addElement("Double submit by user operation or no saved token.");
         br.addElement("Default scope of token is action type");
         br.addElement("so SAVE and VERIFY should be in same action.");
         br.addItem("Requested Action");
@@ -208,7 +286,67 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         br.addElement(getSessionTokenMap());
         final String msg = br.buildExceptionMessage();
         final String messageKey = getDoubleSubmitMessageKey();
-        throw new DoubleSubmitRequestException(msg, () -> errorHook.hook(), messageKey);
+        throw new DoubleSubmittedRequestException(msg, () -> errorHook.hook(), UserMessages.createAsOneGlobal(messageKey));
+    }
+
+    // -----------------------------------------------------
+    //                                       Validation Call
+    //                                       ---------------
+    protected void checkVerifyTokenAfterValidatorCall() {
+        if (allowsVerifyTokenBeforeValidation) {
+            return;
+        }
+        if (LaActionExecuteUtil.hasActionExecute()) { // just in case
+            final ActionExecute execute = LaActionExecuteUtil.getActionExecute();
+            if (certainlyCanBeValidated(execute) && certainlyValidatorNotCalled()) {
+                throwDoubleSubmitVerifyTokenBeforeValidationException(execute);
+            }
+        }
+    }
+
+    protected boolean certainlyCanBeValidated(ActionExecute execute) {
+        // if annotations exist, validator is supposed to be called (checked in framework)
+        // but if validation without annotation, returns false so not exactly
+        return execute.getFormMeta().filter(meta -> meta.isValidatorAnnotated()).isPresent();
+    }
+
+    protected boolean certainlyValidatorNotCalled() {
+        return ActionValidator.certainlyValidatorNotCalled();
+    }
+
+    protected void throwDoubleSubmitVerifyTokenBeforeValidationException(ActionExecute execute) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The verifyToken() was called before validate() in action.");
+        br.addItem("Advice");
+        br.addElement("The verifyToken() should be after validate().");
+        br.addElement("The verifyToken() deletes session token if success,");
+        br.addElement("so it may be token-not-found exception if validation error.");
+        br.addElement("(validation error's response may need session token)");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public HtmlResponse update(Integer memberId) {");
+        br.addElement("        verifyToken(...); // *Bad: session token is deleted here");
+        br.addElement("        validate(form, messages -> {}, () -> { // may be this exception if validation error");
+        br.addElement("            return asHtml(path_...); // the html may need token...");
+        br.addElement("        });");
+        br.addElement("        ...");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse update(Integer memberId) {");
+        br.addElement("        validate(form, messages -> {}, () -> {");
+        br.addElement("            return asHtml(path_...); // session token remains");
+        br.addElement("        });");
+        br.addElement("        verifyToken(...); // Good");
+        br.addElement("        ...");
+        br.addElement("    }");
+        br.addItem("Execute Method");
+        br.addElement(execute.toSimpleMethodExp());
+        br.addItem("Requested Token");
+        br.addElement(getRequestedToken());
+        br.addItem("Saved Token");
+        br.addElement(getSessionTokenMap());
+        final String msg = br.buildExceptionMessage();
+        throw new DoubleSubmitVerifyTokenBeforeValidationException(msg);
     }
 
     // ===================================================================================
@@ -217,6 +355,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     @Override
     public synchronized void resetToken(Class<?> groupType) {
         getSessionTokenMap().ifPresent(tokenMap -> {
+            showRemovingToken(groupType, tokenMap);
             tokenMap.remove(groupType);
             if (tokenMap.isEmpty()) {
                 removeTokenFromSession();
@@ -226,8 +365,15 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         });
     }
 
+    protected void showRemovingToken(Class<?> groupType, DoubleSubmitTokenMap tokenMap) {
+        if (logger.isDebugEnabled()) {
+            final String token = tokenMap.get(groupType).orElse(null); // just in case
+            logger.debug("...Removing double-submit token: group={}, token={}", groupType.getSimpleName(), token);
+        }
+    }
+
     protected void removeTokenFromSession() {
-        requestManager.getSessionManager().removeAttribute(getTokenKey());
+        requestManager.getSessionManager().removeAttribute(getTransactionTokenKey());
     }
 
     // ===================================================================================
@@ -235,18 +381,42 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     //                                                                        ============
     @Override
     public OptionalThing<String> getRequestedToken() {
-        return requestManager.getParameter(getTokenKey());
+        return requestManager.getParameter(getTransactionTokenKey());
     }
 
     @Override
     public OptionalThing<DoubleSubmitTokenMap> getSessionTokenMap() {
-        return requestManager.getSessionManager().getAttribute(getTokenKey(), DoubleSubmitTokenMap.class);
+        return requestManager.getSessionManager().getAttribute(getTransactionTokenKey(), DoubleSubmitTokenMap.class);
+    }
+
+    @Override
+    public boolean isDoubleSubmittedRequest() {
+        return requestManager.getAttribute(getDoubleSubmittedKey(), Object.class).isPresent();
     }
 
     // ===================================================================================
-    //                                                                        Assist Logic
+    //                                                                        Key Provider
     //                                                                        ============
-    protected String getTokenKey() {
-        return TOKEN_KEY;
+    // but cannot change it because thymeleaf or taglib sees LastaWebKey directly
+    protected String getTransactionTokenKey() {
+        return LastaWebKey.TRANSACTION_TOKEN_KEY;
+    }
+
+    protected String getDoubleSubmittedKey() {
+        return LastaWebKey.DOUBLE_SUBMITTED_KEY;
+    }
+
+    // ===================================================================================
+    //                                                                       Assert Helper
+    //                                                                       =============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            String msg = "The value should not be null: variableName=null value=" + value;
+            throw new IllegalArgumentException(msg);
+        }
+        if (value == null) {
+            String msg = "The value should not be null: variableName=" + variableName;
+            throw new IllegalArgumentException(msg);
+        }
     }
 }

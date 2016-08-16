@@ -43,22 +43,16 @@ public abstract class LaApplicationException extends RuntimeException {
     }
 
     // ===================================================================================
-    //                                                                             Message
-    //                                                                             =======
-    public List<LaApplicationMessage> getMessageList() {
+    //                                                                 Application Message
+    //                                                                 ===================
+    public List<LaApplicationMessage> getApplicationMessageList() {
         return messageList != null ? Collections.unmodifiableList(messageList) : Collections.emptyList();
     }
 
-    public void saveMessage(String messageKey, Object... values) {
-        if (messageKey == null) {
-            throw new IllegalArgumentException("The argument 'messageKey' should not be null.");
-        }
-        if (values == null) {
-            throw new IllegalArgumentException("The argument 'values' should not be null.");
-        }
-        if (messageList == null) {
-            messageList = new ArrayList<LaApplicationMessage>(1);
-        }
+    protected void saveApplicationMessage(String messageKey, Object... values) {
+        assertArgumentNotNull("messageKey", messageKey);
+        assertArgumentNotNull("values", values);
+        messageList = new ArrayList<LaApplicationMessage>(1); // overriding
         messageList.add(newApplicationMessage(messageKey, values));
     }
 
@@ -66,10 +60,22 @@ public abstract class LaApplicationException extends RuntimeException {
         return new LaApplicationMessage(messageKey, values);
     }
 
-    public void saveMessages(List<LaApplicationMessage> itemList) {
-        if (itemList == null) {
-            throw new IllegalArgumentException("The argument 'itemList' should not be null.");
+    protected void saveApplicationMessages(List<LaApplicationMessage> messageList) {
+        assertArgumentNotNull("messageList", messageList);
+        this.messageList = messageList; // overriding
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            String msg = "The value should not be null: variableName=null value=" + value;
+            throw new IllegalArgumentException(msg);
         }
-        this.messageList = itemList;
+        if (value == null) {
+            String msg = "The value should not be null: variableName=" + variableName;
+            throw new IllegalArgumentException(msg);
+        }
     }
 }

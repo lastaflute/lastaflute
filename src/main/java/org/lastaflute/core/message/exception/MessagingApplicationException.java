@@ -37,33 +37,37 @@ public class MessagingApplicationException extends LaApplicationException {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public MessagingApplicationException(String msg, String messageKey, Object... args) {
-        super(msg + ": " + messageKey);
-        saveMessage(messageKey, args);
+    public MessagingApplicationException(String debugMsg, UserMessages messages) {
+        super(debugMsg);
+        assertUserMessages(messages);
+        saveApplicationMessages(toAppliactionMessageList(messages));
     }
 
-    public MessagingApplicationException(String msg, Throwable cause, String messageKey, Object... args) {
-        super(msg + ": " + messageKey, cause);
-        saveMessage(messageKey, args);
+    public MessagingApplicationException(String debugMsg, UserMessages messages, Throwable cause) {
+        super(debugMsg, cause);
+        assertUserMessages(messages);
+        saveApplicationMessages(toAppliactionMessageList(messages));
     }
 
-    public MessagingApplicationException(String msg, UserMessages messages) {
-        super(msg + ": " + messages);
+    protected void assertUserMessages(UserMessages messages) {
         if (messages == null) {
             throw new IllegalArgumentException("The argument 'messages' should not be null.");
         }
         if (messages.isEmpty()) {
             throw new IllegalArgumentException("The messages should not be empty: " + messages);
         }
-        saveMessages(toMessageList(messages));
+        // resource check is in application message handling
     }
 
-    protected List<LaApplicationMessage> toMessageList(UserMessages messages) {
+    // ===================================================================================
+    //                                                                 Application Message
+    //                                                                 ===================
+    protected List<LaApplicationMessage> toAppliactionMessageList(UserMessages messages) {
         final List<LaApplicationMessage> convertedList = new ArrayList<LaApplicationMessage>(messages.size());
         for (Iterator<UserMessage> ite = messages.accessByFlatIterator(); ite.hasNext();) {
             final UserMessage message = ite.next();
             verifyResourceMessage(messages, message);
-            convertedList.add(newApplicationMessageItem(message));
+            convertedList.add(toApplicationMessage(message));
         }
         return convertedList;
     }
@@ -74,7 +78,7 @@ public class MessagingApplicationException extends LaApplicationException {
         }
     }
 
-    protected LaApplicationMessage newApplicationMessageItem(UserMessage message) {
+    protected LaApplicationMessage toApplicationMessage(UserMessage message) {
         return new LaApplicationMessage(message.getMessageKey(), message.getValues());
     }
 }

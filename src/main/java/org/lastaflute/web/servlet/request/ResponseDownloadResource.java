@@ -15,11 +15,11 @@
  */
 package org.lastaflute.web.servlet.request;
 
-import java.io.OutputStream;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import org.dbflute.helper.StringKeyMap;
+import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
+import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
 
 /**
  * @author jflute
@@ -34,7 +34,7 @@ public class ResponseDownloadResource {
     protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected byte[] byteData;
     protected WritternStreamCall streamCall;
-    protected Map<String, Consumer<OutputStream>> consumerMap;
+    protected WritternZipStreamCall zipStreamCall;
     protected Integer contentLength;
     protected boolean returnAsEmptyBody;
 
@@ -112,11 +112,19 @@ public class ResponseDownloadResource {
     //                                                                       Download Data
     //                                                                       =============
     public ResponseDownloadResource data(byte[] data) {
-        if (data == null) {
-            throw new IllegalArgumentException("The argument 'data' should not be null.");
+        doData(data);
+        return this;
+    }
+
+    protected void doData(byte[] data) {
+        assertArgumentNotNull("data", data);
+        if (streamCall != null) {
+            throw new IllegalStateException("The streamCall already exists: " + streamCall);
+        }
+        if (zipStreamCall != null) {
+            throw new IllegalStateException("The zipStreamCall already exists: " + zipStreamCall);
         }
         this.byteData = data;
-        return this;
     }
 
     public ResponseDownloadResource stream(WritternStreamCall streamCall) {
@@ -131,36 +139,54 @@ public class ResponseDownloadResource {
     }
 
     protected void doStream(WritternStreamCall streamCall) {
-        if (streamCall == null) {
-            throw new IllegalArgumentException("The argument 'streamCall' should not be null.");
-        }
+        assertArgumentNotNull("streamCall", streamCall);
         if (byteData != null) {
-            throw new IllegalStateException("The byte data already exists.");
+            throw new IllegalStateException("The byte data already exists: " + byteData);
         }
-        if (consumerMap != null) {
-            throw new IllegalStateException("The consumer already exists.");
+        if (zipStreamCall != null) {
+            throw new IllegalStateException("The zipStreamCall already exists: " + zipStreamCall);
         }
         this.streamCall = streamCall;
     }
 
-    public ResponseDownloadResource consumerMap(Map<String, Consumer<OutputStream>> consumerMap) {
-        if (consumerMap == null) {
-            throw new IllegalArgumentException("The argument 'consumerMap' should not be null.");
-        }
-        this.consumerMap = consumerMap;
+    public ResponseDownloadResource zipStreamChunked(WritternZipStreamCall zipStreamCall) {
+        doZipStreamChunked(zipStreamCall);
         return this;
+    }
+
+    protected void doZipStreamChunked(WritternZipStreamCall zipStreamCall) {
+        assertArgumentNotNull("zipStreamCall", zipStreamCall);
+        if (byteData != null) {
+            throw new IllegalStateException("The byte data already exists: " + byteData);
+        }
+        if (streamCall != null) {
+            throw new IllegalStateException("The streamCall already exists: " + streamCall);
+        }
+        this.zipStreamCall = zipStreamCall;
+    }
+
+    public boolean hasByteData() {
+        return byteData != null;
     }
 
     public byte[] getByteData() {
         return byteData;
     }
 
+    public boolean hasStreamCall() {
+        return streamCall != null;
+    }
+
     public WritternStreamCall getStreamCall() {
         return streamCall;
     }
 
-    public Map<String, Consumer<OutputStream>> getConsumerMap() {
-        return consumerMap;
+    public boolean hasZipStreamCall() {
+        return zipStreamCall != null;
+    }
+
+    public WritternZipStreamCall getZipStreamCall() {
+        return zipStreamCall;
     }
 
     public Integer getContentLength() {

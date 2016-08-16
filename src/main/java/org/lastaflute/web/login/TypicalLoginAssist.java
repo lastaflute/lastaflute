@@ -18,7 +18,6 @@ package org.lastaflute.web.login;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
-import java.util.Map;
 
 import javax.annotation.Resource;
 
@@ -26,10 +25,10 @@ import org.dbflute.Entity;
 import org.dbflute.helper.HandyDate;
 import org.dbflute.optional.OptionalEntity;
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.util.DfCollectionUtil;
 import org.lastaflute.core.security.PrimaryCipher;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.login.credential.LoginCredential;
 import org.lastaflute.web.login.exception.LoginFailureException;
 import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.login.option.LoginOpCall;
@@ -97,44 +96,120 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     // ===================================================================================
     //                                                                           Find User
     //                                                                           =========
-    /**
-     * Check the user is login-able. (basically for validation)
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return true if the user is login-able.
-     */
+    // -----------------------------------------------------
+    //                                            Credential
+    //                                            ----------
     @Override
-    public boolean checkUserLoginable(String email, String password) {
-        return doCheckUserLoginable(email, encryptPassword(password));
+    public boolean checkUserLoginable(LoginCredential credential) {
+        final CredentialChecker checker = new CredentialChecker(credential);
+        checkCredential(checker);
+        if (!checker.isChecked()) {
+            handleUnknownLoginCredential(credential);
+        }
+        return checker.isLoginable();
     }
 
     /**
-     * Check the user is login-able. (basically for validation)
-     * @param email The email address for the login user. (NotNull)
-     * @param cipheredPassword The ciphered password for the login user. (NotNull)
-     * @return true if the user is login-able.
+     * Resolve the login credential by agent.
+     * @param checker The checker of login credential to determine the user existence. (NotNull)
      */
-    protected abstract boolean doCheckUserLoginable(String email, String cipheredPassword);
+    protected abstract void checkCredential(CredentialChecker checker);
 
-    /**
-     * Find the login user in the database.
-     * @param email The email address for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
-     */
     @Override
-    public OptionalEntity<USER_ENTITY> findLoginUser(String email, String password) {
-        return doFindLoginUser(email, encryptPassword(password));
+    public OptionalEntity<USER_ENTITY> findLoginUser(LoginCredential credential) {
+        final CredentialResolver resolver = new CredentialResolver(credential);
+        resolveCredential(resolver);
+        if (!resolver.isResolved()) {
+            handleUnknownLoginCredential(credential);
+        }
+        return resolver.getResolvedEntity();
     }
 
     /**
-     * Finding the login user in the database.
-     * @param email The email address for the login user. (NotNull)
-     * @param cipheredPassword The ciphered password for the login user. (NotNull)
-     * @return The optional entity of the found user. (NotNull, EmptyAllowed: when the login user is not found)
+     * Resolve the login credential by agent.
+     * @param resolver The resolver of login credential to find entity. (NotNull)
      */
-    protected abstract OptionalEntity<USER_ENTITY> doFindLoginUser(String email, String cipheredPassword);
+    protected abstract void resolveCredential(CredentialResolver resolver);
 
+    protected void handleUnknownLoginCredential(LoginCredential credential) {
+        throw new IllegalStateException("Unknown login credential: " + credential);
+    }
+
+    // checker and resolver are non-static inner class to keep generic type
+    // and stateful way to avoid generic hell (could not resolve credential generic type...)
+    // similar to chain of responsibility?
+
+    protected class CredentialChecker {
+
+        protected final LoginCredential credential;
+        protected boolean checked;
+        protected boolean loginable;
+
+        public CredentialChecker(LoginCredential credential) {
+            this.credential = credential;
+        }
+
+        public <CREDENTIAL extends LoginCredential> void check(Class<CREDENTIAL> credentialType,
+                CredentialDeterminer<CREDENTIAL, USER_ENTITY> oneArgLambda) {
+            if (!checked && credentialType.isAssignableFrom(credential.getClass())) {
+                checked = true;
+                @SuppressWarnings("unchecked")
+                final CREDENTIAL nativeCredential = (CREDENTIAL) credential;
+                loginable = oneArgLambda.determine(nativeCredential);
+            }
+        }
+
+        public boolean isChecked() {
+            return checked;
+        }
+
+        public boolean isLoginable() {
+            return loginable;
+        }
+    }
+
+    protected interface CredentialDeterminer<CREDENTIAL extends LoginCredential, USER_ENTITY> {
+
+        boolean determine(CREDENTIAL credential);
+    }
+
+    protected class CredentialResolver {
+
+        protected final LoginCredential credential;
+        protected boolean resolved;
+        protected OptionalEntity<USER_ENTITY> resolvedEntity = OptionalEntity.empty();
+
+        public CredentialResolver(LoginCredential credential) {
+            this.credential = credential;
+        }
+
+        public <CREDENTIAL extends LoginCredential> void resolve(Class<CREDENTIAL> credentialType,
+                CredentialEntityFinder<CREDENTIAL, USER_ENTITY> oneArgLambda) {
+            if (!resolved && credentialType.isAssignableFrom(credential.getClass())) {
+                resolved = true;
+                @SuppressWarnings("unchecked")
+                final CREDENTIAL nativeCredential = (CREDENTIAL) credential;
+                resolvedEntity = oneArgLambda.find(nativeCredential);
+            }
+        }
+
+        public boolean isResolved() {
+            return resolved;
+        }
+
+        public OptionalEntity<USER_ENTITY> getResolvedEntity() {
+            return resolvedEntity;
+        }
+    }
+
+    protected interface CredentialEntityFinder<CREDENTIAL extends LoginCredential, USER_ENTITY> {
+
+        OptionalEntity<USER_ENTITY> find(CREDENTIAL credential);
+    }
+
+    // -----------------------------------------------------
+    //                                              Identity
+    //                                              --------
     /**
      * Find the login user in the database.
      * @param userId for the login user. (NotNull)
@@ -166,14 +241,14 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     //                                       Login Interface
     //                                       ---------------
     @Override
-    public void login(String account, String password, LoginOpCall opLambda) throws LoginFailureException {
-        doLogin(account, password, createLoginOption(opLambda));
+    public void login(LoginCredential credential, LoginOpCall opLambda) throws LoginFailureException {
+        doLogin(credential, createLoginOption(opLambda)); // exception if login failure
     }
 
     @Override
-    public HtmlResponse loginRedirect(String account, String password, LoginOpCall opLambda, LoginRedirectSuccessCall oneArgLambda)
+    public HtmlResponse loginRedirect(LoginCredential credential, LoginOpCall opLambda, LoginRedirectSuccessCall oneArgLambda)
             throws LoginFailureException {
-        doLogin(account, password, createLoginOption(opLambda)); // exception if login failure
+        doLogin(credential, createLoginOption(opLambda)); // exception if login failure
         return switchToRequestedActionIfExists(oneArgLambda.success()); // so success only here
     }
 
@@ -198,19 +273,15 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     //                                        Actually Login
     //                                        --------------
     /**
-     * Do actually login for the user by email and password.
-     * @param account The account for the login user. (NotNull)
-     * @param password The plain password for the login user, which is encrypted in this method. (NullAllowed: only when given)
+     * Do actually login for the user by credential.
+     * @param credential The login credential for the login user. (NotNull)
      * @param option The option of login specified by caller. (NotNull)
      * @throws LoginFailureException When it fails to do login by the user info.
      */
-    protected void doLogin(String account, String password, LoginSpecifiedOption option) throws LoginFailureException {
-        assertLoginAccountRequired(account);
-        assertLoginPasswordRequired(password);
-        handleLoginSuccess(findLoginUser(account, password).orElseThrow(() -> {
-            final String msg = "Not found the user by the account and password: " + account + ", " + option;
-            final Map<String, String> authMap = DfCollectionUtil.newHashMap("account", account, "password", password);
-            return handleLoginFailure(msg, authMap, OptionalThing.of(option));
+    protected void doLogin(LoginCredential credential, LoginSpecifiedOption option) throws LoginFailureException {
+        handleLoginSuccess(findLoginUser(credential).orElseThrow(() -> {
+            final String msg = "Not found the user by the credential: " + credential + ", " + option;
+            return handleLoginFailure(msg, credential, OptionalThing.of(option));
         }), option);
     }
 
@@ -307,7 +378,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
 
     @Override
     public void reselectSessionUserBeanIfExists() throws LoginFailureException {
-        getSessionUserBean().ifPresent(oldBean -> {
+        getSavedUserBean().ifPresent(oldBean -> {
             inheritUserBeanAdditionalInfo(oldBean);
             final ID userId = oldBean.getUserId();
             logger.debug("...Re-selecting user bean in session: userId={}", userId);
@@ -648,7 +719,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     }
 
     protected boolean doTryAlreadyLogin(LoginHandlingResource resource) {
-        return getSessionUserBean().map(userBean -> {
+        return getSavedUserBean().map(userBean -> {
             if (!syncCheckLoginSessionIfNeeds(userBean)) {
                 return false;
             }
@@ -662,7 +733,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         final boolean updateToken = isUpdateTokenWhenRememberMe(resource);
         final boolean silently = isSilentlyWhenRememberMe(resource);
         final boolean success = rememberMe(op -> op.updateToken(updateToken).silentLogin(silently));
-        return success && getSessionUserBean().map(userBean -> {
+        return success && getSavedUserBean().map(userBean -> {
             clearLoginRedirectBean();
             logger.debug("...Passing login check as remember-me");
             return true;
@@ -749,11 +820,19 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     //                                      Session UserBean
     //                                      ----------------
     @Override
-    public OptionalThing<USER_BEAN> getSessionUserBean() { // use covariant generic type
+    public OptionalThing<USER_BEAN> getSavedUserBean() { // use covariant generic type
         final String key = getUserBeanKey();
         return OptionalThing.ofNullable(sessionManager.getAttribute(key, getUserBeanType()).orElse(null), () -> {
             throwLoginRequiredException("Not found the user in session by the key:" + key); // to login action
         });
+    }
+
+    /**
+     * @deprecated use getSavedUserBean()
+     */
+    @Override
+    public OptionalThing<USER_BEAN> getSessionUserBean() { // use covariant generic type
+        return getSavedUserBean();
     }
 
     @Override

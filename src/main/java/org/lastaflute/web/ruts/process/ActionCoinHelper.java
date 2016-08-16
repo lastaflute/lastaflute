@@ -28,6 +28,7 @@ import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
+import org.lastaflute.web.exception.MessagingClientErrorException;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
@@ -36,24 +37,9 @@ import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 
 /**
- * @author modified by jflute (originated in Seasar and Struts)
+ * @author jflute
  */
 public class ActionCoinHelper {
-
-    // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    /**
-     * <p>The request attribute under which the path information is stored for
-     * processing during a <code>RequestDispatcher.include</code> call.</p>
-     */
-    public static final String INCLUDE_PATH_INFO = "javax.servlet.include.path_info";
-
-    /**
-     * <p>The request attribute under which the servlet path information is stored
-     * for processing during a <code>RequestDispatcher.include</code> call.</p>
-     */
-    public static final String INCLUDE_SERVLET_PATH = "javax.servlet.include.servlet_path";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -80,14 +66,17 @@ public class ActionCoinHelper {
     public void prepareRequestClientErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
         if (runtime.isApiExecute()) {
             RequestLoggingFilter.setClientErrorHandlerOnThread((request, response, cause) -> {
-                dispatchApiClientException(runtime, reflector, cause);
+                dispatchApiClientErrorException(runtime, reflector, cause);
             }); // cleared at logging filter's finally
         }
     }
 
-    protected void dispatchApiClientException(ActionRuntime runtime, ActionResponseReflector reflector, RequestClientErrorException cause) {
+    protected void dispatchApiClientErrorException(ActionRuntime runtime, ActionResponseReflector reflector,
+            RequestClientErrorException cause) {
         if (canHandleApiException(runtime)) { // check API action just in case
-            getApiManager().handleClientException(createApiFailureResource(runtime), cause).ifPresent(apiRes -> {
+            final OptionalThing<UserMessages> optMessages = findClientErrorMessages(cause);
+            final ApiFailureResource resource = createApiFailureResource(runtime, optMessages, cause);
+            getApiManager().handleClientException(resource, cause).ifPresent(apiRes -> {
                 if (!apiRes.getHttpStatus().isPresent()) { // no specified
                     apiRes.httpStatus(cause.getErrorStatus()); // use thrown status
                 }
@@ -95,6 +84,17 @@ public class ActionCoinHelper {
             });
             runtime.clearDisplayData(); // remove (possible) large data just in case
         }
+    }
+
+    protected OptionalThing<UserMessages> findClientErrorMessages(RequestClientErrorException cause) {
+        final OptionalThing<UserMessages> optMessages;
+        if (cause instanceof MessagingClientErrorException) {
+            final UserMessages messages = ((MessagingClientErrorException) cause).getMessages();
+            optMessages = !messages.isEmpty() ? OptionalThing.of(messages) : OptionalThing.empty();
+        } else {
+            optMessages = OptionalThing.empty();
+        }
+        return optMessages;
     }
 
     // -----------------------------------------------------
@@ -110,7 +110,8 @@ public class ActionCoinHelper {
 
     protected void dispatchApiServerException(ActionRuntime runtime, ActionResponseReflector reflector, Throwable cause) {
         if (canHandleApiException(runtime)) { // check API action just in case
-            getApiManager().handleServerException(createApiFailureResource(runtime), cause).ifPresent(apiRes -> {
+            final ApiFailureResource resource = createApiFailureResource(runtime, OptionalThing.empty(), cause);
+            getApiManager().handleServerException(resource, cause).ifPresent(apiRes -> {
                 if (!apiRes.getHttpStatus().isPresent()) { // no specified
                     apiRes.httpStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // use fixed status
                 }
@@ -127,8 +128,8 @@ public class ActionCoinHelper {
         return runtime.isApiExecute() && !requestManager.getResponseManager().isCommitted();
     }
 
-    protected ApiFailureResource createApiFailureResource(ActionRuntime runtime) {
-        return new ApiFailureResource(runtime, OptionalThing.empty(), requestManager);
+    protected ApiFailureResource createApiFailureResource(ActionRuntime runtime, OptionalThing<UserMessages> messages, Throwable cause) {
+        return new ApiFailureResource(runtime, messages, requestManager);
     }
 
     protected ApiManager getApiManager() {

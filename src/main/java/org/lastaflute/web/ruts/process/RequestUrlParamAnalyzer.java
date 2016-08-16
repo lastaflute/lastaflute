@@ -34,9 +34,10 @@ import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.DfTypeUtil.ParseBooleanException;
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.Srl;
-import org.lastaflute.core.util.LaDBFluteUtil;
-import org.lastaflute.core.util.LaDBFluteUtil.ClassificationUnknownCodeException;
-import org.lastaflute.web.exception.ForcedRequest404NotFoundException;
+import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.core.util.LaClassificationUtil;
+import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
+import org.lastaflute.web.exception.Forced404NotFoundException;
 import org.lastaflute.web.exception.UrlParamArgsDifferentCountException;
 import org.lastaflute.web.exception.UrlParamOptionalParameterEmptyAccessException;
 import org.lastaflute.web.ruts.config.ActionExecute;
@@ -253,7 +254,7 @@ public class RequestUrlParamAnalyzer {
             filtered = DfTypeUtil.toLocalTime(exp);
         } else if (Boolean.class.isAssignableFrom(paramType)) {
             filtered = DfTypeUtil.toBoolean(exp);
-        } else if (LaDBFluteUtil.isClassificationType(paramType)) {
+        } else if (LaClassificationUtil.isCls(paramType)) {
             filtered = toVerifiedClassification(execute, paramType, exp);
         } else if (isOptionalParameterType(paramType)) {
             final Class<?> optGenType = optGenTypeMap.get(index);
@@ -272,17 +273,26 @@ public class RequestUrlParamAnalyzer {
 
     protected Object toVerifiedClassification(ActionExecute execute, Class<?> paramType, Object filtered) {
         try {
-            return LaDBFluteUtil.toVerifiedClassification(paramType, filtered);
+            return LaClassificationUtil.toCls(paramType, filtered);
         } catch (ClassificationUnknownCodeException e) {
-            final StringBuilder sb = new StringBuilder();
-            sb.append("Cannot convert the code of the URL parameter to the classification:");
-            sb.append("\n[Classification Convert Failure]");
-            sb.append("\n").append(execute);
-            sb.append("\ncode=").append(filtered);
-            sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
-            final String msg = sb.toString();
-            throw new ForcedRequest404NotFoundException(msg, e);
+            handleClassificationUnknownCodeException(execute, filtered, e);
+            return null; // unreachable
         }
+    }
+
+    protected void handleClassificationUnknownCodeException(ActionExecute execute, Object filtered, ClassificationUnknownCodeException e) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("Cannot convert the code of the URL parameter to the classification:");
+        sb.append("\n[Classification Convert Failure]");
+        sb.append("\n").append(execute);
+        sb.append("\ncode=").append(filtered);
+        sb.append("\n").append(e.getClass().getName()).append("\n").append(e.getMessage());
+        final String msg = sb.toString();
+        throw new Forced404NotFoundException(msg, getClassificationUnknownCodeMessages(), e);
+    }
+
+    protected UserMessages getClassificationUnknownCodeMessages() {
+        return UserMessages.empty();
     }
 
     protected void throwOptionalGenericTypeNotFoundException(ActionExecute execute, int index, Class<?> paramType,
@@ -443,7 +453,11 @@ public class RequestUrlParamAnalyzer {
     protected void throwExecuteParameterMismatchException(String msg) {
         // no server error because it can occur by user's trick easily e.g. changing URL
         // while, might be client bugs (or server) so request delicate error
-        throw new ForcedRequest404NotFoundException(msg);
+        throw new Forced404NotFoundException(msg, getExecuteParameterMismatchMessages());
+    }
+
+    protected UserMessages getExecuteParameterMismatchMessages() {
+        return UserMessages.empty();
     }
 
     // -----------------------------------------------------

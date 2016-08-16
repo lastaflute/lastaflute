@@ -13,23 +13,23 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process.exception;
+package org.lastaflute.web.exception;
 
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.web.exception.Forced400BadRequestException;
+import org.lastaflute.core.message.exception.MessagingApplicationException;
 
 /**
  * @author jflute
  */
-public class RequestUndefinedParameterInFormException extends Forced400BadRequestException {
+public class RequestIllegalTransitionException extends MessagingApplicationException {
 
     private static final long serialVersionUID = 1L;
 
-    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages) {
-        super(debugMsg, messages);
+    public RequestIllegalTransitionException(String debugMsg, String messageKey) {
+        super(debugMsg, UserMessages.createAsOneGlobal(messageKey));
     }
 
-    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages, Throwable cause) {
-        super(debugMsg, messages, cause);
+    public RequestIllegalTransitionException(String debugMsg, String messageKey, Throwable cause) {
+        super(debugMsg, UserMessages.createAsOneGlobal(messageKey), cause);
     }
 }

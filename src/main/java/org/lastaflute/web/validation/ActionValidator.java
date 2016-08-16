@@ -48,6 +48,8 @@ import javax.validation.constraints.NotNull;
 import javax.validation.groups.Default;
 import javax.validation.metadata.ConstraintDescriptor;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
@@ -220,6 +222,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                               -------
 
     protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
+        verifyFormType(form);
         return actuallyValidate(wrapAsValidIfNeeds(form), moreValidationLambda, validationErrorLambda);
     }
 
@@ -259,6 +262,11 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         if (ThreadCacheContext.exists()) {
             ThreadCacheContext.markValidatorCalled();
         }
+    }
+
+    // unknown if thread cache does not exist, so 'not' method is prepared like this
+    public static boolean certainlyValidatorNotCalled() { // called by e.g. red-cardable assist
+        return ThreadCacheContext.exists() && !ThreadCacheContext.isValidatorCalled();
     }
 
     protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
@@ -544,7 +552,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         final MESSAGES messages = toUserMessages(form, clientErrorSet);
         messages.toPropertySet().forEach(property -> {
             sb.append(LF).append(" ").append(property);
-            for (Iterator<UserMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+            for (Iterator<UserMessage> ite = messages.silentAccessByIteratorOf(property); ite.hasNext();) {
                 sb.append(LF).append("   ").append(ite.next());
             }
         });
@@ -566,7 +574,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
             final TypeFailureElement element = elementMap.get(property);
             if (element != null) { // already exists except type failure
                 handleTypeFailureGroups(element); // may be bad request
-                for (Iterator<UserMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                for (Iterator<UserMessage> ite = messages.silentAccessByIteratorOf(property); ite.hasNext();) {
                     final UserMessage current = ite.next();
                     if (current.getValidatorAnnotation().filter(anno -> {
                         return anno instanceof NotNull || anno instanceof Required;
@@ -577,7 +585,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
                 }
                 newMsgs.add(property, createTypeFailureActionMessage(element)); // add to existing property
             } else { // properties not related with type failures
-                for (Iterator<UserMessage> ite = messages.nonAccessByIteratorOf(property); ite.hasNext();) {
+                for (Iterator<UserMessage> ite = messages.silentAccessByIteratorOf(property); ite.hasNext();) {
                     newMsgs.add(property, ite.next()); // add no-related property
                 }
             }
@@ -675,6 +683,69 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
+    protected void verifyFormType(Object form) {
+        if (mightBeValidable(form)) {
+            return;
+        }
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("The validate() argument 'form' should be form type.");
+        br.addItem("Advice");
+        br.addElement("The validate() or validateApi() first argument");
+        br.addElement("should be object type. (not be e.g. String, Integer)");
+        br.addElement("For example:");
+        br.addElement("  (x): validate(\"sea\", ...) // *Bad");
+        br.addElement("  (x): validate(1, ...) // *Bad");
+        br.addElement("  (x): validate(date, ...) // *Bad");
+        br.addElement("");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse index(SeaForm form) {");
+        br.addElement("        validate(form, ...) // Good");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public JsonResponse<SeaBean> index(SeaBody body) {");
+        br.addElement("        validate(body, ...) // Good");
+        br.addElement("    }");
+        br.addElement("");
+        br.addElement("If that helps, URL parameters on execute method arguments");
+        br.addElement("are unneeded to validate().");
+        br.addElement("If the parameter type is not OptionalThing (e.g. String, Integer),");
+        br.addElement("It has been already checked as required parameter in framework.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public HtmlResponse index(String sea) {");
+        br.addElement("        validate(sea, ...) // *Bad");
+        br.addElement("        if (sea.length() > 3) ...");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse index(String sea) {");
+        br.addElement("        if (sea.length() > 3) ... // Good");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public HtmlResponse index(OptionalThing<String> sea) {");
+        br.addElement("        sea.filter(...).map(...) // Good");
+        br.addElement("    }");
+        br.addItem("Specified Form");
+        br.addElement(form.getClass().getName());
+        br.addElement(form);
+        final String msg = br.buildExceptionMessage();
+        throw new IllegalArgumentException(msg);
+    }
+
+    protected boolean mightBeValidable(Object form) {
+        return !cannotBeValidatable(form);
+    }
+
+    // similar logic is on action response reflector
+    public static boolean cannotBeValidatable(Object value) { // called by e.g. ResponseBeanValidator
+        return value instanceof String // yes-yes-yes 
+                || value instanceof Number // e.g. Integer
+                || DfTypeUtil.isAnyLocalDate(value) // e.g. LocalDate
+                || value instanceof Boolean // of course
+                || value instanceof Classification // e.g. CDef
+                || value.getClass().isPrimitive() // probably no way, just in case
+        ;
+    }
+
     protected String convertToLabelKey(String name) {
         return LABELS_PREFIX + name;
     }

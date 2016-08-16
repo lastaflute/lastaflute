@@ -35,6 +35,7 @@ import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlResultHandler;
 import org.lastaflute.db.dbflute.callbackcontext.RomanticTraceableSqlStringFilter;
+import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginHandlingResource;
 import org.lastaflute.web.login.LoginManager;
@@ -214,7 +215,7 @@ public class TypicalGodHandPrologue {
             handleTooManySqlExecution(runtime, counter);
         }
         final String exp = counter.toLineDisp();
-        requestManager.setAttribute(RequestManager.DBFLUTE_SQL_COUNT_KEY, exp); // logged by logging filter
+        requestManager.setAttribute(LastaWebKey.DBFLUTE_SQL_COUNT_KEY, exp); // logged by logging filter
     }
 
     /**

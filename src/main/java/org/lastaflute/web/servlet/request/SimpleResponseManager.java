@@ -15,16 +15,10 @@
  */
 package org.lastaflute.web.servlet.request;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -35,11 +29,14 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.di.util.LdiInputStreamUtil;
-import org.lastaflute.di.util.LdiOutputStreamUtil;
 import org.lastaflute.web.direction.FwWebDirection;
+import org.lastaflute.web.exception.Forced400BadRequestException;
+import org.lastaflute.web.exception.Forced403ForbiddenException;
+import org.lastaflute.web.exception.Forced404NotFoundException;
 import org.lastaflute.web.path.ActionPathResolver;
+import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
 import org.lastaflute.web.util.LaRequestUtil;
 import org.lastaflute.web.util.LaResponseUtil;
 import org.slf4j.Logger;
@@ -54,6 +51,7 @@ public class SimpleResponseManager implements ResponseManager {
     //                                                                          Definition
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(SimpleResponseManager.class);
+    protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -301,13 +299,14 @@ public class SimpleResponseManager implements ResponseManager {
         if (resource.isReturnAsEmptyBody()) {
             return;
         }
-        final byte[] byteData = resource.getByteData();
-        if (byteData != null) {
-            doDownloadByteData(resource, response, byteData);
-        } else if (resource.consumerMap != null) {
-            doDownloadZipWriter(resource);
-        } else {
+        if (resource.hasByteData()) {
+            doDownloadByteData(resource, response);
+        } else if (resource.hasStreamCall()) {
             doDownloadStreamCall(resource, response);
+        } else if (resource.hasZipStreamCall()) {
+            doDownloadZipStreamCall(resource, response);
+        } else {
+            throw new IllegalStateException("Unknown download resource: " + resource);
         }
     }
 
@@ -343,108 +342,20 @@ public class SimpleResponseManager implements ResponseManager {
         }
     }
 
-    protected void doDownloadByteData(ResponseDownloadResource resource, HttpServletResponse response, byte[] byteData) {
-        try {
-            final OutputStream out = response.getOutputStream();
-            try {
-                out.write(byteData);
-            } finally {
-                LdiOutputStreamUtil.close(out);
-            }
-        } catch (RuntimeException e) {
-            String msg = "Failed to download the byte data: " + resource;
-            throw new IllegalStateException(msg, e);
-        } catch (IOException e) {
-            String msg = "Failed to download the byte data: " + resource;
-            throw new IllegalStateException(msg, e);
-        }
+    protected void doDownloadByteData(ResponseDownloadResource resource, HttpServletResponse response) {
+        createResponseDownloadPerformer().downloadByteData(resource, response);
     }
-
-    // *switch to stream call way for closing headache
-    //protected void doDownloadInputStream(ResponseDownloadResource resource, HttpServletResponse response) {
-    //    final InputStream ins = resource.getInputStream();
-    //    if (ins == null) {
-    //        String msg = "Either byte data or input stream is required: " + resource;
-    //        throw new IllegalArgumentException(msg);
-    //    }
-    //    try {
-    //        final Integer contentLength = resource.getContentLength();
-    //        if (contentLength != null) {
-    //            response.setContentLength(contentLength);
-    //        }
-    //        final OutputStream out = response.getOutputStream();
-    //        try {
-    //            LdiInputStreamUtil.copy(ins, out);
-    //            LdiOutputStreamUtil.flush(out);
-    //        } finally {
-    //            LdiOutputStreamUtil.close(out);
-    //        }
-    //    } catch (RuntimeException e) {
-    //        String msg = "Failed to download the input stream: " + resource;
-    //        throw new IllegalStateException(msg, e);
-    //    } catch (IOException e) {
-    //        String msg = "Failed to download the input stream: " + resource;
-    //        throw new IllegalStateException(msg, e);
-    //    } finally {
-    //        LdiInputStreamUtil.close(ins);
-    //    }
-    //}
 
     protected void doDownloadStreamCall(ResponseDownloadResource resource, HttpServletResponse response) {
-        WritternStreamCall streamCall = resource.getStreamCall();
-        if (streamCall == null) {
-            String msg = "Either byte data or input stream is required: " + resource;
-            throw new IllegalArgumentException(msg);
-        }
-        try {
-            final Integer contentLength = resource.getContentLength();
-            if (contentLength != null) {
-                response.setContentLength(contentLength);
-            }
-            final OutputStream out = response.getOutputStream();
-            try {
-                streamCall.callback(ins -> {
-                    LdiInputStreamUtil.copy(ins, out);
-                });
-                LdiOutputStreamUtil.flush(out);
-            } finally {
-                LdiOutputStreamUtil.close(out);
-            }
-        } catch (RuntimeException e) {
-            String msg = "Failed to download the input stream: " + resource;
-            throw new IllegalStateException(msg, e);
-        } catch (IOException e) {
-            String msg = "Failed to download the input stream: " + resource;
-            throw new IllegalStateException(msg, e);
-        }
+        createResponseDownloadPerformer().downloadStreamCall(resource, response);
     }
 
-    public void doDownloadZipWriter(ResponseDownloadResource resource) {
+    protected void doDownloadZipStreamCall(ResponseDownloadResource resource, HttpServletResponse response) {
+        createResponseDownloadPerformer().downloadZipStreamCall(resource, response);
+    }
 
-        Map<String, Consumer<OutputStream>> consumerMap = resource.getConsumerMap();
-
-        try (ZipOutputStream zipOutputStream = new ZipOutputStream(getResponse().getOutputStream(), Charset.forName("UTF-8"))) {
-            consumerMap.forEach((fileName, consumer) -> {
-                try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-                    consumer.accept(outputStream);
-                    zipOutputStream.putNextEntry(new ZipEntry(fileName));
-                    outputStream.writeTo(zipOutputStream);
-                } catch (IOException e) {
-                    String msg = "Failed to write a ZIP: " + fileName;
-                    throw new IllegalStateException(msg, e);
-                } finally {
-                    try {
-                        zipOutputStream.closeEntry();
-                    } catch (IOException e) {
-                        String msg = "Failed to write a ZIP: " + fileName;
-                        throw new IllegalStateException(msg, e);
-                    }
-                }
-            });
-        } catch (IOException e) {
-            String msg = "Failed to close a ZIP";
-            throw new IllegalStateException(msg, e);
-        }
+    protected ResponseDownloadPerformer createResponseDownloadPerformer() {
+        return new ResponseDownloadPerformer();
     }
 
     // ===================================================================================
@@ -474,6 +385,75 @@ public class SimpleResponseManager implements ResponseManager {
     @Override
     public void setResponseStatus(int sc) {
         getResponse().setStatus(sc);
+    }
+
+    // ===================================================================================
+    //                                                                        Client Error
+    //                                                                        ============
+    @Override
+    public RuntimeException new400(String debugMsg) {
+        return doNew400(debugMsg, op -> {});
+    }
+
+    @Override
+    public RuntimeException new400(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        return doNew400(debugMsg, opLambda);
+    }
+
+    protected RuntimeException doNew400(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        final ForcedClientErrorOption option = createClientErrorOption(opLambda);
+        final UserMessages messages = option.getMessages().orElseGet(() -> UserMessages.empty());
+        return option.getCause().map(cause -> {
+            return new Forced400BadRequestException(debugMsg, messages, cause);
+        }).orElseGet(() -> {
+            return new Forced400BadRequestException(debugMsg, messages);
+        });
+    }
+
+    @Override
+    public RuntimeException new403(String debugMsg) {
+        return doNew403(debugMsg, op -> {});
+    }
+
+    @Override
+    public RuntimeException new403(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        return doNew403(debugMsg, opLambda);
+    }
+
+    protected RuntimeException doNew403(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        final ForcedClientErrorOption option = createClientErrorOption(opLambda);
+        final UserMessages messages = option.getMessages().orElseGet(() -> UserMessages.empty());
+        return option.getCause().map(cause -> {
+            return new Forced403ForbiddenException(debugMsg, messages, cause);
+        }).orElseGet(() -> {
+            return new Forced403ForbiddenException(debugMsg, messages);
+        });
+    }
+
+    @Override
+    public RuntimeException new404(String debugMsg) {
+        return doNew404(debugMsg, op -> {});
+    }
+
+    @Override
+    public RuntimeException new404(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        return doNew404(debugMsg, opLambda);
+    }
+
+    protected RuntimeException doNew404(String debugMsg, ForcedClientErrorOpCall opLambda) {
+        final ForcedClientErrorOption option = createClientErrorOption(opLambda);
+        final UserMessages messages = option.getMessages().orElseGet(() -> UserMessages.empty());
+        return option.getCause().map(cause -> {
+            return new Forced404NotFoundException(debugMsg, messages, cause);
+        }).orElseGet(() -> {
+            return new Forced404NotFoundException(debugMsg, messages);
+        });
+    }
+
+    protected ForcedClientErrorOption createClientErrorOption(ForcedClientErrorOpCall opLambda) {
+        final ForcedClientErrorOption option = new ForcedClientErrorOption();
+        opLambda.callback(option);
+        return option;
     }
 
     // ===================================================================================

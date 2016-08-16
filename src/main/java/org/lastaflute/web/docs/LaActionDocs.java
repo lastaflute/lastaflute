@@ -72,7 +72,7 @@ public interface LaActionDocs {
     }
 
     /**
-     * You can call the following methods defined at super class in your action class.
+     * You can call the following methods defined at super class in your actions.
      * <pre>
      * <span style="font-size: 130%; color: #553000">[Validation]</span>
      * o validate(form, moreValidationLambda, validationErrorLambda) <span style="color: #3F7E5E">// validation by annotation and program</span>
@@ -98,31 +98,79 @@ public interface LaActionDocs {
      * 
      * o toActionUrl(actionType [with chain]) <span style="color: #3F7E5E">// build action URL by action type e.g. /product/list</span>
      * 
-     * <span style="font-size: 130%; color: #553000">[Advance]</span>
-     * o async(noArgLambda) <span style="color: #3F7E5E">// execute asynchronous process</span>
-     * o required(txLambda) <span style="color: #3F7E5E">// execute inheritable transaction process</span>
-     * o requiresNew(txLambda) <span style="color: #3F7E5E">// execute new transaction process</span>
-     * 
      * <span style="font-size: 130%; color: #553000">[User Info]</span>
      * o getUserBean() <span style="color: #3F7E5E">// get bean of login user</span>
      * 
-     * <span style="font-size: 130%; color: #553000">[Verify Anything]</span>
-     * o verifyParameterExists() <span style="color: #3F7E5E">// verify parameter exists or 404 (as default)</span>
-     * o verifyParameterTrue() <span style="color: #3F7E5E">// verify parameter's anything is true or 404 (as default)</span>
-     * o verifyTrueOr404NotFound() <span style="color: #3F7E5E">// verify true or 404</span>
-     * o verifyTrueOrIllegalTransition() <span style="color: #3F7E5E">// verify true or illegal transition exception</span>
+     * <span style="font-size: 130%; color: #553000">[Double Submit]</span>
+     * o saveToken() <span style="color: #3F7E5E">// save the transaction token to session</span>
+     * o verifyToken() <span style="color: #3F7E5E">// verify the request token to prevent double submit</span>
+     * o verifyTokenKeep() <span style="color: #3F7E5E">// verify the request token keeping the saved token</span>
      * 
-     * <span style="font-size: 130%; color: #553000">[Small Facade]</span>
-     * o currentDate() <span style="color: #3F7E5E">// current date as LocalDate</span>
-     * o currentDateTime() <span style="color: #3F7E5E">// current date-time as LocalDateTime</span>
-     * o getUserMessage() <span style="color: #3F7E5E">// message for currently-requested user locale</span>
-     * o isEmpty() <span style="color: #3F7E5E">// determine empty (or null)</span>
-     * o isNotEmpty() <span style="color: #3F7E5E">// determine not empty (and not null)</span>
-     * o isCls(cdefType, code) <span style="color: #3F7E5E">// determine the code matches the classification</span>
-     * o toCls(cdefType, code) <span style="color: #3F7E5E">// convert the code to the classification</span>
+     * <span style="font-size: 130%; color: #553000">[Verify Anything]</span>
+     * o verifyOrClientError() <span style="color: #3F7E5E">// verify true or e.g. 404</span>
+     * o verifyOrIllegalTransition() <span style="color: #3F7E5E">// verify true or illegal transition exception</span>
      * </pre>
      */
     default void document1_CallableSuperMethod() {
+        throw new IllegalStateException("Cannot call it");
+    }
+
+    /**
+     * You can inject the following (frequently used) LastaFlute components in your actions.
+     * <pre>
+     * <span style="font-size: 130%; color: #553000">[Core]</span>
+     * o PrimaryCipher primaryCipher <span style="color: #3F7E5E">// e.g. encrypt(), decrypt(), oneway()</span>
+     * o TimeManager timeManager <span style="color: #3F7E5E">// e.g. currentDate()</span>
+     * o JsonManager jsonManager <span style="color: #3F7E5E">// e.g. fromJson(), toJson()</span>
+     * o MessageManager messageManager <span style="color: #3F7E5E">// e.g. getMessage(), findMessage()</span>
+     * o TemplateManager templateManager <span style="color: #3F7E5E">// e.g. parse()</span>
+     * o AsyncManager asyncManager <span style="color: #3F7E5E">// e.g. async()</span>
+     * o Postbox postbox <span style="color: #3F7E5E">// for Mail Postcard of MailFlute</span>
+     * 
+     * <span style="font-size: 130%; color: #553000">[DB]</span>
+     * o TransactionStage transactionStage <span style="color: #3F7E5E">// e.g. required(), requiresNew()</span>
+     * 
+     * <span style="font-size: 130%; color: #553000">[Web]</span>
+     * o RequestManager requestManager <span style="color: #3F7E5E">// e.g. getRequestPath(), findUserBean(), getUserLocale()</span>
+     * o ResponseManager responseManager <span style="color: #3F7E5E">// e.g. new400(), new404(), getResponse()</span>
+     * o SessionManager sessionManager <span style="color: #3F7E5E">// e.g. getAttribute(), errors()</span>
+     * o CookieManager cookieManager <span style="color: #3F7E5E">// e.g. setCookie(), setCookieCiphered(), getCookie()</span>
+     * o CsrfManager csrfManager <span style="color: #3F7E5E">// e.g. beginToken(), verifyToken()</span>
+     * </pre>
+     */
+    default void document2_InjectableLastaComponent() {
+        throw new IllegalStateException("Cannot call it");
+    }
+
+    /**
+     * You can inject the following (frequently used) quick components in your actions. <br>
+     * These components are registered by suffix naming (e.g. ...Assist, ...Logic).
+     * <pre>
+     * <span style="font-size: 130%; color: #553000">[Action Assist]</span>
+     * The assist of action, that can depend on web and view specification.
+     * You can organize action's codes by assists.
+     *  app
+     *   |-logic
+     *   |-web
+     *      |-base
+     *      |  |-login
+     *      |  |  |-<span style="color: #994747">HarborLoginAssist.java</span> <span style="color: #3F7E5E">// common assist in actions</span>
+     *      |  |-HarborBaseAction.java
+     *      |-sea
+     *         |-SeaLandAction.java
+     *         |-<span style="color: #994747">SeaLandAssist.java</span> <span style="color: #3F7E5E">// for the actions in the package</span>
+     * 
+     * <span style="font-size: 130%; color: #553000">[Business Logic]</span>
+     * The logic of business rule, that can be recycled by other actions.
+     * CANNOT depend on web and view specification. Keep pure logic to be called by everybody.
+     *  app
+     *   |-logic <span style="color: #3F7E5E">// cannot see web packages</span>
+     *   |  |-i18n
+     *   |     |-<span style="color: #994747">I18nDateLogic.java</span>
+     *   |-web
+     * </pre>
+     */
+    default void document3_InjectableQuickComponent() {
         throw new IllegalStateException("Cannot call it");
     }
 

@@ -26,15 +26,15 @@ Typesafe Web Framework for LeAn STArtup with DBFlute and Java8
 @Execute
 public HtmlResponse index(OptionalThing<Integer> pageNumber, ProductSearchForm form) {
     validate(form, messages -> {} , () -> {
-        return asHtml(path_Product_ProductListJsp);
+        return asHtml(path_Product_ProductListHtml);
     });
     PagingResultBean<Product> page = selectProductPage(pageNumber.orElse(1), form);
-    List<ProductSearchRowBean> beans = page.mappingList(product -> {
+    List<ProductSearchRowBean> beans = page.stream().map(product -> {
         return mappingToBean(product);
-    });
-    return asHtml(path_Product_ProductListJsp).renderWith(data -> {
+    }).collect(Collectors.toList());
+    return asHtml(path_Product_ProductListHtml).renderWith(data -> {
         data.register("beans", beans);
-        registerPagingNavi(data, page, form);
+        pagingAssist.registerPagingNavi(data, page, form);
     });
 }
 ```
@@ -61,7 +61,7 @@ and login by user 'Pixy' and password 'sea', and can see debug log at console.
 public class HarborBoot {
 
     public static void main(String[] args) {
-        new JettyBoot(8090, "/harbor").asDevelopment().bootAwait();
+        new JettyBoot(8090, "/harbor").asDevelopment(isNoneEnv()).bootAwait();
     }
 }
 ```
@@ -72,7 +72,7 @@ public class HarborBoot {
 <dependency>
     <groupId>org.lastaflute</groupId>
     <artifactId>lastaflute</artifactId>
-    <version>0.7.9</version>
+    <version>0.8.3</version>
 </dependency>
 ```
 

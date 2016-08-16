@@ -13,23 +13,27 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process.exception;
+package org.lastaflute.web.exception;
+
+import javax.servlet.http.HttpServletResponse;
 
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.web.exception.Forced400BadRequestException;
 
 /**
  * @author jflute
  */
-public class RequestUndefinedParameterInFormException extends Forced400BadRequestException {
+public class Forced400BadRequestException extends MessagingClientErrorException {
 
     private static final long serialVersionUID = 1L;
 
-    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages) {
-        super(debugMsg, messages);
+    protected static final String TITLE = "400 Bad Request";
+    protected static final int STATUS = HttpServletResponse.SC_BAD_REQUEST;
+
+    public Forced400BadRequestException(String debugMsg, UserMessages messages) {
+        super(debugMsg, TITLE, STATUS, messages);
     }
 
-    public RequestUndefinedParameterInFormException(String debugMsg, UserMessages messages, Throwable cause) {
-        super(debugMsg, messages, cause);
+    public Forced400BadRequestException(String debugMsg, UserMessages messages, Throwable cause) {
+        super(debugMsg, TITLE, STATUS, messages, cause);
     }
 }

@@ -40,7 +40,7 @@ import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
- * @author modified by jflute (originated in Seasar and Struts)
+ * @author jflute
  */
 public class ActionRequestProcessor {
 

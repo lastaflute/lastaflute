@@ -72,26 +72,32 @@ public abstract class ResponseBeanValidator {
         if (bean == null) {
             throw new IllegalStateException("The argument 'bean' should not be null.");
         }
-        final ActionValidator<UserMessages> validator = createActionValidator();
-        try {
-            executeValidator(validator, bean);
-        } catch (ValidationErrorException e) {
-            handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
-        } catch (ClientErrorByValidatorException e) {
-            handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
+        if (mightBeValidatable(bean)) {
+            final ActionValidator<UserMessages> validator = createActionValidator();
+            try {
+                executeValidator(validator, bean);
+            } catch (ValidationErrorException e) {
+                handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
+            } catch (ClientErrorByValidatorException e) {
+                handleResponseBeanValidationErrorException(bean, locationBuilder, e.getMessages(), e);
+            }
         }
+    }
+
+    protected boolean mightBeValidatable(Object value) {
+        return !ActionValidator.cannotBeValidatable(value);
     }
 
     protected ActionValidator<UserMessages> createActionValidator() {
         return new ActionValidator<>(requestManager, () -> {
             return new UserMessages();
-        } , getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS));
+        }, getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS));
     }
 
     protected abstract OptionalThing<Class<?>[]> getValidatorGroups();
 
     protected void executeValidator(ActionValidator<UserMessages> validator, Object bean) {
-        validator.validate(bean, more -> {} , () -> {
+        validator.validate(bean, more -> {}, () -> {
             throw new IllegalStateException("unused here, no way");
         });
     }
