@@ -17,10 +17,8 @@
 	</component>
 
 	<component name="connectionPool" class="org.lastaflute.db.dbcp.HookedConnectionPool">
-		<property name="timeout">600</property>
 		<property name="maxPoolSize">provider.config().getJdbcConnectionPoolingSize()</property>
-		<property name="allowLocalTx">true</property>
-		<preDestroy name="close"/>
+		<!-- other sub options can be set by assistant director -->
 	</component>
 
 	<component name="dataSource" class="org.lastaflute.db.dbcp.HookedPooledDataSource"/>

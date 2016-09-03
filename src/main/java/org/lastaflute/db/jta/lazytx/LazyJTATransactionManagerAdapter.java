@@ -15,7 +15,6 @@
  */
 package org.lastaflute.db.jta.lazytx;
 
-import javax.annotation.Resource;
 import javax.transaction.TransactionManager;
 import javax.transaction.UserTransaction;
 
@@ -38,14 +37,15 @@ public class LazyJTATransactionManagerAdapter extends JTATransactionManagerAdapt
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    @Resource
-    private LazyHookedUserTransaction lazyHookedUserTransaction;
+    protected final LazyHookedUserTransaction lazyHookedUserTransaction;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LazyJTATransactionManagerAdapter(UserTransaction userTransaction, TransactionManager transactionManager) {
+    public LazyJTATransactionManagerAdapter(UserTransaction userTransaction, TransactionManager transactionManager,
+            LazyHookedUserTransaction lazyHookedUserTransaction) {
         super(userTransaction, transactionManager);
+        this.lazyHookedUserTransaction = lazyHookedUserTransaction;
     }
 
     // ===================================================================================

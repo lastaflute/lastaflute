@@ -13,20 +13,16 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.security;
+package org.lastaflute.db.dbcp;
 
 /**
  * @author jflute
+ * @since 0.8.4 (2016/09/03 Saturday)
  */
-public interface SecurityResourceProvider {
+public interface ConnectionPoolResourceProvider {
 
     /**
-     * @return The cryptographer that can be invertible for primary cipher. (NotNull)
+     * @return The sub option of connection pool. (NotNull)
      */
-    InvertibleCryptographer providePrimaryInvertibleCryptographer();
-
-    /**
-     * @return The cryptographer of one-way for primary cipher. (NotNull)
-     */
-    OneWayCryptographer providePrimaryOneWayCryptographer();
+    ConnectionPoolSubOption provideSubOption();
 }
