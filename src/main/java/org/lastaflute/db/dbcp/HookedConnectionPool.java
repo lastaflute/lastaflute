@@ -24,7 +24,6 @@ import javax.sql.XAConnection;
 import javax.transaction.Transaction;
 
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.db.direction.FwDbDirection;
 import org.lastaflute.db.jta.RomanticTransaction;
 import org.lastaflute.jta.dbcp.ConnectionPool;
@@ -59,16 +58,9 @@ public class HookedConnectionPool extends SimpleConnectionPool {
      */
     @PostConstruct
     public synchronized void initialize() { // called after property set of Di xml
-        final FwDbDirection direction = assistDbDirection();
-        final ConnectionPoolResourceProvider provider = direction.assistConnectionPoolResourceProvider();
-        if (provider != null) { // not required
-            final ConnectionPoolSubOption option = provider.provideSubOption();
-            if (option == null) {
-                final String msg = "No assist for the provide of connection pool resource.";
-                throw new FwRequiredAssistNotFoundException(msg);
-            }
-            reflectSpecifiedOption(option);
-        }
+        // nothing for now, for future
+        //final FwDbDirection direction = assistDbDirection();
+        //final ConnectionPoolAdjustmentProvider provider = direction.assistConnectionPoolAdjustmentProvider();
         showBootLogging();
     }
 
@@ -76,34 +68,10 @@ public class HookedConnectionPool extends SimpleConnectionPool {
         return assistantDirector.assistDbDirection();
     }
 
-    protected void reflectSpecifiedOption(ConnectionPoolSubOption option) {
-        // embedded in Di xml as main option
-        //if (option.hasMaxPoolSize()) {
-        //    maxPoolSize = option.getMaxPoolSize(); // overriding property set of Di xml
-        //}
-        if (option.hasMinPoolSize()) {
-            minPoolSize = option.getMinPoolSize();
-        }
-        if (option.hasMaxWait()) {
-            maxWait = option.getMaxWait();
-        }
-        if (option.hasTimeout()) {
-            timeout = option.getTimeout();
-        }
-        if (option.hasReadOnly()) {
-            readOnly = option.isReadOnly();
-        }
-        if (option.hasValidationQuery()) {
-            validationQuery = option.getValidationQuery();
-        }
-        if (option.hasValidationInterval()) {
-            validationInterval = option.getValidationInterval();
-        }
-    }
-
     protected void showBootLogging() {
         if (logger.isInfoEnabled()) {
-            logger.info("[Connection Pool]" + (readOnly ? " *read-only" : ""));
+            final String bigTell = (readOnly ? " *readOnly" : "") + (suppressLocalTx ? " *suppressLocalTx" : "");
+            logger.info("[Connection Pool]" + bigTell);
             logger.info(" maxPoolSize: " + maxPoolSize);
             logger.info(" minPoolSize: " + minPoolSize);
             logger.info(" maxWait: " + maxWait + " milliseconds");

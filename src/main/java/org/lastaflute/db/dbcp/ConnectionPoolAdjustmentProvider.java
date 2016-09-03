@@ -19,10 +19,7 @@ package org.lastaflute.db.dbcp;
  * @author jflute
  * @since 0.8.4 (2016/09/03 Saturday)
  */
-public interface ConnectionPoolResourceProvider {
+public interface ConnectionPoolAdjustmentProvider { // for all pools, so hard to use
 
-    /**
-     * @return The sub option of connection pool. (NotNull)
-     */
-    ConnectionPoolSubOption provideSubOption();
+    // for future
 }

@@ -16,7 +16,7 @@
 package org.lastaflute.db.direction;
 
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
-import org.lastaflute.db.dbcp.ConnectionPoolResourceProvider;
+import org.lastaflute.db.dbcp.ConnectionPoolAdjustmentProvider;
 import org.lastaflute.db.dbcp.XAConnectionHook;
 import org.lastaflute.db.dbflute.classification.ListedClassificationProvider;
 import org.lastaflute.db.jta.stage.VestibuleTxProvider;
@@ -37,7 +37,7 @@ public class FwDbDirection {
     // -----------------------------------------------------
     //                                                 JDBC
     //                                                ------
-    protected ConnectionPoolResourceProvider connectionPoolResourceProvider;
+    protected ConnectionPoolAdjustmentProvider connectionPoolAdjustmentProvider;
     protected XAConnectionHook newbornConnectionHook;
     protected VestibuleTxProvider vestibuleTxProvider;
 
@@ -55,8 +55,8 @@ public class FwDbDirection {
     // -----------------------------------------------------
     //                                                 JDBC
     //                                                ------
-    public void directConnectionPool(ConnectionPoolResourceProvider connectionPoolResourceProvider) {
-        this.connectionPoolResourceProvider = connectionPoolResourceProvider;
+    public void directConnectionPool(ConnectionPoolAdjustmentProvider connectionPoolAdjustmentProvider) {
+        this.connectionPoolAdjustmentProvider = connectionPoolAdjustmentProvider;
     }
 
     public void directNewbornConnection(XAConnectionHook newbornConnectionHook) {
@@ -81,8 +81,8 @@ public class FwDbDirection {
     // -----------------------------------------------------
     //                                                 JDBC
     //                                                ------
-    public ConnectionPoolResourceProvider assistConnectionPoolResourceProvider() {
-        return connectionPoolResourceProvider; // not required, it's optional assist
+    public ConnectionPoolAdjustmentProvider assistConnectionPoolAdjustmentProvider() {
+        return connectionPoolAdjustmentProvider; // not required, it's optional assist
     }
 
     public XAConnectionHook assistNewbornConnectionHook() {

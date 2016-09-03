@@ -17,14 +17,26 @@ package org.lastaflute.db.replication.selectable;
 
 import javax.sql.DataSource;
 
+import org.lastaflute.di.core.exception.ComponentNotFoundException;
+
 /**
  * @author modified by jflute (originated in Seasar)
  */
 public interface SelectableDataSourceHolder {
 
+    /**
+     * @param key The key of data source. (NotNull)
+     */
     void switchSelectableDataSourceKey(String key);
 
+    /**
+     * @return The current key of data source. (NotNull)
+     */
     String getCurrentSelectableDataSourceKey();
 
+    /**
+     * @return The selected data source. (NotNull)
+     * @throws ComponentNotFoundException When the data source is not found by the key. 
+     */
     DataSource getSelectedDataSource();
 }
