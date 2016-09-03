@@ -39,13 +39,13 @@ import org.lastaflute.db.jta.romanticist.TransactionMemoriesProvider;
 import org.lastaflute.db.jta.romanticist.TransactionRomanticMemoriesBuilder;
 import org.lastaflute.db.jta.romanticist.TransactionRomanticSnapshotBuilder;
 import org.lastaflute.db.jta.romanticist.TransactionSavedRecentResult;
-import org.lastaflute.jta.core.TransactionImpl;
+import org.lastaflute.jta.core.LaTransaction;
 import org.lastaflute.jta.dbcp.ConnectionWrapper;
 
 /**
  * @author jflute
  */
-public class RomanticTransaction extends TransactionImpl {
+public class RomanticTransaction extends LaTransaction {
 
     // ===================================================================================
     //                                                                           Attribute

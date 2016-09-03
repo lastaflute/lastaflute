@@ -28,18 +28,18 @@ import org.lastaflute.core.magic.TransactionTimeContext;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
-import org.lastaflute.jta.core.UserTransactionImpl;
+import org.lastaflute.jta.core.LaUserTransaction;
 
 /**
  * @author jflute
  */
-public class HookedUserTransaction extends UserTransactionImpl {
+public class HookedUserTransaction extends LaUserTransaction {
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public HookedUserTransaction(TransactionManager tm) {
-        super(tm);
+    public HookedUserTransaction(TransactionManager transactionManager) {
+        super(transactionManager);
     }
 
     // ===================================================================================

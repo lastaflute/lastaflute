@@ -22,7 +22,7 @@ import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.mail.PostedMailCounter;
 import org.lastaflute.core.mail.RequestedMailCount;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
-import org.lastaflute.db.dbflute.callbackcontext.RequestedSqlCount;
+import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RequestedSqlCount;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;

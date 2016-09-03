@@ -21,6 +21,7 @@ import org.lastaflute.di.core.customizer.PointTxAttributeCustomizer;
 import org.lastaflute.web.Execute;
 
 /**
+ * Basically unneeded, use transaction stage.
  * @author jflute
  */
 public class ActionTxAttributeCustomizer extends PointTxAttributeCustomizer {
