@@ -32,8 +32,8 @@ public class ApiFailureResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ActionRuntime runtime;
-    protected final OptionalThing<UserMessages> messages;
+    protected final ActionRuntime runtime; // runtime for current action
+    protected final OptionalThing<UserMessages> messages; // basically embedded in exception
     protected final RequestManager requestManager;
 
     // ===================================================================================
@@ -49,7 +49,8 @@ public class ApiFailureResource {
     //                                                                            Messages
     //                                                                            ========
     /**
-     * Get the list of message text for the errors by user locale.
+     * Get the list of message text for the errors by user locale. <br>
+     * Basically these are embedded in exception.
      * @return The list of message, resolved by resource. (NotNull, EmptyAllowed)
      */
     public List<String> getMessageList() {
@@ -59,7 +60,8 @@ public class ApiFailureResource {
     }
 
     /**
-     * Get the map (property : list of message text) of message for the errors  by user locale.
+     * Get the map (property : list of message text) of message for the errors by user locale. <br>
+     * Basically these are embedded in exception.
      * @return The map of message, resolved by resource. (NotNull, EmptyAllowed)
      */
     public Map<String, List<String>> getPropertyMessageMap() {

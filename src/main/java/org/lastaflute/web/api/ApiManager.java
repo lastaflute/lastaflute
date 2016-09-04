@@ -31,7 +31,7 @@ public interface ApiManager {
      * Handle API failure when validation error. <br>
      * The hookFinally() of action hook will be called after this. <br>
      * This method is called in action transaction (always rolled-back).
-     * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
+     * @param resource The resource of API result, basically contains validation error messages. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
     ApiResponse handleValidationError(ApiFailureResource resource);
@@ -39,7 +39,7 @@ public interface ApiManager {
     /**
      * Handle API failure when application exception. <br>
      * The hookFinally() of action hook will be called after this.
-     * @param resource The resource of API result, contains e.g. error messages if it exists. (NotNull)
+     * @param resource The resource of API result, may contain error messages (e.g. embedded in exception). (NotNull)
      * @param cause The application exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The API response, which is for e.g. JSON or XML. (NotNull)
      */
@@ -52,7 +52,7 @@ public interface ApiManager {
      * Handle API failure when client exception, e.g. 404 not found, 400 bad request. (Not Required) <br>
      * HTTP status will be automatically sent by framework's hook so empty response allowed. <br>
      * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
-     * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)
+     * @param resource The resource of API result, may contain error messages (e.g. embedded in exception). (NotNull)
      * @param cause The client exception thrown by (basically) action execute, might be translated. (NotNull)
      * @return The optional API response, which is for e.g. JSON or XML. (NotNull: if empty, default handling about it)
      */
