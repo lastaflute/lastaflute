@@ -69,6 +69,8 @@ public class JTATransactionStage implements TransactionStage {
             }
             return tx.getResult();
         } catch (Throwable e) {
+            // same as DefaultTransactionCallback
+            // forcedly roll-backed if exception in 'required' transaction scope
             adapter.setRollbackOnly();
             throw e;
         }

@@ -138,7 +138,7 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     }
 
     protected ObjectiveProperties newObjectiveProperties(String resourcePath, PropertyFilter propertyFilter) {
-        return new ObjectiveProperties(resourcePath) {
+        return new ObjectiveProperties(resourcePath) { // for e.g. checking existence and filtering value
             @Override
             public String get(String propertyKey) {
                 final String propertyValue = super.get(propertyKey);
@@ -148,7 +148,7 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         };
     }
 
-    protected void verifyPropertyValue(String propertyKey, final String propertyValue) {
+    protected void verifyPropertyValue(String propertyKey, String propertyValue) {
         if (propertyValue == null) {
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
             br.addNotice("Not found the configuration property by the key.");
@@ -186,10 +186,20 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     // ===================================================================================
     //                                                                        Get Property
     //                                                                        ============
+    // not null or exception because of extension
     @Override
     public String get(String propertyKey) {
         reloadIfNeeds();
         return prop.get(propertyKey);
+    }
+
+    @Override
+    public String getOrDefault(String propertyKey, String defaultValue) { // basically for Di xml
+        try {
+            return get(propertyKey);
+        } catch (ConfigPropertyNotFoundException ignored) { // easy for now, no many users
+            return defaultValue; // null allowed
+        }
     }
 
     @Override

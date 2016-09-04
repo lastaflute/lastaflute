@@ -21,6 +21,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.logging.Logger;
 
+import javax.annotation.Resource;
 import javax.sql.DataSource;
 
 /**
@@ -31,12 +32,13 @@ public class SelectableDataSourceProxy implements DataSource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected SelectableDataSourceHolder selectableDataSourceHolder;
+    @Resource
+    protected SelectableDataSourceHolder selectableDataSourceHolder; // needs selectable_datasource.xml
 
     // ===================================================================================
     //                                                                 Selected DataSource
     //                                                                 ===================
-    public DataSource getDataSource() {
+    public DataSource getSelectedDataSource() {
         return selectableDataSourceHolder.getSelectedDataSource();
     }
 
@@ -44,46 +46,39 @@ public class SelectableDataSourceProxy implements DataSource {
     //                                                                      Implementation
     //                                                                      ==============
     public Connection getConnection() throws SQLException {
-        return getDataSource().getConnection();
+        return getSelectedDataSource().getConnection();
     }
 
     public Connection getConnection(final String username, final String password) throws SQLException {
-        return getDataSource().getConnection(username, password);
+        return getSelectedDataSource().getConnection(username, password);
     }
 
     public PrintWriter getLogWriter() throws SQLException {
-        return getDataSource().getLogWriter();
+        return getSelectedDataSource().getLogWriter();
     }
 
     public void setLogWriter(final PrintWriter out) throws SQLException {
-        getDataSource().setLogWriter(out);
+        getSelectedDataSource().setLogWriter(out);
     }
 
     public int getLoginTimeout() throws SQLException {
-        return getDataSource().getLoginTimeout();
+        return getSelectedDataSource().getLoginTimeout();
     }
 
     public void setLoginTimeout(int seconds) throws SQLException {
-        getDataSource().setLoginTimeout(seconds);
+        getSelectedDataSource().setLoginTimeout(seconds);
     }
 
     // #java8comp DataSource: getParentLogger(), unwrap(), isWrapperFor()
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return getDataSource().getParentLogger();
+        return getSelectedDataSource().getParentLogger();
     }
 
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        return getDataSource().unwrap(iface);
+        return getSelectedDataSource().unwrap(iface);
     }
 
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return getDataSource().isWrapperFor(iface);
-    }
-
-    // ===================================================================================
-    //                                                                            Accessor
-    //                                                                            ========
-    public void setSelectableDataSourceHolder(SelectableDataSourceHolder selectableDataSourceHolder) {
-        this.selectableDataSourceHolder = selectableDataSourceHolder;
+        return getSelectedDataSource().isWrapperFor(iface);
     }
 }

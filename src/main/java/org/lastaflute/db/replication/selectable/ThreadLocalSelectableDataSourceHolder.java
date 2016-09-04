@@ -15,6 +15,7 @@
  */
 package org.lastaflute.db.replication.selectable;
 
+import javax.annotation.Resource;
 import javax.sql.DataSource;
 
 import org.lastaflute.di.core.LaContainer;
@@ -26,9 +27,14 @@ import org.lastaflute.di.util.LdiStringUtil;
 public class ThreadLocalSelectableDataSourceHolder implements SelectableDataSourceHolder {
 
     // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    protected static final ThreadLocal<String> selectableDataSourceKey = new ThreadLocal<String>();
+
+    // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ThreadLocal<String> selectableDataSourceKey = new ThreadLocal<String>();
+    @Resource
     protected LaContainer container;
 
     // ===================================================================================
@@ -39,11 +45,11 @@ public class ThreadLocalSelectableDataSourceHolder implements SelectableDataSour
     }
 
     public String getCurrentSelectableDataSourceKey() {
-        return (String) selectableDataSourceKey.get();
+        return selectableDataSourceKey.get();
     }
 
     public DataSource getSelectedDataSource() {
-        return (DataSource) container.getRoot().getComponent(getDataSourceComponentName());
+        return container.getRoot().getComponent(getDataSourceComponentName());
     }
 
     protected String getDataSourceComponentName() {
@@ -52,16 +58,5 @@ public class ThreadLocalSelectableDataSourceHolder implements SelectableDataSour
             throw new IllegalStateException("Not found the current selectable data source key.");
         }
         return dsName + "DataSource";
-    }
-
-    // ===================================================================================
-    //                                                                            Accessor
-    //                                                                            ========
-    public LaContainer getContainer() {
-        return container;
-    }
-
-    public void setContainer(LaContainer container) {
-        this.container = container;
     }
 }

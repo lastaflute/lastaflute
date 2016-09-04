@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.db.jta.lazy;
+package org.lastaflute.db.jta.lazytx;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,8 +53,8 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LazyHookedUserTransaction(TransactionManager tm) {
-        super(tm);
+    public LazyHookedUserTransaction(TransactionManager transactionManager) {
+        super(transactionManager);
     }
 
     // ===================================================================================
@@ -68,7 +68,7 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
                 toBeLazyTransaction(); // not begin real transaction here for lazy
             } else { // lazy now, this begin() means nested transaction
                 if (!isLazyTransactionRealBegun()) { // not begun lazy transaction yet
-                    beginRealTransactionLazily(); // forcedly begin outer transaction
+                    beginRealTransactionLazily(); // forcedly begin outer transaction before e.g. 'requiresNew' scope
                     suspendForcedlyBegunLazyTransactionIfNeeds(); // like requires new transaction
                 }
                 incrementHierarchyLevel();
@@ -216,17 +216,15 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     //                                                                      Suspend/Resume
     //                                                                      ==============
     protected void suspendForcedlyBegunLazyTransactionIfNeeds() throws SystemException {
-        final Transaction suspended = tm.suspend();
-        if (tm != null) {
-            arrangeForcedlyBegunResumer(() -> {
-                if (isHerarchyLevelFirst()) {
-                    doResumeForcedlyBegunLazyTransaction(suspended);
-                    return true;
-                } else {
-                    return false;
-                }
-            });
-        }
+        final Transaction suspended = transactionManager.suspend();
+        arrangeForcedlyBegunResumer(() -> {
+            if (isHerarchyLevelFirst()) {
+                doResumeForcedlyBegunLazyTransaction(suspended);
+                return true;
+            } else {
+                return false;
+            }
+        });
     }
 
     protected void arrangeForcedlyBegunResumer(ForcedlyBegunResumer resumer) {
@@ -235,7 +233,7 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
 
     protected void doResumeForcedlyBegunLazyTransaction(Transaction suspended) {
         try {
-            tm.resume(suspended);
+            transactionManager.resume(suspended);
         } catch (InvalidTransactionException e) {
             String msg = "Invalid the transaction: " + suspended;
             throw new IllegalStateException(msg, e);

@@ -16,12 +16,12 @@
 package org.lastaflute.db.jta;
 
 import org.lastaflute.jta.core.ExtendedTransaction;
-import org.lastaflute.jta.core.TransactionManagerImpl;
+import org.lastaflute.jta.core.LaTransactionManager;
 
 /**
  * @author jflute
  */
-public class HookedTransactionManager extends TransactionManagerImpl {
+public class HookedTransactionManager extends LaTransactionManager {
 
     @Override
     protected ExtendedTransaction createTransaction() {

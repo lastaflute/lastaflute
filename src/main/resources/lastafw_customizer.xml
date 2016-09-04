@@ -1,16 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
 	"http://dbflute.org/meta/lastadi10.dtd">
-<components>
+<components> <!-- included by customizer.xml of Lasta Di -->
 	<!-- _/_/_/_/_/_/_/_/ -->
 	<!-- _/   Action   _/ -->
 	<!-- _/_/_/_/_/_/_/_/ -->
 	<component name="actionCustomizer" class="org.lastaflute.web.aspect.ActionCustomizerChain">
-	  	<postConstruct name="addCustomizer">
+		<!-- quit Transactional annotation in action, use transaction stage
+		 action class is as non-enhanced object as possible for boot speed so also no handling
+		<postConstruct name="addCustomizer">
 			<arg>
-			  	<!-- XxxAction classes under action package can be treated as Action -->
+				<component class="org.lastaflute.web.aspect.ActionTxAttributeCustomizer"/>
+			</arg>
+		</postConstruct>
+		 -->
+		<postConstruct name="addCustomizer">
+			<arg>
+				<!-- XxxAction classes under action package can be treated as Action -->
 				<component class="org.lastaflute.web.aspect.RomanticActionCustomizer"/>
 			</arg>
-	  	</postConstruct>
+		</postConstruct>
 	</component>
 </components>

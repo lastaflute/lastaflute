@@ -1,27 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
 	"http://dbflute.org/meta/lastadi10.dtd">
-<components namespace="jdbc">
-	<include path="jta.xml"/>
-	<include path="lastaflute_assist.xml"/>
-
-	<component name="xaDataSource" class="org.lastaflute.db.dbcp.HookedXADataSource">
-		<property name="driverClassName">
-			provider.config().getJdbcDriver()
-		</property>
-		<property name="URL">
-			provider.config().getJdbcUrl()
-		</property>
-		<property name="user">provider.config().getJdbcUser()</property>
-		<property name="password">provider.config().getJdbcPassword()</property>
-	</component>
-
-	<component name="connectionPool" class="org.lastaflute.db.dbcp.HookedConnectionPool">
-		<property name="timeout">600</property>
-		<property name="maxPoolSize">provider.config().getJdbcConnectionPoolingSize()</property>
-		<property name="allowLocalTx">true</property>
-		<preDestroy name="close"/>
-	</component>
-
-	<component name="dataSource" class="org.lastaflute.db.dbcp.HookedPooledDataSource"/>
+<components namespace="jdbc"> <!-- included by rdb.xml of Lasta Di for main schema -->
+	<include condition="#exists('#path')" path="my_jdbc.xml"/>
+	<include path="lastafw_jdbc.xml"/>
 </components>
