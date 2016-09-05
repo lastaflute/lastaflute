@@ -19,12 +19,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import javax.sql.XAConnection;
 import javax.transaction.Transaction;
 
-import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.db.direction.FwDbDirection;
 import org.lastaflute.db.jta.RomanticTransaction;
 import org.lastaflute.jta.dbcp.ConnectionPool;
 import org.lastaflute.jta.dbcp.ConnectionWrapper;
@@ -43,13 +40,6 @@ public class HookedConnectionPool extends SimpleConnectionPool {
     private static final Logger logger = LoggerFactory.getLogger(HookedConnectionPool.class);
 
     // ===================================================================================
-    //                                                                           Attribute
-    //                                                                           =========
-    /** The assistant director (AD) for framework. (NotNull: after initialization) */
-    @Resource
-    protected FwAssistantDirector assistantDirector;
-
-    // ===================================================================================
     //                                                                          Initialize
     //                                                                          ==========
     /**
@@ -62,10 +52,6 @@ public class HookedConnectionPool extends SimpleConnectionPool {
         //final FwDbDirection direction = assistDbDirection();
         //final ConnectionPoolAdjustmentProvider provider = direction.assistConnectionPoolAdjustmentProvider();
         showBootLogging();
-    }
-
-    protected FwDbDirection assistDbDirection() {
-        return assistantDirector.assistDbDirection();
     }
 
     protected void showBootLogging() {
