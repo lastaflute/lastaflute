@@ -75,6 +75,10 @@ public class BowgunDestructiveAdjuster {
     // ===================================================================================
     //                                                                       Determination
     //                                                                       =============
+    public static boolean hasAnyBowgun() {
+        return isAsyncToNormalSync() || isRequiresNewToRequired();
+    }
+
     public static boolean isAsyncToNormalSync() {
         return asyncToNormalSync;
     }
