@@ -44,7 +44,7 @@ public class BowgunDestructiveAdjuster {
     public static void shootBowgunAsyncToNormalSync() {
         assertUnlocked();
         if (logger.isInfoEnabled()) {
-            logger.info("...Shooting bowgun: changing asynchronous to (normal) synchronous of AsyncManager.");
+            logger.info("...Shooting bowgun: changing asynchronous to (normal) synchronous of AsyncManager");
         }
         asyncToNormalSync = true;
         lock();
@@ -53,9 +53,22 @@ public class BowgunDestructiveAdjuster {
     public static void shootBowgunRequiresNewToRequired() {
         assertUnlocked();
         if (logger.isInfoEnabled()) {
-            logger.info("...Shooting bowgun: changing requiresNew() to required() of TransactionStage.");
+            logger.info("...Shooting bowgun: changing requiresNew() to required() of TransactionStage");
         }
         requiresNewToRequired = true;
+        lock();
+    }
+
+    // ===================================================================================
+    //                                                                             Restore
+    //                                                                             =======
+    public static void restoreBowgunAll() {
+        assertUnlocked();
+        if (logger.isInfoEnabled()) {
+            logger.info("...Restoring bowgun destructive adjuster");
+        }
+        asyncToNormalSync = false;
+        requiresNewToRequired = false;
         lock();
     }
 
