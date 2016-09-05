@@ -56,6 +56,7 @@ import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.magic.ThreadCompleted;
 import org.lastaflute.core.magic.async.ConcurrentAsyncOption.ConcurrentAsyncInheritType;
+import org.lastaflute.core.magic.destructive.BowgunDestructiveAdjuster;
 import org.lastaflute.core.mail.PostedMailCounter;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RomanticTraceableSqlFireHook;
@@ -241,24 +242,40 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     protected void doAsyncPrimary(ConcurrentAsyncCall callback) {
-        final String keyword = "primary" + buildExecutorHashExp(primaryExecutorService);
-        primaryExecutorService.execute(createRunnable(callback, keyword));
+        actuallyAsync(callback, primaryExecutorService, "primary");
     }
 
     protected void doAsyncSecondary(ConcurrentAsyncCall callback) {
-        final String keyword = "secondary" + buildExecutorHashExp(secondaryExecutorService);
-        secondaryExecutorService.submit(createRunnable(callback, keyword));
+        actuallyAsync(callback, secondaryExecutorService, "secondary");
+    }
+
+    protected void actuallyAsync(ConcurrentAsyncCall callback, ExecutorService service, String title) {
+        if (isDestructiveAsyncToNormalSync()) { // destructive (for e.g. UnitTest)
+            destructiveNormalSync(callback);
+        } else { // basically here
+            final String keyword = title + buildExecutorHashExp(service);
+            final Runnable task = createRunnable(callback, keyword);
+            service.submit(task); // real asynchronous
+        }
+    }
+
+    protected void destructiveNormalSync(ConcurrentAsyncCall callback) {
+        if (logger.isInfoEnabled()) { // no way of production so INFO
+            logger.info("#flow #async *Non-asynchronous by destructive adjuster, so executing as synchronous.");
+        }
+        // *not same state as real asynchronous, thread local values are different so dangerous
+        callback.callback(); // normal synchronous
     }
 
     // ===================================================================================
     //                                                                     Create Runnable
     //                                                                     ===============
-    protected Runnable createRunnable(ConcurrentAsyncCall call, String keyword) {
+    protected Runnable createRunnable(ConcurrentAsyncCall call, String keyword) { // in caller thread
         final Map<String, Object> threadCacheMap = inheritThreadCacheContext(call);
         final AccessContext accessContext = inheritAccessContext(call);
         final CallbackContext callbackContext = inheritCallbackContext(call);
         final Map<String, Object> variousContextMap = findCallerVariousContextMap();
-        return () -> {
+        return () -> { // in other thread
             prepareThreadCacheContext(call, threadCacheMap);
             preparePreparedAccessContext(call, accessContext);
             prepareCallbackContext(call, callbackContext);
@@ -673,6 +690,13 @@ public class SimpleAsyncManager implements AsyncManager {
         return OptionalThing.ofNullable(ThreadCacheContext.findMailCounter(), () -> {
             throw new IllegalStateException("Not found the mail count in the thread cache.");
         });
+    }
+
+    // ===================================================================================
+    //                                                                         Destructive
+    //                                                                         ===========
+    protected boolean isDestructiveAsyncToNormalSync() { // basically for UnitTest
+        return BowgunDestructiveAdjuster.isAsyncToNormalSync();
     }
 
     // ===================================================================================

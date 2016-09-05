@@ -18,6 +18,7 @@ package org.lastaflute.db.jta.stage;
 import javax.annotation.Resource;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.magic.destructive.BowgunDestructiveAdjuster;
 import org.lastaflute.di.tx.TransactionManagerAdapter;
 
 /**
@@ -50,13 +51,17 @@ public class JTATransactionStage implements TransactionStage {
     @SuppressWarnings("unchecked")
     @Override
     public <RESULT> OptionalThing<RESULT> requiresNew(TransactionShow<RESULT> txLambda) {
-        try {
-            return wrapOptional((RESULT) transactionManagerAdapter.requiresNew(adapter -> {
-                return doPerform(txLambda, adapter);
-            }), txLambda);
-        } catch (Throwable e) {
-            handleTransactionFailure(txLambda, e);
-            return null; // unreachable
+        if (isDestructiveRequiresNewToRequired()) { // destructive (for e.g. UnitTest)
+            return required(txLambda); // use outer transaction if it exists
+        } else { // basically here
+            try {
+                return wrapOptional((RESULT) transactionManagerAdapter.requiresNew(adapter -> {
+                    return doPerform(txLambda, adapter);
+                }), txLambda);
+            } catch (Throwable e) {
+                handleTransactionFailure(txLambda, e);
+                return null; // unreachable
+            }
         }
     }
 
@@ -103,7 +108,7 @@ public class JTATransactionStage implements TransactionStage {
     }
 
     // ===================================================================================
-    //                                                                        Small Helper
+    //                                                                        Assist Logic
     //                                                                        ============
     protected <RESULT> BegunTx<RESULT> newBegunTransaction() {
         return new BegunTx<RESULT>();
@@ -114,5 +119,12 @@ public class JTATransactionStage implements TransactionStage {
             String msg = "Not found the transaction result: " + txLambda;
             throw new IllegalStateException(msg);
         });
+    }
+
+    // ===================================================================================
+    //                                                                         Destructive
+    //                                                                         ===========
+    protected boolean isDestructiveRequiresNewToRequired() { // basically for UnitTest
+        return BowgunDestructiveAdjuster.isRequiresNewToRequired();
     }
 }
