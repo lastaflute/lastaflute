@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
+	"http://dbflute.org/meta/lastadi10.dtd">
+<components namespace="jta">
+	<!-- whole redefine here for hooked components
+	 application can use e.g. jta+userTransaction.xml for overriding
+	 -->
+	<component name="transactionManager" class="org.lastaflute.db.jta.HookedTransactionManager"/>
+	<component name="userTransaction" class="org.lastaflute.db.jta.HookedUserTransaction"/>
+
+	<!-- using TransactionManager -->
+	<component name="transactionSynchronizationRegistry" class="org.lastaflute.db.jta.HookedTransactionSynchronizationRegistry"/>
+
+	<!-- using TransactionManager, UserTransaction -->
+	<component name="transactionManagerAdapter" class="org.lastaflute.db.jta.HookedTransactionManagerAdapter"/>
+</components>

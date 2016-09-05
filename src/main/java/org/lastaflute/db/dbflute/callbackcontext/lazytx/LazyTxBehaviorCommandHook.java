@@ -17,7 +17,7 @@ package org.lastaflute.db.dbflute.callbackcontext.lazytx;
 
 import org.dbflute.bhv.core.BehaviorCommandHook;
 import org.dbflute.bhv.core.BehaviorCommandMeta;
-import org.lastaflute.db.jta.lazytx.LazyHookedUserTransaction;
+import org.lastaflute.db.jta.lazytx.LazyUserTransaction;
 
 /**
  * @author jflute
@@ -27,7 +27,7 @@ public class LazyTxBehaviorCommandHook implements BehaviorCommandHook {
 
     public void hookBefore(BehaviorCommandMeta meta) {
         if (canBeginTransactionLazily(meta)) {
-            LazyHookedUserTransaction.beginRealTransactionLazily();
+            LazyUserTransaction.beginRealTransactionLazily();
         }
     }
 

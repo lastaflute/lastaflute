@@ -45,7 +45,7 @@ public class LazyTransactionArranger {
      * @param oneArgLambda The consumer of behavior command hook for lazy transaction. (NotNull)
      */
     public void readyLazyTransaction(Consumer<LazyTxBehaviorCommandHook> oneArgLambda) {
-        LazyHookedUserTransaction.readyLazyTransaction();
+        LazyUserTransaction.readyLazyTransaction();
         oneArgLambda.accept(createLazyTxBehaviorCommandHook());
     }
 
@@ -72,6 +72,6 @@ public class LazyTransactionArranger {
      * </pre>
      */
     public void closeLazyTransaction() {
-        LazyHookedUserTransaction.closeLazyTransaction();
+        LazyUserTransaction.closeLazyTransaction();
     }
 }

@@ -34,26 +34,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Hooked user transaction for Lazy transaction.
+ * The user transaction for lazy transaction.
  * <pre>
  * [Restriction]
- * You should also use LazyRequiredInterceptor instead of default one in j2ee.dicon.
- * While MandatoryTx and NeverTx treats lazy transaction as no transaction.
+ * MandatoryTx and NeverTx treats lazy transaction as no transaction.
  * Because getStatus() returns real status (cannot return lazy status).
  * </pre>
  * @author jflute
  */
-public class LazyHookedUserTransaction extends HookedUserTransaction {
+public class LazyUserTransaction extends HookedUserTransaction {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(LazyHookedUserTransaction.class);
+    private static final Logger logger = LoggerFactory.getLogger(LazyUserTransaction.class);
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LazyHookedUserTransaction(TransactionManager transactionManager) {
+    public LazyUserTransaction(TransactionManager transactionManager) {
         super(transactionManager);
     }
 
@@ -323,8 +322,33 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     // so no extension for lazy
 
     // ===================================================================================
-    //                                                                       Lazy Handling
-    //                                                                       =============
+    //                                                                        Assist Logic
+    //                                                                        ============
+    public boolean canLazyTransaction() {
+        return isLazyTxAllowed() && isLazyTransactionReadyLazy();
+    }
+
+    public boolean isJustLazyNow() {
+        return isLazyTransactionLazyBegun() && !isLazyTransactionRealBegun();
+    }
+
+    protected boolean isLazyTxAllowed() { // you can override
+        return true;
+    }
+
+    protected void arrangeLazyProcessIfAllowed(IndependentProcessor processor) {
+        final String lazyKey = generateLazyProcessListKey();
+        List<IndependentProcessor> lazyList = ThreadCacheContext.getObject(lazyKey);
+        if (lazyList == null) {
+            lazyList = new ArrayList<IndependentProcessor>();
+            ThreadCacheContext.setObject(lazyKey, lazyList);
+        }
+        lazyList.add(processor);
+    }
+
+    // ===================================================================================
+    //                                                                static Lazy Handling
+    //                                                                ====================
     // -----------------------------------------------------
     //                                            Controller
     //                                            ----------
@@ -336,7 +360,7 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     }
 
     public static void beginRealTransactionLazily() {
-        final String lazyKey = LazyHookedUserTransaction.generateLazyProcessListKey();
+        final String lazyKey = generateLazyProcessListKey();
         final List<IndependentProcessor> lazyList = ThreadCacheContext.getObject(lazyKey);
         if (lazyList != null) {
             markLazyRealBegun();
@@ -358,18 +382,6 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
         ThreadCacheContext.removeObject(generateResumeKey()); // just in case
     }
 
-    public boolean canLazyTransaction() {
-        return isLazyTxAllowed() && isLazyTransactionReadyLazy();
-    }
-
-    public boolean isJustLazyNow() {
-        return isLazyTransactionLazyBegun() && !isLazyTransactionRealBegun();
-    }
-
-    protected boolean isLazyTxAllowed() {
-        return true;
-    }
-
     // -----------------------------------------------------
     //                                            Lazy Ready
     //                                            ----------
@@ -377,7 +389,7 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
         ThreadCacheContext.setObject(generateReadyLazyKey(), true);
     }
 
-    protected boolean isLazyTransactionReadyLazy() {
+    protected static boolean isLazyTransactionReadyLazy() {
         return ThreadCacheContext.determineObject(generateReadyLazyKey());
     }
 
@@ -388,11 +400,11 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     // -----------------------------------------------------
     //                                            Lazy Begun
     //                                            ----------
-    protected void markLazyTransactionLazyBegun() {
+    protected static void markLazyTransactionLazyBegun() {
         ThreadCacheContext.setObject(generateLazyBegunKey(), true);
     }
 
-    protected boolean isLazyTransactionLazyBegun() {
+    protected static boolean isLazyTransactionLazyBegun() {
         return ThreadCacheContext.determineObject(generateLazyBegunKey());
     }
 
@@ -403,7 +415,7 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     // -----------------------------------------------------
     //                                            Real Begun
     //                                            ----------
-    protected boolean isLazyTransactionRealBegun() {
+    protected static boolean isLazyTransactionRealBegun() {
         return ThreadCacheContext.determineObject(generateRealBegunKey());
     }
 
@@ -418,16 +430,6 @@ public class LazyHookedUserTransaction extends HookedUserTransaction {
     // -----------------------------------------------------
     //                                          Lazy Process
     //                                          ------------
-    protected void arrangeLazyProcessIfAllowed(IndependentProcessor processor) {
-        final String lazyKey = generateLazyProcessListKey();
-        List<IndependentProcessor> lazyList = ThreadCacheContext.getObject(lazyKey);
-        if (lazyList == null) {
-            lazyList = new ArrayList<IndependentProcessor>();
-            ThreadCacheContext.setObject(lazyKey, lazyList);
-        }
-        lazyList.add(processor);
-    }
-
     public static String generateLazyProcessListKey() {
         return "lazyTx:lazyProcessList";
     }

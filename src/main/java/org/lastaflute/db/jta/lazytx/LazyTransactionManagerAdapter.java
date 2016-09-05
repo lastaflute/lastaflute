@@ -16,10 +16,9 @@
 package org.lastaflute.db.jta.lazytx;
 
 import javax.transaction.TransactionManager;
-import javax.transaction.UserTransaction;
 
+import org.lastaflute.db.jta.HookedTransactionManagerAdapter;
 import org.lastaflute.di.tx.TransactionCallback;
-import org.lastaflute.di.tx.adapter.JTATransactionManagerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,25 +26,24 @@ import org.slf4j.LoggerFactory;
  * @author jflute
  * @since 0.8.4 (2016/09/03 Saturday)
  */
-public class LazyJTATransactionManagerAdapter extends JTATransactionManagerAdapter {
+public class LazyTransactionManagerAdapter extends HookedTransactionManagerAdapter {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(LazyJTATransactionManagerAdapter.class);
+    private static final Logger logger = LoggerFactory.getLogger(LazyTransactionManagerAdapter.class);
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final LazyHookedUserTransaction lazyHookedUserTransaction;
+    protected final LazyUserTransaction lazyHookedUserTransaction;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public LazyJTATransactionManagerAdapter(UserTransaction userTransaction, TransactionManager transactionManager,
-            LazyHookedUserTransaction lazyHookedUserTransaction) {
-        super(userTransaction, transactionManager);
-        this.lazyHookedUserTransaction = lazyHookedUserTransaction;
+    public LazyTransactionManagerAdapter(TransactionManager transactionManager, LazyUserTransaction lazyHookedUserTransaction) {
+        super(transactionManager, lazyHookedUserTransaction);
+        this.lazyHookedUserTransaction = lazyHookedUserTransaction; // keep as concrete type
     }
 
     // ===================================================================================
