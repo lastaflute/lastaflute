@@ -79,6 +79,22 @@ public abstract class ContainerUtil {
         return (COMPONENT[]) SingletonLaContainerFactory.getContainer().findAllComponents(componentType);
     }
 
+    /**
+     * @param componentType The component type to find. (NotNull)
+     * @return The determination, true or false.
+     */
+    public static boolean hasComponent(Class<?> componentType) {
+        return SingletonLaContainerFactory.getContainer().hasComponentDef(componentType);
+    }
+
+    /**
+     * @param componentName The component name to find. (NotNull)
+     * @return The determination, true or false.
+     */
+    public static boolean hasComponent(String componentName) {
+        return SingletonLaContainerFactory.getContainer().hasComponentDef(componentName);
+    }
+
     // ===================================================================================
     //                                                                    External Context
     //                                                                    ================
