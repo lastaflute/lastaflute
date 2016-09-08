@@ -32,7 +32,7 @@ import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
  * @author jflute
  * @since 0.8.4 (2016/09/08 Thursday)
  */
-public abstract class LaTo {
+public abstract class Lato {
 
     // ===================================================================================
     //                                                                          toString()

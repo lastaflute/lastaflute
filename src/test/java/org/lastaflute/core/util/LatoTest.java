@@ -6,16 +6,16 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.dbflute.utflute.core.PlainTestCase;
-import org.lastaflute.core.util.LaToTest.ToStrSeaBean.ToStrAmbaPart;
-import org.lastaflute.core.util.LaToTest.ToStrSeaBean.ToStrBonvoPart;
-import org.lastaflute.core.util.LaToTest.ToStrSeaBean.ToStrDstorePart;
-import org.lastaflute.core.util.LaToTest.ToStrSeaBean.ToStrLandPart;
-import org.lastaflute.core.util.LaToTest.ToStrSeaBean.ToStrPiaryPart;
+import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrAmbaPart;
+import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrBonvoPart;
+import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrDstorePart;
+import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrLandPart;
+import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrPiaryPart;
 
 /**
  * @author jflute
  */
-public class LaToTest extends PlainTestCase {
+public class LatoTest extends PlainTestCase {
 
     public void test_string() {
         // ## Arrange ##
@@ -113,13 +113,13 @@ public class LaToTest extends PlainTestCase {
 
             @Override
             public String toString() {
-                return LaTo.string(this);
+                return Lato.string(this);
             }
         }
 
         @Override
         public String toString() {
-            return LaTo.string(this);
+            return Lato.string(this);
         }
     }
 }
