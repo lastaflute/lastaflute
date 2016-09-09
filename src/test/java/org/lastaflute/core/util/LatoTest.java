@@ -5,12 +5,17 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.validation.Valid;
+
 import org.dbflute.utflute.core.PlainTestCase;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrAmbaPart;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrBonvoPart;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrDstorePart;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrLandPart;
+import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrLandPart.ToStrShowBase;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrPiaryPart;
+import org.lastaflute.unit.mock.db.MockCDef;
+import org.lastaflute.web.validation.Required;
 
 /**
  * @author jflute
@@ -18,6 +23,25 @@ import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrPiaryPart;
 public class LatoTest extends PlainTestCase {
 
     public void test_string_basic() {
+        assertEquals("null", Lato.string(null));
+        assertEquals("", Lato.string(""));
+        assertEquals("1", Lato.string(1));
+        assertEquals("2016-09-09", Lato.string(LocalDate.of(2016, 9, 9)));
+        assertEquals(MockCDef.MemberStatus.Formalized.code(), Lato.string(MockCDef.MemberStatus.Formalized));
+        assertContains(Lato.string(new ToStrSeaBean()), "{seaId=null, seaName=null, seaAccount=null, ");
+        assertEquals(Lato.string(new ToStrSeaBean()), Lato.string(new ToStrSeaBean() {
+        }));
+        log(Lato.string(new ToStrSeaBean() {
+        })); // expects no exception
+        assertEquals(Lato.string(new ToStrSeaBean()), Lato.string(new ToStrSeaBean() {
+            @Override
+            public String toString() {
+                return "ignored: not related";
+            }
+        }));
+    }
+
+    public void test_string_onparade() {
         // ## Arrange ##
         ToStrSeaBean sea = new ToStrSeaBean();
         sea.seaId = 3;
@@ -28,6 +52,10 @@ public class LatoTest extends PlainTestCase {
         sea.updateDatetime = LocalDateTime.now().minusDays(7);
         ToStrLandPart land = new ToStrLandPart();
         land.landName = "oneman";
+        land.landAccount = "minnie";
+        land.showBase = new ToStrShowBase();
+        land.showBase.showBaseName = "tommorrow";
+        land.showBase.land = land;
         sea.land = land;
         ToStrPiaryPart piaryPart1 = new ToStrPiaryPart();
         piaryPart1.piaryName = "bonvo";
@@ -56,7 +84,7 @@ public class LatoTest extends PlainTestCase {
         assertContains(str, "piaryList=[");
         assertContains(str, sea.piaryList.get(0).piaryName);
         assertContains(str, sea.piaryList.get(1).piaryName);
-        assertContains(str, "dstore={dstoreId=7, sea=(cyclic), land={landName=oneman}}}");
+        assertContains(str, "dstore={dstoreId=7, sea=(cyclic), land={landName=oneman, ");
         assertContains(str, "nestedPiaryList=(cyclic)");
         assertContains(str, "piaryAry=[{piaryName=bonvo, piaryAccount...(same)}, null, ");
     }
@@ -75,6 +103,23 @@ public class LatoTest extends PlainTestCase {
         public static class ToStrLandPart {
 
             public String landName;
+            public String landAccount;
+
+            @Valid
+            public ToStrShowBase showBase;
+
+            public static class ToStrShowBase {
+
+                @Required
+                public String showBaseName;
+                @Required
+                public ToStrLandPart land;
+
+                @Override
+                public String toString() {
+                    return Lato.string(this); // ignored when from sea
+                }
+            }
         }
 
         public List<ToStrPiaryPart> piaryList;
