@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
 	"http://dbflute.org/meta/lastadi10.dtd">
-<components namespace="jdbc">
-	<include path="jta.xml"/>
-	<include path="lastaflute_assist.xml"/>
+<components namespace="jdbc"> <!-- included by rdb.xml of Lasta Di for main schema -->
+	<include path="jta.xml"/> <!-- for e.g. transaction manager -->
+	<include path="lastaflute_assist.xml"/> <!-- for configuration provider -->
 
 	<component name="xaDataSource" class="org.lastaflute.db.dbcp.HookedXADataSource">
 		<property name="driverClassName">
@@ -17,10 +17,20 @@
 	</component>
 
 	<component name="connectionPool" class="org.lastaflute.db.dbcp.HookedConnectionPool">
-		<property name="timeout">600</property>
+		<!-- main option, required -->
 		<property name="maxPoolSize">provider.config().getJdbcConnectionPoolingSize()</property>
-		<property name="allowLocalTx">true</property>
-		<preDestroy name="close"/>
+
+		<!-- sub option, not required (setter not called if null) -->
+		<property name="minPoolSize">        provider.config().getOrDefault("jdbc.connection.pooling.min.size", null)            </property>
+		<property name="maxWait">            provider.config().getOrDefault("jdbc.connection.pooling.max.wait", null)            </property>
+		<property name="timeout">            provider.config().getOrDefault("jdbc.connection.pooling.timeout", null)             </property>
+		<property name="suppressLocalTx">    provider.config().getOrDefault("jdbc.connection.pooling.suppress.local.tx", null)   </property>
+		<property name="readOnly">           provider.config().getOrDefault("jdbc.connection.pooling.read.only", null)           </property>
+		<property name="validationQuery">    provider.config().getOrDefault("jdbc.connection.pooling.validation.query", null)    </property>
+		<property name="validationInterval"> provider.config().getOrDefault("jdbc.connection.pooling.validation.interval", null) </property>
+		<!-- may be almost unused (want to change property type if supported)
+		<property name="transactionIsolationLevel">provider.config().getOrDefault("jdbc.connection.pooling.transaction.isolation.level", null)</property>
+		 -->
 	</component>
 
 	<component name="dataSource" class="org.lastaflute.db.dbcp.HookedPooledDataSource"/>

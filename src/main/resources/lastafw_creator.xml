@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
 	"http://dbflute.org/meta/lastadi10.dtd">
-<components>
+<components> <!-- included by creator.xml of Lasta Di -->
 	<include path="convention.xml"/>
 	<include path="customizer.xml"/>
 	<component name="assistCreator" class="org.lastaflute.core.smartdeploy.RomanticAssistCreator"/>

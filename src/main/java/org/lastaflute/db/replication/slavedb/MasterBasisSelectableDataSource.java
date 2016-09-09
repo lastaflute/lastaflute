@@ -30,8 +30,8 @@ public class MasterBasisSelectableDataSource extends SelectableDataSourceProxy {
      * @return The instance of real data-source. (NotNull)
      */
     @Override
-    public DataSource getDataSource() {
-        String dataSourceName = selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
+    public DataSource getSelectedDataSource() {
+        final String dataSourceName = selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
         if (dataSourceName != null) {
             return selectableDataSourceHolder.getSelectedDataSource();
         } else { // means no name set on thread local

@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.db.dbflute.callbackcontext;
+package org.lastaflute.db.dbflute.callbackcontext.traceablesql;
 
 import org.dbflute.bhv.core.BehaviorCommandMeta;
 import org.dbflute.bhv.core.context.InternalMapContext;

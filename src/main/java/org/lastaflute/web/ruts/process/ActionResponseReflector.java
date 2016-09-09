@@ -204,9 +204,9 @@ public class ActionResponseReflector {
         if (response.isReturnAsJsonDirectly()) {
             json = response.getDirectJson().get();
         } else { // mainly here
-            final Object jsonBean = response.getJsonBean();
-            validateJsonBeanIfNeeds(jsonBean, response);
-            json = requestManager.getJsonManager().toJson(jsonBean);
+            final Object jsonResult = response.getJsonResult();
+            validateJsonBeanIfNeeds(jsonResult, response);
+            json = requestManager.getJsonManager().toJson(jsonResult);
         }
         response.getCallback().ifPresent(callback -> {
             final String script = callback + "(" + json + ")";

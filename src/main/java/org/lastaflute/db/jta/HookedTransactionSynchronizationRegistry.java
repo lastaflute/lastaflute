@@ -9,29 +9,24 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.aspect;
+package org.lastaflute.db.jta;
 
-import java.lang.reflect.Method;
+import javax.transaction.TransactionManager;
 
-import org.lastaflute.di.core.customizer.PointTxAttributeCustomizer;
-import org.lastaflute.web.Execute;
+import org.lastaflute.jta.core.LaTransactionSynchronizationRegistry;
 
 /**
- * Basically unneeded, use transaction stage.
  * @author jflute
  */
-public class ActionTxAttributeCustomizer extends PointTxAttributeCustomizer {
+public class HookedTransactionSynchronizationRegistry extends LaTransactionSynchronizationRegistry {
 
-    @Override
-    protected boolean isImplicitTxSupportedMethod(Method method) {
-        return isActionExecute(method);
+    public HookedTransactionSynchronizationRegistry(TransactionManager transactionManager) {
+        super(transactionManager);
     }
 
-    protected boolean isActionExecute(final Method method) {
-        return method.getAnnotation(Execute.class) != null;
-    }
+    // for future
 }

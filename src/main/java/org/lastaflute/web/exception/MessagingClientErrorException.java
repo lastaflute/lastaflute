@@ -70,8 +70,9 @@ public abstract class MessagingClientErrorException extends RequestClientErrorEx
     }
 
     protected void verifyResourceMessage(UserMessages messages, UserMessage message) {
-        if (!message.isResource()) {
-            throw new IllegalArgumentException("Not allowed the non-resource message: " + message + " in " + messages);
-        }
+        // client error can be non-resource message by e.g. validator
+        //if (!message.isResource()) {
+        //    throw new IllegalArgumentException("Not allowed the non-resource message: " + message + " in " + messages);
+        //}
     }
 }

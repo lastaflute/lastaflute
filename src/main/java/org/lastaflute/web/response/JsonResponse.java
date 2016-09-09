@@ -27,10 +27,10 @@ import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.aspect.RomanticActionCustomizer;
 
 /**
- * @param <BEAN> The type of JSON bean.
+ * @param <RESULT> The type of JSON result.
  * @author jflute
  */
-public class JsonResponse<BEAN> implements ApiResponse {
+public class JsonResponse<RESULT> implements ApiResponse {
 
     // ===================================================================================
     //                                                                          Definition
@@ -42,7 +42,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final BEAN jsonBean;
+    protected final RESULT jsonResult;
     protected String callback;
     protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
@@ -63,23 +63,23 @@ public class JsonResponse<BEAN> implements ApiResponse {
      * This needs {@link RomanticActionCustomizer} in your customizer.dicon.
      * <pre>
      * <span style="color: #3F7E5E">// e.g. normal JSON response</span>
-     * <span style="color: #70226C">return new</span> JsonResponse(bean);
+     * <span style="color: #70226C">return new</span> JsonResponse(result);
      * 
      * <span style="color: #3F7E5E">// e.g. JSONP response</span>
-     * <span style="color: #70226C">return new</span> JsonResponse(bean).asJsonp("callback");
+     * <span style="color: #70226C">return new</span> JsonResponse(result).asJsonp("callback");
      * </pre>
-     * @param jsonObj The JSON object to send response. (NotNull)
+     * @param jsonResult The JSON result to send response. (NotNull)
      */
-    public JsonResponse(BEAN jsonObj) {
-        assertArgumentNotNull("jsonObj", jsonObj);
-        this.jsonBean = jsonObj;
+    public JsonResponse(RESULT jsonResult) {
+        assertArgumentNotNull("jsonResult", jsonResult);
+        this.jsonResult = jsonResult;
     }
 
     // ===================================================================================
     //                                                                              Header
     //                                                                              ======
     @Override
-    public JsonResponse<BEAN> header(String name, String... values) {
+    public JsonResponse<RESULT> header(String name, String... values) {
         assertArgumentNotNull("name", name);
         assertArgumentNotNull("values", values);
         assertDefinedState("header");
@@ -107,7 +107,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     //                                                                         HTTP Status
     //                                                                         ===========
     @Override
-    public JsonResponse<BEAN> httpStatus(int httpStatus) {
+    public JsonResponse<RESULT> httpStatus(int httpStatus) {
         assertDefinedState("httpStatus");
         this.httpStatus = httpStatus;
         return this;
@@ -126,14 +126,14 @@ public class JsonResponse<BEAN> implements ApiResponse {
     // -----------------------------------------------------
     //                                                 JSON
     //                                                ------
-    public JsonResponse<BEAN> asJsonp(String callback) {
+    public JsonResponse<RESULT> asJsonp(String callback) {
         assertArgumentNotNull("callback", callback);
         assertDefinedState("asJsonp");
         this.callback = callback;
         return this;
     }
 
-    public JsonResponse<BEAN> forcedlyJavaScript() {
+    public JsonResponse<RESULT> forcedlyJavaScript() {
         forcedlyJavaScript = true;
         assertDefinedState("forcedlyJavaScript");
         return this;
@@ -147,7 +147,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
         return (JsonResponse<OBJ>) new JsonResponse<Object>(DUMMY).ofEmptyBody();
     }
 
-    protected JsonResponse<BEAN> ofEmptyBody() { // internal use
+    protected JsonResponse<RESULT> ofEmptyBody() { // internal use
         returnAsEmptyBody = true;
         return this;
     }
@@ -160,7 +160,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
         return (JsonResponse<OBJ>) new JsonResponse<Object>(DUMMY).ofJsonDirectly(json);
     }
 
-    protected JsonResponse<BEAN> ofJsonDirectly(String json) { // internal use
+    protected JsonResponse<RESULT> ofJsonDirectly(String json) { // internal use
         assertArgumentNotNull("json", json);
         returnAsJsonDirectly = true; // for quick determination
         directJson = json;
@@ -175,7 +175,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
         return (JsonResponse<OBJ>) INSTANCE_OF_UNDEFINED;
     }
 
-    protected JsonResponse<BEAN> ofUndefined() { // internal use
+    protected JsonResponse<RESULT> ofUndefined() { // internal use
         undefined = true;
         return this;
     }
@@ -183,7 +183,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     // -----------------------------------------------------
     //                                         Response Hook
     //                                         -------------
-    public JsonResponse<BEAN> afterTxCommit(ResponseHook noArgLambda) {
+    public JsonResponse<RESULT> afterTxCommit(ResponseHook noArgLambda) {
         assertArgumentNotNull("noArgLambda", noArgLambda);
         afterTxCommitHook = noArgLambda;
         return this;
@@ -196,7 +196,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
      * @param groups The array of group types. (NullAllowed, EmptyAllowed: if null or empty, use default groups)
      * @return this. (NotNull)
      */
-    public JsonResponse<BEAN> groupValidator(Class<?>... groups) {
+    public JsonResponse<RESULT> groupValidator(Class<?>... groups) {
         // allow null or empty to flexibly switch by condition
         final Class<?>[] filtered = filterValidatorGroups(groups);
         validatorGroups = filtered.length > 0 ? filtered : null;
@@ -215,7 +215,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
      * @param suppressed Does it really suppress validator?
      * @return this. (NotNull)
      */
-    public JsonResponse<BEAN> suppressValidator(boolean suppressed) { // argument to flexibly switch by condition
+    public JsonResponse<RESULT> suppressValidator(boolean suppressed) { // argument to flexibly switch by condition
         validatorSuppressed = suppressed;
         return this;
     }
@@ -241,7 +241,7 @@ public class JsonResponse<BEAN> implements ApiResponse {
     @Override
     public String toString() {
         final String classTitle = DfTypeUtil.toClassTitle(this);
-        final String jsonExp = jsonBean != null ? DfTypeUtil.toClassTitle(jsonBean) : null;
+        final String jsonExp = jsonResult != null ? DfTypeUtil.toClassTitle(jsonResult) : null;
         final String callbackExp = callback != null ? ", callback=" + callback : "";
         final String forcedlyJSExp = forcedlyJavaScript ? ", JavaScript" : "";
         final String emptyExp = returnAsEmptyBody ? ", emptyBody" : "";
@@ -256,12 +256,16 @@ public class JsonResponse<BEAN> implements ApiResponse {
     // -----------------------------------------------------
     //                                                 Basic
     //                                                 -----
-    public BEAN getJsonBean() {
-        return jsonBean;
+    public RESULT getJsonResult() {
+        return jsonResult;
+    }
+
+    public RESULT getJsonBean() { // for compatible
+        return jsonResult;
     }
 
     public OptionalThing<String> getCallback() {
-        final Class<? extends Object> beanType = jsonBean.getClass();
+        final Class<? extends Object> beanType = jsonResult.getClass();
         return OptionalThing.ofNullable(callback, () -> {
             throw new IllegalStateException("Not found the callback in the JSON response: " + beanType);
         });

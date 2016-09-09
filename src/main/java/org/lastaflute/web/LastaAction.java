@@ -149,29 +149,29 @@ public abstract class LastaAction {
     /**
      * Return response as JSON.
      * <pre>
-     * <span style="color: #70226C">public</span> JsonResponse&lt;SeaBean&gt; index() {
+     * <span style="color: #70226C">public</span> JsonResponse&lt;SeaResult&gt; index() {
      *     ...
-     *     <span style="color: #70226C">return</span> asJson(<span style="color: #553000">bean</span>);
+     *     <span style="color: #70226C">return</span> asJson(<span style="color: #553000">result</span>);
      * }
      * </pre>
-     * @param <BEAN> The type of bean serialized to JSON.
-     * @param bean The bean object converted to JSON string. (NotNull)
+     * @param <RESULT> The type of result serialized to JSON.
+     * @param result The result object converted to JSON string. (NotNull)
      * @return The new-created response for JSON. (NotNull)
      */
-    protected <BEAN> JsonResponse<BEAN> asJson(BEAN bean) {
-        assertArgumentNotNull("bean", bean);
-        return newJsonResponse(bean);
+    protected <RESULT> JsonResponse<RESULT> asJson(RESULT result) {
+        assertArgumentNotNull("result", result);
+        return newJsonResponse(result);
     }
 
     /**
      * New-create JSON response object.
-     * @param <BEAN> The type of bean serialized to JSON.
-     * @param bean The bean object converted to JSON string. (NotNull)
+     * @param <RESULT> The type of result serialized to JSON.
+     * @param result The result object converted to JSON string. (NotNull)
      * @return The new-created response for JSON. (NotNull)
      */
-    protected <BEAN> JsonResponse<BEAN> newJsonResponse(BEAN bean) {
-        assertArgumentNotNull("bean", bean);
-        return new JsonResponse<BEAN>(bean);
+    protected <RESULT> JsonResponse<RESULT> newJsonResponse(RESULT result) {
+        assertArgumentNotNull("bean", result);
+        return new JsonResponse<RESULT>(result);
     }
 
     /**

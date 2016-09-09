@@ -41,6 +41,15 @@ public interface AccessibleConfig {
      */
     String get(String propertyKey);
 
+    // TODO jflute xxxxx (2016/09/03)
+    /**
+     * Get the value of property as {@link String}.
+     * @param propertyKey The key of the property. (NotNull)
+     * @param defaultValue The default value when not found. (NullAllowed: if null, returns null)
+     * @return The value of found property. (NullAllowed: if the defaultValue is null, returns null)
+     */
+    String getOrDefault(String propertyKey, String defaultValue);
+
     /**
      * Get the value of property as {@link Integer}.
      * @param propertyKey The key of the property. (NotNull)

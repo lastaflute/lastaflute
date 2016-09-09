@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE components PUBLIC "-//DBFLUTE//DTD LastaDi 1.0//EN"
 	"http://dbflute.org/meta/lastadi10.dtd">
-<components namespace="lastaflute">
+<components namespace="lastaflute"> <!-- included by e.g. app.xml -->
 	<include path="lastaflute_core.xml"/>
 	<include path="lastaflute_db.xml"/>
 	<include path="lastaflute_web.xml"/>

@@ -36,6 +36,9 @@ public abstract class ContainerUtil {
     // ===================================================================================
     //                                                                           Component
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                               by Type
+    //                                               -------
     /**
      * @param componentType The component type to find. (NotNull)
      * @return The found component. (NotNull)
@@ -45,18 +48,6 @@ public abstract class ContainerUtil {
      */
     public static <COMPONENT> COMPONENT getComponent(Class<COMPONENT> componentType) { // most frequently used
         return (COMPONENT) SingletonLaContainer.getComponent(componentType);
-    }
-
-    /**
-     * @param componentName The component name to find. (NotNull)
-     * @return The found component. (NotNull)
-     * @throws ComponentNotFoundException When the component is not found by the type.
-     * @throws TooManyRegistrationComponentException When the component key is related to plural components.
-     * @throws CyclicReferenceComponentException When the components refers each other.
-     */
-    public static <COMPONENT> COMPONENT pickupComponentByName(String componentName) {
-        final COMPONENT component = SingletonLaContainer.getComponent(componentName); // variable for generic
-        return component;
     }
 
     /**
@@ -77,6 +68,37 @@ public abstract class ContainerUtil {
     @SuppressWarnings("unchecked")
     public static <COMPONENT> COMPONENT[] searchComponentsAll(Class<COMPONENT> componentType) {
         return (COMPONENT[]) SingletonLaContainerFactory.getContainer().findAllComponents(componentType);
+    }
+
+    /**
+     * @param componentType The component type to find. (NotNull)
+     * @return The determination, true or false.
+     */
+    public static boolean hasComponent(Class<?> componentType) {
+        return SingletonLaContainerFactory.getContainer().hasComponentDef(componentType);
+    }
+
+    // -----------------------------------------------------
+    //                                               by Name
+    //                                               -------
+    /**
+     * @param componentName The component name to find. (NotNull)
+     * @return The found component. (NotNull)
+     * @throws ComponentNotFoundException When the component is not found by the type.
+     * @throws TooManyRegistrationComponentException When the component key is related to plural components.
+     * @throws CyclicReferenceComponentException When the components refers each other.
+     */
+    public static <COMPONENT> COMPONENT pickupComponentByName(String componentName) {
+        final COMPONENT component = SingletonLaContainer.getComponent(componentName); // variable for generic
+        return component;
+    }
+
+    /**
+     * @param componentName The component name to find. (NotNull)
+     * @return The determination, true or false.
+     */
+    public static boolean proveComponentByName(String componentName) {
+        return SingletonLaContainerFactory.getContainer().hasComponentDef(componentName);
     }
 
     // ===================================================================================
