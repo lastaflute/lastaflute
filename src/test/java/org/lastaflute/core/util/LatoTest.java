@@ -17,7 +17,7 @@ import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrPiaryPart;
  */
 public class LatoTest extends PlainTestCase {
 
-    public void test_string() {
+    public void test_string_basic() {
         // ## Arrange ##
         ToStrSeaBean sea = new ToStrSeaBean();
         sea.seaId = 3;
@@ -56,6 +56,9 @@ public class LatoTest extends PlainTestCase {
         assertContains(str, "piaryList=[");
         assertContains(str, sea.piaryList.get(0).piaryName);
         assertContains(str, sea.piaryList.get(1).piaryName);
+        assertContains(str, "dstore={dstoreId=7, sea=(cyclic), land={landName=oneman}}}");
+        assertContains(str, "nestedPiaryList=(cyclic)");
+        assertContains(str, "piaryAry=[{piaryName=bonvo, piaryAccount...(same)}, null, ");
     }
 
     public static class ToStrSeaBean {
