@@ -40,13 +40,13 @@ public class MessagingApplicationException extends LaApplicationException {
     public MessagingApplicationException(String debugMsg, UserMessages messages) {
         super(debugMsg);
         assertUserMessages(messages);
-        saveApplicationMessages(toAppliactionMessageList(messages));
+        saveApplicationMessages(toApplicationMessageList(messages));
     }
 
     public MessagingApplicationException(String debugMsg, UserMessages messages, Throwable cause) {
         super(debugMsg, cause);
         assertUserMessages(messages);
-        saveApplicationMessages(toAppliactionMessageList(messages));
+        saveApplicationMessages(toApplicationMessageList(messages));
     }
 
     protected void assertUserMessages(UserMessages messages) {
@@ -62,7 +62,7 @@ public class MessagingApplicationException extends LaApplicationException {
     // ===================================================================================
     //                                                                 Application Message
     //                                                                 ===================
-    protected List<LaApplicationMessage> toAppliactionMessageList(UserMessages messages) {
+    protected List<LaApplicationMessage> toApplicationMessageList(UserMessages messages) {
         final List<LaApplicationMessage> convertedList = new ArrayList<LaApplicationMessage>(messages.size());
         for (Iterator<UserMessage> ite = messages.accessByFlatIterator(); ite.hasNext();) {
             final UserMessage message = ite.next();
