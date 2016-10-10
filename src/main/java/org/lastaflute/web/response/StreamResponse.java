@@ -29,14 +29,8 @@ import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
 
 /**
- * The response of stream for action.
- * <pre>
- * e.g. simple (content-type is octet-stream or found by extension mapping)
- *  <span style="color: #70226C">return new</span> StreamResponse("classificationDefinitionMap.dfprop").stream(ins);
- * 
- * e.g. specify content-type
- *  <span style="color: #70226C">return new</span> StreamResponse("jflute.jpg").contentTypeJpeg().stream(ins);
- * </pre>
+ * The response of stream for action. <br>
+ * Default settings are: "application/octet-stream", "attachment; filename=..."
  * @author jflute
  */
 public class StreamResponse implements ActionResponse {
@@ -88,13 +82,23 @@ public class StreamResponse implements ActionResponse {
         return this;
     }
 
-    public StreamResponse contentTypeJpeg() {
+    public StreamResponse contentTypeJpeg() { // for image via action
         contentType = "image/jpeg";
         return this;
     }
 
     public StreamResponse contentTypeZip() { // for e.g. zip stream
         contentType = "application/zip";
+        return this;
+    }
+
+    public StreamResponse contentTypeTextHtmlUTF8() { // for custom html rendering
+        contentType = "text/html; charset=UTF-8";
+        return this;
+    }
+
+    public StreamResponse contentTypeTextPlainUTF8() { // for custom text rendering
+        contentType = "text/plain; charset=UTF-8";
         return this;
     }
 
@@ -126,12 +130,14 @@ public class StreamResponse implements ActionResponse {
         return Collections.unmodifiableMap(headerMap);
     }
 
-    public void headerContentDispositionAttachment() { // used as default
+    public StreamResponse headerContentDispositionAttachment() { // used as default
         headerContentDisposition("attachment; filename=\"" + fileName + "\"");
+        return this;
     }
 
-    public void headerContentDispositionInline() {
+    public StreamResponse headerContentDispositionInline() {
         headerContentDisposition("inline; filename=\"" + fileName + "\"");
+        return this;
     }
 
     protected void headerContentDisposition(String disposition) {
