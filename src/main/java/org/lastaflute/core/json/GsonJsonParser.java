@@ -15,7 +15,10 @@
  */
 package org.lastaflute.core.json;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -29,8 +32,14 @@ import org.lastaflute.core.json.adapter.Java8TimeGsonAdaptable;
 import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
 import org.lastaflute.core.json.adapter.StringGsonAdaptable;
 
+import com.google.gson.FieldNamingStrategy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.internal.ConstructorConstructor;
+import com.google.gson.internal.Excluder;
+import com.google.gson.internal.bind.JsonAdapterAnnotationTypeAdapterFactory;
+import com.google.gson.internal.bind.LaReflectiveTypeAdapterFactory;
+import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 
 /**
  * @author jflute
@@ -64,7 +73,9 @@ public class GsonJsonParser implements RealJsonParser // adapters here
         setupDefaultSettings(builder);
         setupYourSettings(builder);
         acceptGsonSettings(settings, builder);
-        return builder.create();
+        final Gson newGson = builder.create();
+        switchFactories(newGson);
+        return newGson;
     }
 
     protected GsonBuilder newGsonBuilder() {
@@ -123,6 +134,42 @@ public class GsonJsonParser implements RealJsonParser // adapters here
     //                                         -------------
     protected void acceptGsonSettings(Consumer<GsonBuilder> settings, GsonBuilder builder) {
         settings.accept(builder);
+    }
+
+    // -----------------------------------------------------
+    //                                      Dangerous Switch
+    //                                      ----------------
+    protected void switchFactories(Gson newGson) {
+        final Field factoriesField = DfReflectionUtil.getWholeField(newGson.getClass(), "factories");
+        @SuppressWarnings("unchecked")
+        final List<Object> factories = (List<Object>) DfReflectionUtil.getValueForcedly(factoriesField, newGson);
+        final List<Object> filtered = new ArrayList<Object>();
+        for (Object factory : factories) {
+            if (factory instanceof ReflectiveTypeAdapterFactory) { // switched, only one time
+                filtered.add(createReflectiveTypeAdapterFactory(newGson, factory));
+            } else {
+                filtered.add(factory);
+            }
+        }
+        DfReflectionUtil.setValueForcedly(factoriesField, newGson, Collections.unmodifiableList(filtered));
+    }
+
+    protected LaReflectiveTypeAdapterFactory createReflectiveTypeAdapterFactory(Gson newGson, Object factory) {
+        final ConstructorConstructor constructorConstructor = getConstructorConstructor(factory);
+        final JsonAdapterAnnotationTypeAdapterFactory jsonAdapterFactory = getJsonAdapterFactory(factory);
+        final FieldNamingStrategy fieldNamingStrategy = newGson.fieldNamingStrategy();
+        final Excluder excluder = newGson.excluder();
+        return new LaReflectiveTypeAdapterFactory(constructorConstructor, fieldNamingStrategy, excluder, jsonAdapterFactory);
+    }
+
+    protected ConstructorConstructor getConstructorConstructor(Object factory) {
+        final Field field = DfReflectionUtil.getWholeField(factory.getClass(), "constructorConstructor");
+        return (ConstructorConstructor) DfReflectionUtil.getValueForcedly(field, factory);
+    }
+
+    protected JsonAdapterAnnotationTypeAdapterFactory getJsonAdapterFactory(Object factory) {
+        final Field field = DfReflectionUtil.getWholeField(factory.getClass(), "jsonAdapterFactory");
+        return (JsonAdapterAnnotationTypeAdapterFactory) DfReflectionUtil.getValueForcedly(field, factory);
     }
 
     // ===================================================================================
