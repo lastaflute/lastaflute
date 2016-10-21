@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 
 /**
  * @author jflute
+ * @since 0.8.5 (2016/10/21 Friday at showbase)
  */
 public class LaJsonFieldingContext {
 

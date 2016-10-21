@@ -29,5 +29,11 @@ import java.lang.annotation.Target;
 @Documented
 public @interface JsonDatePattern {
 
+    /**
+     * The pattern of the date for the JSON field. <br>
+     * The default pattern is ISO standard. (e.g. yyyy-MM-dd) <br>
+     * You can switch the default pattern to your original pattern if it needs.
+     * @return The pattern expression to format the date. e.g. yyyy/MM/dd (NotNull)
+     */
     String value();
 }
