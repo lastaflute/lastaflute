@@ -15,20 +15,19 @@
  */
 package org.lastaflute.core.json;
 
+import java.util.List;
+
+import org.lastaflute.core.json.bind.JsonYourCollectionResource;
+
 /**
  * The provider of JSON resource.
  * @author jflute
  */
 public interface JsonResourceProvider {
 
-    /**
-     * Provide the parser of JSON which is actually used for parsing.
-     * @return The instance for real parser of JSON. (NullAllowed: if null, use default)
-     */
-    default RealJsonParser provideJsonParser() {
-        return null; // use default
-    }
-
+    // ===================================================================================
+    //                                                                       Gson Settings
+    //                                                                       =============
     /**
      * Is null property suppressed (not displayed) in output JSON string?
      * @return The determination, true or false.
@@ -51,5 +50,26 @@ public interface JsonResourceProvider {
      */
     default JsonMappingOption provideOption() {
         return null;
+    }
+
+    /**
+     * Provide the your collections for JSON property. <br>
+     * You can use e.g. ImmutableList (Eclipse Collections) as JSON property type.
+     * @return The read-only list of your collection resource. (NullAllowed: if null, no your collection)
+     */
+    default List<JsonYourCollectionResource> provideYourCollections() {
+        return null; // do nothing
+    }
+
+    // ===================================================================================
+    //                                                                         Json Parser
+    //                                                                         ===========
+    /**
+     * Switch to the parser of JSON for your parsing. <br>
+     * Dangerous! Embedded Gson settings are disappeared.
+     * @return The instance for real parser of JSON. (NullAllowed: if null, use default)
+     */
+    default RealJsonParser swtichJsonParser() {
+        return null; // use default
     }
 }
