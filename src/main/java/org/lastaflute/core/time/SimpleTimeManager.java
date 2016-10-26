@@ -25,6 +25,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.helper.HandyDate;
+import org.dbflute.system.DBFluteSystem;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
@@ -189,7 +190,7 @@ public class SimpleTimeManager implements TimeManager {
         if (realCurrentTimeProvider != null) {
             return realCurrentTimeProvider.currentTimeMillis();
         } else {
-            return System.currentTimeMillis();
+            return DBFluteSystem.currentTimeMillis();
         }
     }
 
