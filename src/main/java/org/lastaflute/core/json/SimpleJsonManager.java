@@ -88,7 +88,7 @@ public class SimpleJsonManager implements JsonManager {
         jsonMappingOption = OptionalThing.ofNullable(provider != null ? provider.provideOption() : null, () -> {
             throw new IllegalStateException("Not found the JSON mapping option.");
         });
-        final List<JsonYourCollectionResource> yourCollections = provider.provideYourCollections();
+        final List<JsonYourCollectionResource> yourCollections = provider != null ? provider.provideYourCollections() : null;
         if (yourCollections != null) {
             yourCollectionResourceList = yourCollections;
         }
