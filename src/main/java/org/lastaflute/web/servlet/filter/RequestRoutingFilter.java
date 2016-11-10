@@ -139,6 +139,9 @@ public class RequestRoutingFilter implements Filter {
 
     protected boolean isRoutingTarget(HttpServletRequest request, String requestPath) {
         final ActionAdjustmentProvider adjustmentProvider = assistActionAdjustmentProvider();
+        if (adjustmentProvider.isForcedRoutingExcept(request, requestPath)) { // you can adjust it
+            return false;
+        }
         if (adjustmentProvider.isForcedRoutingTarget(request, requestPath)) { // you can adjust it
             return true;
         }

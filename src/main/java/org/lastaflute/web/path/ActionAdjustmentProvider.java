@@ -65,23 +65,22 @@ public interface ActionAdjustmentProvider {
     }
 
     /**
-     * Is the request routing target forcedly?
+     * Is the request routing except forcedly?
      * @param request The request object provided from filter. (NotNull)
-     * @param requestPath The path of request to search action. (NotNull)
+     * @param requestPath The path of request to search action (before customization). (NotNull)
      * @return The determination, true or false. If false, default determination for routing.
      */
-    default boolean isForcedRoutingTarget(HttpServletRequest request, String requestPath) {
+    default boolean isForcedRoutingExcept(HttpServletRequest request, String requestPath) {
         return false;
     }
 
     /**
-     * Does it suppress 'trailing slash redirect' for SEO?
+     * Is the request routing target forcedly?
      * @param request The request object provided from filter. (NotNull)
-     * @param requestPath The path of request to search action. (NotNull)
-     * @param execute The action execute of the request. (NotNull)
+     * @param requestPath The path of request to search action (before customization). (NotNull)
      * @return The determination, true or false. If false, default determination for routing.
      */
-    default boolean isSuppressTrailingSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute execute) {
+    default boolean isForcedRoutingTarget(HttpServletRequest request, String requestPath) {
         return false;
     }
 
@@ -93,6 +92,17 @@ public interface ActionAdjustmentProvider {
      */
     default String customizeActionMappingRequestPath(String requestPath) {
         return null;
+    }
+
+    /**
+     * Does it suppress 'trailing slash redirect' for SEO?
+     * @param request The request object provided from filter. (NotNull)
+     * @param requestPath The path of request to search action (after customization). (NotNull)
+     * @param execute The action execute of the request. (NotNull)
+     * @return The determination, true or false. If false, default determination for routing.
+     */
+    default boolean isSuppressTrailingSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute execute) {
+        return false;
     }
 
     /**
