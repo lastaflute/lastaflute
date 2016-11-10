@@ -35,29 +35,43 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final String routingPath;
+    protected final String routingPath; // not null if HTML
     protected final boolean redirectTo;
     protected final boolean asIs; // when redirect
-    protected final boolean undefined;
     protected final OptionalThing<Object> viewObject; // not null, empty allowed, for e.g. mixer2
+    protected final OriginalJourneyProvider originalJourneyProvider; // not null if original e.g. JSON, Stream
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public NextJourney(String routingPath, boolean redirectTo, boolean asIs, OptionalThing<Object> viewObject) {
+    public NextJourney(String routingPath, boolean redirectTo, boolean asIs, OptionalThing<Object> viewObject) { // for HTML
         this.routingPath = routingPath;
         this.redirectTo = redirectTo;
         this.asIs = asIs;
-        this.undefined = false;
         this.viewObject = viewObject;
+        this.originalJourneyProvider = null;
+    }
+
+    public NextJourney(OriginalJourneyProvider originalJourneyProvider) { // for e.g. JSON, Stream
+        this.routingPath = null; // means no HTML
+        this.redirectTo = false;
+        this.asIs = false;
+        this.viewObject = OptionalThing.empty();
+        this.originalJourneyProvider = originalJourneyProvider;
+    }
+
+    @FunctionalInterface
+    public static interface OriginalJourneyProvider {
+
+        void bonVoyage();
     }
 
     protected NextJourney() {
-        this.routingPath = "undefined";
+        this.routingPath = null; // means no HTML
         this.redirectTo = false;
         this.asIs = false;
-        this.undefined = true;
         this.viewObject = OptionalThing.empty();
+        this.originalJourneyProvider = null;
     }
 
     public static NextJourney undefined() {
@@ -71,10 +85,15 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append("journey:{");
-        sb.append("path=").append(routingPath);
-        sb.append(redirectTo ? ", redirect" : ", forward");
-        sb.append(asIs ? ", asIs" : "");
-        sb.append(undefined ? ", undefined" : "");
+        if (isHtmlJourney()) {
+            sb.append("path=").append(routingPath);
+            sb.append(redirectTo ? ", redirect" : ", forward");
+            sb.append(asIs ? ", asIs" : "");
+        } else if (isOriginalJourney()) {
+            sb.append(originalJourneyProvider);
+        } else {
+            sb.append("undefined");
+        }
         sb.append("}");
         return sb.toString();
     }
@@ -82,16 +101,19 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public String getRoutingPath() {
-        assertRoutingPathCalled();
-        return routingPath;
+    // -----------------------------------------------------
+    //                                          HTML Journey
+    //                                          ------------
+    public boolean isHtmlJourney() {
+        return routingPath != null;
     }
 
-    protected void assertRoutingPathCalled() {
-        if (isUndefined()) {
-            String msg = "The action transition is undefined so cannot call getRoutingPath(): " + routingPath;
+    public String getRoutingPath() { // not null or exception
+        if (!isHtmlJourney()) {
+            String msg = "The action transition is not HTML so cannot call getRoutingPath(): " + routingPath;
             throw new IllegalStateException(msg);
         }
+        return routingPath;
     }
 
     public boolean isRedirectTo() {
@@ -102,15 +124,29 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
         return asIs;
     }
 
-    public boolean isDefined() {
-        return !isUndefined();
-    }
-
-    public boolean isUndefined() {
-        return undefined;
-    }
-
-    public OptionalThing<Object> getViewObject() {
+    public OptionalThing<Object> getViewObject() { // not null, empty allowed
         return viewObject;
+    }
+
+    // -----------------------------------------------------
+    //                                      Original Journey
+    //                                      ----------------
+    public boolean isOriginalJourney() {
+        return originalJourneyProvider != null;
+    }
+
+    public OriginalJourneyProvider getOriginalJourneyProvider() { // not null or exception
+        if (!isOriginalJourney()) {
+            String msg = "The action transition is not original so cannot call getOriginalJourneyProvider(): " + routingPath;
+            throw new IllegalStateException(msg);
+        }
+        return originalJourneyProvider;
+    }
+
+    // -----------------------------------------------------
+    //                                     Undefined Journey
+    //                                     -----------------
+    public boolean isUndefined() {
+        return !isHtmlJourney() && !isOriginalJourney();
     }
 }

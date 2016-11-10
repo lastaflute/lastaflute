@@ -30,6 +30,7 @@ import org.lastaflute.web.response.XmlResponse;
 import org.lastaflute.web.response.pushed.PushedFormInfo;
 import org.lastaflute.web.response.render.RenderData;
 import org.lastaflute.web.ruts.NextJourney;
+import org.lastaflute.web.ruts.NextJourney.OriginalJourneyProvider;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.process.ActionRuntime.DisplayDataValidator;
@@ -200,26 +201,27 @@ public class ActionResponseReflector {
         if (response.isReturnAsEmptyBody()) {
             return undefinedJourney();
         }
-        final String json;
-        if (response.isReturnAsJsonDirectly()) {
-            json = response.getDirectJson().get();
-        } else { // mainly here
-            final Object jsonResult = response.getJsonResult();
-            validateJsonBeanIfNeeds(jsonResult, response);
-            json = requestManager.getJsonManager().toJson(jsonResult);
-        }
-        response.getCallback().ifPresent(callback -> {
-            final String script = callback + "(" + json + ")";
-            responseManager.writeAsJavaScript(script);
-        }).orElse(() -> {
-            /* responseManager might have debug logging so no logging here */
-            if (response.isForcedlyJavaScript()) {
-                responseManager.writeAsJavaScript(json);
-            } else { /* as JSON (default) */
-                responseManager.writeAsJson(json);
+        return createOriginalJourney(() -> { // lazy to write response after hookFinally()
+            final String json;
+            if (response.isReturnAsJsonDirectly()) {
+                json = response.getDirectJson().get();
+            } else { // mainly here
+                final Object jsonResult = response.getJsonResult();
+                validateJsonBeanIfNeeds(jsonResult, response);
+                json = requestManager.getJsonManager().toJson(jsonResult);
             }
+            response.getCallback().ifPresent(callback -> {
+                final String script = callback + "(" + json + ")";
+                responseManager.writeAsJavaScript(script);
+            }).orElse(() -> {
+                /* responseManager might have debug logging so no logging here */
+                if (response.isForcedlyJavaScript()) {
+                    responseManager.writeAsJavaScript(json);
+                } else { /* as JSON (default) */
+                    responseManager.writeAsJson(json);
+                }
+            });
         });
-        return undefinedJourney();
     }
 
     // -----------------------------------------------------
@@ -256,8 +258,9 @@ public class ActionResponseReflector {
         if (response.isReturnAsEmptyBody()) {
             return undefinedJourney();
         }
-        responseManager.writeAsXml(response.getXmlStr(), response.getEncoding());
-        return undefinedJourney();
+        return createOriginalJourney(() -> {
+            responseManager.writeAsXml(response.getXmlStr(), response.getEncoding());
+        });
     }
 
     // ===================================================================================
@@ -268,8 +271,9 @@ public class ActionResponseReflector {
         // needs to be handled in download()
         //setupActionResponseHeader(responseManager, response);
         setupActionResponseHttpStatus(responseManager, response);
-        responseManager.download(response.toDownloadResource());
-        return undefinedJourney();
+        return createOriginalJourney(() -> {
+            responseManager.download(response.toDownloadResource());
+        });
     }
 
     // ===================================================================================
@@ -281,10 +285,14 @@ public class ActionResponseReflector {
     }
 
     // ===================================================================================
-    //                                                                   Undefined Journey
-    //                                                                   =================
+    //                                                                        Next Journey
+    //                                                                        ============
     protected NextJourney undefinedJourney() {
         return NextJourney.undefined();
+    }
+
+    protected NextJourney createOriginalJourney(OriginalJourneyProvider originalJourneyProcessor) {
+        return new NextJourney(originalJourneyProcessor);
     }
 
     // ===================================================================================

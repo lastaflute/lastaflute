@@ -109,8 +109,8 @@ public class GodHandableAction implements VirtualAction {
     @Override
     public NextJourney execute(OptionalThing<VirtualForm> form) {
         final NextJourney journey = godHandyExecute(form);
-        setupDisplayData(journey);
-        showTransition(journey);
+        setupHtmlDisplayData(journey);
+        showHtmlTransition(journey);
         return journey;
     }
 
@@ -432,8 +432,8 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                        Display Data
     //                                                                        ============
-    protected void setupDisplayData(NextJourney journey) {
-        if (runtime.isForwardToHtml() && journey.isDefined()) {
+    protected void setupHtmlDisplayData(NextJourney journey) {
+        if (runtime.isForwardToHtml() && journey.isHtmlJourney()) {
             runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
         }
     }
@@ -441,8 +441,8 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                             Logging
     //                                                                             =======
-    protected void showTransition(NextJourney journey) {
-        if (logger.isDebugEnabled() && journey.isDefined()) {
+    protected void showHtmlTransition(NextJourney journey) {
+        if (logger.isDebugEnabled() && journey.isHtmlJourney()) {
             final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
             final String path = journey.getRoutingPath(); // not null
             final String tag = path.endsWith(".html") ? "#html " : (path.endsWith(".jsp") ? "#jsp " : "");
