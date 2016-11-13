@@ -29,6 +29,8 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
+import org.lastaflute.core.json.engine.GsonJsonEngine;
+import org.lastaflute.core.json.engine.RealJsonEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +71,7 @@ public class SimpleJsonManager implements JsonManager {
     protected List<JsonYourCollectionResource> yourCollectionResourceList = Collections.emptyList();
 
     /** The real parser of JSON. (NotNull: after initialization) */
-    protected RealJsonParser realJsonParser;
+    protected RealJsonEngine realJsonParser;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -93,7 +95,7 @@ public class SimpleJsonManager implements JsonManager {
             yourCollectionResourceList = yourCollections;
         }
         // should be last because of using other instance variable
-        final RealJsonParser provided = provider != null ? provider.swtichJsonParser() : null;
+        final RealJsonEngine provided = provider != null ? provider.swtichJsonEngine() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
         showBootLogging();
     }
@@ -102,8 +104,8 @@ public class SimpleJsonManager implements JsonManager {
         return assistantDirector.assistCoreDirection();
     }
 
-    protected RealJsonParser createDefaultJsonParser() {
-        return createGsonJsonParser();
+    protected RealJsonEngine createDefaultJsonParser() {
+        return createGsonJsonEngine(jsonMappingOption);
     }
 
     protected void showBootLogging() {
@@ -142,15 +144,15 @@ public class SimpleJsonManager implements JsonManager {
     // ===================================================================================
     //                                                                               Gson
     //                                                                              ======
-    protected RealJsonParser createGsonJsonParser() {
+    protected RealJsonEngine createGsonJsonEngine(OptionalThing<JsonMappingOption> mappingOption) {
         final boolean serializeNulls = !nullsSuppressed;
         final boolean prettyPrinting = !prettyPrintSuppressed && developmentHere;
-        return new GsonJsonParser(builder -> {
+        return new GsonJsonEngine(builder -> {
             setupSerializeNullsSettings(builder, serializeNulls);
             setupPrettyPrintingSettings(builder, prettyPrinting);
             setupYourCollectionSettings(builder);
         }, op -> {
-            jsonMappingOption.ifPresent(another -> op.acceptAnother(another));
+            mappingOption.ifPresent(another -> op.acceptAnother(another));
         });
     }
 
@@ -261,6 +263,15 @@ public class SimpleJsonManager implements JsonManager {
     public String toJson(Object bean) {
         assertArgumentNotNull("bean", bean);
         return realJsonParser.toJson(bean);
+    }
+
+    // ===================================================================================
+    //                                                                        Another Rule
+    //                                                                        ============
+    @Override
+    public RealJsonEngine newAnotherEngine(OptionalThing<JsonMappingOption> mappingOption) {
+        assertArgumentNotNull("mappingOption", mappingOption);
+        return createGsonJsonEngine(mappingOption);
     }
 
     // ===================================================================================

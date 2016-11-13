@@ -18,6 +18,7 @@ package org.lastaflute.core.json;
 import java.util.List;
 
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
+import org.lastaflute.core.json.engine.RealJsonEngine;
 
 /**
  * The provider of JSON resource.
@@ -62,14 +63,14 @@ public interface JsonResourceProvider {
     }
 
     // ===================================================================================
-    //                                                                         Json Parser
+    //                                                                         Json Engine
     //                                                                         ===========
     /**
-     * Switch to the parser of JSON for your parsing. <br>
+     * Switch to the engine of JSON for your parsing. <br>
      * Dangerous! Embedded Gson settings are disappeared.
-     * @return The instance for real parser of JSON. (NullAllowed: if null, use default)
+     * @return The instance for real engine of JSON. (NullAllowed: if null, use default)
      */
-    default RealJsonParser swtichJsonParser() {
+    default RealJsonEngine swtichJsonEngine() {
         return null; // use default
     }
 }
