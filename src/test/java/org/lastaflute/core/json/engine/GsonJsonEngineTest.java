@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.json;
+package org.lastaflute.core.json.engine;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,14 +31,14 @@ import org.lastaflute.unit.mock.db.MockCDef;
 /**
  * @author jflute
  */
-public class GsonJsonParserTest extends PlainTestCase {
+public class GsonJsonEngineTest extends PlainTestCase {
 
     // ===================================================================================
     //                                                                          Java8 Time
     //                                                                          ==========
     public void test_java8time_toJson_fromJson() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> {} , op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {});
         LocalDate date = toLocalDate("2015/05/18");
         LocalDateTime dateTime = toLocalDateTime("2015/05/25 12:34:56.789");
         LocalTime time = toLocalTime("23:15:47.731");
@@ -50,14 +50,14 @@ public class GsonJsonParserTest extends PlainTestCase {
         mockUser.morningCallTime = time;
 
         // ## Act ##
-        String json = parser.toJson(mockUser);
+        String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
         assertContainsAll(json, "2015-05-18", "2015-05-25T12:34:56.789", "23:15:47.731");
 
         // ## Act ##
-        MockUser fromJson = parser.fromJson(json, MockUser.class);
+        MockUser fromJson = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(fromJson);
@@ -72,7 +72,7 @@ public class GsonJsonParserTest extends PlainTestCase {
     //                                                                             =======
     public void test_Boolean_toJson_fromJson_basic() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> {} , op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {});
         MockUser mockUser = new MockUser();
         mockUser.id = 2;
         mockUser.name = "land";
@@ -80,14 +80,14 @@ public class GsonJsonParserTest extends PlainTestCase {
         mockUser.wrapperFlg = true;
 
         // ## Act ##
-        String json = parser.toJson(mockUser);
+        String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
         assertContainsAll(json, "true");
 
         // ## Act ##
-        MockUser fromJson = parser.fromJson(json, MockUser.class);
+        MockUser fromJson = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(fromJson);
@@ -98,7 +98,7 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_Boolean_toJson_fromJson_null() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> {} , op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {});
         MockUser mockUser = new MockUser();
         mockUser.id = 2;
         mockUser.name = "land";
@@ -106,14 +106,14 @@ public class GsonJsonParserTest extends PlainTestCase {
         mockUser.wrapperFlg = null;
 
         // ## Act ##
-        String json = parser.toJson(mockUser);
+        String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
         assertContainsAll(json, "true");
 
         // ## Act ##
-        MockUser fromJson = parser.fromJson(json, MockUser.class);
+        MockUser fromJson = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(fromJson);
@@ -124,7 +124,7 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_Boolean_toJson_fromJson_everywhereQuoteWriting_andOthers() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.asEverywhereQuoteWriting().asNullToEmptyWriting().asEmptyToNullReading();
         });
         MockUser mockUser = new MockUser();
@@ -134,14 +134,14 @@ public class GsonJsonParserTest extends PlainTestCase {
         mockUser.wrapperFlg = null;
 
         // ## Act ##
-        String json = parser.toJson(mockUser);
+        String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
         assertContainsAll(json, "\"true\"");
 
         // ## Act ##
-        MockUser fromJson = parser.fromJson(json, MockUser.class);
+        MockUser fromJson = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(fromJson);
@@ -152,7 +152,7 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_Boolean_toJson_fromJson_booleanFilter_integer() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.deserializeBooleanBy(exp -> exp.equals(1)).serializeBooleanBy(value -> value ? 1 : 0);
         });
         MockUser mockUser = new MockUser();
@@ -162,14 +162,14 @@ public class GsonJsonParserTest extends PlainTestCase {
         mockUser.wrapperFlg = null;
 
         // ## Act ##
-        String json = parser.toJson(mockUser);
+        String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
         assertContainsAll(json, "1");
 
         // ## Act ##
-        MockUser fromJson = parser.fromJson(json, MockUser.class);
+        MockUser fromJson = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(fromJson);
@@ -180,7 +180,7 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_Boolean_toJson_fromJson_booleanFilter_string() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.deserializeBooleanBy(exp -> exp.equals("1")).serializeBooleanBy(value -> value ? "1" : "0");
         });
         MockUser mockUser = new MockUser();
@@ -190,14 +190,14 @@ public class GsonJsonParserTest extends PlainTestCase {
         mockUser.wrapperFlg = null;
 
         // ## Act ##
-        String json = parser.toJson(mockUser);
+        String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
         assertContainsAll(json, "\"1\"");
 
         // ## Act ##
-        MockUser fromJson = parser.fromJson(json, MockUser.class);
+        MockUser fromJson = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(fromJson);
@@ -211,21 +211,21 @@ public class GsonJsonParserTest extends PlainTestCase {
     //                                                                              ======
     public void test_CDef_toJson_fromJson() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> {} , op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {});
         MockUser mockUser = new MockUser();
         mockUser.id = 2;
         mockUser.name = "land";
         mockUser.validFlg = MockCDef.Flg.True;
 
         // ## Act ##
-        String json = parser.toJson(mockUser);
+        String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
         assertContainsAll(json, "1");
 
         // ## Act ##
-        MockUser fromJson = parser.fromJson(json, MockUser.class);
+        MockUser fromJson = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(fromJson);
@@ -238,12 +238,12 @@ public class GsonJsonParserTest extends PlainTestCase {
     //                                                                       =============
     public void test_emptyToNull_toJson_non_nullAll() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {});
         String json =
                 "{id:null,name:null,status:null,birthdate:null,formalizedDatetime:null,morningCallTime:null,primitiveFlg:null,wrapperFlg:null,validFlg:null}";
 
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(user);
@@ -257,12 +257,12 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_emptyToNull_toJson_non_emptyProperty() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {});
         String json =
                 "{id:null,name:null,status:null,birthdate:null,formalizedDatetime:null,morningCallTime:null,primitiveFlg:null,wrapperFlg:null,validFlg:\"\"}";
 
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(user);
@@ -276,11 +276,11 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_emptyToNull_toJson_valid_nullAll() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> op.asEmptyToNullReading());
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> op.asEmptyToNullReading());
         String json = "{id:null,name:null,status:null,birthdate:null,formalizedDatetime:null,morningCallTime:null,validFlg:null}";
 
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(user);
@@ -292,11 +292,11 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_emptyToNull_toJson_valid_emptyProperty() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> op.asEmptyToNullReading());
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> op.asEmptyToNullReading());
         String json = "{id:\"\",name:\"\",status:null,birthdate:\"\",formalizedDatetime:\"\",morningCallTime:\"\",validFlg:\"\"}";
 
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(user);
@@ -311,10 +311,10 @@ public class GsonJsonParserTest extends PlainTestCase {
     //                                                                       =============
     public void test_nullToEmpty_toJson_non() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {});
 
         // ## Act ##
-        String json = parser.toJson(new MockUser());
+        String json = engine.toJson(new MockUser());
 
         // ## Assert ##
         log(json);
@@ -322,7 +322,7 @@ public class GsonJsonParserTest extends PlainTestCase {
         assertNotContains(json, "\"\"");
 
         // ## Act ##
-        MockUser fromJson = parser.fromJson(json, MockUser.class);
+        MockUser fromJson = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(fromJson);
@@ -332,10 +332,10 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_nullToEmpty_toJson_valid() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> {} , op -> op.asNullToEmptyWriting());
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> op.asNullToEmptyWriting());
 
         // ## Act ##
-        String json = parser.toJson(new MockUser());
+        String json = engine.toJson(new MockUser());
 
         // ## Assert ##
         log(json);
@@ -344,7 +344,7 @@ public class GsonJsonParserTest extends PlainTestCase {
 
         // ## Act ##
         try {
-            parser.fromJson(json, MockUser.class);
+            engine.fromJson(json, MockUser.class);
             // ## Assert ##
             fail();
         } catch (JsonPropertyNumberParseFailureException e) { // cannot reverse
@@ -357,14 +357,14 @@ public class GsonJsonParserTest extends PlainTestCase {
     //                                                                   =================
     public void test_filterSimpleText_fromJson_non() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.filterSimpleTextReading(text -> text);
         });
         String json = "{id:\" 1 \",name:\" sea \",status:null,birthdate:\" 2015-12-15 \",validFlg:\" true \",primitiveFlg:\" true \"}";
 
         // ## Act ##
         try {
-            parser.fromJson(json, MockUser.class);
+            engine.fromJson(json, MockUser.class);
             // ## Assert ##
             fail();
         } catch (JsonPropertyNumberParseFailureException e) {
@@ -374,13 +374,13 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_filterSimpleText_fromJson_trim() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.filterSimpleTextReading(text -> text.trim());
         });
         String json = "{id:\" 1 \",name:\" sea \",status:null,birthdate:\" 2015-12-15 \",validFlg:\" true \",primitiveFlg:\" true \"}";
 
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
 
         // ## Assert ##
         log(user);
@@ -391,7 +391,7 @@ public class GsonJsonParserTest extends PlainTestCase {
         assertNull(user.formalizedDatetime);
         assertEquals(MockCDef.Flg.True, user.validFlg);
         assertTrue(user.primitiveFlg);
-        log(parser.toJson(user)); // expect no exception
+        log(engine.toJson(user)); // expect no exception
     }
 
     // ===================================================================================
@@ -399,77 +399,77 @@ public class GsonJsonParserTest extends PlainTestCase {
     //                                                          ==========================
     public void test_asListNullToEmptyReading_fromJson_noOption_null() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {});
         String json = "{id:\"1\",stringList:null}";
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
         // ## Assert ##
         log(user);
         assertEquals(1, user.id);
         assertNull(user.stringList);
-        assertContains(parser.toJson(user), "\"stringList\":null");
+        assertContains(engine.toJson(user), "\"stringList\":null");
     }
 
     public void test_asListNullToEmptyReading_fromJson_noOption_hasElement() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {});
         String json = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
         // ## Assert ##
         log(user);
         assertEquals(1, user.id);
         assertNotNull(user.stringList);
         assertEquals(Arrays.asList("over", "mystic"), user.stringList);
-        assertContains(parser.toJson(user), "\"stringList\":[\"over\",\"mystic\"]");
+        assertContains(engine.toJson(user), "\"stringList\":[\"over\",\"mystic\"]");
     }
 
     public void test_asListNullToEmptyReading_fromJson_null() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.asListNullToEmptyReading();
         });
         String json = "{id:\"1\",stringList:null}";
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
         // ## Assert ##
         log(user);
         assertEquals(1, user.id);
         assertNotNull(user.stringList);
         assertHasZeroElement(user.stringList);
-        assertContains(parser.toJson(user), "\"stringList\":[]");
+        assertContains(engine.toJson(user), "\"stringList\":[]");
     }
 
     public void test_asListNullToEmptyReading_fromJson_emptyList() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.asListNullToEmptyReading();
         });
         String json = "{id:\"1\",stringList:[]}";
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
         // ## Assert ##
         log(user);
         assertEquals(1, user.id);
         assertNotNull(user.stringList);
         assertHasZeroElement(user.stringList);
-        assertContains(parser.toJson(user), "\"stringList\":[]");
+        assertContains(engine.toJson(user), "\"stringList\":[]");
     }
 
     public void test_asListNullToEmptyReading_fromJson_hasElement() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.asListNullToEmptyReading();
         });
         String json = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
         // ## Act ##
-        MockUser user = parser.fromJson(json, MockUser.class);
+        MockUser user = engine.fromJson(json, MockUser.class);
         // ## Assert ##
         log(user);
         assertEquals(1, user.id);
         assertNotNull(user.stringList);
         assertEquals(Arrays.asList("over", "mystic"), user.stringList);
-        assertContains(parser.toJson(user), "over");
+        assertContains(engine.toJson(user), "over");
     }
 
     // ===================================================================================
@@ -477,11 +477,11 @@ public class GsonJsonParserTest extends PlainTestCase {
     //                                                          ==========================
     public void test_asListNullToEmptyWriting_toJson_noOption_null() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {});
         String sourceJson = "{id:\"1\",stringList:null}";
-        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        MockUser user = engine.fromJson(sourceJson, MockUser.class);
         // ## Act ##
-        String json = parser.toJson(user);
+        String json = engine.toJson(user);
         // ## Assert ##
         log(json);
         assertContains(json, "\"stringList\":null");
@@ -489,50 +489,50 @@ public class GsonJsonParserTest extends PlainTestCase {
 
     public void test_asListNullToEmptyWriting_toJson_noOption_hasElement() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {});
         String sourceJson = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
-        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        MockUser user = engine.fromJson(sourceJson, MockUser.class);
         // ## Act ##
-        String json = parser.toJson(user);
+        String json = engine.toJson(user);
         // ## Assert ##
         log(json);
         assertContains(json, "\"stringList\":[\"over\",\"mystic\"]");
     }
 
     public void test_asListNullToEmptyWriting_toJson_null() throws Exception {
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.asListNullToEmptyWriting();
         });
         String sourceJson = "{id:\"1\",stringList:null}";
-        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        MockUser user = engine.fromJson(sourceJson, MockUser.class);
         // ## Act ##
-        String json = parser.toJson(user);
+        String json = engine.toJson(user);
         // ## Assert ##
         log(json);
         assertContains(json, "\"stringList\":[]");
     }
 
     public void test_asListNullToEmptyWriting_toJson_emptyList() throws Exception {
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.asListNullToEmptyWriting();
         });
         String sourceJson = "{id:\"1\",stringList:[]}";
-        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        MockUser user = engine.fromJson(sourceJson, MockUser.class);
         // ## Act ##
-        String json = parser.toJson(user);
+        String json = engine.toJson(user);
         // ## Assert ##
         log(json);
         assertContains(json, "\"stringList\":[]");
     }
 
     public void test_asListNullToEmptyWriting_toJson_hasElement() throws Exception {
-        GsonJsonParser parser = new GsonJsonParser(builder -> builder.serializeNulls(), op -> {
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> builder.serializeNulls(), op -> {
             op.asListNullToEmptyReading();
         });
         String sourceJson = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
-        MockUser user = parser.fromJson(sourceJson, MockUser.class);
+        MockUser user = engine.fromJson(sourceJson, MockUser.class);
         // ## Act ##
-        String json = parser.toJson(user);
+        String json = engine.toJson(user);
         // ## Assert ##
         log(json);
         assertContains(json, "\"stringList\":[\"over\",\"mystic\"]");
@@ -543,7 +543,7 @@ public class GsonJsonParserTest extends PlainTestCase {
     //                                                                         ===========
     public void test_threadSafe() throws Exception {
         // ## Arrange ##
-        GsonJsonParser parser = new GsonJsonParser(builder -> {} , op -> {});
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {});
 
         // ## Act ##
         // ## Assert ##
@@ -556,12 +556,12 @@ public class GsonJsonParserTest extends PlainTestCase {
                 second.id = 2;
                 second.name = "land";
                 second.status = new MockUserStatus("fml");
-                String toJson1 = parser.toJson(first);
-                String toJson2 = parser.toJson(second);
-                MockUser fromJson1 = parser.fromJson(toJson1, MockUser.class);
-                MockUser fromJson2 = parser.fromJson(toJson2, MockUser.class);
-                String totoJson1 = parser.toJson(fromJson1);
-                String totoJson2 = parser.toJson(fromJson2);
+                String toJson1 = engine.toJson(first);
+                String toJson2 = engine.toJson(second);
+                MockUser fromJson1 = engine.fromJson(toJson1, MockUser.class);
+                MockUser fromJson2 = engine.fromJson(toJson2, MockUser.class);
+                String totoJson1 = engine.toJson(fromJson1);
+                String totoJson2 = engine.toJson(fromJson2);
                 car.goal(totoJson1 + totoJson2);
             }
         }, new CannonballOption().expectSameResult().threadCount(20).repeatCount(30));
