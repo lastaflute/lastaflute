@@ -208,15 +208,16 @@ public class ActionRequestProcessor {
     //                                                                             to Next
     //                                                                             =======
     protected void toNext(ActionRuntime runtime, NextJourney journey) throws IOException, ServletException {
-        if (journey.isHtmlJourney()) {
+        if (journey.hasJourneyProvider()) { // e.g. HTML/JSON response
+            journey.getJourneyProvider().bonVoyage();
+        }
+        if (journey.hasViewRouting()) { // basically HTML response
             if (journey.isRedirectTo()) {
                 doRedirect(runtime, journey);
             } else {
                 final HtmlRenderer renderer = prepareHtmlRenderer(runtime, journey);
                 renderer.render(getRequestManager(), runtime, journey);
             }
-        } else if (journey.isOriginalJourney()) { // e.g. JSON handling
-            journey.getOriginalJourneyProvider().bonVoyage();
         }
         // do nothing if undefined
     }

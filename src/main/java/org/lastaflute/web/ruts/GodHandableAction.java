@@ -155,7 +155,7 @@ public class GodHandableAction implements VirtualAction {
     protected void doExecute(OptionalThing<VirtualForm> form, ActionHook hook, BegunTx<Object> tx) {
         final ActionResponse response = actuallyExecute(form, hook); // #to_action
         redCardableAssist.assertExecuteMethodResponseDefined(response);
-        final NextJourney journey = reflect(response); // also response handling in transaction
+        final NextJourney journey = reflect(response);
         final boolean rollbackOnly;
         if (runtime.hasValidationError()) {
             tx.rollbackOnly();
@@ -433,7 +433,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                        Display Data
     //                                                                        ============
     protected void setupHtmlDisplayData(NextJourney journey) {
-        if (runtime.isForwardToHtml() && journey.isHtmlJourney()) {
+        if (runtime.isForwardToHtml() && journey.hasViewRouting()) {
             runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
         }
     }
@@ -442,7 +442,7 @@ public class GodHandableAction implements VirtualAction {
     //                                                                             Logging
     //                                                                             =======
     protected void showHtmlTransition(NextJourney journey) {
-        if (logger.isDebugEnabled() && journey.isHtmlJourney()) {
+        if (logger.isDebugEnabled() && journey.hasViewRouting()) {
             final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
             final String path = journey.getRoutingPath(); // not null
             final String tag = path.endsWith(".html") ? "#html " : (path.endsWith(".jsp") ? "#jsp " : "");

@@ -29,6 +29,7 @@ import org.lastaflute.di.util.ArrayMap;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.NextJourney;
+import org.lastaflute.web.ruts.NextJourney.PlannedJourneyProvider;
 import org.lastaflute.web.util.LaServletContextUtil;
 
 /**
@@ -122,7 +123,7 @@ public class ActionMapping {
     //                                                                  ==================
     // o to suppress that URL that contains dot is handled as JSP
     // o routing path of forward e.g. /member/list/ -> MemberListAction
-    public NextJourney createNextJourney(HtmlResponse response) { // almost copied from super
+    public NextJourney createNextJourney(PlannedJourneyProvider journeyProvider, HtmlResponse response) { // almost copied from super
         String path = response.getRoutingPath();
         final boolean redirectTo = response.isRedirectTo();
         if (path.indexOf(":") < 0) {
@@ -133,11 +134,14 @@ public class ActionMapping {
                 path = filterHtmlPath(path);
             }
         }
-        return newNextJourney(path, redirectTo, response.isAsIs(), response.getViewObject());
+        return newNextJourney(journeyProvider, path, redirectTo, response.isAsIs(), response.getViewObject());
     }
 
-    protected NextJourney newNextJourney(String routingPath, boolean redirectTo, boolean asIs, OptionalThing<Object> viewObject) {
-        return new NextJourney(routingPath, redirectTo, asIs, viewObject);
+    protected NextJourney newNextJourney(PlannedJourneyProvider journeyProvider // fixed
+            , String routingPath, boolean redirectTo, boolean asIs // routing resources
+            , OptionalThing<Object> viewObject // for e.g. mixer2
+    ) {
+        return new NextJourney(journeyProvider, routingPath, redirectTo, asIs, viewObject);
     }
 
     protected String buildActionPath(String componentName) {

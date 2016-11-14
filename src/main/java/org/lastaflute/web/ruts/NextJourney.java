@@ -35,43 +35,53 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                      Journey Provider
+    //                                      ----------------
+    protected final PlannedJourneyProvider journeyProvider; // not null if defined (e.g. HTML, JSON)
+
+    // -----------------------------------------------------
+    //                                          View Routing
+    //                                          ------------
     protected final String routingPath; // not null if HTML
     protected final boolean redirectTo;
     protected final boolean asIs; // when redirect
     protected final OptionalThing<Object> viewObject; // not null, empty allowed, for e.g. mixer2
-    protected final OriginalJourneyProvider originalJourneyProvider; // not null if original e.g. JSON, Stream
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public NextJourney(String routingPath, boolean redirectTo, boolean asIs, OptionalThing<Object> viewObject) { // for HTML
+    public NextJourney(PlannedJourneyProvider journeyProvider // fixed resource
+            , String routingPath, boolean redirectTo, boolean asIs // routing resources
+            , OptionalThing<Object> viewObject // for e.g. mixer2 
+    ) { // for HTML
+        this.journeyProvider = journeyProvider;
         this.routingPath = routingPath;
         this.redirectTo = redirectTo;
         this.asIs = asIs;
         this.viewObject = viewObject;
-        this.originalJourneyProvider = null;
     }
 
-    public NextJourney(OriginalJourneyProvider originalJourneyProvider) { // for e.g. JSON, Stream
+    public NextJourney(PlannedJourneyProvider journeyProvider) { // for e.g. JSON, Stream
+        this.journeyProvider = journeyProvider;
         this.routingPath = null; // means no HTML
         this.redirectTo = false;
         this.asIs = false;
         this.viewObject = OptionalThing.empty();
-        this.originalJourneyProvider = originalJourneyProvider;
     }
 
     @FunctionalInterface
-    public static interface OriginalJourneyProvider {
+    public static interface PlannedJourneyProvider {
 
         void bonVoyage();
     }
 
-    protected NextJourney() {
+    protected NextJourney() { // as undefined
         this.routingPath = null; // means no HTML
         this.redirectTo = false;
         this.asIs = false;
         this.viewObject = OptionalThing.empty();
-        this.originalJourneyProvider = null;
+        this.journeyProvider = null;
     }
 
     public static NextJourney undefined() {
@@ -85,14 +95,15 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append("journey:{");
-        if (isHtmlJourney()) {
-            sb.append("path=").append(routingPath);
-            sb.append(redirectTo ? ", redirect" : ", forward");
-            sb.append(asIs ? ", asIs" : "");
-        } else if (isOriginalJourney()) {
-            sb.append(originalJourneyProvider);
-        } else {
+        if (isUndefined()) {
             sb.append("undefined");
+        } else {
+            sb.append(journeyProvider != null ? journeyProvider : null);
+            if (hasViewRouting()) {
+                sb.append(", routing=").append(routingPath);
+                sb.append(redirectTo ? ", redirect" : ", forward");
+                sb.append(asIs ? ", asIs" : "");
+            }
         }
         sb.append("}");
         return sb.toString();
@@ -102,14 +113,29 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     //                                                                            Accessor
     //                                                                            ========
     // -----------------------------------------------------
-    //                                          HTML Journey
+    //                                      Journey Provider
+    //                                      ----------------
+    public boolean hasJourneyProvider() {
+        return journeyProvider != null;
+    }
+
+    public PlannedJourneyProvider getJourneyProvider() { // not null or exception
+        if (!hasJourneyProvider()) {
+            String msg = "The action transition is not original so cannot call getOriginalJourneyProvider(): " + routingPath;
+            throw new IllegalStateException(msg);
+        }
+        return journeyProvider;
+    }
+
+    // -----------------------------------------------------
+    //                                          View Routing
     //                                          ------------
-    public boolean isHtmlJourney() {
+    public boolean hasViewRouting() {
         return routingPath != null;
     }
 
     public String getRoutingPath() { // not null or exception
-        if (!isHtmlJourney()) {
+        if (!hasViewRouting()) {
             String msg = "The action transition is not HTML so cannot call getRoutingPath(): " + routingPath;
             throw new IllegalStateException(msg);
         }
@@ -129,24 +155,9 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     }
 
     // -----------------------------------------------------
-    //                                      Original Journey
-    //                                      ----------------
-    public boolean isOriginalJourney() {
-        return originalJourneyProvider != null;
-    }
-
-    public OriginalJourneyProvider getOriginalJourneyProvider() { // not null or exception
-        if (!isOriginalJourney()) {
-            String msg = "The action transition is not original so cannot call getOriginalJourneyProvider(): " + routingPath;
-            throw new IllegalStateException(msg);
-        }
-        return originalJourneyProvider;
-    }
-
-    // -----------------------------------------------------
     //                                     Undefined Journey
     //                                     -----------------
     public boolean isUndefined() {
-        return !isHtmlJourney() && !isOriginalJourney();
+        return !hasJourneyProvider() && !hasViewRouting();
     }
 }

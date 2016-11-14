@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 
 // package is a little strange (path adjustment from the beginning...)
 // but no change for compatible
@@ -106,10 +107,11 @@ public interface ActionAdjustmentProvider {
     }
 
     /**
-     * Adjust (defined) action response just before reflection to response, e.g. header.
+     * Adjust (defined) action response just before reflecting to response, e.g. header.
+     * @param runtime The runtime of action that has current various state. (NotNull)
      * @param response The defined action response. (NotNull)
      */
-    default void adjustActionResponseJustBefore(ActionResponse response) {
+    default void adjustActionResponseJustBefore(ActionRuntime runtime, ActionResponse response) {
     }
 
     /**
