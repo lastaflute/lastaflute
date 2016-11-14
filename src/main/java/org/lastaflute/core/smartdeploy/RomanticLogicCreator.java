@@ -165,7 +165,7 @@ public class RomanticLogicCreator extends LogicCreator {
                 || HttpServletRequest.class.isAssignableFrom(tp) // servlet request
                 || HttpServletResponse.class.isAssignableFrom(tp) // servlet response
                 || HttpSession.class.isAssignableFrom(tp) // servlet session
-                ;
+        ;
     }
 
     protected boolean isAppWeb(Class<?> tp) {

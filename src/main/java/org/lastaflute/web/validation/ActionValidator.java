@@ -60,15 +60,11 @@ import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.core.message.supplier.MessageLocaleProvider;
+import org.lastaflute.core.message.supplier.UserMessagesCreator;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
-import org.lastaflute.web.api.ApiFailureResource;
-import org.lastaflute.web.response.ApiResponse;
-import org.lastaflute.web.ruts.message.MessagesCreator;
-import org.lastaflute.web.ruts.process.ActionRuntime;
-import org.lastaflute.web.servlet.request.RequestManager;
-import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
@@ -147,19 +143,26 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final RequestManager requestManager;
-    protected final MessagesCreator<MESSAGES> messageCreator;
+    protected final MessageManager messageManager;
+    protected final MessageLocaleProvider messageLocaleProvider;
+    protected final UserMessagesCreator<MESSAGES> userMessagesCreator;
+    protected final VaErrorHook apiFailureHook;
     protected final Class<?>[] runtimeGroups; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(RequestManager requestManager, MessagesCreator<MESSAGES> noArgInLambda, Class<?>... runtimeGroups) {
-        assertArgumentNotNull("requestManager", requestManager);
-        assertArgumentNotNull("noArgInLambda", noArgInLambda);
+    public ActionValidator(MessageManager messageManager, MessageLocaleProvider messageLocaleProvider,
+            UserMessagesCreator<MESSAGES> userMessagesCreator, VaErrorHook apiFailureHook, Class<?>... runtimeGroups) {
+        assertArgumentNotNull("messageManager", messageManager);
+        assertArgumentNotNull("messageLocaleProvider", messageLocaleProvider);
+        assertArgumentNotNull("userMessagesCreator", userMessagesCreator);
+        assertArgumentNotNull("apiFailureHook", apiFailureHook);
         assertArgumentNotNull("runtimeGroups", runtimeGroups);
-        this.requestManager = requestManager;
-        this.messageCreator = noArgInLambda;
+        this.messageManager = messageManager;
+        this.messageLocaleProvider = messageLocaleProvider;
+        this.userMessagesCreator = userMessagesCreator;
+        this.apiFailureHook = apiFailureHook;
         this.runtimeGroups = runtimeGroups;
         assertGroupsNotContainsClientError(runtimeGroups);
     }
@@ -184,10 +187,10 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         return doValidate(form, moreValidationLambda, validationErrorLambda);
     }
 
-    public void throwValidationError(MessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
+    public void throwValidationError(UserMessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
         assertArgumentNotNull("noArgInLambda", noArgInLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
-        throwValidationErrorException(noArgInLambda.provide(), validationErrorLambda);
+        throwValidationErrorException(noArgInLambda.create(), validationErrorLambda);
     }
 
     // -----------------------------------------------------
@@ -196,25 +199,12 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     public ValidationSuccess validateApi(Object body, VaMore<MESSAGES> moreValidationLambda) {
         assertArgumentNotNull("body", body);
         assertArgumentNotNull("moreValidationLambda", moreValidationLambda);
-        return doValidate(body, moreValidationLambda, () -> hookApiValidationError());
+        return doValidate(body, moreValidationLambda, apiFailureHook);
     }
 
-    public void throwValidationErrorApi(MessagesCreator<MESSAGES> noArgInLambda) {
+    public void throwValidationErrorApi(UserMessagesCreator<MESSAGES> noArgInLambda) {
         assertArgumentNotNull("noArgInLambda", noArgInLambda);
-        throwValidationErrorException(noArgInLambda.provide(), () -> hookApiValidationError());
-    }
-
-    protected ApiResponse hookApiValidationError() { // for API
-        final ApiFailureResource resource = createApiFailureResource(requestManager.errors().get(), requestManager);
-        return requestManager.getApiManager().handleValidationError(resource);
-    }
-
-    protected ApiFailureResource createApiFailureResource(OptionalThing<UserMessages> errors, RequestManager requestManager) {
-        return new ApiFailureResource(getActionRuntime(), errors, requestManager);
-    }
-
-    protected ActionRuntime getActionRuntime() {
-        return LaActionRuntimeUtil.getActionRuntime();
+        throwValidationErrorException(noArgInLambda.create(), apiFailureHook);
     }
 
     // -----------------------------------------------------
@@ -309,7 +299,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     protected ResourceBundle newHookedResourceBundle(Locale locale) {
-        return new HookedResourceBundle(requestManager.getMessageManager(), locale);
+        return new HookedResourceBundle(messageManager, locale);
     }
 
     protected static class HookedResourceBundle extends ResourceBundle {
@@ -435,7 +425,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                       Messages Assist
     //                                       ---------------
     protected MESSAGES prepareActionMessages() {
-        return messageCreator.provide();
+        return userMessagesCreator.create();
     }
 
     protected void registerActionMessage(UserMessages messages, ConstraintViolation<Object> vio) {
@@ -751,7 +741,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     protected OptionalThing<String> findMessage(String messageKey) {
-        return requestManager.getMessageManager().findMessage(requestManager.getUserLocale(), messageKey);
+        return messageManager.findMessage(messageLocaleProvider.provide(), messageKey);
     }
 
     protected UserMessage newDirectActionMessage(String msg, Annotation annotation, Class<?>[] groups) {

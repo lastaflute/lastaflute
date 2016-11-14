@@ -14,7 +14,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process;
+package org.lastaflute.web.ruts.process.actioncoins;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -30,6 +30,8 @@ import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.exception.MessagingClientErrorException;
 import org.lastaflute.web.ruts.config.ModuleConfig;
+import org.lastaflute.web.ruts.process.ActionResponseReflector;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -39,7 +41,7 @@ import org.lastaflute.web.util.LaActionRuntimeUtil;
 /**
  * @author jflute
  */
-public class ActionCoinHelper {
+public class ActionCoinsHelper {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -51,7 +53,7 @@ public class ActionCoinHelper {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionCoinHelper(ModuleConfig moduleConfig, FwAssistantDirector assistantDirector, RequestManager requestManager) {
+    public ActionCoinsHelper(ModuleConfig moduleConfig, FwAssistantDirector assistantDirector, RequestManager requestManager) {
         this.moduleConfig = moduleConfig;
         this.assistantDirector = assistantDirector;
         this.requestManager = requestManager;

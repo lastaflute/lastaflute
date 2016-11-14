@@ -33,6 +33,7 @@ import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
+import org.lastaflute.web.ruts.process.urlparam.RequestUrlParam;
 import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**
@@ -125,7 +126,7 @@ public class ActionRuntime {
         return routingPath.endsWith(".html") // e.g. Thymeleaf
                 || routingPath.endsWith(".xhtml") // just in case
                 || routingPath.endsWith(".jsp") // no comment
-                ;
+        ;
     }
 
     /**

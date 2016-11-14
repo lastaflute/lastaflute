@@ -13,17 +13,16 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.message;
+package org.lastaflute.core.message.supplier;
 
-import org.lastaflute.core.message.UserMessages;
+import java.util.Locale;
 
 /**
- * @param <MESSAGES> The type of messages.
  * @author jflute
- * @since 0.6.0 (2015/05/17 Sunday at higashi-ginza)
+ * @since 0.8.5 (2016/11/17 Monday at showbase)
  */
 @FunctionalInterface
-public interface MessagesCreator<MESSAGES extends UserMessages> {
+public interface MessageLocaleProvider {
 
-    MESSAGES provide();
+    Locale provide();
 }

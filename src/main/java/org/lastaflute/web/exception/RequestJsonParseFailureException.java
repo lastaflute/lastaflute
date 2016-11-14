@@ -19,7 +19,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.web.ruts.process.JsonDebugChallenge;
+import org.lastaflute.web.ruts.process.debugchallenge.JsonDebugChallenge;
 
 /**
  * @author jflute

@@ -34,6 +34,8 @@ import org.lastaflute.web.ruts.NextJourney.OriginalJourneyProvider;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.process.ActionRuntime.DisplayDataValidator;
+import org.lastaflute.web.ruts.process.validatebean.ResponseHtmlBeanValidator;
+import org.lastaflute.web.ruts.process.validatebean.ResponseJsonBeanValidator;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.slf4j.Logger;

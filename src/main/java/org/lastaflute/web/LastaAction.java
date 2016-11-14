@@ -17,22 +17,27 @@ package org.lastaflute.web;
 
 import javax.annotation.Resource;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionStage;
+import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.path.ActionPathResolver;
+import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.response.StreamResponse;
 import org.lastaflute.web.response.XmlResponse;
 import org.lastaflute.web.response.next.ForwardNext;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.ActionValidator;
 
 /**
@@ -95,13 +100,29 @@ public abstract class LastaAction {
         return createValidator(myValidationGroups());
     }
 
-    @SuppressWarnings("unchecked")
-    protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> createValidator(Class<?>... groups) { // for explicit groups
-        return new ActionValidator<MESSAGES>(requestManager, () -> (MESSAGES) createMessages(), groups);
-    }
-
     protected Class<?>[] myValidationGroups() { // you can override
         return ActionValidator.DEFAULT_GROUPS; // means default group
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> createValidator(Class<?>... groups) { // for explicit groups
+        return new ActionValidator<MESSAGES>(messageManager // to get validation message
+                , () -> requestManager.getUserLocale() // used with messageManager
+                , () -> (MESSAGES) createMessages() // for new user messages
+                , () -> handleApiValidationError() // apiFailureHook
+                , groups);
+    }
+
+    protected ApiResponse handleApiValidationError() { // for API
+        final ActionRuntime runtime = LaActionRuntimeUtil.getActionRuntime();
+        final OptionalThing<UserMessages> messages = requestManager.errors().get();
+        final ApiFailureResource resource = newApiFailureResource(runtime, messages, requestManager);
+        return requestManager.getApiManager().handleValidationError(resource);
+    }
+
+    protected ApiFailureResource newApiFailureResource(ActionRuntime runtime, OptionalThing<UserMessages> messages,
+            RequestManager requestManager) {
+        return new ApiFailureResource(runtime, messages, requestManager);
     }
 
     /**

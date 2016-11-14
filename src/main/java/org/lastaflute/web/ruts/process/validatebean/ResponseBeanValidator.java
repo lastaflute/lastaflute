@@ -14,7 +14,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process;
+package org.lastaflute.web.ruts.process.validatebean;
 
 import java.util.Iterator;
 import java.util.List;
@@ -25,14 +25,17 @@ import java.util.function.Consumer;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.core.message.supplier.MessageLocaleProvider;
+import org.lastaflute.core.message.supplier.UserMessagesCreator;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
-import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
+import org.lastaflute.web.validation.VaErrorHook;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.slf4j.Logger;
@@ -52,15 +55,18 @@ public abstract class ResponseBeanValidator {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final RequestManager requestManager;
+    protected final MessageManager messageManager;
+    protected final MessageLocaleProvider messageLocaleProvider;
     protected final Object actionExp; // used as only exception message, Object for unit test
     protected final boolean warning;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ResponseBeanValidator(RequestManager requestManager, Object actionExp, boolean warning) {
-        this.requestManager = requestManager;
+    public ResponseBeanValidator(MessageManager messageManager, MessageLocaleProvider messageLocaleProvider, Object actionExp,
+            boolean warning) {
+        this.messageManager = messageManager;
+        this.messageLocaleProvider = messageLocaleProvider;
         this.actionExp = actionExp;
         this.warning = warning;
     }
@@ -89,9 +95,12 @@ public abstract class ResponseBeanValidator {
     }
 
     protected ActionValidator<UserMessages> createActionValidator() {
-        return new ActionValidator<>(requestManager, () -> {
-            return new UserMessages();
-        }, getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS));
+        final UserMessagesCreator<UserMessages> userMessagesCreator = () -> new UserMessages();
+        final Class<?>[] groups = getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS);
+        final VaErrorHook apiFailureHook = () -> {
+            throw new IllegalStateException("unused here, no way");
+        };
+        return new ActionValidator<>(messageManager, messageLocaleProvider, userMessagesCreator, apiFailureHook, groups);
     }
 
     protected abstract OptionalThing<Class<?>[]> getValidatorGroups();

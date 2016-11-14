@@ -48,10 +48,10 @@ public @interface EnvDispatch {
     /**
      * @return The type of implementation class for development environment. (NotNull)
      */
-    Class<?>development();
+    Class<?> development();
 
     /**
      * @return The type of implementation class for production environment. (NotNull)
      */
-    Class<?>production();
+    Class<?> production();
 }

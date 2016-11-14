@@ -1,6 +1,7 @@
 package org.lastaflute.web.ruts.process;
 
 import org.dbflute.utflute.core.PlainTestCase;
+import org.lastaflute.web.ruts.process.debugchallenge.JsonDebugChallenge;
 
 /**
  * @author jflute

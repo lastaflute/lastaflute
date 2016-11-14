@@ -33,7 +33,7 @@ import org.lastaflute.core.direction.CurtainBeforeHook;
 import org.lastaflute.core.direction.CurtainFinallyHook;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
-import org.lastaflute.core.message.MessageResourcesHolder;
+import org.lastaflute.core.message.resources.MessageResourcesHolder;
 import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ExternalContext;

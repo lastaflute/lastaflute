@@ -1,6 +1,5 @@
 /*
  * Copyright 2015-2016 the original author or authors.
- * Copyright 2015-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +13,17 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process;
+package org.lastaflute.core.message.supplier;
 
-import org.lastaflute.web.response.JsonResponse;
-import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.core.message.UserMessages;
 
 /**
+ * @param <MESSAGES> The type of messages.
  * @author jflute
- * @deprecated for compatible (with e.g. UTFlute)
+ * @since 0.6.0 (2015/05/17 Sunday at higashi-ginza)
  */
-public class ResponseJsonBeanValidator extends org.lastaflute.web.ruts.process.validatebean.ResponseJsonBeanValidator {
+@FunctionalInterface
+public interface UserMessagesCreator<MESSAGES extends UserMessages> {
 
-    // for compatible (with e.g. UTFlute)
-    public ResponseJsonBeanValidator(RequestManager requestManager, Object actionExp, boolean warning, JsonResponse<?> response) {
-        super(requestManager, actionExp, warning, response);
-    }
+    MESSAGES create();
 }

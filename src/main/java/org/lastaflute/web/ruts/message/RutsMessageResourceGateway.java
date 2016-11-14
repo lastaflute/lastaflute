@@ -17,7 +17,7 @@ package org.lastaflute.web.ruts.message;
 
 import java.util.Locale;
 
-import org.lastaflute.core.message.MessageResourcesGateway;
+import org.lastaflute.core.message.resources.MessageResourcesGateway;
 
 /**
  * @author jflute

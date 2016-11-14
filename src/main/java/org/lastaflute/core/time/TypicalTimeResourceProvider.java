@@ -41,7 +41,7 @@ public abstract class TypicalTimeResourceProvider implements TimeResourceProvide
     public BusinessTimeHandler provideBusinessTimeHandler(TimeManager timeManager) {
         return new TypicalBusinessTimeHandler(() -> {
             return timeManager.currentMillis();
-        } , () -> {
+        }, () -> {
             return getCentralTimeZone();
         });
     }

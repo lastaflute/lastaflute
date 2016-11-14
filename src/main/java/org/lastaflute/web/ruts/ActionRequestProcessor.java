@@ -30,11 +30,11 @@ import org.lastaflute.db.jta.stage.VestibuleTxProvider;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ModuleConfig;
-import org.lastaflute.web.ruts.process.ActionCoinHelper;
 import org.lastaflute.web.ruts.process.ActionFormMapper;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.ActionRuntime;
-import org.lastaflute.web.ruts.process.RequestUrlParam;
+import org.lastaflute.web.ruts.process.actioncoins.ActionCoinsHelper;
+import org.lastaflute.web.ruts.process.urlparam.RequestUrlParam;
 import org.lastaflute.web.ruts.renderer.HtmlRenderer;
 import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -51,7 +51,7 @@ public class ActionRequestProcessor {
     //                                 Initialized Component
     //                                 ---------------------
     protected ModuleConfig moduleConfig;
-    protected ActionCoinHelper actionCoinHelper;
+    protected ActionCoinsHelper actionCoinsHelper;
     protected ActionFormMapper actionFormMapper;
 
     // -----------------------------------------------------
@@ -75,12 +75,12 @@ public class ActionRequestProcessor {
     //                                                                          ==========
     public void initialize(ModuleConfig moduleConfig) throws ServletException {
         this.moduleConfig = moduleConfig;
-        this.actionCoinHelper = createActionCoinHelper(moduleConfig);
+        this.actionCoinsHelper = createActionCoinHelper(moduleConfig);
         this.actionFormMapper = createActionFormPopulator(moduleConfig);
     }
 
-    protected ActionCoinHelper createActionCoinHelper(ModuleConfig moduleConfig) {
-        return new ActionCoinHelper(moduleConfig, getAssistantDirector(), getRequestManager());
+    protected ActionCoinsHelper createActionCoinHelper(ModuleConfig moduleConfig) {
+        return new ActionCoinsHelper(moduleConfig, getAssistantDirector(), getRequestManager());
     }
 
     protected ActionFormMapper createActionFormPopulator(ModuleConfig moduleConfig) {
@@ -141,11 +141,11 @@ public class ActionRequestProcessor {
     }
 
     protected void ready(ActionRuntime runtime, ActionResponseReflector reflector) {
-        actionCoinHelper.prepareRequestClientErrorHandlingIfApi(runtime, reflector);
-        actionCoinHelper.prepareRequestServerErrorHandlingIfApi(runtime, reflector);
-        actionCoinHelper.saveRuntimeToRequest(runtime);
-        actionCoinHelper.removeCachedMessages();
-        actionCoinHelper.resolveLocale(runtime);
+        actionCoinsHelper.prepareRequestClientErrorHandlingIfApi(runtime, reflector);
+        actionCoinsHelper.prepareRequestServerErrorHandlingIfApi(runtime, reflector);
+        actionCoinsHelper.saveRuntimeToRequest(runtime);
+        actionCoinsHelper.removeCachedMessages();
+        actionCoinsHelper.resolveLocale(runtime);
     }
 
     // ===================================================================================
@@ -195,7 +195,7 @@ public class ActionRequestProcessor {
         } catch (RuntimeException e) {
             return handleActionFailureException(action, form, runtime, e);
         } finally {
-            actionCoinHelper.clearContextJustInCase();
+            actionCoinsHelper.clearContextJustInCase();
         }
     }
 
