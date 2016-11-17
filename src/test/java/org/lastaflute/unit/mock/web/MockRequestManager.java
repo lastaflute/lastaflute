@@ -25,6 +25,7 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
+import org.lastaflute.unit.mock.core.message.MockMessageManager;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
@@ -264,7 +265,7 @@ public class MockRequestManager implements RequestManager {
 
     @Override
     public MessageManager getMessageManager() {
-        return null;
+        return new MockMessageManager();
     }
 
     @Override

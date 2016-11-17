@@ -17,6 +17,9 @@ package org.lastaflute.core.json;
 
 import java.lang.reflect.ParameterizedType;
 
+import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.json.engine.RealJsonEngine;
+
 /**
  * @author jflute
  */
@@ -54,4 +57,12 @@ public interface JsonManager {
      * @return The encoded JSON string. (NotNull)
      */
     String toJson(Object bean);
+
+    /**
+     * Create new JSON engine as another rule. <br>
+     * (inheriting basic settings e.g. serializeNulls, yourCollections)
+     * @param mappingOption The optional option of (NotNull, EmptyAllowed: when default options)
+     * @return The JSON engine as another rule. (NotNull)
+     */
+    RealJsonEngine newAnotherEngine(OptionalThing<JsonMappingOption> mappingOption);
 }

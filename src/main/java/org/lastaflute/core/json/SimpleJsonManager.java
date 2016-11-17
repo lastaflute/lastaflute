@@ -16,6 +16,9 @@
 package org.lastaflute.core.json;
 
 import java.lang.reflect.ParameterizedType;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -25,8 +28,14 @@ import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
+import org.lastaflute.core.json.bind.JsonYourCollectionResource;
+import org.lastaflute.core.json.engine.GsonJsonEngine;
+import org.lastaflute.core.json.engine.RealJsonEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.gson.GsonBuilder;
+import com.google.gson.internal.bind.LaYourCollectionTypeAdapterFactory;
 
 /**
  * @author jflute
@@ -49,9 +58,6 @@ public class SimpleJsonManager implements JsonManager {
     /** Is development here? */
     protected boolean developmentHere;
 
-    /** The real parser of JSON. (NotNull: after initialization) */
-    protected RealJsonParser realJsonParser;
-
     /** Is null property suppressed (not displayed) in output JSON string? */
     protected boolean nullsSuppressed;
 
@@ -60,6 +66,12 @@ public class SimpleJsonManager implements JsonManager {
 
     /** The option of JSON mapping. (NotNull, EmptyAllowed: if empty, use default) */
     protected OptionalThing<JsonMappingOption> jsonMappingOption = OptionalThing.empty();
+
+    /** The list of your collection resource. (NotNull, EmptyAllowed: if empty, no your collection) */
+    protected List<JsonYourCollectionResource> yourCollectionResourceList = Collections.emptyList();
+
+    /** The real parser of JSON. (NotNull: after initialization) */
+    protected RealJsonEngine realJsonParser;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -78,8 +90,12 @@ public class SimpleJsonManager implements JsonManager {
         jsonMappingOption = OptionalThing.ofNullable(provider != null ? provider.provideOption() : null, () -> {
             throw new IllegalStateException("Not found the JSON mapping option.");
         });
+        final List<JsonYourCollectionResource> yourCollections = provider != null ? provider.provideYourCollections() : null;
+        if (yourCollections != null) {
+            yourCollectionResourceList = yourCollections;
+        }
         // should be last because of using other instance variable
-        final RealJsonParser provided = provider != null ? provider.provideJsonParser() : null;
+        final RealJsonEngine provided = provider != null ? provider.swtichJsonEngine() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
         showBootLogging();
     }
@@ -88,8 +104,8 @@ public class SimpleJsonManager implements JsonManager {
         return assistantDirector.assistCoreDirection();
     }
 
-    protected RealJsonParser createDefaultJsonParser() {
-        return createGsonJsonParser();
+    protected RealJsonEngine createDefaultJsonParser() {
+        return createGsonJsonEngine(jsonMappingOption);
     }
 
     protected void showBootLogging() {
@@ -102,6 +118,12 @@ public class SimpleJsonManager implements JsonManager {
             }
             if (jsonMappingOption.isPresent()) { // not use lambda to keep log indent
                 logger.info(" option: " + jsonMappingOption.get());
+            }
+            if (yourCollectionResourceList != null) {
+                final String yourCollectionsExp = yourCollectionResourceList.stream().map(res -> {
+                    return res.getYourType().getName();
+                }).collect(Collectors.joining(", "));
+                logger.info(" yourCollections: " + yourCollectionsExp);
             }
         }
     }
@@ -120,21 +142,40 @@ public class SimpleJsonManager implements JsonManager {
     }
 
     // ===================================================================================
-    //                                                                               GSON
+    //                                                                               Gson
     //                                                                              ======
-    protected RealJsonParser createGsonJsonParser() {
+    protected RealJsonEngine createGsonJsonEngine(OptionalThing<JsonMappingOption> mappingOption) {
         final boolean serializeNulls = !nullsSuppressed;
         final boolean prettyPrinting = !prettyPrintSuppressed && developmentHere;
-        return new GsonJsonParser(builder -> {
-            if (serializeNulls) {
-                builder.serializeNulls();
-            }
-            if (prettyPrinting) {
-                builder.setPrettyPrinting();
-            }
-        } , op -> {
-            jsonMappingOption.ifPresent(another -> op.acceptAnother(another));
+        return new GsonJsonEngine(builder -> {
+            setupSerializeNullsSettings(builder, serializeNulls);
+            setupPrettyPrintingSettings(builder, prettyPrinting);
+            setupYourCollectionSettings(builder);
+        }, op -> {
+            mappingOption.ifPresent(another -> op.acceptAnother(another));
         });
+    }
+
+    protected void setupSerializeNullsSettings(GsonBuilder builder, boolean serializeNulls) {
+        if (serializeNulls) {
+            builder.serializeNulls();
+        }
+    }
+
+    protected void setupPrettyPrintingSettings(GsonBuilder builder, boolean prettyPrinting) {
+        if (prettyPrinting) {
+            builder.setPrettyPrinting();
+        }
+    }
+
+    protected void setupYourCollectionSettings(GsonBuilder builder) {
+        for (JsonYourCollectionResource resource : yourCollectionResourceList) {
+            builder.registerTypeAdapterFactory(createYourCollectionTypeAdapterFactory(resource));
+        }
+    }
+
+    protected LaYourCollectionTypeAdapterFactory createYourCollectionTypeAdapterFactory(JsonYourCollectionResource resource) {
+        return new LaYourCollectionTypeAdapterFactory(resource.getYourType(), resource.getYourCollectionCreator());
     }
 
     // ===================================================================================
@@ -222,6 +263,15 @@ public class SimpleJsonManager implements JsonManager {
     public String toJson(Object bean) {
         assertArgumentNotNull("bean", bean);
         return realJsonParser.toJson(bean);
+    }
+
+    // ===================================================================================
+    //                                                                        Another Rule
+    //                                                                        ============
+    @Override
+    public RealJsonEngine newAnotherEngine(OptionalThing<JsonMappingOption> mappingOption) {
+        assertArgumentNotNull("mappingOption", mappingOption);
+        return createGsonJsonEngine(mappingOption);
     }
 
     // ===================================================================================

@@ -94,7 +94,7 @@ public interface LaValidatable<MESSAGES extends UserMessages> {
             final MESSAGES messages = createMessages();
             validationMessagesLambda.message(messages);
             return messages;
-        } , validationErrorLambda);
+        }, validationErrorLambda);
     }
 
     /**

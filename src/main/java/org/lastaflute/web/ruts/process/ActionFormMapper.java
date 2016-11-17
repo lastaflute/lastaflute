@@ -82,6 +82,7 @@ import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
+import org.lastaflute.web.ruts.process.debugchallenge.JsonDebugChallenge;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
 import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
 import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterFilter;

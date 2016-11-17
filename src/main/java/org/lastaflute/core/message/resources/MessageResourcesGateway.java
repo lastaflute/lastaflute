@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.message;
+package org.lastaflute.core.message.resources;
 
 import java.util.Locale;
 

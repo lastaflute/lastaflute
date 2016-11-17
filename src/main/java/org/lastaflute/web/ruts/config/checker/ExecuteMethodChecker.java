@@ -245,7 +245,7 @@ public class ExecuteMethodChecker implements Serializable {
             baseInfoMap.put("ActionForm", formMeta);
             baseInfoMap.put("Root Property", property);
             return baseInfoMap;
-        } , pathDeque, checkedTypeSet);
+        }, pathDeque, checkedTypeSet);
     }
 
     // ===================================================================================
@@ -349,6 +349,6 @@ public class ExecuteMethodChecker implements Serializable {
             baseInfoMap.put("JsonBean", jsonBeanType);
             baseInfoMap.put("Root Property", pd);
             return baseInfoMap;
-        } , pathDeque, checkedTypeSet);
+        }, pathDeque, checkedTypeSet);
     }
 }

@@ -21,6 +21,7 @@ import java.util.Map;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
+import org.lastaflute.core.message.resources.MessageResourcesGateway;
 
 /**
  * The manager of message. <br>

@@ -123,6 +123,7 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     protected ObjectiveProperties prepareObjectiveProperties() {
         final ObjectiveProperties makingProp = newObjectiveProperties(appResource, preparePropertyFilter());
         makingProp.checkImplicitOverride();
+        makingProp.encodeAsUTF8(); // fixedly, so not need to encode japanese 
         if (!extendsResourceList.isEmpty()) {
             makingProp.extendsProperties(extendsResourceList.toArray(new String[extendsResourceList.size()]));
         }

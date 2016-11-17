@@ -13,15 +13,15 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.json;
+package org.lastaflute.core.json.engine;
 
 import java.lang.reflect.ParameterizedType;
 
 /**
- * The parser of JSON resource.
+ * The real engine of JSON.
  * @author jflute
  */
-public interface RealJsonParser {
+public interface RealJsonEngine {
 
     /**
      * Convert from the JSON string to the bean new-created by the specified type.

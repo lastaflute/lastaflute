@@ -36,8 +36,8 @@ import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.process.RequestUrlParam;
-import org.lastaflute.web.ruts.process.RequestUrlParamAnalyzer;
+import org.lastaflute.web.ruts.process.urlparam.RequestUrlParam;
+import org.lastaflute.web.ruts.process.urlparam.RequestUrlParamAnalyzer;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.util.LaModuleConfigUtil;
@@ -139,6 +139,9 @@ public class RequestRoutingFilter implements Filter {
 
     protected boolean isRoutingTarget(HttpServletRequest request, String requestPath) {
         final ActionAdjustmentProvider adjustmentProvider = assistActionAdjustmentProvider();
+        if (adjustmentProvider.isForcedRoutingExcept(request, requestPath)) { // you can adjust it
+            return false;
+        }
         if (adjustmentProvider.isForcedRoutingTarget(request, requestPath)) { // you can adjust it
             return true;
         }

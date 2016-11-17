@@ -109,8 +109,8 @@ public class GodHandableAction implements VirtualAction {
     @Override
     public NextJourney execute(OptionalThing<VirtualForm> form) {
         final NextJourney journey = godHandyExecute(form);
-        setupDisplayData(journey);
-        showTransition(journey);
+        setupHtmlDisplayData(journey);
+        showHtmlTransition(journey);
         return journey;
     }
 
@@ -155,7 +155,7 @@ public class GodHandableAction implements VirtualAction {
     protected void doExecute(OptionalThing<VirtualForm> form, ActionHook hook, BegunTx<Object> tx) {
         final ActionResponse response = actuallyExecute(form, hook); // #to_action
         redCardableAssist.assertExecuteMethodResponseDefined(response);
-        final NextJourney journey = reflect(response); // also response handling in transaction
+        final NextJourney journey = reflect(response);
         final boolean rollbackOnly;
         if (runtime.hasValidationError()) {
             tx.rollbackOnly();
@@ -432,8 +432,8 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                        Display Data
     //                                                                        ============
-    protected void setupDisplayData(NextJourney journey) {
-        if (runtime.isForwardToHtml() && journey.isDefined()) {
+    protected void setupHtmlDisplayData(NextJourney journey) {
+        if (runtime.isForwardToHtml() && journey.hasViewRouting()) {
             runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
         }
     }
@@ -441,8 +441,8 @@ public class GodHandableAction implements VirtualAction {
     // ===================================================================================
     //                                                                             Logging
     //                                                                             =======
-    protected void showTransition(NextJourney journey) {
-        if (logger.isDebugEnabled() && journey.isDefined()) {
+    protected void showHtmlTransition(NextJourney journey) {
+        if (logger.isDebugEnabled() && journey.hasViewRouting()) {
             final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
             final String path = journey.getRoutingPath(); // not null
             final String tag = path.endsWith(".html") ? "#html " : (path.endsWith(".jsp") ? "#jsp " : "");

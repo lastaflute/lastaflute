@@ -79,11 +79,14 @@ public class LastaShowbaseFilter implements Filter {
             @Override
             protected boolean isTargetPath(HttpServletRequest request) {
                 // forced routings also should be logging control target
-                if (adjustmentProvider.isForcedRoutingTarget(request, requestManager.getRequestPath())) {
-                    return true;
-                } else {
-                    return super.isTargetPath(request);
+                final String requestPath = requestManager.getRequestPath();
+                if (adjustmentProvider.isForcedRoutingExcept(request, requestPath)) {
+                    return false;
                 }
+                if (adjustmentProvider.isForcedRoutingTarget(request, requestPath)) {
+                    return true;
+                }
+                return super.isTargetPath(request);
             }
         };
     }

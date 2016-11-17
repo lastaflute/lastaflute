@@ -199,8 +199,8 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     //                                                                             =======
     default List<TypeAdapterFactory> createNumberFactoryList() {
         return Arrays.asList(createIntegerTypeAdapterFactory() // Integer
-        , createLongTypeAdapterFactory() // Long
-        , createBigDecimalTypeAdapterFactory() // BigDecimal
+                , createLongTypeAdapterFactory() // Long
+                , createBigDecimalTypeAdapterFactory() // BigDecimal
         );
     }
 

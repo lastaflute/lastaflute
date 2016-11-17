@@ -32,6 +32,8 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
+import org.lastaflute.core.message.resources.MessageResourcesGateway;
+import org.lastaflute.core.message.resources.MessageResourcesHolder;
 
 /**
  * @author jflute

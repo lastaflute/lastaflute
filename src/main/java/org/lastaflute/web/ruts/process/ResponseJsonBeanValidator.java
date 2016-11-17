@@ -16,78 +16,17 @@
  */
 package org.lastaflute.web.ruts.process;
 
-import java.util.function.Consumer;
-
-import org.dbflute.helper.message.ExceptionMessageBuilder;
-import org.dbflute.optional.OptionalThing;
-import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.response.JsonResponse;
-import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
  * @author jflute
- * @since 0.7.1 (2015/12/14 Monday)
+ * @deprecated for compatible (with e.g. UTFlute)
  */
-public class ResponseJsonBeanValidator extends ResponseBeanValidator {
+public class ResponseJsonBeanValidator extends org.lastaflute.web.ruts.process.validatebean.ResponseJsonBeanValidator {
 
-    protected final JsonResponse<?> response;
-
+    // for compatible (with e.g. UTFlute)
     public ResponseJsonBeanValidator(RequestManager requestManager, Object actionExp, boolean warning, JsonResponse<?> response) {
-        super(requestManager, actionExp, warning);
-        this.response = response;
-    }
-
-    /**
-     * @param bean The JSON bean to be validated. (NotNull)
-     * @throws ResponseBeanValidationErrorException When the validation error.
-     */
-    public void validate(Object bean) {
-        doValidate(bean, br -> {});
-    }
-
-    @Override
-    protected OptionalThing<Class<?>[]> getValidatorGroups() {
-        return response.getValidatorGroups();
-    }
-
-    @Override
-    protected String buildValidationErrorMessage(Object bean, Consumer<ExceptionMessageBuilder> locationBuilder, UserMessages messages) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Validation error for the JSON response.");
-        br.addItem("Advice");
-        br.addElement("Make sure your JSON bean property values.");
-        br.addElement("For example:");
-        br.addElement("  public class SeaBean {");
-        br.addElement("      @Required");
-        br.addElement("      public String dockside;");
-        br.addElement("  }");
-        br.addElement("  (x):");
-        br.addElement("    public class SeaAction {");
-        br.addElement("        @Execute");
-        br.addElement("        public JsonResponse<SeaBean> index() {");
-        br.addElement("            SeaBean bean = new SeaBean();");
-        br.addElement("            return asJson(bean); // *Bad");
-        br.addElement("        }");
-        br.addElement("    }");
-        br.addElement("  (o):");
-        br.addElement("    public class SeaAction {");
-        br.addElement("        @Execute");
-        br.addElement("        public JsonResponse<SeaBean> index() {");
-        br.addElement("            SeaBean bean = new SeaBean();");
-        br.addElement("            bean.dockside = \"overthewaves\"; // Good");
-        br.addElement("            return asJson(bean);");
-        br.addElement("        }");
-        br.addElement("    }");
-        br.addItem("Action");
-        br.addElement(actionExp);
-        locationBuilder.accept(br); // basically do nothing when JSON
-        setupItemValidatedBean(br, bean);
-        setupItemMessages(br, messages);
-        return br.buildExceptionMessage();
-    }
-
-    public JsonResponse<?> getActionResponse() {
-        return response;
+        super(requestManager, actionExp, warning, response);
     }
 }

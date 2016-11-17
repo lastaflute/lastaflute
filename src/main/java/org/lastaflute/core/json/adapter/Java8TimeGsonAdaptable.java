@@ -16,6 +16,7 @@
 package org.lastaflute.core.json.adapter;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -25,12 +26,15 @@ import java.time.temporal.TemporalAccessor;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.core.json.JsonMappingOption;
+import org.lastaflute.core.json.annotation.JsonDatePattern;
 import org.lastaflute.core.json.exception.JsonPropertyDateTimeParseFailureException;
 import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
+import com.google.gson.internal.bind.LaJsonFieldingAvailable;
+import com.google.gson.internal.bind.LaJsonFieldingContext;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
@@ -88,7 +92,7 @@ public interface Java8TimeGsonAdaptable {
         }
     }
 
-    abstract class AbstractTypeDateTimeAdapter<DATE extends TemporalAccessor> extends TypeAdapter<DATE> {
+    abstract class AbstractTypeDateTimeAdapter<DATE extends TemporalAccessor> extends TypeAdapter<DATE> implements LaJsonFieldingAvailable {
 
         protected final JsonMappingOption option;
         protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
@@ -108,7 +112,7 @@ public interface Java8TimeGsonAdaptable {
             if (isEmptyToNullReading() && "".equals(exp)) { // option
                 return null;
             }
-            final DateTimeFormatter formatter = getDateTimeFormatter();
+            final DateTimeFormatter formatter = prepareDateTimeFormatter();
             try {
                 return formatter.parse(exp, temporal -> fromTemporal(temporal));
             } catch (DateTimeParseException e) {
@@ -133,12 +137,28 @@ public interface Java8TimeGsonAdaptable {
             if (isNullToEmptyWriting() && value == null) { // option
                 out.value("");
             } else { // mainly here
-                out.value(value != null ? getDateTimeFormatter().format(value) : null);
+                out.value(value != null ? prepareDateTimeFormatter().format(value) : null);
             }
         }
 
         protected boolean isNullToEmptyWriting() {
             return option.isNullToEmptyWriting();
+        }
+
+        private DateTimeFormatter prepareDateTimeFormatter() {
+            DateTimeFormatter formatter = null;
+            final Field field = LaJsonFieldingContext.getJsonFieldOnThread();
+            if (field != null) { // no way but avoid stop
+                final JsonDatePattern anno = field.getAnnotation(JsonDatePattern.class);
+                if (anno != null) {
+                    final String pattern = anno.value();
+                    formatter = DateTimeFormatter.ofPattern(pattern); // #hope can be cached? by jflute
+                }
+            }
+            if (formatter == null) {
+                formatter = getDateTimeFormatter(); // not null
+            }
+            return formatter;
         }
 
         protected abstract DateTimeFormatter getDateTimeFormatter();
