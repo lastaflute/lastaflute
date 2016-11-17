@@ -128,7 +128,7 @@ public class RequestLoggingFilter implements Filter {
     }
 
     protected List<String> getDefaultExceptExtSet() {
-        return Arrays.asList(".js", ".css", ".png", ".gif", ".jpg", ".ico", ".svg", ".svgz", ".ttf", ".woff", ".json");
+        return Arrays.asList(".js", ".css", ".png", ".gif", ".jpg", ".ico", ".svg", ".svgz", ".ttf", ".woff", ".woff2", ".json");
     }
 
     protected void setupExceptUrlPattern(FilterConfig filterConfig) {
