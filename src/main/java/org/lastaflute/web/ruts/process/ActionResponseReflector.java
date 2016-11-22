@@ -95,6 +95,9 @@ public class ActionResponseReflector {
     //                                                                       HTML Response
     //                                                                       =============
     protected NextJourney handleHtmlResponse(HtmlResponse response) {
+        if (response.isForwardTo()) {
+            gatherForwardRenderData(response); // not lazy to be in action transaction
+        }
         // lazy to write response after hookFinally()
         // for example, you can add headers in hookFinally() by action response
         // (and response handling should not be in transaction because of unexpected waiting)
@@ -110,33 +113,37 @@ public class ActionResponseReflector {
                 writeHtmlDirectly(response);
                 return;
             }
-            setupForwardRenderData(response);
-            setupPushedActionForm(response);
-            setupSavingErrorsToSession(response);
+            if (response.isForwardTo()) {
+                setupPushedActionForm(response);
+                setupForwardRenderData();
+            }
+            if (response.isErrorsToSession()) {
+                saveErrorsToSession(response);
+            }
+            showHtmlTransition(response);
         }, response);
     }
 
+    protected NextJourney createActionNext(PlannedJourneyProvider journeyProvider, HtmlResponse response) {
+        return runtime.getActionExecute().getActionMapping().createNextJourney(journeyProvider, response);
+    }
+
+    // -----------------------------------------------------
+    //                                         HTML Directly
+    //                                         -------------
     protected void writeHtmlDirectly(HtmlResponse response) {
         requestManager.getResponseManager().write(response.getDirectHtml().get(), "text/html");
     }
 
-    protected void setupForwardRenderData(HtmlResponse response) {
-        final RenderData data = newRenderData();
-        response.getRegistrationList().forEach(reg -> reg.register(data));
-        validateHtmlBeanIfNeeds(response); // manage validator
-        data.getDataMap().forEach((key, value) -> runtime.registerData(key, value)); // so validated here
-    }
-
-    protected RenderData newRenderData() {
-        return new RenderData();
-    }
-
+    // -----------------------------------------------------
+    //                                     Pushed ActionForm
+    //                                     -----------------
     protected void setupPushedActionForm(HtmlResponse response) {
         response.getPushedFormInfo().ifPresent(formInfo -> {
             final String formKey = LastaWebKey.PUSHED_ACTION_FORM_KEY;
             VirtualForm form = createPushedActionForm(formInfo, formKey);
-            requestManager.setAttribute(formKey, form);
             runtime.manageActionForm(OptionalThing.of(form)); // to export properties to request attribute
+            requestManager.setAttribute(formKey, form);
         });
     }
 
@@ -151,19 +158,34 @@ public class ActionResponseReflector {
         return runtime.getActionExecute().prepareFormMeta(formType, listFormParameter, formSetupper).get().createActionForm();
     }
 
-    protected NextJourney createActionNext(PlannedJourneyProvider journeyProvider, HtmlResponse response) {
-        return runtime.getActionExecute().getActionMapping().createNextJourney(journeyProvider, response);
+    // -----------------------------------------------------
+    //                                           Render Data
+    //                                           -----------
+    protected void gatherForwardRenderData(HtmlResponse response) {
+        final RenderData data = newRenderData();
+        response.getRegistrationList().forEach(reg -> reg.register(data));
+        validateHtmlBeanIfNeeds(response); // manage validator
+        data.getDataMap().forEach((key, value) -> runtime.registerData(key, value)); // so validated here
     }
 
-    protected void setupSavingErrorsToSession(HtmlResponse response) {
-        if (response.isErrorsToSession()) {
-            requestManager.saveErrorsToSession();
-        }
+    protected RenderData newRenderData() {
+        return new RenderData();
+    }
+
+    protected void setupForwardRenderData() {
+        runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
     }
 
     // -----------------------------------------------------
-    //                                             Validator
-    //                                             ---------
+    //                                     Errors to Session
+    //                                     -----------------
+    protected void saveErrorsToSession(HtmlResponse response) {
+        requestManager.saveErrorsToSession();
+    }
+
+    // -----------------------------------------------------
+    //                                       Bean Validation
+    //                                       ---------------
     protected void validateHtmlBeanIfNeeds(HtmlResponse response) {
         final DisplayDataValidator validator = createDisplayDataValidator(response);
         runtime.getDisplayDataMap().forEach((key, value) -> validator.validate(key, value)); // from e.g. hookBefore()
@@ -187,6 +209,18 @@ public class ActionResponseReflector {
 
     protected ResponseHtmlBeanValidator createHtmlBeanValidator(HtmlResponse response, ResponseReflectingOption option) {
         return new ResponseHtmlBeanValidator(requestManager, runtime, option.isHtmlBeanValidationErrorWarned(), response);
+    }
+
+    // -----------------------------------------------------
+    //                                       HTML Transition
+    //                                       ---------------
+    protected void showHtmlTransition(HtmlResponse response) {
+        if (logger.isDebugEnabled()) {
+            final String ing = response.isRedirectTo() ? "Redirecting" : "Forwarding";
+            final String path = response.getRoutingPath(); // not null
+            final String tag = path.endsWith(".html") ? "#html " : (path.endsWith(".jsp") ? "#jsp " : "");
+            logger.debug("#flow ...{} to {}{}", ing, tag, path);
+        }
     }
 
     // ===================================================================================

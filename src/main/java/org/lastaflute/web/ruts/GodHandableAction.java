@@ -108,16 +108,6 @@ public class GodHandableAction implements VirtualAction {
     //                                                                             =======
     @Override
     public NextJourney execute(OptionalThing<VirtualForm> form) {
-        final NextJourney journey = godHandyExecute(form);
-        setupHtmlDisplayData(journey);
-        showHtmlTransition(journey);
-        return journey;
-    }
-
-    // -----------------------------------------------------
-    //                                             God Handy
-    //                                             ---------
-    protected NextJourney godHandyExecute(OptionalThing<VirtualForm> form) {
         final ActionHook hook = prepareActionHook();
         try {
             final ActionResponse before = processHookBefore(hook);
@@ -430,35 +420,13 @@ public class GodHandableAction implements VirtualAction {
     }
 
     // ===================================================================================
-    //                                                                        Display Data
-    //                                                                        ============
-    protected void setupHtmlDisplayData(NextJourney journey) {
-        if (runtime.isForwardToHtml() && journey.hasViewRouting()) {
-            runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
-        }
-    }
-
-    // ===================================================================================
-    //                                                                             Logging
-    //                                                                             =======
-    protected void showHtmlTransition(NextJourney journey) {
-        if (logger.isDebugEnabled() && journey.hasViewRouting()) {
-            final String ing = journey.isRedirectTo() ? "Redirecting" : "Forwarding";
-            final String path = journey.getRoutingPath(); // not null
-            final String tag = path.endsWith(".html") ? "#html " : (path.endsWith(".jsp") ? "#jsp " : "");
-            logger.debug("#flow ...{} to {}{}", ing, tag, path);
-        }
-    }
-
+    //                                                                         Action Name
+    //                                                                         ===========
     protected String buildActionDisp(ActionRuntime runtime) {
-        final Method method = runtime.getExecuteMethod();
-        final Class<?> declaringClass = method.getDeclaringClass();
-        return declaringClass.getSimpleName() + "@" + method.getName() + "()";
+        return buildActionName(runtime) + "@" + runtime.getExecuteMethod().getName() + "()";
     }
 
     protected String buildActionName(ActionRuntime runtime) {
-        final Method method = runtime.getExecuteMethod();
-        final Class<?> declaringClass = method.getDeclaringClass();
-        return declaringClass.getSimpleName();
+        return runtime.getExecuteMethod().getDeclaringClass().getSimpleName();
     }
 }
