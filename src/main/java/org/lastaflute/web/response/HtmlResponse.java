@@ -428,6 +428,10 @@ public class HtmlResponse implements ActionResponse, Redirectable {
         return nextRouting instanceof RedirectNext;
     }
 
+    public boolean isForwardTo() {
+        return nextRouting instanceof ForwardNext && !DUMMY.equals(nextRouting);
+    }
+
     public boolean isAsIs() {
         return getNextRouting().isAsIs();
     }

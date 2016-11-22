@@ -95,6 +95,9 @@ public class ActionResponseReflector {
     //                                                                       HTML Response
     //                                                                       =============
     protected NextJourney handleHtmlResponse(HtmlResponse response) {
+        if (response.isForwardTo()) {
+            gatherForwardRenderData(response); // not lazy to be in action transaction
+        }
         // lazy to write response after hookFinally()
         // for example, you can add headers in hookFinally() by action response
         // (and response handling should not be in transaction because of unexpected waiting)
@@ -110,9 +113,9 @@ public class ActionResponseReflector {
                 writeHtmlDirectly(response);
                 return;
             }
-            if (!response.isRedirectTo()) {
+            if (response.isForwardTo()) {
                 setupPushedActionForm(response);
-                setupForwardRenderData(response);
+                setupForwardRenderData();
             }
             if (response.isErrorsToSession()) {
                 saveErrorsToSession(response);
@@ -139,8 +142,8 @@ public class ActionResponseReflector {
         response.getPushedFormInfo().ifPresent(formInfo -> {
             final String formKey = LastaWebKey.PUSHED_ACTION_FORM_KEY;
             VirtualForm form = createPushedActionForm(formInfo, formKey);
-            requestManager.setAttribute(formKey, form);
             runtime.manageActionForm(OptionalThing.of(form)); // to export properties to request attribute
+            requestManager.setAttribute(formKey, form);
         });
     }
 
@@ -158,16 +161,19 @@ public class ActionResponseReflector {
     // -----------------------------------------------------
     //                                           Render Data
     //                                           -----------
-    protected void setupForwardRenderData(HtmlResponse response) {
+    protected void gatherForwardRenderData(HtmlResponse response) {
         final RenderData data = newRenderData();
         response.getRegistrationList().forEach(reg -> reg.register(data));
         validateHtmlBeanIfNeeds(response); // manage validator
         data.getDataMap().forEach((key, value) -> runtime.registerData(key, value)); // so validated here
-        runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
     }
 
     protected RenderData newRenderData() {
         return new RenderData();
+    }
+
+    protected void setupForwardRenderData() {
+        runtime.getDisplayDataMap().forEach((key, value) -> requestManager.setAttribute(key, value));
     }
 
     // -----------------------------------------------------
