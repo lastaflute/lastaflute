@@ -672,7 +672,9 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected Locale getRequestedLocale() {
-        return getRequest().getLocale();
+        return localeHandler.getRequestedLocale(this).orElseGet(() -> {
+            return getRequest().getLocale();
+        });
     }
 
     @Override
