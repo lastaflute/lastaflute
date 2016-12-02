@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.di.core.ExternalContext;
 import org.lastaflute.di.core.SingletonLaContainer;
+import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.core.exception.ComponentNotFoundException;
 import org.lastaflute.di.core.exception.CyclicReferenceComponentException;
 import org.lastaflute.di.core.exception.TooManyRegistrationComponentException;
@@ -148,6 +149,26 @@ public abstract class ContainerUtil {
                     DfReflectionUtil.setValueForcedly(field, target, getComponent(field.getType()));
                 }
             }
+        }
+    }
+
+    // ===================================================================================
+    //                                                                            Injector
+    //                                                                            ========
+    /**
+     * @param enhancedType The class type that may be enhanced by Lasta Di. (NotNull)
+     * @return The real class if enhanced type specified, or specified type. (NotNull)
+     */
+    public static Class<?> toRealClassIfEnhanced(Class<?> enhancedType) {
+        if (enhancedType.getName().contains(AspectWeaver.SUFFIX_ENHANCED_CLASS)) {
+            final Class<?> superclass = enhancedType.getSuperclass();
+            if (superclass == null) { // no way, but just in case
+                return enhancedType;
+            } else {
+                return superclass;
+            }
+        } else {
+            return enhancedType;
         }
     }
 }

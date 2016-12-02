@@ -26,6 +26,7 @@ import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.time.TimeManager;
+import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.docs.LaActionDocs;
@@ -49,7 +50,6 @@ import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.token.DoubleSubmitManager;
 import org.lastaflute.web.token.TokenErrorHook;
 import org.lastaflute.web.token.exception.DoubleSubmittedRequestException;
-import org.lastaflute.web.util.LaActionRuntimeUtil;
 
 /**
  * The typical action for your project. <br>
@@ -309,7 +309,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     protected Class<?> myTokenGroupType() {
-        return LaActionRuntimeUtil.getActionRuntime().getActionType();
+        return ContainerUtil.toRealClassIfEnhanced(getClass());
     }
 
     // ===================================================================================

@@ -54,7 +54,6 @@ import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.core.util.LaClassificationUtil;
 import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
-import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
@@ -1342,7 +1341,7 @@ public class ActionFormMapper {
     //                                            Real Class
     //                                            ----------
     protected Class<?> getRealClass(Class<?> clazz) {
-        return clazz.getName().indexOf(AspectWeaver.SUFFIX_ENHANCED_CLASS) > 0 ? clazz.getSuperclass() : clazz;
+        return ContainerUtil.toRealClassIfEnhanced(clazz);
     }
 
     // ===================================================================================
