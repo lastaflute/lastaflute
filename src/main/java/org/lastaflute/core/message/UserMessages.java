@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.dbflute.util.Srl;
+
 /**
  * @author jflute
  */
@@ -37,6 +39,10 @@ public class UserMessages implements Serializable {
 
     /** The property key for global property (non-specific property) for protocol with HTML, JavaScipt. */
     public static final String GLOBAL_PROPERTY_KEY = "_global";
+
+    protected static final String LABELS_PREFIX = "labels.";
+    protected static final String LABELS_BEGIN_MARK = "{" + LABELS_PREFIX;
+    protected static final String LABELS_END_MARK = "}";
 
     protected static final UserMessages EMPTY_MESSAGES = new UserMessages().lock();
 
@@ -76,16 +82,22 @@ public class UserMessages implements Serializable {
         assertArgumentNotNull("property", property);
         assertArgumentNotNull("message", message);
         assertLocked();
-        final UserMessageItem item = messageMap.get(property);
+        final UserMessageItem item = getPropertyItem(property);
         final List<UserMessage> messageList;
         if (item == null) {
             ++itemCount;
             messageList = new ArrayList<UserMessage>();
-            messageMap.put(property, newUserMessageItem(messageList, itemCount, property));
+            final String filtered = filterProperty(property);
+            messageMap.put(filtered, newUserMessageItem(messageList, itemCount, filtered));
         } else {
             messageList = item.getMessageList();
         }
         messageList.add(message);
+    }
+
+    protected String filterProperty(String property) {
+        final String resolved = resolveLabelProperty(property);
+        return resolved != null ? resolved : property;
     }
 
     protected UserMessageItem newUserMessageItem(List<UserMessage> messageList, int itemCount, String property) {
@@ -149,7 +161,7 @@ public class UserMessages implements Serializable {
         if (messageMap.isEmpty()) {
             return Collections.emptyIterator();
         }
-        final UserMessageItem item = messageMap.get(property);
+        final UserMessageItem item = getPropertyItem(property);
         return item != null ? item.getMessageList().iterator() : Collections.emptyIterator();
     }
 
@@ -157,17 +169,42 @@ public class UserMessages implements Serializable {
     //                                                                   Property Handling
     //                                                                   =================
     public boolean hasMessageOf(String property) {
-        final UserMessageItem item = messageMap.get(property);
+        final UserMessageItem item = getPropertyItem(property);
         return item != null && !item.getMessageList().isEmpty();
     }
 
     public boolean hasMessageOf(String property, String key) {
-        final UserMessageItem item = messageMap.get(property);
+        final UserMessageItem item = getPropertyItem(property);
         return item != null && item.getMessageList().stream().anyMatch(message -> message.getMessageKey().equals(key));
+    }
+
+    protected UserMessageItem getPropertyItem(String property) {
+        final UserMessageItem item = messageMap.get(property);
+        if (item != null) {
+            return item;
+        } else {
+            final String resolved = resolveLabelProperty(property);
+            return resolved != null ? messageMap.get(resolved) : null;
+        }
     }
 
     public Set<String> toPropertySet() {
         return !messageMap.isEmpty() ? Collections.unmodifiableSet(messageMap.keySet()) : Collections.emptySet();
+    }
+
+    protected String resolveLabelProperty(String property) {
+        final String beginMark = LABELS_BEGIN_MARK;
+        final String endMark = LABELS_END_MARK;
+        if (Srl.isQuotedAnything(property, beginMark, endMark)) {
+            return Srl.unquoteAnything(property, beginMark, endMark);
+        } else {
+            final String labelsPrefix = LABELS_PREFIX;
+            if (property.startsWith(labelsPrefix)) {
+                return Srl.removePrefix(property, labelsPrefix);
+            } else {
+                return null;
+            }
+        }
     }
 
     // ===================================================================================
@@ -196,7 +233,7 @@ public class UserMessages implements Serializable {
 
     public int size(String property) {
         assertArgumentNotNull("property", property);
-        final UserMessageItem item = messageMap.get(property);
+        final UserMessageItem item = getPropertyItem(property);
         return item != null ? item.getMessageList().size() : 0;
     }
 
