@@ -53,6 +53,12 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     }
 
     protected Postcard createNativePostcard() {
+        final Postcard nativePostcard = newNativePostcard();
+        nativePostcard.writeMessageTheme(getClass()); // as default
+        return nativePostcard;
+    }
+
+    protected Postcard newNativePostcard() {
         return new Postcard();
     }
 
@@ -288,6 +294,15 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
      */
     public void dryrun() {
         postcard.dryrun();
+    }
+
+    /**
+     * Write message author on this postcard. (used in logging)
+     * @param messageAuthor The instance that expresses the message author. (NotNull)
+     */
+    public void writeAuthor(Object messageAuthor) {
+        assertArgumentNotNull("messageAuthor", messageAuthor);
+        postcard.writeMessageAuthor(messageAuthor);
     }
 
     // ===================================================================================
