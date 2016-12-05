@@ -92,4 +92,6 @@ public interface DoubleSubmitManager {
     OptionalThing<DoubleSubmitTokenMap> getSessionTokenMap();
 
     boolean isDoubleSubmittedRequest();
+
+    boolean isFirstSubmittedRequest();
 }
