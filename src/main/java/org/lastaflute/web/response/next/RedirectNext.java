@@ -20,9 +20,15 @@ package org.lastaflute.web.response.next;
  */
 public class RedirectNext implements RoutingNext {
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
     protected final String redirectPath;
     protected final RedirectPathStyle redirectPathDest;
 
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
     public RedirectNext(String redirectPath, RedirectPathStyle redirectPathStyle) {
         if (redirectPath == null) {
             throw new IllegalArgumentException("The argument 'redirectPath' should not be null.");
@@ -38,11 +44,31 @@ public class RedirectNext implements RoutingNext {
         INNER, AS_IS
     }
 
+    // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
     @Override
-    public String toString() {
-        return "redirect:{" + redirectPath + "}";
+    public int hashCode() {
+        return 31 * redirectPath.hashCode() * redirectPathDest.hashCode();
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof RedirectNext)) {
+            return false;
+        }
+        final RedirectNext you = ((RedirectNext) obj);
+        return redirectPath.equals(you.redirectPath) && redirectPathDest.equals(you.redirectPathDest);
+    }
+
+    @Override
+    public String toString() {
+        return "redirect:{" + redirectPath + ", " + redirectPathDest + "}";
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
     @Override
     public String getRoutingPath() {
         return redirectPath;

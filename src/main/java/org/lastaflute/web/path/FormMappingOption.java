@@ -15,15 +15,18 @@
  */
 package org.lastaflute.web.path;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterFilter;
+import org.lastaflute.web.ruts.process.populate.FormYourCollectionResource;
 
 // package is a little strange (path!? near adjustment provider...)
 // but no change for compatible
@@ -39,6 +42,7 @@ public class FormMappingOption {
     protected OptionalThing<FormSimpleTextParameterFilter> simpleTextParameterFilter = OptionalThing.empty();
     protected boolean undefinedParameterError;
     protected Set<String> indefinableParameterSet; // null allowed
+    protected List<FormYourCollectionResource> yourCollectionResourceList; // null allowed
 
     // ===================================================================================
     //                                                                              Facade
@@ -85,6 +89,20 @@ public class FormMappingOption {
         specifiedSet.add(LastaWebKey.TRANSACTION_TOKEN_KEY);
     }
 
+    // -----------------------------------------------------
+    //                                       Your Collection
+    //                                       ---------------
+    public FormMappingOption yourCollection(FormYourCollectionResource resource) {
+        if (resource == null) {
+            throw new IllegalArgumentException("The argument 'resource' should not be null.");
+        }
+        if (yourCollectionResourceList == null) {
+            yourCollectionResourceList = new ArrayList<>();
+        }
+        yourCollectionResourceList.add(resource);
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -92,7 +110,7 @@ public class FormMappingOption {
     public String toString() {
         final String title = DfTypeUtil.toClassTitle(this);
         return title + ":{" + keepEmptyStringParameter + ", " + simpleTextParameterFilter + ", " + undefinedParameterError + ", "
-                + indefinableParameterSet + "}";
+                + indefinableParameterSet + ", " + yourCollectionResourceList + "}";
     }
 
     // ===================================================================================
@@ -121,5 +139,12 @@ public class FormMappingOption {
 
     public Set<String> getIndefinableParameterSet() { // not null
         return indefinableParameterSet != null ? indefinableParameterSet : Collections.emptySet();
+    }
+
+    // -----------------------------------------------------
+    //                                       Your Collection
+    //                                       ---------------
+    public List<FormYourCollectionResource> getYourCollectionResource() { // not null
+        return yourCollectionResourceList != null ? yourCollectionResourceList : Collections.emptyList();
     }
 }

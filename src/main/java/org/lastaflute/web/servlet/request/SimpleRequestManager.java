@@ -55,6 +55,7 @@ import org.lastaflute.web.exception.RequestAttributeNotFoundException;
 import org.lastaflute.web.exception.RequestInfoNotFoundException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
+import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.scoped.ScopedMessageHandler;
@@ -81,6 +82,24 @@ public class SimpleRequestManager implements RequestManager {
     @Resource
     protected FwAssistantDirector assistantDirector;
 
+    // -----------------------------------------------------
+    //                                          Core Friends
+    //                                          ------------
+    /** The manager of time. (NotNull: after initialization) */
+    @Resource
+    protected TimeManager timeManager;
+
+    /** The manager of message. (NotNull: after initialization) */
+    @Resource
+    protected MessageManager messageManager;
+
+    /** The manager of JSON. (NotNull: after initialization) */
+    @Resource
+    protected JsonManager jsonManager;
+
+    // -----------------------------------------------------
+    //                                           Web Friends
+    //                                           -----------
     /** The manager of response. (NotNull: after initialization) */
     @Resource
     protected ResponseManager responseManager;
@@ -93,22 +112,17 @@ public class SimpleRequestManager implements RequestManager {
     @Resource
     protected CookieManager cookieManager;
 
-    /** The manager of time. (NotNull: after initialization) */
-    @Resource
-    protected TimeManager timeManager;
-
-    /** The manager of message. (NotNull: after initialization) */
-    @Resource
-    protected MessageManager messageManager;
-
     /** The manager of API. (NotNull: after initialization) */
     @Resource
     protected ApiManager apiManager;
 
-    /** The manager of JSON. (NotNull: after initialization) */
+    /** The resolver of action path. (NotNull: after initialization) */
     @Resource
-    protected JsonManager jsonManager;
+    protected ActionPathResolver actionPathResolver;
 
+    // -----------------------------------------------------
+    //                                    Provided Resources
+    //                                    ------------------
     /** The provider of request user locale. (NotNull: after initialization) */
     protected UserLocaleProcessProvider localeHandler;
 
@@ -672,7 +686,9 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected Locale getRequestedLocale() {
-        return getRequest().getLocale();
+        return localeHandler.getRequestedLocale(this).orElseGet(() -> {
+            return getRequest().getLocale();
+        });
     }
 
     @Override
@@ -872,6 +888,27 @@ public class SimpleRequestManager implements RequestManager {
     // ===================================================================================
     //                                                                     Friends Gateway
     //                                                                     ===============
+    // -----------------------------------------------------
+    //                                          Core Friends
+    //                                          ------------
+    @Override
+    public TimeManager getTimeManager() {
+        return timeManager;
+    }
+
+    @Override
+    public MessageManager getMessageManager() {
+        return messageManager;
+    }
+
+    @Override
+    public JsonManager getJsonManager() {
+        return jsonManager;
+    }
+
+    // -----------------------------------------------------
+    //                                           Web Friends
+    //                                           -----------
     @Override
     public ResponseManager getResponseManager() {
         return responseManager;
@@ -888,23 +925,13 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     @Override
-    public TimeManager getTimeManager() {
-        return timeManager;
-    }
-
-    @Override
-    public MessageManager getMessageManager() {
-        return messageManager;
-    }
-
-    @Override
-    public JsonManager getJsonManager() {
-        return jsonManager;
-    }
-
-    @Override
     public ApiManager getApiManager() {
         return apiManager;
+    }
+
+    @Override
+    public ActionPathResolver getActionPathResolver() {
+        return actionPathResolver;
     }
 
     // ===================================================================================

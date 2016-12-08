@@ -29,6 +29,7 @@ import org.lastaflute.unit.mock.core.message.MockMessageManager;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
+import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -244,21 +245,6 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
-    public ResponseManager getResponseManager() {
-        return null;
-    }
-
-    @Override
-    public SessionManager getSessionManager() {
-        return null;
-    }
-
-    @Override
-    public CookieManager getCookieManager() {
-        return null;
-    }
-
-    @Override
     public TimeManager getTimeManager() {
         return null;
     }
@@ -274,7 +260,27 @@ public class MockRequestManager implements RequestManager {
     }
 
     @Override
+    public ResponseManager getResponseManager() {
+        return null;
+    }
+
+    @Override
+    public SessionManager getSessionManager() {
+        return null;
+    }
+
+    @Override
+    public CookieManager getCookieManager() {
+        return null;
+    }
+
+    @Override
     public ApiManager getApiManager() {
+        return null;
+    }
+
+    @Override
+    public ActionPathResolver getActionPathResolver() {
         return null;
     }
 }

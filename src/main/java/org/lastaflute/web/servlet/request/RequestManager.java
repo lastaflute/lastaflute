@@ -28,6 +28,7 @@ import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
+import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.scoped.ScopedAttributeHolder;
@@ -355,6 +356,30 @@ public interface RequestManager extends ScopedAttributeHolder {
     // ===================================================================================
     //                                                                     Friends Gateway
     //                                                                     ===============
+    // -----------------------------------------------------
+    //                                          Core Friends
+    //                                          ------------
+    /**
+     * Get the manager of time.
+     * @return The injected manager of time. (NotNull)
+     */
+    TimeManager getTimeManager();
+
+    /**
+     * Get the manager of message.
+     * @return The injected manager of message. (NotNull)
+     */
+    MessageManager getMessageManager();
+
+    /**
+     * Get the manager of JSON.
+     * @return The injected manager of JSON. (NotNull)
+     */
+    JsonManager getJsonManager();
+
+    // -----------------------------------------------------
+    //                                           Web Friends
+    //                                           -----------
     /**
      * Get the manager of response.
      * @return The injected manager of response. (NotNull)
@@ -374,26 +399,14 @@ public interface RequestManager extends ScopedAttributeHolder {
     CookieManager getCookieManager();
 
     /**
-     * Get the manager of time.
-     * @return The injected manager of time. (NotNull)
+     * Get the manager of API.
+     * @return The injected manager of API. (NotNull)
      */
-    TimeManager getTimeManager();
-
-    /**
-     * Get the manager of message.
-     * @return The injected manager of message. (NotNull)
-     */
-    MessageManager getMessageManager();
-
-    /**
-     * Get the manager of JSON.
-     * @return The injected manager of JSON. (NotNull)
-     */
-    JsonManager getJsonManager();
+    ApiManager getApiManager();
 
     /**
      * Get the manager of API.
      * @return The injected manager of API. (NotNull)
      */
-    ApiManager getApiManager();
+    ActionPathResolver getActionPathResolver();
 }

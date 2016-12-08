@@ -54,7 +54,6 @@ import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.core.util.LaClassificationUtil;
 import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
-import org.lastaflute.di.core.aop.javassist.AspectWeaver;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.ParameterizedClassDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
@@ -87,6 +86,7 @@ import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureExcept
 import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
 import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterFilter;
 import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterMeta;
+import org.lastaflute.web.ruts.process.populate.FormYourCollectionResource;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
@@ -533,18 +533,18 @@ public class ActionFormMapper {
         if (propertyType.isArray()) { // fixedly String #for_now e.g. public String[] strArray; so use List<>
             mappedValue = prepareStringArray(value, name, propertyType, option); // plain mapping to array, e.g. JSON not supported
         } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
-            if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
+            mappedValue = prepareObjectList(virtualForm, bean, name, value, pathSb, option, pd);
+        } else { // not array or list, e.g. Your Collection, String, Object
+            final Object yourCollection = prepareYourCollection(virtualForm, bean, name, value, pathSb, option, pd);
+            if (yourCollection != null) { // e.g. ImmutableList (Eclipse Collections)
+                mappedValue = yourCollection;
+            } else { // simple object types
                 final Object scalar = prepareObjectScalar(value);
-                mappedValue = parseJsonParameter(virtualForm, bean, name, prepareJsonString(scalar), pd);
-            } else { // e.g. List<String>, List<CDef.MemberStatus>
-                mappedValue = prepareMappedList(virtualForm, bean, name, value, pd, pathSb, option);
-            }
-        } else { // not array or list, e.g. String, Object
-            final Object scalar = prepareObjectScalar(value);
-            if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
-                mappedValue = parseJsonParameter(virtualForm, bean, name, prepareJsonString(scalar), pd);
-            } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
-                mappedValue = prepareNativeValue(virtualForm, bean, name, scalar, pd, pathSb, option);
+                if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter for Object
+                    mappedValue = parseJsonParameterAsObject(virtualForm, bean, name, adjustAsJsonString(scalar), pd);
+                } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
+                    mappedValue = prepareNativeValue(virtualForm, bean, name, scalar, pd, pathSb, option);
+                }
             }
         }
         pd.setValue(bean, mappedValue);
@@ -566,8 +566,20 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                         List Property
     //                                         -------------
-    protected List<? extends Object> prepareMappedList(VirtualForm virtualForm, Object bean, String name, Object value, PropertyDesc pd,
-            StringBuilder pathSb, FormMappingOption option) {
+    protected List<?> prepareObjectList(VirtualForm virtualForm, Object bean, String name, Object value, StringBuilder pathSb,
+            FormMappingOption option, PropertyDesc pd) {
+        final List<?> mappedValue;
+        if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
+            final Object scalar = prepareObjectScalar(value);
+            mappedValue = parseJsonParameterAsList(virtualForm, bean, name, adjustAsJsonString(scalar), pd);
+        } else { // e.g. List<String>, List<CDef.MemberStatus>
+            mappedValue = prepareSimpleElementList(virtualForm, bean, name, value, pd, pathSb, option);
+        }
+        return mappedValue;
+    }
+
+    protected List<? extends Object> prepareSimpleElementList(VirtualForm virtualForm, Object bean, String name, Object value,
+            PropertyDesc pd, StringBuilder pathSb, FormMappingOption option) {
         final Class<?> propertyType = pd.getPropertyType();
         final List<String> strList = prepareStringList(value, name, propertyType, option);
         if (pd.isParameterized()) {
@@ -599,18 +611,34 @@ public class ActionFormMapper {
     }
 
     // -----------------------------------------------------
-    //                                         JSON Property
-    //                                         -------------
-    protected String prepareJsonString(Object value) { // not null (empty if null)
-        if (value != null) {
-            if (value instanceof String) {
-                return (String) value;
-            } else {
-                return value.toString();
-            }
-        } else {
-            return "";
+    //                                      Your Collections
+    //                                      ----------------
+    protected Object prepareYourCollection(VirtualForm virtualForm, Object bean, String name, Object value, StringBuilder pathSb,
+            FormMappingOption option, PropertyDesc pd) {
+        final List<FormYourCollectionResource> resourceList = option.getYourCollectionResource();
+        if (resourceList.isEmpty()) {
+            return null; // no settings of your collections
         }
+        final Class<?> propertyType = pd.getPropertyType();
+        for (FormYourCollectionResource resource : resourceList) {
+            if (!propertyType.isAssignableFrom(resource.getYourType())) {
+                continue;
+            }
+            final List<?> objectList = prepareObjectList(virtualForm, bean, name, value, pathSb, option, pd);
+            final Iterable<? extends Object> applied = resource.getYourCollectionCreator().apply(objectList);
+            final Object mappedValue;
+            if (applied instanceof List<?>) {
+                mappedValue = applied;
+            } else {
+                final List<Object> newList = new ArrayList<>();
+                for (Object element : applied) {
+                    newList.add(element);
+                }
+                mappedValue = newList;
+            }
+            return mappedValue;
+        }
+        return null; // is not your collections
     }
 
     // -----------------------------------------------------
@@ -652,6 +680,18 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                        JSON Parameter
     //                                        --------------
+    protected String adjustAsJsonString(Object value) { // not null (empty if null)
+        if (value != null) {
+            if (value instanceof String) {
+                return (String) value;
+            } else {
+                return value.toString();
+            }
+        } else {
+            return "";
+        }
+    }
+
     protected boolean isJsonParameterProperty(PropertyDesc pd) {
         final Class<JsonParameter> annoType = JsonParameter.class;
         final Field field = pd.getField();
@@ -675,38 +715,39 @@ public class ActionFormMapper {
         return false;
     }
 
-    protected Object parseJsonParameter(VirtualForm virtualForm, Object bean, String name, String json, PropertyDesc pd) {
+    protected List<?> parseJsonParameterAsList(VirtualForm virtualForm, Object bean, String name, String json, PropertyDesc pd) {
+        final JsonManager jsonManager = getJsonManager();
+        if (!pd.isParameterized()) { // e.g. public List anyList;
+            throwListJsonPropertyNonGenericException(bean, name, json, pd); // program mistake
+            return null; // unreachable
+        }
+        final ParameterizedClassDesc paramedDesc = pd.getParameterizedClassDesc();
+        final Type plainType = paramedDesc.getParameterizedType(); // not null
+        if (!(plainType instanceof ParameterizedType)) { // generic array type? anyway check it
+            throwListJsonPropertyNonParameterizedException(bean, name, json, pd, plainType); // program mistake
+            return null; // unreachable
+        }
+        final ParameterizedType paramedType = (ParameterizedType) plainType;
+        if (Object.class.equals(paramedDesc.getGenericFirstType())) { // e.g. public List<?> beanList;
+            throwListJsonPropertyGenericNotScalarException(bean, name, json, pd, paramedType);
+            return null; // unreachable
+        }
+        try {
+            return (List<?>) jsonManager.fromJsonParameteried(json, paramedType); // e.g. public List<SeaBean> beanList;
+        } catch (RuntimeException e) {
+            throwListJsonParameterParseFailureException(bean, name, json, paramedType, e);
+            return null; // unreachable
+        }
+    }
+
+    protected Object parseJsonParameterAsObject(VirtualForm virtualForm, Object bean, String name, String json, PropertyDesc pd) {
         final JsonManager jsonManager = getJsonManager();
         final Class<?> propertyType = pd.getPropertyType();
-        if (isListJsonProperty(propertyType)) { // e.g. public List<...> beanList;
-            if (!pd.isParameterized()) { // e.g. public List anyList;
-                throwListJsonPropertyNonGenericException(bean, name, json, pd); // program mistake
-                return null; // unreachable
-            }
-            final ParameterizedClassDesc paramedDesc = pd.getParameterizedClassDesc();
-            final Type plainType = paramedDesc.getParameterizedType(); // not null
-            if (!(plainType instanceof ParameterizedType)) { // generic array type? anyway check it
-                throwListJsonPropertyNonParameterizedException(bean, name, json, pd, plainType); // program mistake
-                return null; // unreachable
-            }
-            final ParameterizedType paramedType = (ParameterizedType) plainType;
-            if (Object.class.equals(paramedDesc.getGenericFirstType())) { // e.g. public List<?> beanList;
-                throwListJsonPropertyGenericNotScalarException(bean, name, json, pd, paramedType);
-                return null; // unreachable
-            }
-            try {
-                return jsonManager.fromJsonParameteried(json, paramedType); // e.g. public List<SeaBean> beanList;
-            } catch (RuntimeException e) {
-                throwListJsonParameterParseFailureException(bean, name, json, paramedType, e);
-                return null; // unreachable
-            }
-        } else { // e.g. public SeaBean seaBean;
-            try {
-                return jsonManager.fromJson(json, propertyType);
-            } catch (RuntimeException e) {
-                throwJsonParameterParseFailureException(bean, name, json, propertyType, e);
-                return null; // unreachable
-            }
+        try {
+            return jsonManager.fromJson(json, propertyType);
+        } catch (RuntimeException e) {
+            throwJsonParameterParseFailureException(bean, name, json, propertyType, e);
+            return null; // unreachable
         }
     }
 
@@ -1342,7 +1383,7 @@ public class ActionFormMapper {
     //                                            Real Class
     //                                            ----------
     protected Class<?> getRealClass(Class<?> clazz) {
-        return clazz.getName().indexOf(AspectWeaver.SUFFIX_ENHANCED_CLASS) > 0 ? clazz.getSuperclass() : clazz;
+        return ContainerUtil.toRealClassIfEnhanced(clazz);
     }
 
     // ===================================================================================

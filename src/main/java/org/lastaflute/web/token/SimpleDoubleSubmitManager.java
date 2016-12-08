@@ -51,6 +51,7 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     private static final Logger logger = LoggerFactory.getLogger(SimpleDoubleSubmitManager.class);
     protected static final String ERRORS_APP_DOUBLE_SUBMIT_REQUEST = "errors.app.double.submit.request";
     protected static final Object DOUBLE_SUBMITTED_OBJ = new Object();
+    protected static final Object SINGLE_SUBMITTED_OBJ = new Object();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -262,6 +263,8 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         if (!matched) {
             saveDoubleSubmittedMark();
             throwDoubleSubmittedRequestException(groupType, errorHook);
+        } else {
+            saveSingleSubmittedMark(); // means verified  for e.g. UnitTest
         }
     }
 
@@ -287,6 +290,10 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         final String msg = br.buildExceptionMessage();
         final String messageKey = getDoubleSubmitMessageKey();
         throw new DoubleSubmittedRequestException(msg, () -> errorHook.hook(), UserMessages.createAsOneGlobal(messageKey));
+    }
+
+    protected void saveSingleSubmittedMark() {
+        requestManager.setAttribute(getFirstSubmittedKey(), SINGLE_SUBMITTED_OBJ);
     }
 
     // -----------------------------------------------------
@@ -394,6 +401,11 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
         return requestManager.getAttribute(getDoubleSubmittedKey(), Object.class).isPresent();
     }
 
+    @Override
+    public boolean isFirstSubmittedRequest() {
+        return requestManager.getAttribute(getFirstSubmittedKey(), Object.class).isPresent();
+    }
+
     // ===================================================================================
     //                                                                        Key Provider
     //                                                                        ============
@@ -404,6 +416,10 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
 
     protected String getDoubleSubmittedKey() {
         return LastaWebKey.DOUBLE_SUBMITTED_KEY;
+    }
+
+    protected String getFirstSubmittedKey() {
+        return LastaWebKey.FIRST_SUBMITTED_KEY;
     }
 
     // ===================================================================================
