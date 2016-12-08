@@ -534,14 +534,14 @@ public class ActionFormMapper {
             mappedValue = prepareStringArray(value, name, propertyType, option); // plain mapping to array, e.g. JSON not supported
         } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
             mappedValue = prepareObjectList(virtualForm, bean, name, value, pathSb, option, pd);
-        } else { // not array or list, e.g. String, Object
+        } else { // not array or list, e.g. Your Collection, String, Object
             final Object yourCollection = prepareYourCollection(virtualForm, bean, name, value, pathSb, option, pd);
             if (yourCollection != null) { // e.g. ImmutableList (Eclipse Collections)
                 mappedValue = yourCollection;
-            } else {
+            } else { // simple object types
                 final Object scalar = prepareObjectScalar(value);
-                if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter
-                    mappedValue = parseJsonParameterAsObject(virtualForm, bean, name, adjustJsonString(scalar), pd);
+                if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter for Object
+                    mappedValue = parseJsonParameterAsObject(virtualForm, bean, name, adjustAsJsonString(scalar), pd);
                 } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
                     mappedValue = prepareNativeValue(virtualForm, bean, name, scalar, pd, pathSb, option);
                 }
@@ -571,7 +571,7 @@ public class ActionFormMapper {
         final List<?> mappedValue;
         if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
             final Object scalar = prepareObjectScalar(value);
-            mappedValue = parseJsonParameterAsList(virtualForm, bean, name, adjustJsonString(scalar), pd);
+            mappedValue = parseJsonParameterAsList(virtualForm, bean, name, adjustAsJsonString(scalar), pd);
         } else { // e.g. List<String>, List<CDef.MemberStatus>
             mappedValue = prepareSimpleElementList(virtualForm, bean, name, value, pd, pathSb, option);
         }
@@ -680,7 +680,7 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                        JSON Parameter
     //                                        --------------
-    protected String adjustJsonString(Object value) { // not null (empty if null)
+    protected String adjustAsJsonString(Object value) { // not null (empty if null)
         if (value != null) {
             if (value instanceof String) {
                 return (String) value;
