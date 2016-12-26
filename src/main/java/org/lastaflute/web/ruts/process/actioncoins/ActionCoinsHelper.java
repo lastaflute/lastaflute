@@ -82,7 +82,7 @@ public class ActionCoinsHelper {
                 if (!apiRes.getHttpStatus().isPresent()) { // no specified
                     apiRes.httpStatus(cause.getErrorStatus()); // use thrown status
                 }
-                reflector.reflect(apiRes); // empty journey so ignore return
+                reflector.reflect(apiRes).getJourneyProvider().bonVoyage(); // always exists if API response
             });
             runtime.clearDisplayData(); // remove (possible) large data just in case
         }
@@ -117,7 +117,7 @@ public class ActionCoinsHelper {
                 if (!apiRes.getHttpStatus().isPresent()) { // no specified
                     apiRes.httpStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // use fixed status
                 }
-                reflector.reflect(apiRes); // empty journey so ignore return
+                reflector.reflect(apiRes).getJourneyProvider().bonVoyage(); // always exists if API response
             });
             runtime.clearDisplayData(); // remove (possible) large data just in case
         }
