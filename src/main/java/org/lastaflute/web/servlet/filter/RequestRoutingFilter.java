@@ -97,7 +97,7 @@ public class RequestRoutingFilter implements Filter {
             return;
         }
         // no extension here (may be SAStruts URL)
-        final ActionPathResolver resolver = ContainerUtil.getComponent(ActionPathResolver.class);
+        final ActionPathResolver resolver = getRequestManager().getActionPathResolver();
         try {
             final String contextPath = extractContextPath(httpReq);
             final ActionFoundPathHandler handler = createActionPathHandler(httpReq, httpRes, contextPath); // (#to_action)
