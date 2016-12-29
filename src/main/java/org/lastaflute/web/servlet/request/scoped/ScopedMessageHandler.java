@@ -72,12 +72,25 @@ public class ScopedMessageHandler {
     //                                                                                Add
     //                                                                               =====
     /**
+     * Add message as named user messages to rear of existing messages. <br>
+     * This message will be deleted immediately after display if you use e.g. la:errors.
+     * @param property The property name corresponding to the message. (NotNull)
+     * @param messageKey The message key to be added. (NotNull)
+     * @param args The varying array of arguments for the message. (NullAllowed, EmptyAllowed)
+     */
+    public void add(String property, String messageKey, Object... args) {
+        assertObjectNotNull("property", property);
+        assertObjectNotNull("messageKey", messageKey);
+        doAddMessages(prepareUserMessages(messageKey, args));
+    }
+
+    /**
      * Add message as (global) user messages to rear of existing messages. <br>
      * This message will be deleted immediately after display if you use e.g. la:errors.
      * @param messageKey The message key to be added. (NotNull)
      * @param args The varying array of arguments for the message. (NullAllowed, EmptyAllowed)
      */
-    public void add(String messageKey, Object... args) {
+    public void addGlobal(String messageKey, Object... args) {
         assertObjectNotNull("messageKey", messageKey);
         doAddMessages(prepareUserMessages(messageKey, args));
     }

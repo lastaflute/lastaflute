@@ -49,15 +49,15 @@ public abstract class LaApplicationException extends RuntimeException {
         return messageList != null ? Collections.unmodifiableList(messageList) : Collections.emptyList();
     }
 
-    protected void saveApplicationMessage(String messageKey, Object... values) {
+    protected void saveApplicationMessage(String property, String messageKey, Object... values) {
         assertArgumentNotNull("messageKey", messageKey);
         assertArgumentNotNull("values", values);
         messageList = new ArrayList<LaApplicationMessage>(1); // overriding
-        messageList.add(newApplicationMessage(messageKey, values));
+        messageList.add(newApplicationMessage(property, messageKey, values));
     }
 
-    protected LaApplicationMessage newApplicationMessage(String messageKey, Object... values) {
-        return new LaApplicationMessage(messageKey, values);
+    protected LaApplicationMessage newApplicationMessage(String property, String messageKey, Object... values) {
+        return new LaApplicationMessage(property, messageKey, values);
     }
 
     protected void saveApplicationMessages(List<LaApplicationMessage> messageList) {

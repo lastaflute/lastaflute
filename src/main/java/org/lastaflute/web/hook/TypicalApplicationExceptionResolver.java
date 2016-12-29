@@ -135,18 +135,20 @@ public class TypicalApplicationExceptionResolver {
         if (!messageList.isEmpty()) {
             logger.debug("...Saving embedded application message as action error: {}", messageList);
             sessionManager.errors().clear(); // overriding existing messages if exists
-            messageList.forEach(msg -> sessionManager.errors().add(msg.getMessageKey(), msg.getValues()));
+            messageList.forEach(msg -> sessionManager.errors().add(msg.getProperty(), msg.getMessageKey(), msg.getValues()));
         }
     }
 
     protected ActionResponse asDBFluteApplicationException(ActionRuntime runtime, RuntimeException cause) {
-        ActionResponse response = ActionResponse.undefined();
+        final ActionResponse response;
         if (cause instanceof EntityAlreadyDeletedException) {
             response = handleEntityAlreadyDeletedException(runtime, (EntityAlreadyDeletedException) cause);
         } else if (cause instanceof EntityAlreadyUpdatedException) {
             response = handleEntityAlreadyUpdatedException(runtime, (EntityAlreadyUpdatedException) cause);
         } else if (cause instanceof EntityAlreadyExistsException) {
             response = handleEntityAlreadyExistsException(runtime, (EntityAlreadyExistsException) cause);
+        } else {
+            response = ActionResponse.undefined();
         }
         return response;
     }

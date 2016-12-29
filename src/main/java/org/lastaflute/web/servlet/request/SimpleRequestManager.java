@@ -875,12 +875,13 @@ public class SimpleRequestManager implements RequestManager {
 
     @Override
     public void saveErrorsToSession() {
+        sessionManager.errors().clear(); // for overriding completely
         errors().get().ifPresent(messages -> {
-            final Iterator<UserMessage> ite = messages.accessByFlatIterator();
-            sessionManager.errors().clear(); /* means overriding */
-            while (ite.hasNext()) {
-                final UserMessage message = ite.next();
-                sessionManager.errors().add(message.getMessageKey(), message.getValues());
+            for (String property : messages.toPropertySet()) {
+                for (Iterator<UserMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
+                    final UserMessage message = ite.next();
+                    sessionManager.errors().add(property, message.getMessageKey(), message.getValues());
+                }
             }
         });
     }
