@@ -374,7 +374,7 @@ public class TypicalApplicationExceptionResolver {
     //                                                                        Assist Logic
     //                                                                        ============
     protected void saveErrors(String messageKey) {
-        sessionManager.errors().save(messageKey); // cleared later if API
+        sessionManager.errors().saveGlobal(messageKey); // cleared later if API
     }
 
     protected HtmlResponse redirectToLoginAction() {

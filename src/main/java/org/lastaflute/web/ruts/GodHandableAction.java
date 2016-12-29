@@ -399,7 +399,7 @@ public class GodHandableAction implements VirtualAction {
             sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/");
             logger.debug(sb.toString());
         }
-        requestManager.errors().save(messages); // also API can use it
+        requestManager.errors().saveMessages(messages); // also API can use it
         runtime.manageValidationErrors(messages); // reflect to runtime
         runtime.manageFailureCause(cause); // also cause
         final VaErrorHook errorHook = cause.getErrorHook();

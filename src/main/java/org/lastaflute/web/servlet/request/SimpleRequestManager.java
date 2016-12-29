@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -38,7 +37,6 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
-import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.core.time.TimeManager;
@@ -877,12 +875,7 @@ public class SimpleRequestManager implements RequestManager {
     public void saveErrorsToSession() {
         sessionManager.errors().clear(); // for overriding completely
         errors().get().ifPresent(messages -> {
-            for (String property : messages.toPropertySet()) {
-                for (Iterator<UserMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
-                    final UserMessage message = ite.next();
-                    sessionManager.errors().add(property, message.getMessageKey(), message.getValues());
-                }
-            }
+            sessionManager.errors().addMessages(messages);
         });
     }
 
