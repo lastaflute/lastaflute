@@ -116,11 +116,11 @@ public abstract class LastaAction {
     protected ApiResponse handleApiValidationError() { // for API
         final ActionRuntime runtime = LaActionRuntimeUtil.getActionRuntime();
         final OptionalThing<UserMessages> messages = requestManager.errors().get();
-        final ApiFailureResource resource = newApiFailureResource(runtime, messages, requestManager);
+        final ApiFailureResource resource = newApiFailureResource(OptionalThing.of(runtime), messages, requestManager);
         return requestManager.getApiManager().handleValidationError(resource);
     }
 
-    protected ApiFailureResource newApiFailureResource(ActionRuntime runtime, OptionalThing<UserMessages> messages,
+    protected ApiFailureResource newApiFailureResource(OptionalThing<ActionRuntime> runtime, OptionalThing<UserMessages> messages,
             RequestManager requestManager) {
         return new ApiFailureResource(runtime, messages, requestManager);
     }

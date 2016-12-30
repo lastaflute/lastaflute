@@ -67,25 +67,32 @@ public class ActionCoinsHelper {
     //                                          ------------
     public void prepareRequestClientErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
         if (runtime.isApiExecute()) {
-            RequestLoggingFilter.setClientErrorHandlerOnThread((request, response, cause) -> {
-                dispatchApiClientErrorException(runtime, reflector, cause);
-            }); // cleared at logging filter's finally
+            registerApiClientErrorHandler(OptionalThing.of(runtime), reflector);
         }
     }
 
-    protected void dispatchApiClientErrorException(ActionRuntime runtime, ActionResponseReflector reflector,
+    protected void registerApiClientErrorHandler(OptionalThing<ActionRuntime> runtime, ActionResponseReflector reflector) {
+        RequestLoggingFilter.setClientErrorHandlerOnThread((request, response, cause) -> {
+            dispatchApiClientErrorException(runtime, reflector, cause);
+        }); // cleared at logging filter's finally
+    }
+
+    protected void dispatchApiClientErrorException(OptionalThing<ActionRuntime> runtime, ActionResponseReflector reflector,
             RequestClientErrorException cause) {
-        if (canHandleApiException(runtime)) { // check API action just in case
-            final OptionalThing<UserMessages> optMessages = findClientErrorMessages(cause);
-            final ApiFailureResource resource = createApiFailureResource(runtime, optMessages, cause);
-            getApiManager().handleClientException(resource, cause).ifPresent(apiRes -> {
-                if (!apiRes.getHttpStatus().isPresent()) { // no specified
-                    apiRes.httpStatus(cause.getErrorStatus()); // use thrown status
-                }
-                reflector.reflect(apiRes).getJourneyProvider().bonVoyage(); // always exists if API response
-            });
-            runtime.clearDisplayData(); // remove (possible) large data just in case
+        if (isAlreadyCommitted()) { // just in case
+            return; // can do nothing
         }
+        final OptionalThing<UserMessages> optMessages = findClientErrorMessages(cause);
+        final ApiFailureResource resource = createApiFailureResource(runtime, optMessages, cause);
+        getApiManager().handleClientException(resource, cause).ifPresent(apiRes -> {
+            if (!apiRes.getHttpStatus().isPresent()) { // no specified
+                apiRes.httpStatus(cause.getErrorStatus()); // use thrown status
+            }
+            reflector.reflect(apiRes).getJourneyProvider().bonVoyage(); // always exists if API response
+        });
+        runtime.ifPresent(rt -> {
+            rt.clearDisplayData(); // remove (possible) large data just in case
+        });
     }
 
     protected OptionalThing<UserMessages> findClientErrorMessages(RequestClientErrorException cause) {
@@ -104,33 +111,41 @@ public class ActionCoinsHelper {
     //                                          ------------
     public void prepareRequestServerErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
         if (runtime.isApiExecute()) {
-            RequestLoggingFilter.setServerErrorHandlerOnThread((request, response, cause) -> {
-                dispatchApiServerException(runtime, reflector, cause);
-            }); // cleared at logging filter's finally
+            registerServerErrorHandler(OptionalThing.of(runtime), reflector);
         }
     }
 
-    protected void dispatchApiServerException(ActionRuntime runtime, ActionResponseReflector reflector, Throwable cause) {
-        if (canHandleApiException(runtime)) { // check API action just in case
-            final ApiFailureResource resource = createApiFailureResource(runtime, OptionalThing.empty(), cause);
-            getApiManager().handleServerException(resource, cause).ifPresent(apiRes -> {
-                if (!apiRes.getHttpStatus().isPresent()) { // no specified
-                    apiRes.httpStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // use fixed status
-                }
-                reflector.reflect(apiRes).getJourneyProvider().bonVoyage(); // always exists if API response
-            });
-            runtime.clearDisplayData(); // remove (possible) large data just in case
+    protected void registerServerErrorHandler(OptionalThing<ActionRuntime> runtime, ActionResponseReflector reflector) {
+        RequestLoggingFilter.setServerErrorHandlerOnThread((request, response, cause) -> {
+            dispatchApiServerException(runtime, reflector, cause);
+        }); // cleared at logging filter's finally
+    }
+
+    protected void dispatchApiServerException(OptionalThing<ActionRuntime> runtime, ActionResponseReflector reflector, Throwable cause) {
+        if (isAlreadyCommitted()) { // just in case
+            return; // can do nothing
         }
+        final ApiFailureResource resource = createApiFailureResource(runtime, OptionalThing.empty(), cause);
+        getApiManager().handleServerException(resource, cause).ifPresent(apiRes -> {
+            if (!apiRes.getHttpStatus().isPresent()) { // no specified
+                apiRes.httpStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // use fixed status
+            }
+            reflector.reflect(apiRes).getJourneyProvider().bonVoyage(); // always exists if API response
+        });
+        runtime.ifPresent(rt -> {
+            rt.clearDisplayData(); // remove (possible) large data just in case
+        });
     }
 
     // -----------------------------------------------------
     //                                          Assist Logic
     //                                          ------------
-    protected boolean canHandleApiException(ActionRuntime runtime) {
-        return runtime.isApiExecute() && !requestManager.getResponseManager().isCommitted();
+    protected boolean isAlreadyCommitted() {
+        return requestManager.getResponseManager().isCommitted();
     }
 
-    protected ApiFailureResource createApiFailureResource(ActionRuntime runtime, OptionalThing<UserMessages> messages, Throwable cause) {
+    protected ApiFailureResource createApiFailureResource(OptionalThing<ActionRuntime> runtime, OptionalThing<UserMessages> messages,
+            Throwable cause) {
         return new ApiFailureResource(runtime, messages, requestManager);
     }
 

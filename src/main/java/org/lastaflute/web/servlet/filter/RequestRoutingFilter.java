@@ -29,7 +29,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
-import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ActionFoundPathHandler;
 import org.lastaflute.web.path.ActionPathResolver;
@@ -57,6 +56,9 @@ public class RequestRoutingFilter implements Filter {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                                Cached
+    //                                                ------
     /**
      * The cache of assistant director, which can be lazy-loaded when you get it.
      * Don't use these variables directly, you should use the getter. (NotNull: after lazy-load)
@@ -70,11 +72,20 @@ public class RequestRoutingFilter implements Filter {
     protected RequestManager cachedRequestManager;
 
     /**
+     * The cache of action adjustment provider, which can be lazy-loaded when you get it.
+     * Don't use these variables directly, you should use the getter. (NotNull: after lazy-load)
+     */
+    protected ActionAdjustmentProvider cachedActionAdjustmentProvider;
+
+    /**
      * The cache of URL parameter analyzer, which can be lazy-loaded when you get it.
      * Don't use these variables directly, you should use the getter. (NotNull: after lazy-load)
      */
     protected RequestUrlParamAnalyzer cachedUrlParamAnalyzer;
 
+    // -----------------------------------------------------
+    //                                             Processor
+    //                                             ---------
     /** The processor of action request, lazy loaded so use the getter. (NotNull: after lazy-load) */
     protected ActionRequestProcessor lazyLoadedProcessor; // lazy loaded
 
@@ -111,11 +122,12 @@ public class RequestRoutingFilter implements Filter {
                 throw (ServletException) e;
             } else if (e instanceof RuntimeException) {
                 throw (RuntimeException) e;
-            } else { // no way
-                throw new IllegalStateException(e);
+            } else { // no way, just in case
+                throw new IllegalStateException("*No way", e);
             }
         }
         // no routing here
+        // #hope option to call API failure hook for 404 JSON by jflute
         showExpectedRouting(requestPath, resolver);
         chain.doFilter(servReq, servRes);
     }
@@ -138,7 +150,7 @@ public class RequestRoutingFilter implements Filter {
     }
 
     protected boolean isRoutingTarget(HttpServletRequest request, String requestPath) {
-        final ActionAdjustmentProvider adjustmentProvider = assistActionAdjustmentProvider();
+        final ActionAdjustmentProvider adjustmentProvider = getActionAdjustmentProvider();
         if (adjustmentProvider.isForcedRoutingExcept(request, requestPath)) { // you can adjust it
             return false;
         }
@@ -146,11 +158,6 @@ public class RequestRoutingFilter implements Filter {
             return true;
         }
         return !isExtensionUrlPossible(request, requestPath); // default determination
-    }
-
-    protected ActionAdjustmentProvider assistActionAdjustmentProvider() {
-        final FwWebDirection direction = getAssistantDirector().assistWebDirection();
-        return direction.assistActionAdjustmentProvider();
     }
 
     protected boolean isExtensionUrlPossible(HttpServletRequest request, String requestPath) {
@@ -217,7 +224,7 @@ public class RequestRoutingFilter implements Filter {
     }
 
     protected boolean isSuppressTrailingSlashRedirect(HttpServletRequest request, String requestPath, ActionExecute execute) {
-        return assistActionAdjustmentProvider().isSuppressTrailingSlashRedirect(request, requestPath, execute);
+        return getActionAdjustmentProvider().isSuppressTrailingSlashRedirect(request, requestPath, execute);
     }
 
     protected boolean isNonTrailingSlashRequest(HttpServletRequest request, String requestPath, ActionExecute execute) {
@@ -306,6 +313,19 @@ public class RequestRoutingFilter implements Filter {
             cachedRequestManager = ContainerUtil.getComponent(RequestManager.class);
         }
         return cachedRequestManager;
+    }
+
+    protected ActionAdjustmentProvider getActionAdjustmentProvider() {
+        if (cachedActionAdjustmentProvider != null) {
+            return cachedActionAdjustmentProvider;
+        }
+        synchronized (this) {
+            if (cachedActionAdjustmentProvider != null) {
+                return cachedActionAdjustmentProvider;
+            }
+            cachedActionAdjustmentProvider = getAssistantDirector().assistWebDirection().assistActionAdjustmentProvider();
+        }
+        return cachedActionAdjustmentProvider;
     }
 
     protected RequestUrlParamAnalyzer getUrlParamAnalyzer() {
