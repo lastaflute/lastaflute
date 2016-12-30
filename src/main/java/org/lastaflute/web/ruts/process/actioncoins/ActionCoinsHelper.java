@@ -67,17 +67,17 @@ public class ActionCoinsHelper {
     //                                          ------------
     public void prepareRequestClientErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
         if (runtime.isApiExecute()) {
-            registerApiClientErrorHandler(OptionalThing.of(runtime), reflector);
+            registerApiClientErrorHandler(runtime, reflector);
         }
     }
 
-    protected void registerApiClientErrorHandler(OptionalThing<ActionRuntime> runtime, ActionResponseReflector reflector) {
+    protected void registerApiClientErrorHandler(ActionRuntime runtime, ActionResponseReflector reflector) {
         RequestLoggingFilter.setClientErrorHandlerOnThread((request, response, cause) -> {
             dispatchApiClientErrorException(runtime, reflector, cause);
         }); // cleared at logging filter's finally
     }
 
-    protected void dispatchApiClientErrorException(OptionalThing<ActionRuntime> runtime, ActionResponseReflector reflector,
+    protected void dispatchApiClientErrorException(ActionRuntime runtime, ActionResponseReflector reflector,
             RequestClientErrorException cause) {
         if (isAlreadyCommitted()) { // just in case
             return; // can do nothing
@@ -90,9 +90,7 @@ public class ActionCoinsHelper {
             }
             reflector.reflect(apiRes).getJourneyProvider().bonVoyage(); // always exists if API response
         });
-        runtime.ifPresent(rt -> {
-            rt.clearDisplayData(); // remove (possible) large data just in case
-        });
+        runtime.clearDisplayData(); // remove (possible) large data just in case
     }
 
     protected OptionalThing<UserMessages> findClientErrorMessages(RequestClientErrorException cause) {
@@ -111,17 +109,17 @@ public class ActionCoinsHelper {
     //                                          ------------
     public void prepareRequestServerErrorHandlingIfApi(ActionRuntime runtime, ActionResponseReflector reflector) {
         if (runtime.isApiExecute()) {
-            registerServerErrorHandler(OptionalThing.of(runtime), reflector);
+            registerServerErrorHandler(runtime, reflector);
         }
     }
 
-    protected void registerServerErrorHandler(OptionalThing<ActionRuntime> runtime, ActionResponseReflector reflector) {
+    protected void registerServerErrorHandler(ActionRuntime runtime, ActionResponseReflector reflector) {
         RequestLoggingFilter.setServerErrorHandlerOnThread((request, response, cause) -> {
             dispatchApiServerException(runtime, reflector, cause);
         }); // cleared at logging filter's finally
     }
 
-    protected void dispatchApiServerException(OptionalThing<ActionRuntime> runtime, ActionResponseReflector reflector, Throwable cause) {
+    protected void dispatchApiServerException(ActionRuntime runtime, ActionResponseReflector reflector, Throwable cause) {
         if (isAlreadyCommitted()) { // just in case
             return; // can do nothing
         }
@@ -132,9 +130,7 @@ public class ActionCoinsHelper {
             }
             reflector.reflect(apiRes).getJourneyProvider().bonVoyage(); // always exists if API response
         });
-        runtime.ifPresent(rt -> {
-            rt.clearDisplayData(); // remove (possible) large data just in case
-        });
+        runtime.clearDisplayData(); // remove (possible) large data just in case
     }
 
     // -----------------------------------------------------
@@ -144,8 +140,7 @@ public class ActionCoinsHelper {
         return requestManager.getResponseManager().isCommitted();
     }
 
-    protected ApiFailureResource createApiFailureResource(OptionalThing<ActionRuntime> runtime, OptionalThing<UserMessages> messages,
-            Throwable cause) {
+    protected ApiFailureResource createApiFailureResource(ActionRuntime runtime, OptionalThing<UserMessages> messages, Throwable cause) {
         return new ApiFailureResource(runtime, messages, requestManager);
     }
 

@@ -32,14 +32,14 @@ public class ApiFailureResource {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final OptionalThing<ActionRuntime> runtime; // runtime for current action, might be no action
+    protected final ActionRuntime runtime; // runtime for current action
     protected final OptionalThing<UserMessages> messages; // basically embedded in exception
     protected final RequestManager requestManager;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ApiFailureResource(OptionalThing<ActionRuntime> runtime, OptionalThing<UserMessages> messages, RequestManager requestManager) {
+    public ApiFailureResource(ActionRuntime runtime, OptionalThing<UserMessages> messages, RequestManager requestManager) {
         this.runtime = runtime;
         this.messages = messages;
         this.requestManager = requestManager;
@@ -73,7 +73,7 @@ public class ApiFailureResource {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public OptionalThing<ActionRuntime> getRuntime() { // exists in action, might be no action
+    public ActionRuntime getRuntime() { // exists in action, might be no action
         return runtime;
     }
 

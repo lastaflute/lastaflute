@@ -50,6 +50,7 @@ public interface ApiFailureHook {
     //                                                                      ==============
     /**
      * Handle API failure when client exception, e.g. 404 not found, 400 bad request. (Not Required) <br>
+     * This hook can be called if action found, so also use Servlet container's error-page if it needs. <br>
      * HTTP status will be automatically sent by framework's hook so empty response allowed. <br>
      * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
      * @param resource The resource of API result, may contain error messages (e.g. embedded in exception). (NotNull)
@@ -60,6 +61,7 @@ public interface ApiFailureHook {
 
     /**
      * Handle API failure when server exception, e.g. 500 server error. (Not Required) <br>
+     * This hook can be called if action found, so also use Servlet container's error-page if it needs. <br>
      * HTTP status will be automatically sent by framework's hook so empty response allowed. <br>
      * The hookFinally() of action hook NOT always be called after this, depends on occurrence place.
      * @param resource The resource of API result, without error messages, you can get request manager from it. (NotNull)

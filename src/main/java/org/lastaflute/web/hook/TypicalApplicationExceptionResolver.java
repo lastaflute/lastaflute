@@ -236,7 +236,7 @@ public class TypicalApplicationExceptionResolver {
 
     protected ApiFailureResource createApiFailureResource(ActionRuntime runtime) {
         final OptionalThing<UserMessages> messages = sessionManager.errors().get(); // pick up session errors here
-        return new ApiFailureResource(OptionalThing.of(runtime), messages, requestManager);
+        return new ApiFailureResource(runtime, messages, requestManager);
     }
 
     protected void clearUnneededSessionErrorsForApiForcedly() {

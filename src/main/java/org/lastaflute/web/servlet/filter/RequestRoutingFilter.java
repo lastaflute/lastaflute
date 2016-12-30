@@ -127,7 +127,6 @@ public class RequestRoutingFilter implements Filter {
             }
         }
         // no routing here
-        // #hope option to call API failure hook for 404 JSON by jflute
         showExpectedRouting(requestPath, resolver);
         chain.doFilter(servReq, servRes);
     }
