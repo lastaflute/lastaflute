@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -399,7 +399,7 @@ public class GodHandableAction implements VirtualAction {
             sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/");
             logger.debug(sb.toString());
         }
-        requestManager.errors().save(messages); // also API can use it
+        requestManager.errors().saveMessages(messages); // also API can use it
         runtime.manageValidationErrors(messages); // reflect to runtime
         runtime.manageFailureCause(cause); // also cause
         final VaErrorHook errorHook = cause.getErrorHook();

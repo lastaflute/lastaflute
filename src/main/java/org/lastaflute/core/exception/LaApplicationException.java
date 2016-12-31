@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,15 +49,15 @@ public abstract class LaApplicationException extends RuntimeException {
         return messageList != null ? Collections.unmodifiableList(messageList) : Collections.emptyList();
     }
 
-    protected void saveApplicationMessage(String messageKey, Object... values) {
+    protected void saveApplicationMessage(String property, String messageKey, Object... values) {
         assertArgumentNotNull("messageKey", messageKey);
         assertArgumentNotNull("values", values);
         messageList = new ArrayList<LaApplicationMessage>(1); // overriding
-        messageList.add(newApplicationMessage(messageKey, values));
+        messageList.add(newApplicationMessage(property, messageKey, values));
     }
 
-    protected LaApplicationMessage newApplicationMessage(String messageKey, Object... values) {
-        return new LaApplicationMessage(messageKey, values);
+    protected LaApplicationMessage newApplicationMessage(String property, String messageKey, Object... values) {
+        return new LaApplicationMessage(property, messageKey, values);
     }
 
     protected void saveApplicationMessages(List<LaApplicationMessage> messageList) {

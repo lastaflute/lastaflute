@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -38,7 +37,6 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.MessageManager;
-import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.core.time.TimeManager;
@@ -875,13 +873,9 @@ public class SimpleRequestManager implements RequestManager {
 
     @Override
     public void saveErrorsToSession() {
+        sessionManager.errors().clear(); // for overriding completely
         errors().get().ifPresent(messages -> {
-            final Iterator<UserMessage> ite = messages.accessByFlatIterator();
-            sessionManager.errors().clear(); /* means overriding */
-            while (ite.hasNext()) {
-                final UserMessage message = ite.next();
-                sessionManager.errors().add(message.getMessageKey(), message.getValues());
-            }
+            sessionManager.errors().addMessages(messages);
         });
     }
 

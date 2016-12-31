@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,10 +64,12 @@ public class MessagingApplicationException extends LaApplicationException {
     //                                                                 ===================
     protected List<LaApplicationMessage> toApplicationMessageList(UserMessages messages) {
         final List<LaApplicationMessage> convertedList = new ArrayList<LaApplicationMessage>(messages.size());
-        for (Iterator<UserMessage> ite = messages.accessByFlatIterator(); ite.hasNext();) {
-            final UserMessage message = ite.next();
-            verifyResourceMessage(messages, message);
-            convertedList.add(toApplicationMessage(message));
+        for (String property : messages.toPropertySet()) {
+            for (Iterator<UserMessage> ite = messages.accessByIteratorOf(property); ite.hasNext();) {
+                final UserMessage message = ite.next();
+                verifyResourceMessage(messages, message);
+                convertedList.add(toApplicationMessage(property, message));
+            }
         }
         return convertedList;
     }
@@ -78,7 +80,7 @@ public class MessagingApplicationException extends LaApplicationException {
         }
     }
 
-    protected LaApplicationMessage toApplicationMessage(UserMessage message) {
-        return new LaApplicationMessage(message.getMessageKey(), message.getValues());
+    protected LaApplicationMessage toApplicationMessage(String property, UserMessage message) {
+        return new LaApplicationMessage(property, message.getMessageKey(), message.getValues());
     }
 }

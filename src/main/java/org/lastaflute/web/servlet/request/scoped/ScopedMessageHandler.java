@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 the original author or authors.
+ * Copyright 2015-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,20 +46,32 @@ public class ScopedMessageHandler {
     /**
      * Save message as (global) user messages. (overriding existing messages) <br>
      * This message will be deleted immediately after display if you use e.g. la:errors.
+     * @param property The property name corresponding to the message. (NotNull)
      * @param messageKey The message key to be saved. (NotNull)
      * @param args The varying array of arguments for the message. (NullAllowed, EmptyAllowed)
      */
-    public void save(String messageKey, Object... args) {
+    public void save(String property, String messageKey, Object... args) {
         assertObjectNotNull("messageKey", messageKey);
-        doSaveInfo(prepareUserMessages(messageKey, args));
+        doSaveInfo(prepareUserMessages(globalPropertyKey, messageKey, args));
     }
 
     /**
-     * Save message as (global) user messages. (overriding existing messages) <br>
+     * Save message as global user messages. (overriding existing messages) <br>
+     * This message will be deleted immediately after display if you use e.g. la:errors.
+     * @param messageKey The message key to be saved. (NotNull)
+     * @param args The varying array of arguments for the message. (NullAllowed, EmptyAllowed)
+     */
+    public void saveGlobal(String messageKey, Object... args) {
+        assertObjectNotNull("messageKey", messageKey);
+        doSaveInfo(prepareUserMessages(globalPropertyKey, messageKey, args));
+    }
+
+    /**
+     * Save message as user messages. (overriding existing messages) <br>
      * This message will be deleted immediately after display if you use e.g. la:errors.
      * @param messages The action message for messages. (NotNull, EmptyAllowed)
      */
-    public void save(UserMessages messages) {
+    public void saveMessages(UserMessages messages) {
         assertObjectNotNull("messages", messages);
         doSaveInfo(messages);
     }
@@ -72,14 +84,37 @@ public class ScopedMessageHandler {
     //                                                                                Add
     //                                                                               =====
     /**
-     * Add message as (global) user messages to rear of existing messages. <br>
+     * Add message as named user messages to rear of existing messages. <br>
+     * This message will be deleted immediately after display if you use e.g. la:errors.
+     * @param property The property name corresponding to the message. (NotNull)
+     * @param messageKey The message key to be added. (NotNull)
+     * @param args The varying array of arguments for the message. (NullAllowed, EmptyAllowed)
+     */
+    public void add(String property, String messageKey, Object... args) {
+        assertObjectNotNull("property", property);
+        assertObjectNotNull("messageKey", messageKey);
+        doAddMessages(prepareUserMessages(property, messageKey, args));
+    }
+
+    /**
+     * Add message as global user messages to rear of existing messages. <br>
      * This message will be deleted immediately after display if you use e.g. la:errors.
      * @param messageKey The message key to be added. (NotNull)
      * @param args The varying array of arguments for the message. (NullAllowed, EmptyAllowed)
      */
-    public void add(String messageKey, Object... args) {
+    public void addGlobal(String messageKey, Object... args) {
         assertObjectNotNull("messageKey", messageKey);
-        doAddMessages(prepareUserMessages(messageKey, args));
+        doAddMessages(prepareUserMessages(globalPropertyKey, messageKey, args));
+    }
+
+    /**
+     * Add user messages to rear of existing messages. <br>
+     * This message will be deleted immediately after display if you use e.g. la:errors.
+     * @param messages The action message for messages. (NotNull, EmptyAllowed)
+     */
+    public void addMessages(UserMessages messages) {
+        assertObjectNotNull("messages", messages);
+        doAddMessages(messages);
     }
 
     protected void doAddMessages(UserMessages messages) {
@@ -127,9 +162,9 @@ public class ScopedMessageHandler {
         return messagesKey;
     }
 
-    protected UserMessages prepareUserMessages(String messageKey, Object[] args) {
+    protected UserMessages prepareUserMessages(String property, String messageKey, Object[] args) {
         final UserMessages messages = newUserMessages();
-        messages.add(globalPropertyKey, new UserMessage(messageKey, args));
+        messages.add(property, new UserMessage(messageKey, args));
         return messages;
     }
 
