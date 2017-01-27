@@ -29,7 +29,7 @@ import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.message.exception.MessagingApplicationException;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
+import org.lastaflute.web.exception.ApplicationExceptionHandler;
 import org.lastaflute.web.exception.MessageResponseApplicationException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.exception.LoginFailureException;
@@ -47,12 +47,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jflute
  */
-public class TypicalApplicationExceptionResolver {
+public class ApplicationExceptionResolver {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TypicalApplicationExceptionResolver.class);
+    private static final Logger logger = LoggerFactory.getLogger(ApplicationExceptionResolver.class);
     protected static final String LF = "\n";
 
     // ===================================================================================
@@ -63,21 +63,21 @@ public class TypicalApplicationExceptionResolver {
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
-    protected final TypicalEmbeddedKeySupplier typicalKeySupplier;
-    protected final ActionApplicationExceptionHandler applicationExceptionHandler;
+    protected final EmbeddedMessageKeySupplier embeddedMessageKeySupplier;
+    protected final ApplicationExceptionHandler applicationExceptionHandler;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalApplicationExceptionResolver(FwAssistantDirector assistantDirector, RequestManager requestManager,
-            SessionManager sessionManager, OptionalThing<LoginManager> loginManager, ApiManager apiManager,
-            TypicalEmbeddedKeySupplier typicalKeySupplier, ActionApplicationExceptionHandler applicationExceptionHandler) {
+    public ApplicationExceptionResolver(FwAssistantDirector assistantDirector, RequestManager requestManager, SessionManager sessionManager,
+            OptionalThing<LoginManager> loginManager, ApiManager apiManager, EmbeddedMessageKeySupplier embeddedMessageKeySupplier,
+            ApplicationExceptionHandler applicationExceptionHandler) {
         this.assistantDirector = assistantDirector;
         this.requestManager = requestManager;
         this.sessionManager = sessionManager;
         this.loginManager = loginManager;
         this.apiManager = apiManager;
-        this.typicalKeySupplier = typicalKeySupplier;
+        this.embeddedMessageKeySupplier = embeddedMessageKeySupplier;
         this.applicationExceptionHandler = applicationExceptionHandler;
     }
 
@@ -113,10 +113,16 @@ public class TypicalApplicationExceptionResolver {
         return response;
     }
 
+    // -----------------------------------------------------
+    //                                             Specified
+    //                                             ---------
     protected ActionResponse asSpecifiedApplicationException(ActionRuntime runtime, LaApplicationException appEx) {
         return applicationExceptionHandler.handle(appEx);
     }
 
+    // -----------------------------------------------------
+    //                                              Embedded
+    //                                              --------
     protected ActionResponse asEmbeddedApplicationException(ActionRuntime runtime, LaApplicationException appEx) {
         ActionResponse response = ActionResponse.undefined();
         if (appEx instanceof LoginUnauthorizedException) {
@@ -125,7 +131,7 @@ public class TypicalApplicationExceptionResolver {
             response = handleMessagingApplicationException(runtime, (MessagingApplicationException) appEx);
         }
         if (response.isUndefined()) {
-            response = handleUnknownApplicationException(appEx);
+            response = handleUnknownApplicationException(runtime, appEx);
         }
         return response;
     }
@@ -139,6 +145,9 @@ public class TypicalApplicationExceptionResolver {
         }
     }
 
+    // -----------------------------------------------------
+    //                                               DBFlute
+    //                                               -------
     protected ActionResponse asDBFluteApplicationException(ActionRuntime runtime, RuntimeException cause) {
         final ActionResponse response;
         if (cause instanceof EntityAlreadyDeletedException) {
@@ -250,8 +259,11 @@ public class TypicalApplicationExceptionResolver {
     }
 
     // ===================================================================================
-    //                                                                  Login Unauthorized
-    //                                                                  ==================
+    //                                                                    Handle Exception
+    //                                                                    ================
+    // -----------------------------------------------------
+    //                                                 Login
+    //                                                 -----
     protected ActionResponse handleLoginUnauthorizedException(ActionRuntime runtime, LoginUnauthorizedException appEx) {
         assertLoginManagerPresent();
         if (appEx instanceof LoginFailureException) {
@@ -269,12 +281,12 @@ public class TypicalApplicationExceptionResolver {
     }
 
     protected String getErrorsLoginFailureKey() {
-        return typicalKeySupplier.getErrorsLoginFailureKey();
+        return embeddedMessageKeySupplier.getErrorsLoginFailureKey();
     }
 
-    // ===================================================================================
-    //                                                                         Message Key
-    //                                                                         ===========
+    // -----------------------------------------------------
+    //                                               Message
+    //                                               -------
     protected ActionResponse handleMessagingApplicationException(ActionRuntime runtime, MessagingApplicationException appEx) {
         // no save here because of saved as embedded message later
         //saveErrors(appEx.getErrors());
@@ -303,25 +315,16 @@ public class TypicalApplicationExceptionResolver {
         }
     }
 
-    protected HtmlResponse getShowErrorsDefaultForward() {
-        return HtmlResponse.fromForwardPath(typicalKeySupplier.getShowErrorsDefaultPath());
+    // -----------------------------------------------------
+    //                                               Unknown
+    //                                               -------
+    protected ActionResponse handleUnknownApplicationException(ActionRuntime runtime, LaApplicationException appEx) {
+        // suppress warning because it is dispatched when JSON response so unneeded handling implementation
+        // it needs big refactoring to remove this gap between HTML and JSON response
+        //logger.warn("*Unknown application exception: {}", appEx.getClass(), appEx);
+        return prepareShowErrorsForward(runtime); // cannot help it, use applicationExceptionHandler
     }
 
-    // ===================================================================================
-    //                                                                             Unknown
-    //                                                                             =======
-    protected ActionResponse handleUnknownApplicationException(LaApplicationException appEx) {
-        logger.warn("*Unknown application exception: {}", appEx.getClass(), appEx);
-        return redirectToUnknownAppcalitionExceptionAction(); // basically no way
-    }
-
-    protected ActionResponse redirectToUnknownAppcalitionExceptionAction() {
-        return redirectToLoginAction(); // cannot help it
-    }
-
-    // ===================================================================================
-    //                                                                             DBFlute
-    //                                                                             =======
     // -----------------------------------------------------
     //                             (DBFlute) Already Deleted
     //                             -------------------------
@@ -331,7 +334,7 @@ public class TypicalApplicationExceptionResolver {
     }
 
     protected String getErrorsAppAlreadyDeletedKey() {
-        return typicalKeySupplier.getErrorsAppDbAlreadyDeletedKey();
+        return embeddedMessageKeySupplier.getErrorsAppDbAlreadyDeletedKey();
     }
 
     protected ActionResponse getErrorMessageAlreadyDeletedJsp(ActionRuntime runtime) {
@@ -347,7 +350,7 @@ public class TypicalApplicationExceptionResolver {
     }
 
     protected String getErrorsAppAlreadyUpdatedKey() {
-        return typicalKeySupplier.getErrorsAppDbAlreadyUpdatedKey();
+        return embeddedMessageKeySupplier.getErrorsAppDbAlreadyUpdatedKey();
     }
 
     protected ActionResponse getErrorMessageAlreadyUpdatedJsp(ActionRuntime runtime) {
@@ -363,7 +366,7 @@ public class TypicalApplicationExceptionResolver {
     }
 
     protected String getErrorsAppAlreadyExistsKey() {
-        return TypicalKey.ERRORS_APP_DB_ALREADY_EXISTS;
+        return EmbeddedMessageKey.ERRORS_APP_DB_ALREADY_EXISTS;
     };
 
     protected ActionResponse getErrorMessageAlreadyExistsJsp(ActionRuntime runtime) {

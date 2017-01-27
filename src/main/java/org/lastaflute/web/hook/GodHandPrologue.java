@@ -51,12 +51,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jflute
  */
-public class TypicalGodHandPrologue {
+public class GodHandPrologue {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandPrologue.class);
+    private static final Logger logger = LoggerFactory.getLogger(GodHandPrologue.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -66,7 +66,7 @@ public class TypicalGodHandPrologue {
     protected final SessionManager sessionManager;
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
-    protected final TypicalEmbeddedKeySupplier keySupplier;
+    protected final EmbeddedMessageKeySupplier keySupplier;
     protected final AccessContextArranger accessContextArranger;
     protected final Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier;
     protected final Supplier<String> appTypeSupplier;
@@ -74,7 +74,7 @@ public class TypicalGodHandPrologue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandPrologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier keySupplier,
+    public GodHandPrologue(GodHandResource resource, EmbeddedMessageKeySupplier keySupplier,
             AccessContextArranger accessContextArranger, Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier,
             Supplier<String> appTypeSupplier) {
         this.messageManager = resource.getMessageManager();

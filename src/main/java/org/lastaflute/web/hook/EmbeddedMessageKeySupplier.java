@@ -9,24 +9,26 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
-
-import org.lastaflute.core.exception.LaApplicationException;
-import org.lastaflute.web.response.ActionResponse;
+package org.lastaflute.web.hook;
 
 /**
  * @author jflute
  */
-@FunctionalInterface
-public interface ActionApplicationExceptionHandler {
+public interface EmbeddedMessageKeySupplier {
 
-    /**
-     * @param appEx The original application exception, not embedded application exception. (NotNull)
-     * @return The handled response for the exception. (NullAllowed)
-     */
-    ActionResponse handle(LaApplicationException appEx);
+    String getErrorsLoginFailureKey();
+
+    String getErrorsAppIllegalTransitionKey();
+
+    String getErrorsAppDbAlreadyDeletedKey();
+
+    String getErrorsAppDbAlreadyUpdatedKey();
+
+    String getErrorsAppDbAlreadyExistsKey();
+
+    String getErrorsAppDoubleSubmitRequestKey();
 }
