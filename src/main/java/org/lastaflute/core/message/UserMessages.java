@@ -178,6 +178,23 @@ public class UserMessages implements Serializable {
         return item != null && item.getMessageList().stream().anyMatch(message -> message.getMessageKey().equals(key));
     }
 
+    // #pending implement with type-safe function by jflute (2017/02/03)
+    ///**
+    // * Is the property non-error? (has no message? correct property?)
+    // * <pre>
+    // * private void moreValidate(SeaForm form, LandMessages messages) {
+    // *     if (messages.isNonError(form.piari)) {
+    // *         // ...validating by program for form.piari here
+    // *     }
+    // * }
+    // * </pre>
+    // * @param property the name of property, which may have user messages. (NotNull)
+    // * @return The determination, true or false.
+    // */
+    //public boolean isNonError(String property) {
+    //    return !hasMessageOf(property);
+    //}
+
     protected UserMessageItem getPropertyItem(String property) {
         final UserMessageItem item = messageMap.get(property);
         if (item != null) {
