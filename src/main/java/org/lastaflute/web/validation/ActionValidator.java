@@ -295,7 +295,13 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                       Resource Bundle
     //                                       ---------------
     protected ResourceBundleLocator newResourceBundleLocator() {
-        return locale -> newHookedResourceBundle(locale);
+        return ignoredLocale -> {
+            // not used default locacle managed in Hibernate validator,
+            // all messages use provided locale (e.g. request locale)
+            // to match with other message's locale
+            final Locale provided = messageLocaleProvider.provide();
+            return newHookedResourceBundle(provided);
+        };
     }
 
     protected ResourceBundle newHookedResourceBundle(Locale locale) {

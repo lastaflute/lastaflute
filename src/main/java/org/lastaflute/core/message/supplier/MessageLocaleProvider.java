@@ -24,5 +24,8 @@ import java.util.Locale;
 @FunctionalInterface
 public interface MessageLocaleProvider {
 
+    /**
+     * @return The locale object for message. (NotNull)
+     */
     Locale provide();
 }
