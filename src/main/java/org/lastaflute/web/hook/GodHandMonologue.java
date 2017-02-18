@@ -91,10 +91,13 @@ public class GodHandMonologue {
     }
 
     protected ActionResponse handleApplicationException(ActionRuntime runtime, RuntimeException cause) {
-        final ApplicationExceptionResolver resolver //
-                = new ApplicationExceptionResolver(assistantDirector //
-                        , requestManager, sessionManager, loginManager //
-                        , apiManager, typicalKeySupplier, applicationExceptionHandler);
+        final ApplicationExceptionResolver resolver = createApplicationExceptionResolver();
         return resolver.resolve(runtime, cause);
+    }
+
+    protected ApplicationExceptionResolver createApplicationExceptionResolver() { // you can override
+        return new ApplicationExceptionResolver(assistantDirector //
+                , requestManager, sessionManager, loginManager //
+                , apiManager, typicalKeySupplier, applicationExceptionHandler);
     }
 }
