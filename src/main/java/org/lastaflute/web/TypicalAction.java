@@ -30,16 +30,16 @@ import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.docs.LaActionDocs;
-import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
+import org.lastaflute.web.exception.ApplicationExceptionHandler;
 import org.lastaflute.web.exception.RequestIllegalTransitionException;
 import org.lastaflute.web.hook.ActionHook;
+import org.lastaflute.web.hook.EmbeddedMessageKey.SimpleEmbeddedMessageKeySupplier;
+import org.lastaflute.web.hook.EmbeddedMessageKeySupplier;
+import org.lastaflute.web.hook.GodHandEpilogue;
+import org.lastaflute.web.hook.GodHandMonologue;
+import org.lastaflute.web.hook.GodHandPrologue;
+import org.lastaflute.web.hook.GodHandResource;
 import org.lastaflute.web.hook.TooManySqlOption;
-import org.lastaflute.web.hook.TypicalEmbeddedKeySupplier;
-import org.lastaflute.web.hook.TypicalGodHandEpilogue;
-import org.lastaflute.web.hook.TypicalGodHandMonologue;
-import org.lastaflute.web.hook.TypicalGodHandPrologue;
-import org.lastaflute.web.hook.TypicalGodHandResource;
-import org.lastaflute.web.hook.TypicalKey.TypicalSimpleEmbeddedKeySupplier;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
 import org.lastaflute.web.response.ActionResponse;
@@ -115,14 +115,14 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                                ------
     @Override
     public ActionResponse godHandPrologue(ActionRuntime runtime) { // fixed process
-        return createTypicalGodHandPrologue(runtime).performPrologue(runtime);
+        return createGodHandPrologue(runtime).performPrologue(runtime);
     }
 
-    protected TypicalGodHandPrologue createTypicalGodHandPrologue(ActionRuntime runtime) {
-        final TypicalGodHandResource resource = createTypicalGodHandResource(runtime);
-        final TypicalEmbeddedKeySupplier supplier = newTypicalEmbeddedKeySupplier();
+    protected GodHandPrologue createGodHandPrologue(ActionRuntime runtime) {
+        final GodHandResource resource = createGodHandResource(runtime);
+        final EmbeddedMessageKeySupplier supplier = newEmbeddedMessageKeySupplier();
         final AccessContextArranger arranger = newAccessContextArranger();
-        return newTypicalGodHandPrologue(resource, supplier, arranger, () -> getUserBean(), () -> myAppType());
+        return newGodHandPrologue(resource, supplier, arranger, () -> getUserBean(), () -> myAppType());
     }
 
     /**
@@ -131,10 +131,10 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      */
     protected abstract AccessContextArranger newAccessContextArranger();
 
-    protected TypicalGodHandPrologue newTypicalGodHandPrologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier keySupplier,
+    protected GodHandPrologue newGodHandPrologue(GodHandResource resource, EmbeddedMessageKeySupplier keySupplier,
             AccessContextArranger arranger, Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier,
             Supplier<String> appTypeSupplier) {
-        return new TypicalGodHandPrologue(resource, keySupplier, arranger, userBeanSupplier, appTypeSupplier);
+        return new GodHandPrologue(resource, keySupplier, arranger, userBeanSupplier, appTypeSupplier);
     }
 
     @Override
@@ -147,17 +147,17 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                            ----------
     @Override
     public ActionResponse godHandMonologue(ActionRuntime runtime) { // fixed process
-        return createTypicalGodHandMonologue(runtime).performMonologue(runtime);
+        return createGodHandMonologue(runtime).performMonologue(runtime);
     }
 
-    protected TypicalGodHandMonologue createTypicalGodHandMonologue(ActionRuntime runtime) {
-        final TypicalGodHandResource resource = createTypicalGodHandResource(runtime);
-        final TypicalEmbeddedKeySupplier supplier = newTypicalEmbeddedKeySupplier();
-        final ActionApplicationExceptionHandler handler = newActionApplicationExceptionHandler();
-        return newTypicalGodHandMonologue(resource, supplier, handler);
+    protected GodHandMonologue createGodHandMonologue(ActionRuntime runtime) {
+        final GodHandResource resource = createGodHandResource(runtime);
+        final EmbeddedMessageKeySupplier supplier = newEmbeddedMessageKeySupplier();
+        final ApplicationExceptionHandler handler = newApplicationExceptionHandler();
+        return newGodHandMonologue(resource, supplier, handler);
     }
 
-    protected ActionApplicationExceptionHandler newActionApplicationExceptionHandler() {
+    protected ApplicationExceptionHandler newApplicationExceptionHandler() {
         return appEx -> handleApplicationException(appEx);
     }
 
@@ -170,9 +170,9 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
         return ActionResponse.undefined();
     }
 
-    protected TypicalGodHandMonologue newTypicalGodHandMonologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier supplier,
-            ActionApplicationExceptionHandler handler) {
-        return new TypicalGodHandMonologue(resource, supplier, handler);
+    protected GodHandMonologue newGodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier supplier,
+            ApplicationExceptionHandler handler) {
+        return new GodHandMonologue(resource, supplier, handler);
     }
 
     // -----------------------------------------------------
@@ -187,18 +187,18 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
         if (runtime.isForwardToHtml()) {
             setupHtmlData(runtime);
         }
-        createTypicalGodHandEpilogue(runtime).performEpilogue(runtime);
+        createGodHandEpilogue(runtime).performEpilogue(runtime);
     }
 
     protected void setupHtmlData(ActionRuntime runtime) { // application may override
     }
 
-    protected TypicalGodHandEpilogue createTypicalGodHandEpilogue(ActionRuntime runtime) {
-        return newTypicalGodHandEpilogue(createTypicalGodHandResource(runtime), createTooManySqlOption(runtime));
+    protected GodHandEpilogue createGodHandEpilogue(ActionRuntime runtime) {
+        return newGodHandEpilogue(createGodHandResource(runtime), createTooManySqlOption(runtime));
     }
 
-    protected TypicalGodHandEpilogue newTypicalGodHandEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
-        return new TypicalGodHandEpilogue(resource, tooManySqlOption);
+    protected GodHandEpilogue newGodHandEpilogue(GodHandResource resource, TooManySqlOption tooManySqlOption) {
+        return new GodHandEpilogue(resource, tooManySqlOption);
     }
 
     protected TooManySqlOption createTooManySqlOption(ActionRuntime runtime) {
@@ -212,13 +212,13 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     // -----------------------------------------------------
     //                                      Resource Factory
     //                                      ----------------
-    protected TypicalGodHandResource createTypicalGodHandResource(ActionRuntime runtime) {
-        return new TypicalGodHandResource(assistantDirector, timeManager, messageManager, exceptionTranslator, requestManager,
-                responseManager, sessionManager, myLoginManager(), apiManager);
+    protected GodHandResource createGodHandResource(ActionRuntime runtime) {
+        return new GodHandResource(assistantDirector, timeManager, messageManager, exceptionTranslator, requestManager, responseManager,
+                sessionManager, myLoginManager(), apiManager);
     }
 
-    protected TypicalEmbeddedKeySupplier newTypicalEmbeddedKeySupplier() {
-        return new TypicalSimpleEmbeddedKeySupplier();
+    protected EmbeddedMessageKeySupplier newEmbeddedMessageKeySupplier() {
+        return new SimpleEmbeddedMessageKeySupplier();
     }
 
     // ===================================================================================
@@ -352,6 +352,6 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     protected void handleVerifiedIllegalTransition(String debugMsg) {
-        throw new RequestIllegalTransitionException(debugMsg, newTypicalEmbeddedKeySupplier().getErrorsAppIllegalTransitionKey());
+        throw new RequestIllegalTransitionException(debugMsg, newEmbeddedMessageKeySupplier().getErrorsAppIllegalTransitionKey());
     }
 }

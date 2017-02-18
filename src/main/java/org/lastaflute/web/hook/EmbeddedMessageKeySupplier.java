@@ -13,19 +13,22 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.message.supplier;
-
-import java.util.Locale;
+package org.lastaflute.web.hook;
 
 /**
  * @author jflute
- * @since 0.8.5 (2016/11/17 Monday at showbase)
  */
-@FunctionalInterface
-public interface MessageLocaleProvider {
+public interface EmbeddedMessageKeySupplier {
 
-    /**
-     * @return The locale object for message. (NotNull)
-     */
-    Locale provide();
+    String getErrorsLoginFailureKey();
+
+    String getErrorsAppIllegalTransitionKey();
+
+    String getErrorsAppDbAlreadyDeletedKey();
+
+    String getErrorsAppDbAlreadyUpdatedKey();
+
+    String getErrorsAppDbAlreadyExistsKey();
+
+    String getErrorsAppDoubleSubmitRequestKey();
 }

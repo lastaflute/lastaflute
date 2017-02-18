@@ -43,6 +43,8 @@ public class UserMessages implements Serializable {
     protected static final String LABELS_PREFIX = "labels.";
     protected static final String LABELS_BEGIN_MARK = "{" + LABELS_PREFIX;
     protected static final String LABELS_END_MARK = "}";
+    protected static final String MESSAGES_BEGIN_MARK = "{";
+    protected static final String MESSAGES_END_MARK = "}";
 
     protected static final UserMessages EMPTY_MESSAGES = new UserMessages().lock();
 
@@ -175,8 +177,27 @@ public class UserMessages implements Serializable {
 
     public boolean hasMessageOf(String property, String key) {
         final UserMessageItem item = getPropertyItem(property);
-        return item != null && item.getMessageList().stream().anyMatch(message -> message.getMessageKey().equals(key));
+        return item != null && item.getMessageList().stream().anyMatch(message -> {
+            return message.getMessageKey().equals(resolveMessageKey(key));
+        });
     }
+
+    // #pending implement with type-safe function by jflute (2017/02/03)
+    ///**
+    // * Is the property non-error? (has no message? correct property?)
+    // * <pre>
+    // * private void moreValidate(SeaForm form, LandMessages messages) {
+    // *     if (messages.isNonError(form.piari)) {
+    // *         // ...validating by program for form.piari here
+    // *     }
+    // * }
+    // * </pre>
+    // * @param property the name of property, which may have user messages. (NotNull)
+    // * @return The determination, true or false.
+    // */
+    //public boolean isNonError(String property) {
+    //    return !hasMessageOf(property);
+    //}
 
     protected UserMessageItem getPropertyItem(String property) {
         final UserMessageItem item = messageMap.get(property);
@@ -204,6 +225,16 @@ public class UserMessages implements Serializable {
             } else {
                 return null;
             }
+        }
+    }
+
+    protected String resolveMessageKey(String key) {
+        final String beginMark = MESSAGES_BEGIN_MARK;
+        final String endMark = MESSAGES_END_MARK;
+        if (Srl.isQuotedAnything(key, beginMark, endMark)) {
+            return Srl.unquoteAnything(key, beginMark, endMark);
+        } else {
+            return key;
         }
     }
 

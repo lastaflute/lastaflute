@@ -47,7 +47,8 @@ public class RomanticServiceCreator extends ServiceCreator {
 
     protected List<String> deriveWebPackageList(NamingConvention namingConvention) {
         final String[] packageNames = namingConvention.getRootPackageNames();
-        return Stream.of(packageNames).map(name -> name + ".web.").collect(Collectors.toList());
+        final String webRoot = namingConvention.getWebRootPackageName();
+        return Stream.of(packageNames).map(name -> name + "." + webRoot + ".").collect(Collectors.toList());
     }
 
     // ===================================================================================

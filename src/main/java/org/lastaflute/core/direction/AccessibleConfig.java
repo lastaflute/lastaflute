@@ -17,6 +17,7 @@ package org.lastaflute.core.direction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Set;
 
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.DfTypeUtil.ParseDateNumberFormatException;
@@ -41,7 +42,6 @@ public interface AccessibleConfig {
      */
     String get(String propertyKey);
 
-    // TODO jflute xxxxx (2016/09/03)
     /**
      * Get the value of property as {@link String}.
      * @param propertyKey The key of the property. (NotNull)
@@ -95,4 +95,10 @@ public interface AccessibleConfig {
      * @throws ConfigPropertyNotFoundException When the property is not found.
      */
     boolean is(String propertyKey);
+
+    /**
+     * Get the set of property key.
+     * @return The set of key string. (NotNull)
+     */
+    Set<String> keySet();
 }

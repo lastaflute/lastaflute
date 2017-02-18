@@ -33,12 +33,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @author jflute
  */
-public class TypicalGodHandEpilogue {
+public class GodHandEpilogue {
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(TypicalGodHandEpilogue.class);
+    private static final Logger logger = LoggerFactory.getLogger(GodHandEpilogue.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -50,7 +50,7 @@ public class TypicalGodHandEpilogue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandEpilogue(TypicalGodHandResource resource, TooManySqlOption tooManySqlOption) {
+    public GodHandEpilogue(GodHandResource resource, TooManySqlOption tooManySqlOption) {
         this.requestManager = resource.getRequestManager();
         this.responseManager = resource.getResponseManager();
         this.tooManySqlOption = tooManySqlOption;

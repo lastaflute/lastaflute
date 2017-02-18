@@ -64,14 +64,29 @@ public class ValidationErrorException extends RuntimeException {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    /**
+     * Get the types as runtime groups. <br>
+     * Basically application does not need to use this.
+     * @return The array of types as runtime groups. (NotNull)
+     */
     public Class<?>[] getRuntimeGroups() {
         return runtimeGroups;
     }
 
+    /**
+     * Get the user messages as validation error. <br>
+     * You may use this when unit test for validation error.
+     * @return The messages object. (NotNull)
+     */
     public UserMessages getMessages() {
         return messages;
     }
 
+    /**
+     * Get the error hook called by framework. <br>
+     * Basically application does not need to use this.
+     * @return The callback for error hook. (NotNull)
+     */
     public VaErrorHook getErrorHook() {
         return errorHook;
     }

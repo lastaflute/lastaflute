@@ -714,6 +714,12 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     // -----------------------------------------------------
     //                          Already Login or Remember Me
     //                          ----------------------------
+    /**
+     * Confirm (try) that current request is already login or can login by remember-me. <br>
+     * Called by e.g. asLoginRequired(), asNonLoginRequired() (login check process).
+     * @param resource The resource for login handling, e.g. action runtime. (NotNull)
+     * @return Is login status?
+     */
     protected boolean tryAlreadyLoginOrRememberMe(LoginHandlingResource resource) {
         return doTryAlreadyLogin(resource) || doTryRememberMe(resource);
     }

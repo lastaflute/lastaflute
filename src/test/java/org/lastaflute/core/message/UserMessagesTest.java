@@ -16,6 +16,8 @@ public class UserMessagesTest extends UnitLastaFluteTestCase {
         assertTrue(messages.hasMessageOf("sea"));
         assertTrue(messages.hasMessageOf("labels.sea"));
         assertTrue(messages.hasMessageOf("{labels.sea}"));
+        assertTrue(messages.hasMessageOf("sea", "bigband"));
+        assertTrue(messages.hasMessageOf("sea", "{bigband}"));
         Iterator<UserMessage> iterator = messages.accessByIteratorOf("sea");
         assertTrue(iterator.hasNext());
         UserMessage mystic = (UserMessage) iterator.next();

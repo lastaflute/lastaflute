@@ -19,7 +19,7 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.exception.ActionApplicationExceptionHandler;
+import org.lastaflute.web.exception.ApplicationExceptionHandler;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
@@ -30,7 +30,7 @@ import org.lastaflute.web.servlet.session.SessionManager;
 /**
  * @author jflute
  */
-public class TypicalGodHandMonologue {
+public class GodHandMonologue {
 
     // ===================================================================================
     //                                                                          Definition
@@ -46,14 +46,14 @@ public class TypicalGodHandMonologue {
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
     protected final ExceptionTranslator exceptionTranslator;
-    protected final TypicalEmbeddedKeySupplier typicalKeySupplier;
-    protected final ActionApplicationExceptionHandler applicationExceptionHandler;
+    protected final EmbeddedMessageKeySupplier typicalKeySupplier;
+    protected final ApplicationExceptionHandler applicationExceptionHandler;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandMonologue(TypicalGodHandResource resource, TypicalEmbeddedKeySupplier typicalKeySupplier,
-            ActionApplicationExceptionHandler applicationExceptionHandler) {
+    public GodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier typicalKeySupplier,
+            ApplicationExceptionHandler applicationExceptionHandler) {
         this.assistantDirector = resource.getAssistantDirector();
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
@@ -91,10 +91,13 @@ public class TypicalGodHandMonologue {
     }
 
     protected ActionResponse handleApplicationException(ActionRuntime runtime, RuntimeException cause) {
-        final TypicalApplicationExceptionResolver resolver //
-                = new TypicalApplicationExceptionResolver(assistantDirector //
-                        , requestManager, sessionManager, loginManager //
-                        , apiManager, typicalKeySupplier, applicationExceptionHandler);
+        final ApplicationExceptionResolver resolver = createApplicationExceptionResolver();
         return resolver.resolve(runtime, cause);
+    }
+
+    protected ApplicationExceptionResolver createApplicationExceptionResolver() { // you can override
+        return new ApplicationExceptionResolver(assistantDirector //
+                , requestManager, sessionManager, loginManager //
+                , apiManager, typicalKeySupplier, applicationExceptionHandler);
     }
 }

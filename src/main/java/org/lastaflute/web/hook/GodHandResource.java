@@ -29,7 +29,7 @@ import org.lastaflute.web.servlet.session.SessionManager;
 /**
  * @author jflute
  */
-public class TypicalGodHandResource {
+public class GodHandResource {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -47,7 +47,7 @@ public class TypicalGodHandResource {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public TypicalGodHandResource(FwAssistantDirector assistantDirector, TimeManager timeManager, MessageManager messageManager,
+    public GodHandResource(FwAssistantDirector assistantDirector, TimeManager timeManager, MessageManager messageManager,
             ExceptionTranslator exceptionTranslator, RequestManager requestManager, ResponseManager responseManager,
             SessionManager sessionManager, OptionalThing<LoginManager> loginManager, ApiManager apiManager) {
         this.assistantDirector = assistantDirector;

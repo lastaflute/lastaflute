@@ -13,20 +13,23 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
+package org.lastaflute.core.smartdeploy.exception;
 
-import org.lastaflute.core.exception.LaApplicationException;
-import org.lastaflute.web.response.ActionResponse;
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
+ * @since 0.9.0 (2017/02/13 Monday at bay maihama hotel)
  */
-@FunctionalInterface
-public interface ActionApplicationExceptionHandler {
+public class JobAssistWebReferenceException extends LaSystemException {
 
-    /**
-     * @param appEx The original application exception, not embedded application exception. (NotNull)
-     * @return The handled response for the exception. (NullAllowed)
-     */
-    ActionResponse handle(LaApplicationException appEx);
+    private static final long serialVersionUID = 1L;
+
+    public JobAssistWebReferenceException(String msg) {
+        super(msg);
+    }
+
+    public JobAssistWebReferenceException(String msg, Throwable e) {
+        super(msg, e);
+    }
 }

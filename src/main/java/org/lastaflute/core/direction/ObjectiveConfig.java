@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -187,7 +188,7 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     // ===================================================================================
     //                                                                        Get Property
     //                                                                        ============
-    // not null or exception because of extension
+    // not null or exception by extension (see newObjectivePropertie())
     @Override
     public String get(String propertyKey) {
         reloadIfNeeds();
@@ -231,6 +232,15 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     public boolean is(String propertyKey) {
         reloadIfNeeds();
         return prop.is(propertyKey);
+    }
+
+    // ===================================================================================
+    //                                                                          Whole Info
+    //                                                                          ==========
+    @Override
+    public Set<String> keySet() {
+        reloadIfNeeds();
+        return prop.getJavaPropertiesResult().getPropertyMap().keySet();
     }
 
     // ===================================================================================
