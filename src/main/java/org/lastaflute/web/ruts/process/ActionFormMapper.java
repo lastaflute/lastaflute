@@ -938,7 +938,15 @@ public class ActionFormMapper {
         } else if (LocalTime.class.isAssignableFrom(propertyType)) {
             converted = DfTypeUtil.toLocalTime(exp);
         } else if (Boolean.class.isAssignableFrom(propertyType)) {
-            converted = isCheckboxOn(exp) ? true : DfTypeUtil.toBoolean(exp);
+            if (isCheckboxOn(exp)) {
+                converted = true;
+            } else {
+                if (exp instanceof String && ((String) exp).isEmpty()) { // pinpoint patch
+                    converted = null; // toBoolean("") before DBFlute-1.1.3 throws exception so avoid it
+                } else {
+                    converted = DfTypeUtil.toBoolean(exp);
+                }
+            }
         } else if (isClassificationProperty(propertyType)) { // means CDef
             converted = toVerifiedClassification(bean, name, exp, propertyType);
         } else { // e.g. multipart form file or unsupported type
