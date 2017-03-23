@@ -81,9 +81,9 @@ public class RequestUrlParamAnalyzer {
         if (execute.isIndexMethod()) {
             real = paramPath;
         } else { // sea()
-            final String methodName = execute.getExecuteMethod().getName();
+            final String methodName = execute.getMappingMethodName();
             if (paramPath.equals(methodName) || paramPath.startsWith(methodName + "/")) { // e.g. sea or sea/3/
-                real = Srl.ltrim(Srl.substringFirstRear(paramPath, execute.getExecuteMethod().getName()), "/");
+                real = Srl.ltrim(Srl.substringFirstRear(paramPath, methodName), "/");
             } else {
                 real = paramPath;
             }
