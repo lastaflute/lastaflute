@@ -41,6 +41,15 @@ public class JsonMappingOption {
     protected OptionalThing<JsonSimpleTextReadingFilter> simpleTextReadingFilter = OptionalThing.empty(); // not null
     protected boolean listNullToEmptyReading; // [] if null
     protected boolean listNullToEmptyWriting; // same
+    protected OptionalThing<JsonFieldNaming> fieldNaming = OptionalThing.empty(); // not null;
+
+    public static enum JsonFieldNaming {
+
+        /** Gson's FieldNamingPolicy.IDENTITY */
+        IDENTITY,
+        /** Gson's FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES */
+        CAMEL_TO_LOWER_SNAKE
+    }
 
     // ===================================================================================
     //                                                                      Accept Another
@@ -57,6 +66,7 @@ public class JsonMappingOption {
         simpleTextReadingFilter = another.getSimpleTextReadingFilter();
         listNullToEmptyReading = another.isListNullToEmptyReading();
         listNullToEmptyWriting = another.isListNullToEmptyWriting();
+        fieldNaming = another.getFieldNaming();
         return this;
     }
 
@@ -156,6 +166,19 @@ public class JsonMappingOption {
         return this;
     }
 
+    /**
+     * Set up as list-null-to-empty writing. (null value of List is writtern as empty list)
+     * @param fieldNaming The type of field naming. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonMappingOption asFieldNaming(JsonFieldNaming fieldNaming) {
+        if (fieldNaming == null) {
+            throw new IllegalArgumentException("The argument 'fieldNaming' should not be null.");
+        }
+        this.fieldNaming = OptionalThing.of(fieldNaming);
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -178,6 +201,7 @@ public class JsonMappingOption {
             sb.append(delimiter).append("everywhereQuoteWriting");
         }
         simpleTextReadingFilter.ifPresent(ter -> sb.append(delimiter).append(ter));
+        fieldNaming.ifPresent(ing -> sb.append(delimiter).append(ing));
         return "{" + Srl.ltrim(sb.toString(), delimiter) + "}";
     }
 
@@ -226,5 +250,9 @@ public class JsonMappingOption {
 
     public boolean isListNullToEmptyWriting() {
         return listNullToEmptyWriting;
+    }
+
+    public OptionalThing<JsonFieldNaming> getFieldNaming() {
+        return fieldNaming;
     }
 }
