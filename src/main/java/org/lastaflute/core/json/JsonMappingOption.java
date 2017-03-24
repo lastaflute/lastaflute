@@ -75,6 +75,7 @@ public class JsonMappingOption {
         listNullToEmptyReading = another.isListNullToEmptyReading();
         listNullToEmptyWriting = another.isListNullToEmptyWriting();
         fieldNaming = another.getFieldNaming();
+        yourCollections = another.getYourCollections();
         return this;
     }
 
