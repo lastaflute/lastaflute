@@ -16,10 +16,14 @@
 package org.lastaflute.core.json;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.json.bind.JsonYourCollectionResource;
 import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 
 /**
@@ -42,7 +46,11 @@ public class JsonMappingOption {
     protected boolean listNullToEmptyReading; // [] if null
     protected boolean listNullToEmptyWriting; // same
     protected OptionalThing<JsonFieldNaming> fieldNaming = OptionalThing.empty(); // not null;
+    protected List<JsonYourCollectionResource> yourCollections = Collections.emptyList();
 
+    // ===================================================================================
+    //                                                                    Supplement Class
+    //                                                                    ================
     public static enum JsonFieldNaming {
 
         /** Gson's FieldNamingPolicy.IDENTITY */
@@ -179,6 +187,20 @@ public class JsonMappingOption {
         return this;
     }
 
+    /**
+     * Set up the your collections for JSON property. <br>
+     * You can use e.g. ImmutableList (Eclipse Collections) as JSON property type.
+     * @param yourCollections The list of your collection resource. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonMappingOption yourCollections(List<JsonYourCollectionResource> yourCollections) {
+        if (yourCollections == null) {
+            throw new IllegalArgumentException("The argument 'yourCollections' should not be null.");
+        }
+        this.yourCollections = yourCollections;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -202,6 +224,12 @@ public class JsonMappingOption {
         }
         simpleTextReadingFilter.ifPresent(ter -> sb.append(delimiter).append(ter));
         fieldNaming.ifPresent(ing -> sb.append(delimiter).append(ing));
+        if (!yourCollections.isEmpty()) {
+            final List<String> expList = yourCollections.stream().map(ons -> {
+                return ons.getYourType().getSimpleName();
+            }).collect(Collectors.toList());
+            sb.append(delimiter).append(expList);
+        }
         return "{" + Srl.ltrim(sb.toString(), delimiter) + "}";
     }
 
@@ -254,5 +282,9 @@ public class JsonMappingOption {
 
     public OptionalThing<JsonFieldNaming> getFieldNaming() {
         return fieldNaming;
+    }
+
+    public List<JsonYourCollectionResource> getYourCollections() {
+        return Collections.unmodifiableList(yourCollections);
     }
 }

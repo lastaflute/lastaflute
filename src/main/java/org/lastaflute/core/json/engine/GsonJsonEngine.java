@@ -33,6 +33,7 @@ import org.lastaflute.core.json.adapter.DBFluteGsonAdaptable;
 import org.lastaflute.core.json.adapter.Java8TimeGsonAdaptable;
 import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
 import org.lastaflute.core.json.adapter.StringGsonAdaptable;
+import org.lastaflute.core.json.bind.JsonYourCollectionResource;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.FieldNamingStrategy;
@@ -42,6 +43,7 @@ import com.google.gson.internal.ConstructorConstructor;
 import com.google.gson.internal.Excluder;
 import com.google.gson.internal.bind.JsonAdapterAnnotationTypeAdapterFactory;
 import com.google.gson.internal.bind.LaReflectiveTypeAdapterFactory;
+import com.google.gson.internal.bind.LaYourCollectionTypeAdapterFactory;
 import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 
 /**
@@ -97,6 +99,7 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         registerDBFluteAdapter(builder);
         registerUtilDateFormat(builder);
         setupFieldPolicy(builder);
+        setupYourCollectionSettings(builder);
     }
 
     protected void registerStringAdapter(GsonBuilder builder) {
@@ -146,6 +149,17 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
             throw new IllegalStateException("Unknown field naming: " + naming);
         }
         return policy;
+    }
+
+    protected void setupYourCollectionSettings(GsonBuilder builder) {
+        final List<JsonYourCollectionResource> yourCollections = option.getYourCollections();
+        for (JsonYourCollectionResource resource : yourCollections) {
+            builder.registerTypeAdapterFactory(createYourCollectionTypeAdapterFactory(resource));
+        }
+    }
+
+    protected LaYourCollectionTypeAdapterFactory createYourCollectionTypeAdapterFactory(JsonYourCollectionResource resource) {
+        return new LaYourCollectionTypeAdapterFactory(resource.getYourType(), resource.getYourCollectionCreator());
     }
 
     // -----------------------------------------------------
