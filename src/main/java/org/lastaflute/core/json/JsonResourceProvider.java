@@ -49,6 +49,15 @@ public interface JsonResourceProvider {
      * Provide the option of JSON mapping, e.g. date format
      * @return The new-created option of JSON mapping. (NullAllowed: if null, use default)
      */
+    default JsonMappingOption provideMappingOption() {
+        return null;
+    }
+
+    /**
+     * Provide the option of JSON mapping, e.g. date format
+     * @return The new-created option of JSON mapping. (NullAllowed: if null, use default)
+     * @deprecated use provideMappingOption()
+     */
     default JsonMappingOption provideOption() {
         return null;
     }

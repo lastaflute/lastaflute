@@ -81,7 +81,7 @@ public class SimpleJsonManager implements JsonManager {
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
         nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
         prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
-        jsonMappingOption = OptionalThing.ofNullable(provider != null ? provider.provideOption() : null, () -> {
+        jsonMappingOption = OptionalThing.ofNullable(extractMappingOption(provider), () -> {
             throw new IllegalStateException("Not found the JSON mapping option.");
         });
         reflectCompatibleYourCollections(provider);
@@ -94,6 +94,19 @@ public class SimpleJsonManager implements JsonManager {
 
     protected FwCoreDirection assistCoreDirection() {
         return assistantDirector.assistCoreDirection();
+    }
+
+    protected JsonMappingOption extractMappingOption(JsonResourceProvider provider) {
+        if (provider == null) {
+            return null;
+        }
+        @SuppressWarnings("deprecation")
+        final JsonMappingOption providedOption = provider.provideOption();
+        if (providedOption != null) {
+            return providedOption;
+        } else {
+            return provider.provideMappingOption();
+        }
     }
 
     protected void reflectCompatibleYourCollections(JsonResourceProvider provider) {
