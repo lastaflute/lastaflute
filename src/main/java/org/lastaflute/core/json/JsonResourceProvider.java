@@ -49,6 +49,15 @@ public interface JsonResourceProvider {
      * Provide the option of JSON mapping, e.g. date format
      * @return The new-created option of JSON mapping. (NullAllowed: if null, use default)
      */
+    default JsonMappingOption provideMappingOption() {
+        return null;
+    }
+
+    /**
+     * Provide the option of JSON mapping, e.g. date format
+     * @return The new-created option of JSON mapping. (NullAllowed: if null, use default)
+     * @deprecated use provideMappingOption()
+     */
     default JsonMappingOption provideOption() {
         return null;
     }
@@ -57,6 +66,7 @@ public interface JsonResourceProvider {
      * Provide the your collections for JSON property. <br>
      * You can use e.g. ImmutableList (Eclipse Collections) as JSON property type.
      * @return The read-only list of your collection resource. (NullAllowed: if null, no your collection)
+     * @deprecated use JsonMappingOption's yourCollections()
      */
     default List<JsonYourCollectionResource> provideYourCollections() {
         return null; // do nothing

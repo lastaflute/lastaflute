@@ -16,9 +16,7 @@
 package org.lastaflute.core.json;
 
 import java.lang.reflect.ParameterizedType;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -35,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.GsonBuilder;
-import com.google.gson.internal.bind.LaYourCollectionTypeAdapterFactory;
 
 /**
  * @author jflute
@@ -67,9 +64,6 @@ public class SimpleJsonManager implements JsonManager {
     /** The option of JSON mapping. (NotNull, EmptyAllowed: if empty, use default) */
     protected OptionalThing<JsonMappingOption> jsonMappingOption = OptionalThing.empty();
 
-    /** The list of your collection resource. (NotNull, EmptyAllowed: if empty, no your collection) */
-    protected List<JsonYourCollectionResource> yourCollectionResourceList = Collections.emptyList();
-
     /** The real parser of JSON. (NotNull: after initialization) */
     protected RealJsonEngine realJsonParser;
 
@@ -87,13 +81,11 @@ public class SimpleJsonManager implements JsonManager {
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
         nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
         prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
-        jsonMappingOption = OptionalThing.ofNullable(provider != null ? provider.provideOption() : null, () -> {
+        jsonMappingOption = OptionalThing.ofNullable(extractMappingOption(provider), () -> {
             throw new IllegalStateException("Not found the JSON mapping option.");
         });
-        final List<JsonYourCollectionResource> yourCollections = provider != null ? provider.provideYourCollections() : null;
-        if (yourCollections != null) {
-            yourCollectionResourceList = yourCollections;
-        }
+        reflectCompatibleYourCollections(provider);
+
         // should be last because of using other instance variable
         final RealJsonEngine provided = provider != null ? provider.swtichJsonEngine() : null;
         realJsonParser = provided != null ? provided : createDefaultJsonParser();
@@ -102,6 +94,29 @@ public class SimpleJsonManager implements JsonManager {
 
     protected FwCoreDirection assistCoreDirection() {
         return assistantDirector.assistCoreDirection();
+    }
+
+    protected JsonMappingOption extractMappingOption(JsonResourceProvider provider) {
+        if (provider == null) {
+            return null;
+        }
+        @SuppressWarnings("deprecation")
+        final JsonMappingOption providedOption = provider.provideOption();
+        if (providedOption != null) {
+            return providedOption;
+        } else {
+            return provider.provideMappingOption();
+        }
+    }
+
+    protected void reflectCompatibleYourCollections(JsonResourceProvider provider) {
+        @SuppressWarnings("deprecation")
+        final List<JsonYourCollectionResource> yourCollections = provider != null ? provider.provideYourCollections() : null;
+        if (yourCollections != null) {
+            jsonMappingOption.ifPresent(op -> op.yourCollections(yourCollections)).orElse(() -> {
+                jsonMappingOption = OptionalThing.of(new JsonMappingOption().yourCollections(yourCollections));
+            });
+        }
     }
 
     protected RealJsonEngine createDefaultJsonParser() {
@@ -118,12 +133,6 @@ public class SimpleJsonManager implements JsonManager {
             }
             if (jsonMappingOption.isPresent()) { // not use lambda to keep log indent
                 logger.info(" option: " + jsonMappingOption.get());
-            }
-            if (yourCollectionResourceList != null) {
-                final String yourCollectionsExp = yourCollectionResourceList.stream().map(res -> {
-                    return res.getYourType().getName();
-                }).collect(Collectors.joining(", "));
-                logger.info(" yourCollections: " + yourCollectionsExp);
             }
         }
     }
@@ -150,7 +159,6 @@ public class SimpleJsonManager implements JsonManager {
         return new GsonJsonEngine(builder -> {
             setupSerializeNullsSettings(builder, serializeNulls);
             setupPrettyPrintingSettings(builder, prettyPrinting);
-            setupYourCollectionSettings(builder);
         }, op -> {
             mappingOption.ifPresent(another -> op.acceptAnother(another));
         });
@@ -166,16 +174,6 @@ public class SimpleJsonManager implements JsonManager {
         if (prettyPrinting) {
             builder.setPrettyPrinting();
         }
-    }
-
-    protected void setupYourCollectionSettings(GsonBuilder builder) {
-        for (JsonYourCollectionResource resource : yourCollectionResourceList) {
-            builder.registerTypeAdapterFactory(createYourCollectionTypeAdapterFactory(resource));
-        }
-    }
-
-    protected LaYourCollectionTypeAdapterFactory createYourCollectionTypeAdapterFactory(JsonYourCollectionResource resource) {
-        return new LaYourCollectionTypeAdapterFactory(resource.getYourType(), resource.getYourCollectionCreator());
     }
 
     // ===================================================================================

@@ -26,13 +26,16 @@ import java.util.function.Consumer;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.core.json.JsonMappingOption;
+import org.lastaflute.core.json.JsonMappingOption.JsonFieldNaming;
 import org.lastaflute.core.json.adapter.BooleanGsonAdaptable;
 import org.lastaflute.core.json.adapter.CollectionGsonAdaptable;
 import org.lastaflute.core.json.adapter.DBFluteGsonAdaptable;
 import org.lastaflute.core.json.adapter.Java8TimeGsonAdaptable;
 import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
 import org.lastaflute.core.json.adapter.StringGsonAdaptable;
+import org.lastaflute.core.json.bind.JsonYourCollectionResource;
 
+import com.google.gson.FieldNamingPolicy;
 import com.google.gson.FieldNamingStrategy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -40,6 +43,7 @@ import com.google.gson.internal.ConstructorConstructor;
 import com.google.gson.internal.Excluder;
 import com.google.gson.internal.bind.JsonAdapterAnnotationTypeAdapterFactory;
 import com.google.gson.internal.bind.LaReflectiveTypeAdapterFactory;
+import com.google.gson.internal.bind.LaYourCollectionTypeAdapterFactory;
 import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 
 /**
@@ -94,6 +98,8 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         registerCollectionAdapter(builder);
         registerDBFluteAdapter(builder);
         registerUtilDateFormat(builder);
+        setupFieldPolicy(builder);
+        setupYourCollectionSettings(builder);
     }
 
     protected void registerStringAdapter(GsonBuilder builder) {
@@ -122,6 +128,38 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
 
     protected void registerUtilDateFormat(GsonBuilder builder) {
         builder.setDateFormat("yyyy-MM-dd'T'HH:mm:ss"); // same as local date-time
+    }
+
+    protected void setupFieldPolicy(GsonBuilder builder) {
+        final JsonFieldNaming naming = option.getFieldNaming().orElse(getDefaultFieldNaming());
+        builder.setFieldNamingPolicy(deriveFieldNamingPolicy(naming));
+    }
+
+    protected JsonFieldNaming getDefaultFieldNaming() {
+        return JsonFieldNaming.IDENTITY; // as default
+    }
+
+    protected FieldNamingPolicy deriveFieldNamingPolicy(JsonFieldNaming naming) {
+        final FieldNamingPolicy policy;
+        if (naming == JsonFieldNaming.IDENTITY) {
+            policy = FieldNamingPolicy.IDENTITY;
+        } else if (naming == JsonFieldNaming.CAMEL_TO_LOWER_SNAKE) {
+            policy = FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES;
+        } else {
+            throw new IllegalStateException("Unknown field naming: " + naming);
+        }
+        return policy;
+    }
+
+    protected void setupYourCollectionSettings(GsonBuilder builder) {
+        final List<JsonYourCollectionResource> yourCollections = option.getYourCollections();
+        for (JsonYourCollectionResource resource : yourCollections) {
+            builder.registerTypeAdapterFactory(createYourCollectionTypeAdapterFactory(resource));
+        }
+    }
+
+    protected LaYourCollectionTypeAdapterFactory createYourCollectionTypeAdapterFactory(JsonYourCollectionResource resource) {
+        return new LaYourCollectionTypeAdapterFactory(resource.getYourType(), resource.getYourCollectionCreator());
     }
 
     // -----------------------------------------------------

@@ -40,7 +40,7 @@ public class RequiredValidator implements ConstraintValidator<Required, Object> 
     protected boolean determineValid(Object value) {
         if (value instanceof String) {
             return ((String) value).trim().length() > 0; // means not blank
-        } else if (value instanceof Collection<?>) {
+        } else if (value instanceof Collection<?>) { // also contains ImmutableList (concrete class)
             return !((Collection<?>) value).isEmpty();
         } else if (value instanceof Map<?, ?>) {
             return !((Map<?, ?>) value).isEmpty();
