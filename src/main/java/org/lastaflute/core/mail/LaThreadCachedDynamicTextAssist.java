@@ -17,7 +17,7 @@ package org.lastaflute.core.mail;
 
 import java.util.Locale;
 
-import org.dbflute.mail.Postcard;
+import org.dbflute.mail.send.embedded.receptionist.SMailDynamicDataResource;
 import org.dbflute.mail.send.embedded.receptionist.SMailDynamicTextAssist;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.ThreadCacheContext;
@@ -27,35 +27,51 @@ import org.lastaflute.core.magic.ThreadCacheContext;
  */
 public abstract class LaThreadCachedDynamicTextAssist implements SMailDynamicTextAssist {
 
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
     protected static final Object NONE = new Object();
 
+    // ===================================================================================
+    //                                                                        Dynamic Data
+    //                                                                        ============
     @Override
-    public String assist(Postcard postcard, String path, boolean filesystem, OptionalThing<Locale> receiverLocale) {
+    public OptionalThing<? extends Object> prepareDynamicData(SMailDynamicDataResource resource) {
         final boolean exists = ThreadCacheContext.exists();
-        final String cacheKey = exists ? generateCacheKey(path, filesystem, receiverLocale) : null;
+        final String cacheKey = exists ? generateDataCacheKey(resource) : null;
         if (exists) {
-            final String cached = ThreadCacheContext.getObject(cacheKey);
+            final Object cached = ThreadCacheContext.getObject(cacheKey);
             if (cached != null) {
-                return !cached.equals(NONE) ? cached : null;
+                return OptionalThing.ofNullable(!cached.equals(NONE) ? cached : null, () -> {
+                    throw new IllegalStateException("Not found the dynamic data: " + resource);
+                });
             }
         }
-        final String assisted = doAssist(postcard, path, filesystem, receiverLocale);
+        final OptionalThing<? extends Object> assisted = loadDynamicData(resource);
         if (exists) {
-            if (assisted != null) {
-                ThreadCacheContext.setObject(cacheKey, assisted);
-                return ThreadCacheContext.getObject(cacheKey);
-            } else {
+            assisted.ifPresent(dynamicData -> {
+                ThreadCacheContext.setObject(cacheKey, dynamicData);
+            }).orElse(() -> {
                 ThreadCacheContext.setObject(cacheKey, NONE); // also cache not-found
-                return null;
-            }
+            });
+            return assisted;
         } else {
             return assisted;
         }
     }
 
-    protected String generateCacheKey(String path, boolean filesystem, OptionalThing<Locale> receiverLocale) {
-        return "fw:mailText:" + path + ":" + filesystem + ":" + receiverLocale;
+    // -----------------------------------------------------
+    //                                             Cache Key
+    //                                             ---------
+    protected String generateDataCacheKey(SMailDynamicDataResource resource) {
+        final String templatePath = resource.getTemplatePath();
+        final boolean filesystem = resource.isFilesystem();
+        final OptionalThing<Locale> receiverLocale = resource.getReceiverLocale();
+        return "fw:mailDynamicData:" + templatePath + ":" + filesystem + ":" + receiverLocale;
     }
 
-    protected abstract String doAssist(Postcard postcard, String path, boolean filesystem, OptionalThing<Locale> receiverLocale);
+    // -----------------------------------------------------
+    //                                                 Load
+    //                                                ------
+    protected abstract OptionalThing<? extends Object> loadDynamicData(SMailDynamicDataResource resource);
 }

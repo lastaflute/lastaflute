@@ -227,6 +227,9 @@ public class ActionResponseReflector {
     //                                                                       JSON Response
     //                                                                       =============
     protected NextJourney handleJsonResponse(JsonResponse<?> response) {
+        if (!response.isReturnAsEmptyBody() && !response.isReturnAsJsonDirectly()) {
+            validateJsonBeanIfNeeds(response.getJsonResult(), response); // not lazy to be in action transaction
+        }
         // lazy because of same reason as HTML response (see the comment)
         return createOriginalJourney(() -> {
             adjustActionResponseJustBefore(response);
@@ -240,9 +243,7 @@ public class ActionResponseReflector {
             if (response.isReturnAsJsonDirectly()) {
                 json = response.getDirectJson().get();
             } else { // mainly here
-                final Object jsonResult = response.getJsonResult();
-                validateJsonBeanIfNeeds(jsonResult, response);
-                json = requestManager.getJsonManager().toJson(jsonResult);
+                json = requestManager.getJsonManager().toJson(response.getJsonResult());
             }
             response.getCallback().ifPresent(callback -> {
                 final String script = callback + "(" + json + ")";
