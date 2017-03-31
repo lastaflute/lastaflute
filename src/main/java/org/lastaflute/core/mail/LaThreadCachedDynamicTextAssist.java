@@ -36,7 +36,7 @@ public abstract class LaThreadCachedDynamicTextAssist implements SMailDynamicTex
     //                                                                        Dynamic Data
     //                                                                        ============
     @Override
-    public OptionalThing<Object> prepareDynamicData(SMailDynamicDataResource resource) {
+    public OptionalThing<? extends Object> prepareDynamicData(SMailDynamicDataResource resource) {
         final boolean exists = ThreadCacheContext.exists();
         final String cacheKey = exists ? generateDataCacheKey(resource) : null;
         if (exists) {
@@ -47,7 +47,7 @@ public abstract class LaThreadCachedDynamicTextAssist implements SMailDynamicTex
                 });
             }
         }
-        final OptionalThing<Object> assisted = loadDynamicData(resource);
+        final OptionalThing<? extends Object> assisted = loadDynamicData(resource);
         if (exists) {
             assisted.ifPresent(dynamicData -> {
                 ThreadCacheContext.setObject(cacheKey, dynamicData);
@@ -73,5 +73,5 @@ public abstract class LaThreadCachedDynamicTextAssist implements SMailDynamicTex
     // -----------------------------------------------------
     //                                                 Load
     //                                                ------
-    protected abstract OptionalThing<Object> loadDynamicData(SMailDynamicDataResource resource);
+    protected abstract OptionalThing<? extends Object> loadDynamicData(SMailDynamicDataResource resource);
 }
