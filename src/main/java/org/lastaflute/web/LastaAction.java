@@ -17,29 +17,23 @@ package org.lastaflute.web;
 
 import javax.annotation.Resource;
 
-import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionStage;
-import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.path.ActionPathResolver;
-import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.response.StreamResponse;
 import org.lastaflute.web.response.XmlResponse;
 import org.lastaflute.web.response.next.ForwardNext;
-import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
-import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.ActionValidator;
-import org.lastaflute.web.validation.VaConfigSetupper;
 
 /**
  * @author jflute
@@ -107,17 +101,10 @@ public abstract class LastaAction {
 
     @SuppressWarnings("unchecked")
     protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> doCreateValidator(Class<?>... groups) { // for explicit groups
-        // cannot cache here, needs to use the instance method createMessage()
-        // (not to keep (random) action instance)
-        // so it caches only hibernate validator in action validator
-        // so config setupper is called only once
-        final VaConfigSetupper configSetupper = requestManager.getActionAdjustmentProvider().adjustValidatorConfig();
-        return new ActionValidator<MESSAGES>(messageManager // to get validation message
-                , () -> requestManager.getUserLocale() // used with messageManager
+        // cannot cache here, not to keep (random) action instance
+        // (it uses the instance method createMessage() for application type)
+        return new ActionValidator<MESSAGES>(requestManager // has message manager, user locacle
                 , () -> (MESSAGES) createMessages() // for new user messages
-                , () -> processApiValidationError() // hook for API validation error
-                , LastaAction.class // hibernate cache key, all actions use same hibernate validator
-                , configSetupper != null ? configSetupper : conf -> {} // your configuration of hibernate validator
                 , groups // validator runtime groups
         );
     }
@@ -128,13 +115,6 @@ public abstract class LastaAction {
      */
     protected UserMessages createMessages() { // overridden as type-safe
         return new UserMessages();
-    }
-
-    protected ApiResponse processApiValidationError() { // for API
-        final ActionRuntime runtime = LaActionRuntimeUtil.getActionRuntime();
-        final OptionalThing<UserMessages> messages = requestManager.errors().get();
-        final ApiFailureResource resource = new ApiFailureResource(runtime, messages, requestManager);
-        return requestManager.getApiManager().handleValidationError(resource);
     }
 
     // ===================================================================================

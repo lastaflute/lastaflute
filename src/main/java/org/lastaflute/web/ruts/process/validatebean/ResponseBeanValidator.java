@@ -25,7 +25,6 @@ import java.util.function.Consumer;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
-import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.di.helper.beans.BeanDesc;
@@ -34,8 +33,6 @@ import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
-import org.lastaflute.web.validation.VaConfigSetupper;
-import org.lastaflute.web.validation.VaErrorHook;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.slf4j.Logger;
@@ -92,26 +89,14 @@ public abstract class ResponseBeanValidator {
     }
 
     protected ActionValidator<UserMessages> createActionValidator() {
-        final MessageManager messageManager = requestManager.getMessageManager();
-        final VaErrorHook apiFailureHook = () -> {
-            throw new IllegalStateException("unused here, no way");
-        };
-        final VaConfigSetupper configSetupper = requestManager.getActionAdjustmentProvider().adjustValidatorConfig();
         final Class<?>[] groups = getValidatorGroups().orElse(ActionValidator.DEFAULT_GROUPS);
-        return new ActionValidator<UserMessages>(messageManager // to get validation message
-                , () -> requestManager.getUserLocale() // used with messageManager
-                , () -> new UserMessages() // for new user messages
-                , apiFailureHook // hook for API validation error
-                , ResponseBeanValidator.class // hibernate cache key, all actions use same hibernate validator
-                , configSetupper != null ? configSetupper : conf -> {} // your configuration of hibernate validator
-                , groups // validator runtime groups
-        );
+        return new ActionValidator<UserMessages>(requestManager, () -> new UserMessages(), groups);
     }
 
     protected abstract OptionalThing<Class<?>[]> getValidatorGroups();
 
     protected void executeValidator(ActionValidator<UserMessages> validator, Object bean) {
-        validator.validate(bean, more -> {}, () -> {
+        validator.validate(bean, unused -> {}, () -> {
             throw new IllegalStateException("unused here, no way");
         });
     }

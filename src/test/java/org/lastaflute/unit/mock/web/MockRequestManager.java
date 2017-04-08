@@ -282,7 +282,8 @@ public class MockRequestManager implements RequestManager {
 
     @Override
     public ActionAdjustmentProvider getActionAdjustmentProvider() {
-        return null;
+        return new ActionAdjustmentProvider() {
+        };
     }
 
     @Override

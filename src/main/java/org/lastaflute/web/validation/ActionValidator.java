@@ -34,7 +34,6 @@ import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -67,6 +66,12 @@ import org.lastaflute.core.message.supplier.UserMessagesCreator;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
+import org.lastaflute.web.api.ApiFailureResource;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.response.ApiResponse;
+import org.lastaflute.web.ruts.process.ActionRuntime;
+import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
 import org.lastaflute.web.validation.exception.ValidationStoppedException;
@@ -139,58 +144,70 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     // -----------------------------------------------------
-    //                                          Type Message
-    //                                          ------------
-    protected static final Map<Class<?>, Validator> cachedValidatorMap = new ConcurrentHashMap<Class<?>, Validator>();
+    //                                      Cached Validator
+    //                                      ----------------
+    protected static Validator cachedValidator;
 
     // -----------------------------------------------------
     //                                               Various
     //                                               -------
+    protected static final VaConfigSetupper EMPTY_CONF_SETUPPER = conf -> {};
     protected static final String MESSAGE_HINT_DELIMITER = "$$df:messageKeyDelimiter$$";
     protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final MessageManager messageManager; // not null
-    protected final MessageLocaleProvider messageLocaleProvider; // not null
-    protected final UserMessagesCreator<MESSAGES> messagesCreator; // not null
-    protected final VaErrorHook apiFailureHook; // not null
-    protected final Class<?>[] runtimeGroups; // not null
+    protected final RequestManager requestManager; // not null, *embedded in hibernate
+    protected final MessageManager messageManager; // not null, *embedded in hibernate
+    protected final MessageLocaleProvider messageLocaleProvider; // not null, *embedded in hibernate
+    protected final UserMessagesCreator<MESSAGES> messagesCreator; // not null, used by action process
+    protected final Class<?>[] runtimeGroups; // not null, used by action process
+    protected final VaErrorHook apiFailureHook; // not null, used by action process
     protected final Validator hibernateValidator; // not null, validator is thread-safe
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(MessageManager messageManager // to get validation message
-            , MessageLocaleProvider messageLocaleProvider // used with messageManager
+    public ActionValidator(RequestManager requestManager // has message manager, user locacle
             , UserMessagesCreator<MESSAGES> messagesCreator // for new user messages
-            , VaErrorHook apiFailureHook // hook for API validation error
-            , Class<?> hibernateCacheKey // hibernate cache key
-            , VaConfigSetupper hibernateConfigSetupper // your configuration of hibernate validator
             , Class<?>... runtimeGroups // validator runtime groups
     ) {
-        assertArgumentNotNull("messageManager", messageManager);
-        assertArgumentNotNull("messageLocaleProvider", messageLocaleProvider);
+        assertArgumentNotNull("requestManager", requestManager);
         assertArgumentNotNull("messagesCreator", messagesCreator);
-        assertArgumentNotNull("apiFailureHook", apiFailureHook);
-        assertArgumentNotNull("hibernateCacheKey", hibernateCacheKey);
-        assertArgumentNotNull("hibernateConfigSetupper", hibernateConfigSetupper);
         assertArgumentNotNull("runtimeGroups", runtimeGroups);
-        this.messageManager = messageManager;
-        this.messageLocaleProvider = messageLocaleProvider;
-        this.messagesCreator = messagesCreator;
-        this.apiFailureHook = apiFailureHook;
-        this.runtimeGroups = runtimeGroups;
         assertGroupsNotContainsClientError(runtimeGroups);
-        this.hibernateValidator = comeOnHibernateValidator(hibernateCacheKey, hibernateConfigSetupper);
+        this.requestManager = requestManager;
+        this.messageManager = requestManager.getMessageManager();
+        this.messageLocaleProvider = () -> provideUserLocale();
+        this.messagesCreator = messagesCreator;
+        this.runtimeGroups = runtimeGroups;
+        this.apiFailureHook = () -> processApiValidationError();
+        this.hibernateValidator = comeOnHibernateValidator(() -> adjustValidatorConfig());
     }
 
     protected void assertGroupsNotContainsClientError(Class<?>... groups) {
         Stream.of(groups).filter(tp -> tp.equals(CLIENT_ERROR_TYPE)).findAny().ifPresent(groupType -> {
-            String msg = "Cannot specify client error as group, you can use it only at annotation: ";
-            throw new IllegalStateException(msg + Arrays.asList(groups));
+            String msg = "Cannot specify client error as group, you can use it only at annotation: " + Arrays.asList(groups);
+            throw new IllegalStateException(msg);
         });
+    }
+
+    protected Locale provideUserLocale() { // in callback
+        return requestManager.getUserLocale();
+    }
+
+    protected ApiResponse processApiValidationError() { // for API, in callback
+        final ActionRuntime runtime = LaActionRuntimeUtil.getActionRuntime();
+        final OptionalThing<UserMessages> messages = requestManager.errors().get();
+        final ApiFailureResource resource = new ApiFailureResource(runtime, messages, requestManager);
+        return requestManager.getApiManager().handleValidationError(resource);
+    }
+
+    protected VaConfigSetupper adjustValidatorConfig() { // in callback
+        final ActionAdjustmentProvider adjustmentProvider = requestManager.getActionAdjustmentProvider();
+        final VaConfigSetupper setupper = adjustmentProvider.adjustValidatorConfig();
+        return setupper != null ? setupper : EMPTY_CONF_SETUPPER;
     }
 
     // ===================================================================================
@@ -229,7 +246,6 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // -----------------------------------------------------
     //                                               Control
     //                                               -------
-
     protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
         verifyFormType(form);
         return actuallyValidate(wrapAsValidIfNeeds(form), moreValidationLambda, validationErrorLambda);
@@ -290,8 +306,8 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                                                 Hibernate Validator
     //                                                                 ===================
     // -----------------------------------------------------
-    //                                     Actually Validate
-    //                                     -----------------
+    //                                 Validate by Hibernate
+    //                                 ---------------------
     protected Set<ConstraintViolation<Object>> hibernateValidate(Object form, Class<?>[] groups) {
         try {
             return hibernateValidator.validate(form, groups);
@@ -315,22 +331,31 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     // -----------------------------------------------------
-    //                                     Prepare Validator
+    //                                     Prepare Hibernate
     //                                     -----------------
-    protected Validator comeOnHibernateValidator(Class<?> hibernateCacheKey, VaConfigSetupper hibernateConfigSetupper) {
-        Validator cached = cachedValidatorMap.get(hibernateCacheKey);
-        if (cached != null) {
-            return cached;
-        }
-        synchronized (cachedValidatorMap) {
-            cached = cachedValidatorMap.get(hibernateCacheKey);
-            if (cached != null) {
-                return cached;
+    protected Validator comeOnHibernateValidator(Supplier<VaConfigSetupper> configSetupperSupplier) {
+        if (isSuppressHibernateValidatorCache()) {
+            return createHibernateValidator(configSetupperSupplier);
+        } else { // basically here
+            if (cachedValidator != null) {
+                return cachedValidator;
             }
-            cached = buildValidatorFactory(hibernateConfigSetupper).getValidator(); // about 5ms
-            cachedValidatorMap.put(hibernateCacheKey, cached);
-            return cachedValidatorMap.get(hibernateCacheKey);
+            synchronized (ActionValidator.class) {
+                if (cachedValidator != null) {
+                    return cachedValidator;
+                }
+                cachedValidator = createHibernateValidator(configSetupperSupplier);
+                return cachedValidator;
+            }
         }
+    }
+
+    protected boolean isSuppressHibernateValidatorCache() { // just in case, for emergency
+        return false;
+    }
+
+    protected Validator createHibernateValidator(Supplier<VaConfigSetupper> configSetupperSupplier) {
+        return buildValidatorFactory(configSetupperSupplier.get()).getValidator(); // about 5ms
     }
 
     protected ValidatorFactory buildValidatorFactory(VaConfigSetupper hibernateConfigSetupper) {

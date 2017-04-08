@@ -19,19 +19,15 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.constraints.NotNull;
 
-import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.core.message.supplier.MessageLocaleProvider;
-import org.lastaflute.core.message.supplier.UserMessagesCreator;
 import org.lastaflute.unit.UnitLastaFluteTestCase;
-import org.lastaflute.unit.mock.core.message.MockMessageManager;
+import org.lastaflute.unit.mock.web.MockRequestManager;
 import org.lastaflute.unit.mock.web.validation.MockConstraintViolation;
 import org.lastaflute.web.validation.theme.typed.TypeBigDecimal;
 import org.lastaflute.web.validation.theme.typed.TypeDouble;
@@ -79,14 +75,8 @@ public class ActionValidatorTest extends UnitLastaFluteTestCase {
     }
 
     protected ActionValidator<UserMessages> createValidator() {
-        MessageManager messageManager = new MockMessageManager();
-        MessageLocaleProvider localeProvider = () -> Locale.ENGLISH;
-        UserMessagesCreator<UserMessages> userMessagesCreator = () -> new UserMessages();
-        VaErrorHook hook = () -> null;
-        Class<? extends ActionValidatorTest> cacheKey = getClass();
-        VaConfigSetupper conf = unsed -> {};
-        Class<?>[] groups = new Class<?>[0];
-        return new ActionValidator<UserMessages>(messageManager, localeProvider, userMessagesCreator, hook, cacheKey, conf, groups);
+        MockRequestManager requestManager = new MockRequestManager();
+        return new ActionValidator<UserMessages>(requestManager, () -> new UserMessages());
     }
 
     protected MockConstraintViolation createViolation(String propertyPath) {
