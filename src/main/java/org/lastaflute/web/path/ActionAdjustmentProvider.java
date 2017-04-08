@@ -132,8 +132,8 @@ public interface ActionAdjustmentProvider {
     }
 
     /**
-     * Adjust action validator configuration. (called per hibernate validator cache, maybe one or two)
-     * @return The option of API response. (NullAllowed: if null, no option)
+     * Adjust action validator configuration. (called only once if cached)
+     * @return The setupper of hibernate configuration. (NullAllowed: if null, no configuration)
      */
     default VaConfigSetupper adjustValidatorConfig() {
         return null;
