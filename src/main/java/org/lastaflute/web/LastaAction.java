@@ -97,7 +97,7 @@ public abstract class LastaAction {
     //                                                                          Validation
     //                                                                          ==========
     protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> createValidator() { // overridden as type-safe
-        return createValidator(myValidationGroups());
+        return doCreateValidator(myValidationGroups());
     }
 
     protected Class<?>[] myValidationGroups() { // you can override
@@ -105,7 +105,7 @@ public abstract class LastaAction {
     }
 
     @SuppressWarnings("unchecked")
-    protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> createValidator(Class<?>... groups) { // for explicit groups
+    protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> doCreateValidator(Class<?>... groups) { // for explicit groups
         return new ActionValidator<MESSAGES>(messageManager // to get validation message
                 , () -> requestManager.getUserLocale() // used with messageManager
                 , () -> (MESSAGES) createMessages() // for new user messages
