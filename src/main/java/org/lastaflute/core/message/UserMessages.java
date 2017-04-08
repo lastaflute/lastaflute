@@ -170,15 +170,26 @@ public class UserMessages implements Serializable {
     // ===================================================================================
     //                                                                   Property Handling
     //                                                                   =================
+    /**
+     * Does the property has user message?
+     * @param property the name of property, which may have user messages. (NotNull)
+     * @return The determination, true or false.
+     */
     public boolean hasMessageOf(String property) {
         final UserMessageItem item = getPropertyItem(property);
         return item != null && !item.getMessageList().isEmpty();
     }
 
-    public boolean hasMessageOf(String property, String key) {
+    /**
+     * Does the property has user message for the message key?
+     * @param property the name of property, which may have user messages. (NotNull)
+     * @param messageKey The message key or message itself. (NotNull)
+     * @return The determination, true or false.
+     */
+    public boolean hasMessageOf(String property, String messageKey) {
         final UserMessageItem item = getPropertyItem(property);
         return item != null && item.getMessageList().stream().anyMatch(message -> {
-            return message.getMessageKey().equals(resolveMessageKey(key));
+            return message.getMessageKey().equals(resolveMessageKey(messageKey));
         });
     }
 
@@ -228,13 +239,13 @@ public class UserMessages implements Serializable {
         }
     }
 
-    protected String resolveMessageKey(String key) {
+    protected String resolveMessageKey(String messageKey) {
         final String beginMark = MESSAGES_BEGIN_MARK;
         final String endMark = MESSAGES_END_MARK;
-        if (Srl.isQuotedAnything(key, beginMark, endMark)) {
-            return Srl.unquoteAnything(key, beginMark, endMark);
+        if (Srl.isQuotedAnything(messageKey, beginMark, endMark)) {
+            return Srl.unquoteAnything(messageKey, beginMark, endMark);
         } else {
-            return key;
+            return messageKey;
         }
     }
 
