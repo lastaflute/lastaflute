@@ -68,39 +68,39 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    /** The assistant director (AD) for framework. (NotNull) */
+    /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
     private FwAssistantDirector assistantDirector;
 
-    /** The manager of time. (NotNull) */
+    /** The manager of time. (NotNull: after initialization) */
     @Resource
     private TimeManager timeManager;
 
-    /** The manager of message. (NotNull) */
+    /** The manager of message. (NotNull: after initialization) */
     @Resource
     private MessageManager messageManager;
 
-    /** The translator of exception. (NotNull) */
+    /** The translator of exception. (NotNull: after initialization) */
     @Resource
     private ExceptionTranslator exceptionTranslator;
 
-    /** The manager of request. (NotNull) */
+    /** The manager of request. (NotNull: after initialization) */
     @Resource
     private RequestManager requestManager;
 
-    /** The manager of response. (NotNull) */
+    /** The manager of response. (NotNull: after initialization) */
     @Resource
     private ResponseManager responseManager;
 
-    /** The manager of session. (NotNull) */
+    /** The manager of session. (NotNull: after initialization) */
     @Resource
     private SessionManager sessionManager;
 
-    /** The manager of API. (NotNull) */
+    /** The manager of API. (NotNull: after initialization) */
     @Resource
     private ApiManager apiManager;
 
-    /** The manager of double submit using transaction token. (NotNull) */
+    /** The manager of double submit using transaction token. (NotNull: after initialization) */
     @Resource
     private DoubleSubmitManager doubleSubmitManager;
 
@@ -316,7 +316,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                                                     Verify Anything
     //                                                                     ===============
     /**
-     * Check the condition is true or it throws client error (e.g. 404 not found) forcedly. <br>
+     * Check the condition is true or it throws client error (e.g. 400 bad request) forcedly. <br>
      * You can use this in your action process against invalid URL parameters.
      * <pre>
      * verifyOrClientError("The pageNumber should be positive number: " + pageNumber, pageNumber &gt; 0);
@@ -327,12 +327,12 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     protected void verifyOrClientError(String debugMsg, boolean expectedBool) { // application may call
         assertArgumentNotNull("debugMsg", debugMsg);
         if (!expectedBool) {
-            handleVerifiedClientError(debugMsg);
+            throwVerifiedClientError(debugMsg);
         }
     }
 
-    protected void handleVerifiedClientError(String debugMsg) {
-        throw responseManager.new404(debugMsg);
+    protected void throwVerifiedClientError(String debugMsg) {
+        throw responseManager.new400(debugMsg);
     }
 
     /**
@@ -347,11 +347,11 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     protected void verifyOrIllegalTransition(String debugMsg, boolean expectedBool) { // application may call
         assertArgumentNotNull("debugMsg", debugMsg);
         if (!expectedBool) {
-            handleVerifiedIllegalTransition(debugMsg);
+            throwVerifiedIllegalTransition(debugMsg);
         }
     }
 
-    protected void handleVerifiedIllegalTransition(String debugMsg) {
+    protected void throwVerifiedIllegalTransition(String debugMsg) {
         throw new RequestIllegalTransitionException(debugMsg, newEmbeddedMessageKeySupplier().getErrorsAppIllegalTransitionKey());
     }
 }

@@ -80,11 +80,13 @@ public class ActionValidatorTest extends UnitLastaFluteTestCase {
 
     protected ActionValidator<UserMessages> createValidator() {
         MessageManager messageManager = new MockMessageManager();
-        MessageLocaleProvider messageLocaleProvider = () -> Locale.ENGLISH;
+        MessageLocaleProvider localeProvider = () -> Locale.ENGLISH;
         UserMessagesCreator<UserMessages> userMessagesCreator = () -> new UserMessages();
-        VaErrorHook apiFailureHook = () -> null;
+        VaErrorHook hook = () -> null;
+        Class<? extends ActionValidatorTest> cacheKey = getClass();
+        VaConfigSetupper conf = unsed -> {};
         Class<?>[] groups = new Class<?>[0];
-        return new ActionValidator<UserMessages>(messageManager, messageLocaleProvider, userMessagesCreator, apiFailureHook, groups);
+        return new ActionValidator<UserMessages>(messageManager, localeProvider, userMessagesCreator, hook, cacheKey, conf, groups);
     }
 
     protected MockConstraintViolation createViolation(String propertyPath) {

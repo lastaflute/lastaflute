@@ -34,6 +34,7 @@ import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -137,6 +138,11 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     // -----------------------------------------------------
+    //                                          Type Message
+    //                                          ------------
+    protected static final Map<Class<?>, Validator> cachedValidatorMap = new ConcurrentHashMap<Class<?>, Validator>();
+
+    // -----------------------------------------------------
     //                                               Various
     //                                               -------
     protected static final String MESSAGE_HINT_DELIMITER = "$$df:messageKeyDelimiter$$";
@@ -145,28 +151,38 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final MessageManager messageManager;
-    protected final MessageLocaleProvider messageLocaleProvider;
-    protected final UserMessagesCreator<MESSAGES> userMessagesCreator;
-    protected final VaErrorHook apiFailureHook;
+    protected final MessageManager messageManager; // not null
+    protected final MessageLocaleProvider messageLocaleProvider; // not null
+    protected final UserMessagesCreator<MESSAGES> messagesCreator; // not null
+    protected final VaErrorHook apiFailureHook; // not null
     protected final Class<?>[] runtimeGroups; // not null
+    protected final Validator hibernateValidator; // not null, validator is thread-safe
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(MessageManager messageManager, MessageLocaleProvider messageLocaleProvider,
-            UserMessagesCreator<MESSAGES> userMessagesCreator, VaErrorHook apiFailureHook, Class<?>... runtimeGroups) {
+    public ActionValidator(MessageManager messageManager // to get validation message
+            , MessageLocaleProvider messageLocaleProvider // used with messageManager
+            , UserMessagesCreator<MESSAGES> messagesCreator // for new user messages
+            , VaErrorHook apiFailureHook // hook for API validation error
+            , Class<?> hibernateCacheKey // hibernate cache key
+            , VaConfigSetupper hibernateConfigSetupper // your configuration of hibernate validator
+            , Class<?>... runtimeGroups // validator runtime groups
+    ) {
         assertArgumentNotNull("messageManager", messageManager);
         assertArgumentNotNull("messageLocaleProvider", messageLocaleProvider);
-        assertArgumentNotNull("userMessagesCreator", userMessagesCreator);
+        assertArgumentNotNull("messagesCreator", messagesCreator);
         assertArgumentNotNull("apiFailureHook", apiFailureHook);
+        assertArgumentNotNull("hibernateCacheKey", hibernateCacheKey);
+        assertArgumentNotNull("hibernateConfigSetupper", hibernateConfigSetupper);
         assertArgumentNotNull("runtimeGroups", runtimeGroups);
         this.messageManager = messageManager;
         this.messageLocaleProvider = messageLocaleProvider;
-        this.userMessagesCreator = userMessagesCreator;
+        this.messagesCreator = messagesCreator;
         this.apiFailureHook = apiFailureHook;
         this.runtimeGroups = runtimeGroups;
         assertGroupsNotContainsClientError(runtimeGroups);
+        this.hibernateValidator = comeOnHibernateValidator(hibernateCacheKey, hibernateConfigSetupper);
     }
 
     protected void assertGroupsNotContainsClientError(Class<?>... groups) {
@@ -272,21 +288,36 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // ===================================================================================
     //                                                                 Hibernate Validator
     //                                                                 ===================
+    // -----------------------------------------------------
+    //                                     Actually Validate
+    //                                     -----------------
     protected Set<ConstraintViolation<Object>> hibernateValidate(Object form, Class<?>[] groups) {
-        return comeOnHibernateValidator().validate(form, groups);
+        return hibernateValidator.validate(form, groups);
     }
 
     // -----------------------------------------------------
-    //                                    Validator Settings
-    //                                    ------------------
-    protected Validator comeOnHibernateValidator() {
-        return buildValidatorFactory().getValidator();
+    //                                     Prepare Validator
+    //                                     -----------------
+    protected Validator comeOnHibernateValidator(Class<?> hibernateCacheKey, VaConfigSetupper hibernateConfigSetupper) {
+        Validator cached = cachedValidatorMap.get(hibernateCacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (cachedValidatorMap) {
+            cached = cachedValidatorMap.get(hibernateCacheKey);
+            if (cached != null) {
+                return cached;
+            }
+            cached = buildValidatorFactory(hibernateConfigSetupper).getValidator(); // about 5ms
+            cachedValidatorMap.put(hibernateCacheKey, cached);
+            return cachedValidatorMap.get(hibernateCacheKey);
+        }
     }
 
-    protected ValidatorFactory buildValidatorFactory() {
-        final Configuration<?> configuration = configure();
+    protected ValidatorFactory buildValidatorFactory(VaConfigSetupper hibernateConfigSetupper) {
+        final Configuration<?> configuration = createConfiguration();
         setupFrameworkConfiguration(configuration);
-        setupYourConfiguration(configuration);
+        setupYourConfiguration(configuration, hibernateConfigSetupper);
         return configuration.buildValidatorFactory();
     }
 
@@ -294,10 +325,11 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         configuration.messageInterpolator(newResourceBundleMessageInterpolator());
     }
 
-    protected void setupYourConfiguration(Configuration<?> configuration) { // you can override
+    protected void setupYourConfiguration(Configuration<?> configuration, VaConfigSetupper hibernateConfigSetupper) {
+        hibernateConfigSetupper.setup(configuration);
     }
 
-    protected Configuration<?> configure() {
+    protected Configuration<?> createConfiguration() {
         return newGenericBootstrap().configure();
     }
 
@@ -453,7 +485,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                       Messages Assist
     //                                       ---------------
     protected MESSAGES prepareActionMessages() {
-        return userMessagesCreator.create();
+        return messagesCreator.create();
     }
 
     protected void registerActionMessage(UserMessages messages, ConstraintViolation<Object> vio) {

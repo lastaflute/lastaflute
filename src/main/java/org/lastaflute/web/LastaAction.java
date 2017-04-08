@@ -39,6 +39,7 @@ import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.ActionValidator;
+import org.lastaflute.web.validation.VaConfigSetupper;
 
 /**
  * @author jflute
@@ -53,43 +54,43 @@ public abstract class LastaAction {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    /** The manager of time. (NotNull) */
+    /** The manager of time. (NotNull: after initialization) */
     @Resource
     private TimeManager timeManager;
 
-    /** The manager of JSON. (NotNull) */
+    /** The manager of JSON. (NotNull: after initialization) */
     @Resource
     private JsonManager jsonManager;
 
-    /** The manager of message. (NotNull) */
+    /** The manager of message. (NotNull: after initialization) */
     @Resource
     private MessageManager messageManager;
 
-    /** The manager of asynchronous. (NotNull) */
+    /** The manager of asynchronous. (NotNull: after initialization) */
     @Resource
     private AsyncManager asycnManager;
 
-    /** The stage of transaction. (NotNull) */
+    /** The stage of transaction. (NotNull: after initialization) */
     @Resource
     private TransactionStage transactionStage;
 
-    /** The manager of request. (NotNull) */
+    /** The manager of request. (NotNull: after initialization) */
     @Resource
     private RequestManager requestManager;
 
-    /** The manager of response. (NotNull) */
+    /** The manager of response. (NotNull: after initialization) */
     @Resource
     private ResponseManager responseManager;
 
-    /** The manager of session. (NotNull) */
+    /** The manager of session. (NotNull: after initialization) */
     @Resource
     private SessionManager sessionManager;
 
-    /** The manager of API. (NotNull) */
+    /** The manager of API. (NotNull: after initialization) */
     @Resource
     private ApiManager apiManager;
 
-    /** The resolver of action, e.g. it can convert action type to action path. (NotNull) */
+    /** The resolver of action, e.g. it can convert action type to action path. (NotNull: after initialization) */
     @Resource
     private ActionPathResolver actionPathResolver;
 
@@ -106,23 +107,19 @@ public abstract class LastaAction {
 
     @SuppressWarnings("unchecked")
     protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> doCreateValidator(Class<?>... groups) { // for explicit groups
+        // cannot cache here, needs to use the instance method createMessage()
+        // (not to keep (random) action instance)
+        // so it caches only hibernate validator in action validator
+        // so config setupper is called only once
+        final VaConfigSetupper configSetupper = requestManager.getActionAdjustmentProvider().adjustValidatorConfig();
         return new ActionValidator<MESSAGES>(messageManager // to get validation message
                 , () -> requestManager.getUserLocale() // used with messageManager
                 , () -> (MESSAGES) createMessages() // for new user messages
-                , () -> handleApiValidationError() // apiFailureHook
-                , groups);
-    }
-
-    protected ApiResponse handleApiValidationError() { // for API
-        final ActionRuntime runtime = LaActionRuntimeUtil.getActionRuntime();
-        final OptionalThing<UserMessages> messages = requestManager.errors().get();
-        final ApiFailureResource resource = newApiFailureResource(runtime, messages, requestManager);
-        return requestManager.getApiManager().handleValidationError(resource);
-    }
-
-    protected ApiFailureResource newApiFailureResource(ActionRuntime runtime, OptionalThing<UserMessages> messages,
-            RequestManager requestManager) {
-        return new ApiFailureResource(runtime, messages, requestManager);
+                , () -> processApiValidationError() // hook for API validation error
+                , LastaAction.class // hibernate cache key, all actions use same hibernate validator
+                , configSetupper != null ? configSetupper : conf -> {} // your configuration of hibernate validator
+                , groups // validator runtime groups
+        );
     }
 
     /**
@@ -131,6 +128,13 @@ public abstract class LastaAction {
      */
     protected UserMessages createMessages() { // overridden as type-safe
         return new UserMessages();
+    }
+
+    protected ApiResponse processApiValidationError() { // for API
+        final ActionRuntime runtime = LaActionRuntimeUtil.getActionRuntime();
+        final OptionalThing<UserMessages> messages = requestManager.errors().get();
+        final ApiFailureResource resource = new ApiFailureResource(runtime, messages, requestManager);
+        return requestManager.getApiManager().handleValidationError(resource);
     }
 
     // ===================================================================================

@@ -28,6 +28,7 @@ import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
@@ -405,8 +406,14 @@ public interface RequestManager extends ScopedAttributeHolder {
     ApiManager getApiManager();
 
     /**
-     * Get the manager of API.
-     * @return The injected manager of API. (NotNull)
+     * Get the provider of action adjustment.
+     * @return The injected provider of action adjustment. (NotNull)
+     */
+    ActionAdjustmentProvider getActionAdjustmentProvider();
+
+    /**
+     * Get the resolver of action path.
+     * @return The injected resolver of action path. (NotNull)
      */
     ActionPathResolver getActionPathResolver();
 }
