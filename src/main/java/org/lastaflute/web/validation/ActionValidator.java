@@ -43,6 +43,7 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Valid;
 import javax.validation.Validation;
 import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import javax.validation.bootstrap.GenericBootstrap;
 import javax.validation.constraints.NotNull;
 import javax.validation.groups.Default;
@@ -278,9 +279,25 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                    Validator Settings
     //                                    ------------------
     protected Validator comeOnHibernateValidator() {
-        final Configuration<?> configure = newGenericBootstrap().configure();
-        configure.messageInterpolator(newResourceBundleMessageInterpolator());
-        return configure.buildValidatorFactory().getValidator();
+        return buildValidatorFactory().getValidator();
+    }
+
+    protected ValidatorFactory buildValidatorFactory() {
+        final Configuration<?> configuration = configure();
+        setupFrameworkConfiguration(configuration);
+        setupYourConfiguration(configuration);
+        return configuration.buildValidatorFactory();
+    }
+
+    protected void setupFrameworkConfiguration(Configuration<?> configuration) {
+        configuration.messageInterpolator(newResourceBundleMessageInterpolator());
+    }
+
+    protected void setupYourConfiguration(Configuration<?> configuration) { // you can override
+    }
+
+    protected Configuration<?> configure() {
+        return newGenericBootstrap().configure();
     }
 
     protected GenericBootstrap newGenericBootstrap() {
