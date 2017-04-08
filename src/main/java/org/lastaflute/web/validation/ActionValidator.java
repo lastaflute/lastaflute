@@ -69,6 +69,7 @@ import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
+import org.lastaflute.web.validation.exception.ValidationStoppedException;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureElement;
 import org.lastaflute.web.validation.theme.conversion.ValidateTypeFailure;
@@ -292,7 +293,25 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                     Actually Validate
     //                                     -----------------
     protected Set<ConstraintViolation<Object>> hibernateValidate(Object form, Class<?>[] groups) {
-        return hibernateValidator.validate(form, groups);
+        try {
+            return hibernateValidator.validate(form, groups);
+        } catch (RuntimeException e) {
+            handleHibernateValidatorException(form, groups, e);
+            return null; // unreachable
+        }
+    }
+
+    protected void handleHibernateValidatorException(Object form, Class<?>[] groups, RuntimeException e) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Failed to validate so stop it.");
+        br.addItem("Advice");
+        br.addElement("Confirm the nested exception message.");
+        br.addItem("Form or Body");
+        br.addElement(form.getClass().getName());
+        br.addItem("Groups");
+        br.addElement(Stream.of(groups).map(gr -> gr.getSimpleName()).collect(Collectors.joining(", ")));
+        final String msg = br.buildExceptionMessage();
+        throw new ValidationStoppedException(msg, e);
     }
 
     // -----------------------------------------------------
