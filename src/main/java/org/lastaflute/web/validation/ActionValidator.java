@@ -139,6 +139,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // -----------------------------------------------------
     //                                               Various
     //                                               -------
+    protected static final String MESSAGE_HINT_DELIMITER = "$$df:messageKeyDelimiter$$";
     protected static final String LF = "\n";
 
     // ===================================================================================
@@ -345,7 +346,11 @@ public class ActionValidator<MESSAGES extends UserMessages> {
             //final String realKey = filterMessageKey(key);
             final OptionalThing<String> opt = messageManager.findMessage(locale, key);
             checkMainMessageNotFound(opt, key);
-            return opt.orElse(null);
+            return opt.map(msg -> toHintMessage(key, msg)).orElse(null); // filtered later
+        }
+
+        protected String toHintMessage(String key, String msg) {
+            return key + MESSAGE_HINT_DELIMITER + msg;
         }
 
         protected void checkMainMessageNotFound(OptionalThing<String> opt, String key) {
@@ -453,11 +458,22 @@ public class ActionValidator<MESSAGES extends UserMessages> {
 
     protected void registerActionMessage(UserMessages messages, ConstraintViolation<Object> vio) {
         final String propertyPath = extractPropertyPath(vio);
-        final String message = filterMessageItem(extractMessage(vio), propertyPath);
+        final String plainMessage = filterMessageItem(extractMessage(vio), propertyPath);
+        final String delimiter = MESSAGE_HINT_DELIMITER;
+        final String messageItself;
+        final String messageKey;
+        if (plainMessage.contains(delimiter)) { // basically here
+            messageItself = Srl.substringFirstRear(plainMessage, delimiter);
+            messageKey = Srl.substringFirstFront(plainMessage, delimiter);
+        } else { // just in case
+            messageItself = plainMessage;
+            messageKey = null;
+        }
         final ConstraintDescriptor<?> descriptor = vio.getConstraintDescriptor();
         final Annotation annotation = descriptor.getAnnotation();
-        final Set<Class<?>> groups = descriptor.getGroups();
-        messages.add(propertyPath, newDirectActionMessage(message, annotation, groups.toArray(new Class<?>[groups.size()])));
+        final Set<Class<?>> groupSet = descriptor.getGroups();
+        final Class<?>[] groups = groupSet.toArray(new Class<?>[groupSet.size()]);
+        messages.add(propertyPath, createDirectMessage(messageItself, annotation, groups, messageKey));
     }
 
     protected String extractPropertyPath(ConstraintViolation<Object> vio) {
@@ -653,7 +669,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
             completeMsg = buildDefaultTypeMessage(propertyPath, propertyType);
         }
         final ValidateTypeFailure annotation = element.getAnnotation();
-        return newDirectActionMessage(completeMsg, annotation, annotation.groups());
+        return createDirectMessage(completeMsg, annotation, annotation.groups(), messageKey);
     }
 
     protected String buildDefaultTypeMessage(String propertyPath, Class<?> propertyType) {
@@ -767,8 +783,16 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         return messageManager.findMessage(messageLocaleProvider.provide(), messageKey);
     }
 
-    protected UserMessage newDirectActionMessage(String msg, Annotation annotation, Class<?>[] groups) {
-        return UserMessage.asDirectMessage(msg, annotation, groups);
+    protected UserMessage createDirectMessage(String msg, Annotation annotation, Class<?>[] groups, String messageKey) {
+        return UserMessage.asDirectMessage(msg, annotation, groups, unbraceDirectMessageKey(messageKey));
+    }
+
+    protected String unbraceDirectMessageKey(String messageKey) {
+        if (messageKey != null && Srl.isQuotedAnything(messageKey, "{", "}")) {
+            return Srl.unquoteAnything(messageKey, "{", "}");
+        } else {
+            return messageKey;
+        }
     }
 
     // ===================================================================================

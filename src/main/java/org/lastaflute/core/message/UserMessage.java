@@ -43,9 +43,10 @@ public class UserMessage implements Serializable {
     protected final Object[] values; // not null, empty allowed when no parameter or direct message
     protected final boolean resource; // basically true here, false if direct message for framework
 
-    // supplemental information
-    protected final Annotation validatorAnnotation; // null allowed
-    protected final Class<?>[] annotatedGroups; // null allowed
+    // supplemental information for e.g. unit test
+    protected final Annotation validatorAnnotation; // null allowed (exists if annotation message)
+    protected final Class<?>[] validatorGroups; // null allowed (exists if annotation message)
+    protected final String validatorMessageKey; // null allowed (even if annotation exists)
 
     // ===================================================================================
     //                                                                         Constructor
@@ -57,23 +58,28 @@ public class UserMessage implements Serializable {
         this.values = values != null ? filterValues(values) : EMPTY_VALUES;
         this.resource = true;
         this.validatorAnnotation = null;
-        this.annotatedGroups = null;
+        this.validatorGroups = null;
+        this.validatorMessageKey = null;
     }
 
-    protected UserMessage(String messageKey, Annotation validatorAnnotation, Class<?>[] annotatedGroups) { // for e.g. hibernate validator
-        assertArgumentNotNull("messageKey", messageKey);
+    protected UserMessage(String messageItself, Annotation validatorAnnotation, Class<?>[] validatorGroups, String validatorMessageKey) { // for e.g. hibernate validator
+        assertArgumentNotNull("messageItself", messageItself);
         assertArgumentNotNull("validatorAnnotation", validatorAnnotation);
-        assertArgumentNotNull("annotationGroups", annotatedGroups);
-        this.messageKey = messageKey;
+        // message key might be not required, because of possible that it cannot get it
+        //assertArgumentNotNull("validatorMessageKey", validatorMessageKey);
+        assertArgumentNotNull("annotationGroups", validatorGroups);
+        this.messageKey = messageItself;
         this.values = EMPTY_VALUES;
         this.resource = false;
         this.validatorAnnotation = validatorAnnotation;
-        this.annotatedGroups = annotatedGroups;
+        this.validatorGroups = validatorGroups;
+        this.validatorMessageKey = validatorMessageKey;
     }
 
     // factory method to avoid argument mistake, and this is internal method for framework
-    public static UserMessage asDirectMessage(String key, Annotation validatorAnnotation, Class<?>[] annotatedGroups) {
-        return new UserMessage(key, validatorAnnotation, annotatedGroups);
+    public static UserMessage asDirectMessage(String messageItself, Annotation validatorAnnotation, Class<?>[] validatorGroups,
+            String validatorMessageKey) {
+        return new UserMessage(messageItself, validatorAnnotation, validatorGroups, validatorMessageKey);
     }
 
     protected String filterMessageKey(String messageKey) {
@@ -128,13 +134,33 @@ public class UserMessage implements Serializable {
         sb.append("]");
         if (validatorAnnotation != null) { // because of option
             sb.append(" by @").append(validatorAnnotation.annotationType().getSimpleName());
-            if (annotatedGroups != null) { // just in case
-                sb.append(Stream.of(annotatedGroups).map(tp -> {
+            if (validatorGroups != null) { // just in case
+                sb.append(Stream.of(validatorGroups).map(tp -> {
                     return tp.getSimpleName() + ".class";
                 }).collect(Collectors.toList()));
             }
+            if (validatorMessageKey != null) {
+                sb.append(" (").append(filterEmbeddedDomainForDisplay(validatorMessageKey)).append(")");
+            }
         }
         return sb.toString();
+    }
+
+    protected String filterEmbeddedDomainForDisplay(String key) { // copied from SimpleMessageManager
+        final String javaxPackage = "javax.validation.";
+        final String hibernatePackage = "org.hibernate.validator.";
+        final String lastaflutePackage = "org.lastaflute.validator.";
+        final String realKey;
+        if (key.startsWith(javaxPackage)) {
+            realKey = Srl.substringFirstRear(key, javaxPackage);
+        } else if (key.startsWith(hibernatePackage)) {
+            realKey = Srl.substringFirstRear(key, hibernatePackage);
+        } else if (key.startsWith(lastaflutePackage)) {
+            realKey = Srl.substringFirstRear(key, lastaflutePackage);
+        } else {
+            realKey = key;
+        }
+        return realKey;
     }
 
     // ===================================================================================
@@ -158,9 +184,15 @@ public class UserMessage implements Serializable {
         });
     }
 
-    public OptionalThing<Class<?>[]> getAnnotatedGroups() {
-        return OptionalThing.ofNullable(annotatedGroups, () -> {
-            throw new IllegalStateException("Not found the annotated groups: " + toString());
+    public OptionalThing<Class<?>[]> getValidatorGroups() {
+        return OptionalThing.ofNullable(validatorGroups, () -> {
+            throw new IllegalStateException("Not found the validator groups: " + toString());
+        });
+    }
+
+    public OptionalThing<String> getValidatorMessageKey() {
+        return OptionalThing.ofNullable(validatorMessageKey, () -> {
+            throw new IllegalStateException("Not found the validator message key: " + toString());
         });
     }
 }
