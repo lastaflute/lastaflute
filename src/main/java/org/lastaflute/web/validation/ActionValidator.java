@@ -169,7 +169,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(RequestManager requestManager // has message manager, user locacle
+    public ActionValidator(RequestManager requestManager // has message manager, user locale
             , UserMessagesCreator<MESSAGES> messagesCreator // for new user messages
             , Class<?>... runtimeGroups // validator runtime groups
     ) {
