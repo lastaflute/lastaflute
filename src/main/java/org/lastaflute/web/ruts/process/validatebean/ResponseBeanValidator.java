@@ -110,8 +110,8 @@ public abstract class ResponseBeanValidator {
         final String msg = buildValidationErrorMessage(bean, locationBuilder, messages);
         if (warning) {
             logger.warn(msg);
-        } else {
-            throw new ResponseBeanValidationErrorException(msg);
+        } else { // but keep framework information for various purpose of client
+            throw new ResponseBeanValidationErrorException(msg, bean, messages);
         }
     }
 
