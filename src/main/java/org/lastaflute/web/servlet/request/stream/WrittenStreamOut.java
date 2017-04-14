@@ -25,13 +25,13 @@ import java.io.OutputStream;
 public interface WrittenStreamOut {
 
     /**
+     * @return The output stream of response, not committed yet. (NotNull)
+     */
+    OutputStream stream();
+
+    /**
      * @param ins The input stream provided by application. (NotNull)
      * @throws IOException When writing stream failed.
      */
     void write(InputStream ins) throws IOException;
-
-    /**
-     * @return The output stream of response, not committed yet. (NotNull)
-     */
-    OutputStream writer();
 }

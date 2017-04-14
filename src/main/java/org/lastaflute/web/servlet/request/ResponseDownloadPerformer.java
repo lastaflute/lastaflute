@@ -101,12 +101,12 @@ public class ResponseDownloadPerformer {
 
     protected WrittenStreamOut createWrittenStreamOut(OutputStream out) {
         return new WrittenStreamOut() {
-            public void write(InputStream ins) throws IOException {
-                writeDownloadStream(ins, out);
+            public OutputStream stream() {
+                return new WrittenOutputStreamWrapper(out); // delegator, you cannot close
             }
 
-            public OutputStream writer() {
-                return new WrittenOutputStreamWrapper(out); // delegator, you cannot close
+            public void write(InputStream ins) throws IOException {
+                writeDownloadStream(ins, out);
             }
         };
     }
