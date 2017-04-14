@@ -99,7 +99,7 @@ public class ActionResponseReflector {
             gatherForwardRenderData(response); // not lazy to be in action transaction
         }
         if (response.isReturnAsEmptyBody()) {
-            return createSimpleJourney(() -> { // to suppress render handling
+            return createSelfContainedJourney(() -> { // to suppress render handling
                 readyHtmlResponseHandling(response);
             });
         } else {
@@ -241,7 +241,7 @@ public class ActionResponseReflector {
             validateJsonBeanIfNeeds(response.getJsonResult(), response); // not lazy to be in action transaction
         }
         // lazy because of same reason as HTML response (see the comment)
-        return createSimpleJourney(() -> {
+        return createSelfContainedJourney(() -> {
             adjustActionResponseJustBefore(response);
             final ResponseManager responseManager = requestManager.getResponseManager();
             setupActionResponseHeader(responseManager, response);
@@ -298,7 +298,7 @@ public class ActionResponseReflector {
     //                                                                        ============
     protected NextJourney handleXmlResponse(XmlResponse response) {
         // lazy because of same reason as HTML response (see the comment)
-        return createSimpleJourney(() -> {
+        return createSelfContainedJourney(() -> {
             adjustActionResponseJustBefore(response);
             final ResponseManager responseManager = requestManager.getResponseManager();
             setupActionResponseHeader(responseManager, response);
@@ -315,7 +315,7 @@ public class ActionResponseReflector {
     //                                                                     ===============
     protected NextJourney handleStreamResponse(StreamResponse response) {
         // lazy because of same reason as HTML response (see the comment)
-        return createSimpleJourney(() -> {
+        return createSelfContainedJourney(() -> {
             adjustActionResponseJustBefore(response);
             final ResponseManager responseManager = requestManager.getResponseManager();
             // needs to be handled in download()
@@ -340,7 +340,7 @@ public class ActionResponseReflector {
         return NextJourney.undefined();
     }
 
-    protected NextJourney createSimpleJourney(PlannedJourneyProvider journeyProcessor) {
+    protected NextJourney createSelfContainedJourney(PlannedJourneyProvider journeyProcessor) {
         return new NextJourney(journeyProcessor);
     }
 
