@@ -29,7 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.lastaflute.web.exception.ResponseClientAbortIOException;
 import org.lastaflute.web.exception.ResponseDownloadFailureException;
-import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
+import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamWriter;
 import org.slf4j.Logger;
@@ -74,7 +74,7 @@ public class ResponseDownloadPerformer {
     //                                                                        ============
     // switched to stream call way for closing headache
     public void downloadStreamCall(ResponseDownloadResource resource, HttpServletResponse response) {
-        final WritternStreamCall streamCall = resource.getStreamCall();
+        final WrittenStreamCall streamCall = resource.getStreamCall();
         if (streamCall == null) {
             String msg = "Either byte data or input stream is required: " + resource;
             throw new IllegalArgumentException(msg);

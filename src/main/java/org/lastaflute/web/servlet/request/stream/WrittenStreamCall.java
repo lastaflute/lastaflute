@@ -16,13 +16,12 @@
 package org.lastaflute.web.servlet.request.stream;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * @author jflute
  */
 @FunctionalInterface
-public interface WritternStreamOut {
+public interface WrittenStreamCall {
 
-    void write(InputStream ins) throws IOException;
+    void callback(WrittenStreamOut out) throws IOException;
 }

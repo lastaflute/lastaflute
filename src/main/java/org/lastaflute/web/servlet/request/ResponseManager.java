@@ -22,7 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
+import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
 
 /**
  * The manager of response. (response facade)
@@ -141,7 +141,7 @@ public interface ResponseManager {
      * @param fileName The file name as 'filename' used in the header. (NotNull)
      * @param writtenStreamLambda The callback for writing stream of download data. (NotNull)
      */
-    void download(String fileName, WritternStreamCall writtenStreamLambda);
+    void download(String fileName, WrittenStreamCall writtenStreamLambda);
 
     /**
      * Download by the stream callback with content length. <br>
@@ -157,7 +157,7 @@ public interface ResponseManager {
      * @param writtenStreamLambda The callback for writing stream of download data. (NotNull)
      * @param contentLength The content length of the response.
      */
-    void download(String fileName, WritternStreamCall writtenStreamLambda, int contentLength);
+    void download(String fileName, WrittenStreamCall writtenStreamLambda, int contentLength);
 
     /**
      * Download the resource by flexible settings. <br>

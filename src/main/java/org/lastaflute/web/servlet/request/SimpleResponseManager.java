@@ -36,7 +36,7 @@ import org.lastaflute.web.exception.Forced400BadRequestException;
 import org.lastaflute.web.exception.Forced403ForbiddenException;
 import org.lastaflute.web.exception.Forced404NotFoundException;
 import org.lastaflute.web.path.ActionPathResolver;
-import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
+import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
 import org.lastaflute.web.util.LaRequestUtil;
 import org.lastaflute.web.util.LaResponseUtil;
 import org.slf4j.Logger;
@@ -268,14 +268,14 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     @Override
-    public void download(String fileName, WritternStreamCall writtenStreamLambda) {
+    public void download(String fileName, WrittenStreamCall writtenStreamLambda) {
         assertArgumentNotNull("fileName", fileName);
         assertArgumentNotNull("writtenStreamLambda", writtenStreamLambda);
         doDownload(createResponseDownloadResource(fileName).stream(writtenStreamLambda));
     }
 
     @Override
-    public void download(String fileName, WritternStreamCall writtenStreamLambda, int contentLength) {
+    public void download(String fileName, WrittenStreamCall writtenStreamLambda, int contentLength) {
         assertArgumentNotNull("fileName", fileName);
         assertArgumentNotNull("writtenStreamLambda", writtenStreamLambda);
         doDownload(createResponseDownloadResource(fileName).stream(writtenStreamLambda, contentLength));
