@@ -62,6 +62,7 @@ import org.lastaflute.di.helper.misc.ParameterizedRef;
 import org.lastaflute.di.util.LdiArrayUtil;
 import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.di.util.LdiModifierUtil;
+import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.JsonParameter;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.Forced400BadRequestException;
@@ -88,6 +89,7 @@ import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterFilter;
 import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterMeta;
 import org.lastaflute.web.ruts.process.populate.FormYourCollectionResource;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.WholeShowErrorFlushAttribute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureElement;
@@ -268,6 +270,7 @@ public class ActionFormMapper {
             if (logger.isDebugEnabled()) {
                 logger.debug("#flow ...Parsing JSON from request body:{}", buildJsonBodyDebugDisplay(body));
             }
+            keepRequestBodyForErrorFlush(virtualForm, body);
             return body;
         } catch (RuntimeException e) {
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
@@ -281,6 +284,11 @@ public class ActionFormMapper {
             final String msg = br.buildExceptionMessage();
             throw new JsonBodyCannotReadFromRequestException(msg, e);
         }
+    }
+
+    protected void keepRequestBodyForErrorFlush(VirtualForm virtualForm, String body) {
+        // request body can be read only once so needs to keep it for error logging
+        requestManager.setAttribute(LastaWebKey.REQUEST_BODY_KEY, new WholeShowErrorFlushAttribute(body));
     }
 
     protected String buildJsonBodyDebugDisplay(String value) {
