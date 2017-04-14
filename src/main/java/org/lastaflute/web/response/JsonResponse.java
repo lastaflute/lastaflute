@@ -170,6 +170,11 @@ public class JsonResponse<RESULT> implements ApiResponse {
     // -----------------------------------------------------
     //                                     Undefined Control
     //                                     -----------------
+    /**
+     * You cannot use in execute method. Only for action hook. <br>
+     * If you return empty body, use asEmptyBody().
+     * @return this. (NotNull)
+     */
     @SuppressWarnings("unchecked")
     public static <OBJ> JsonResponse<OBJ> undefined() { // user interface
         return (JsonResponse<OBJ>) INSTANCE_OF_UNDEFINED;

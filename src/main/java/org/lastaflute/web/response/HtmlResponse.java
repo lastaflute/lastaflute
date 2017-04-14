@@ -293,6 +293,11 @@ public class HtmlResponse implements ActionResponse, Redirectable {
     // -----------------------------------------------------
     //                                     Undefined Control
     //                                     -----------------
+    /**
+     * You cannot use in execute method. Only for action hook. <br>
+     * If you return empty body, use asEmptyBody().
+     * @return this. (NotNull)
+     */
     public static HtmlResponse undefined() { // user interface
         return INSTANCE_OF_UNDEFINED;
     }

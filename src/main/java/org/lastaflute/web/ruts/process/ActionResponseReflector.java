@@ -98,33 +98,43 @@ public class ActionResponseReflector {
         if (response.isForwardTo()) {
             gatherForwardRenderData(response); // not lazy to be in action transaction
         }
-        // lazy to write response after hookFinally()
-        // for example, you can add headers in hookFinally() by action response
-        // (and response handling should not be in transaction because of unexpected waiting)
-        return createActionNext(() -> {
-            adjustActionResponseJustBefore(response);
-            final ResponseManager responseManager = requestManager.getResponseManager();
-            setupActionResponseHeader(responseManager, response);
-            setupActionResponseHttpStatus(responseManager, response);
-            if (response.isReturnAsEmptyBody()) {
-                return;
-            }
-            if (response.isReturnAsHtmlDirectly()) {
-                writeHtmlDirectly(response);
-                return;
-            }
-            if (response.isForwardTo()) {
-                setupPushedActionForm(response);
-                setupForwardRenderData();
-            }
-            if (response.isErrorsToSession()) {
-                saveErrorsToSession(response);
-            }
-            showHtmlTransition(response);
-        }, response);
+        if (response.isReturnAsEmptyBody()) {
+            return createSimpleJourney(() -> { // to suppress render handling
+                readyHtmlResponseHandling(response);
+            });
+        } else {
+            // lazy to write response after hookFinally()
+            // for example, you can add headers in hookFinally() by action response
+            // (and response handling should not be in transaction because of unexpected waiting)
+            return createHtmlJourney(() -> {
+                readyHtmlResponseHandling(response);
+                if (response.isReturnAsEmptyBody()) {
+                    return;
+                }
+                if (response.isReturnAsHtmlDirectly()) {
+                    writeHtmlDirectly(response);
+                    return;
+                }
+                if (response.isForwardTo()) {
+                    setupPushedActionForm(response);
+                    setupForwardRenderData();
+                }
+                if (response.isErrorsToSession()) {
+                    saveErrorsToSession(response);
+                }
+                showHtmlTransition(response);
+            }, response);
+        }
     }
 
-    protected NextJourney createActionNext(PlannedJourneyProvider journeyProvider, HtmlResponse response) {
+    protected void readyHtmlResponseHandling(HtmlResponse response) {
+        adjustActionResponseJustBefore(response);
+        final ResponseManager responseManager = requestManager.getResponseManager();
+        setupActionResponseHeader(responseManager, response);
+        setupActionResponseHttpStatus(responseManager, response);
+    }
+
+    protected NextJourney createHtmlJourney(PlannedJourneyProvider journeyProvider, HtmlResponse response) {
         return runtime.getActionExecute().getActionMapping().createNextJourney(journeyProvider, response);
     }
 
@@ -231,7 +241,7 @@ public class ActionResponseReflector {
             validateJsonBeanIfNeeds(response.getJsonResult(), response); // not lazy to be in action transaction
         }
         // lazy because of same reason as HTML response (see the comment)
-        return createOriginalJourney(() -> {
+        return createSimpleJourney(() -> {
             adjustActionResponseJustBefore(response);
             final ResponseManager responseManager = requestManager.getResponseManager();
             setupActionResponseHeader(responseManager, response);
@@ -288,7 +298,7 @@ public class ActionResponseReflector {
     //                                                                        ============
     protected NextJourney handleXmlResponse(XmlResponse response) {
         // lazy because of same reason as HTML response (see the comment)
-        return createOriginalJourney(() -> {
+        return createSimpleJourney(() -> {
             adjustActionResponseJustBefore(response);
             final ResponseManager responseManager = requestManager.getResponseManager();
             setupActionResponseHeader(responseManager, response);
@@ -305,7 +315,7 @@ public class ActionResponseReflector {
     //                                                                     ===============
     protected NextJourney handleStreamResponse(StreamResponse response) {
         // lazy because of same reason as HTML response (see the comment)
-        return createOriginalJourney(() -> {
+        return createSimpleJourney(() -> {
             adjustActionResponseJustBefore(response);
             final ResponseManager responseManager = requestManager.getResponseManager();
             // needs to be handled in download()
@@ -330,7 +340,7 @@ public class ActionResponseReflector {
         return NextJourney.undefined();
     }
 
-    protected NextJourney createOriginalJourney(PlannedJourneyProvider journeyProcessor) {
+    protected NextJourney createSimpleJourney(PlannedJourneyProvider journeyProcessor) {
         return new NextJourney(journeyProcessor);
     }
 
