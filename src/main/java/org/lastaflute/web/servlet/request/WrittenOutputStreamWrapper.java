@@ -13,25 +13,29 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.request.stream;
+package org.lastaflute.web.servlet.request;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
  * @author jflute
+ * @since 0.9.5 (2017/04/15 Saturday)
  */
-public interface WrittenStreamOut {
+public class WrittenOutputStreamWrapper extends OutputStream {
 
-    /**
-     * @param ins The input stream provided by application. (NotNull)
-     * @throws IOException When writing stream failed.
-     */
-    void write(InputStream ins) throws IOException;
+    protected final OutputStream nativeStream;
 
-    /**
-     * @return The output stream of response, not committed yet. (NotNull)
-     */
-    OutputStream writer();
+    public WrittenOutputStreamWrapper(OutputStream nativeStream) {
+        this.nativeStream = nativeStream;
+    }
+
+    @Override
+    public void write(int b) throws IOException {
+        nativeStream.write(b);
+    }
+
+    public OutputStream getNativeStream() {
+        return nativeStream;
+    }
 }

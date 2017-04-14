@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.lastaflute.web.exception.ResponseClientAbortIOException;
 import org.lastaflute.web.exception.ResponseDownloadFailureException;
 import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
+import org.lastaflute.web.servlet.request.stream.WrittenStreamOut;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamWriter;
 import org.slf4j.Logger;
@@ -86,9 +87,7 @@ public class ResponseDownloadPerformer {
             }
             final OutputStream out = response.getOutputStream();
             try {
-                streamCall.callback(ins -> {
-                    writeDownloadStream(ins, out);
-                });
+                streamCall.callback(createWrittenStreamOut(out));
                 flushDownloadStream(out);
             } finally {
                 closeDownloadStream(out);
@@ -98,6 +97,18 @@ public class ResponseDownloadPerformer {
         } catch (IOException e) {
             handleDownloadIOException(resource, e);
         }
+    }
+
+    protected WrittenStreamOut createWrittenStreamOut(OutputStream out) {
+        return new WrittenStreamOut() {
+            public void write(InputStream ins) throws IOException {
+                writeDownloadStream(ins, out);
+            }
+
+            public OutputStream writer() {
+                return new WrittenOutputStreamWrapper(out); // delegator, you cannot close
+            }
+        };
     }
 
     // ===================================================================================
