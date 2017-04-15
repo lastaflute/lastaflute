@@ -37,7 +37,8 @@ public class DoubleSubmittedRequestException extends MessageResponseApplicationE
 
     protected void initializeOption() {
         // double submit is rare case because of client application's check
-        // so enable info logging here by jflute (2017/04/15)
+        // and sometimes needs to analyze duplicate data so enable info logging here 
+        //  by jflute (2017/04/15)
         //withoutInfo(); // obviously double submit does not need info logging
     }
 }
