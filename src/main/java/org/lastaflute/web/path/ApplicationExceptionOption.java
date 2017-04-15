@@ -35,11 +35,11 @@ public class ApplicationExceptionOption {
     // -----------------------------------------------------
     //                                       Info Suppressor
     //                                       ---------------
-    public ApplicationExceptionOption suppressInfo(AppExInfoSuppressor suppressor) {
-        if (suppressor == null) {
-            throw new IllegalArgumentException("The argument 'suppressor' should not be null.");
+    public ApplicationExceptionOption suppressInfo(AppExInfoSuppressor causeLambda) {
+        if (causeLambda == null) {
+            throw new IllegalArgumentException("The argument 'causeLambda' should not be null.");
         }
-        this.appExInfoSuppressor = OptionalThing.of(suppressor);
+        this.appExInfoSuppressor = OptionalThing.of(causeLambda);
         return this;
     }
 
