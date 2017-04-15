@@ -22,7 +22,6 @@ import javax.annotation.Resource;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
-import org.lastaflute.core.exception.LaApplicationException;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.time.TimeManager;
@@ -30,9 +29,10 @@ import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.dbflute.accesscontext.AccessContextArranger;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.docs.LaActionDocs;
-import org.lastaflute.web.exception.ApplicationExceptionHandler;
 import org.lastaflute.web.exception.RequestIllegalTransitionException;
 import org.lastaflute.web.hook.ActionHook;
+import org.lastaflute.web.hook.ApplicationExceptionHandler;
+import org.lastaflute.web.hook.ApplicationExceptionResolver.HandledAppExCall;
 import org.lastaflute.web.hook.EmbeddedMessageKey.SimpleEmbeddedMessageKeySupplier;
 import org.lastaflute.web.hook.EmbeddedMessageKeySupplier;
 import org.lastaflute.web.hook.GodHandEpilogue;
@@ -127,7 +127,14 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
 
     /**
      * New the arranger of access context.
-     * @return The instance of arranger. (NotNull)
+     * <pre>
+     * <span style="color: #77226C">return</span> <span style="color: #553000">resource</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #77226C">return</span> <span style="color: #553000">accessContextLogic</span>.create(<span style="color: #553000">resource</span>, () <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> myUserType(), () <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> getUserBean().map(userBean <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #77226C">return</span> <span style="color: #553000">userBean</span>.getUserId(); <span style="color: #3F7E5E">// as user expression</span>
+     *     }), () <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> myAppType());
+     * };
+     * </pre>
+     * @return The new-created instance of arranger. (NotNull)
      */
     protected abstract AccessContextArranger newAccessContextArranger();
 
@@ -151,28 +158,30 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     protected GodHandMonologue createGodHandMonologue(ActionRuntime runtime) {
-        final GodHandResource resource = createGodHandResource(runtime);
-        final EmbeddedMessageKeySupplier supplier = newEmbeddedMessageKeySupplier();
-        final ApplicationExceptionHandler handler = newApplicationExceptionHandler();
-        return newGodHandMonologue(resource, supplier, handler);
-    }
-
-    protected ApplicationExceptionHandler newApplicationExceptionHandler() {
-        return appEx -> handleApplicationException(appEx);
+        return newGodHandMonologue(createGodHandResource(runtime), newEmbeddedMessageKeySupplier(), handler -> {
+            handleApplicationException(handler);
+            return handler.getResponse();
+        });
     }
 
     /**
      * Handle the application exception before framework's handling process.
-     * @param appEx The thrown application exception. (NotNull)
-     * @return The response for the exception. (NullAllowed: if null, to next handling step)
+     * <pre>
+     * {@literal @}Override
+     * <span style="color: #77226C">protected</span> void <span style="color: #CC4747">handleApplicationException</span>(ApplicationExceptionHandler <span style="color: #553000">handler</span>) {
+     *     <span style="color: #77226C">super</span>.handleApplicationException(<span style="color: #553000">handler</span>);
+     *     <span style="color: #553000">handler</span>.<span style="color: #994747">handle</span>(EntityAlreadyDeletedException.<span style="color: #77226C">class</span>, createMessages().addErrors...(<span style="color: #0000C0">GLOBAL</span>), <span style="color: #553000">cause</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *         <span style="color: #77226C">return</span> asHtml(<span style="color: #0000C0">path_...</span>);
+     *     });
+     * }
+     * </pre>
+     * @param handler The handler for the thrown application exception. (NotNull)
      */
-    protected ActionResponse handleApplicationException(LaApplicationException appEx) { // application may override
-        return ActionResponse.undefined();
+    protected void handleApplicationException(ApplicationExceptionHandler handler) { // application may override
     }
 
-    protected GodHandMonologue newGodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier supplier,
-            ApplicationExceptionHandler handler) {
-        return new GodHandMonologue(resource, supplier, handler);
+    protected GodHandMonologue newGodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier supplier, HandledAppExCall call) {
+        return new GodHandMonologue(resource, supplier, call);
     }
 
     // -----------------------------------------------------
@@ -190,6 +199,9 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
         createGodHandEpilogue(runtime).performEpilogue(runtime);
     }
 
+    /**
+     * @param runtime The runtime object of action. (NotNull)
+     */
     protected void setupHtmlData(ActionRuntime runtime) { // application may override
     }
 

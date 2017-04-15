@@ -29,7 +29,6 @@ import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.message.exception.MessagingApplicationException;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.exception.ApplicationExceptionHandler;
 import org.lastaflute.web.exception.MessageResponseApplicationException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.exception.LoginFailureException;
@@ -65,21 +64,26 @@ public class ApplicationExceptionResolver {
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
     protected final EmbeddedMessageKeySupplier embeddedMessageKeySupplier;
-    protected final ApplicationExceptionHandler applicationExceptionHandler;
+    protected final HandledAppExCall handledAppExCall;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public ApplicationExceptionResolver(FwAssistantDirector assistantDirector, RequestManager requestManager, SessionManager sessionManager,
             OptionalThing<LoginManager> loginManager, ApiManager apiManager, EmbeddedMessageKeySupplier embeddedMessageKeySupplier,
-            ApplicationExceptionHandler applicationExceptionHandler) {
+            HandledAppExCall handledAppExCall) {
         this.assistantDirector = assistantDirector;
         this.requestManager = requestManager;
         this.sessionManager = sessionManager;
         this.loginManager = loginManager;
         this.apiManager = apiManager;
         this.embeddedMessageKeySupplier = embeddedMessageKeySupplier;
-        this.applicationExceptionHandler = applicationExceptionHandler;
+        this.handledAppExCall = handledAppExCall;
+    }
+
+    public static interface HandledAppExCall {
+
+        ActionResponse handle(ApplicationExceptionHandler handler);
     }
 
     // ===================================================================================
@@ -94,14 +98,18 @@ public class ApplicationExceptionResolver {
      * @return The action response for application exception. (NotNull: and if defined, go to the path, UndefinedAllowed: unhandled as application exception)
      */
     public ActionResponse resolve(ActionRuntime runtime, RuntimeException cause) {
+        final ActionResponse handledBy = handleByApplication(cause);
         final ActionResponse response;
-        if (cause instanceof LaApplicationException) {
-            final LaApplicationException appEx = (LaApplicationException) cause;
-            final ActionResponse specified = asSpecifiedApplicationException(runtime, appEx);
-            response = specified.isDefined() ? specified : asEmbeddedApplicationException(runtime, appEx);
-            reflectEmbeddedApplicationMessagesIfExists(runtime, appEx); // saving messages to session
-        } else { // e.g. framework exception
-            response = asDBFluteApplicationException(runtime, cause); // saving messages to session
+        if (handledBy.isDefined()) { // by application
+            response = handledBy;
+        } else { // embedded
+            if (cause instanceof LaApplicationException) {
+                final LaApplicationException appEx = (LaApplicationException) cause;
+                response = asEmbeddedApplicationException(runtime, appEx);
+                reflectEmbeddedApplicationMessagesIfExists(runtime, appEx); // saving messages to session
+            } else { // e.g. framework exception
+                response = asDBFluteApplicationException(runtime, cause); // saving messages to session
+            }
         }
         if (response.isDefined()) { // #hope no session gateway when API by jflute (2016/08/06)
             if (needsApplicationExceptionApiDispatch(runtime, cause, response)) { // clearing session messages (basically)
@@ -115,15 +123,21 @@ public class ApplicationExceptionResolver {
     }
 
     // -----------------------------------------------------
-    //                                             Specified
-    //                                             ---------
-    protected ActionResponse asSpecifiedApplicationException(ActionRuntime runtime, LaApplicationException appEx) {
-        return applicationExceptionHandler.handle(appEx);
+    //                                Handled by Application
+    //                                ----------------------
+    protected ActionResponse handleByApplication(RuntimeException cause) {
+        return handledAppExCall.handle(createApplicationExceptionHandler(cause));
+    }
+
+    protected ApplicationExceptionHandler createApplicationExceptionHandler(RuntimeException cause) {
+        return new ApplicationExceptionHandler(cause, messages -> {
+            sessionManager.errors().saveMessages(messages);
+        });
     }
 
     // -----------------------------------------------------
-    //                                              Embedded
-    //                                              --------
+    //                        Embedded Application Exception
+    //                        ------------------------------
     protected ActionResponse asEmbeddedApplicationException(ActionRuntime runtime, LaApplicationException appEx) {
         ActionResponse response = ActionResponse.undefined();
         if (appEx instanceof LoginUnauthorizedException) {
@@ -147,8 +161,8 @@ public class ApplicationExceptionResolver {
     }
 
     // -----------------------------------------------------
-    //                                               DBFlute
-    //                                               -------
+    //                         DBFlute Application Exception
+    //                         -----------------------------
     protected ActionResponse asDBFluteApplicationException(ActionRuntime runtime, RuntimeException cause) {
         final ActionResponse response;
         if (cause instanceof EntityAlreadyDeletedException) {
