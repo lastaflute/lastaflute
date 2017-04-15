@@ -28,17 +28,18 @@ public interface LaActionDocs {
      * <span style="color: #0000C0">Product</span>Action#<span style="color: #0000C0">list</span>() =&gt; <span style="color: #994747">/product/list/</span>
      * <span style="color: #0000C0">ProductList</span>Action#index() =&gt; <span style="color: #994747">/product/list/</span>
      * <span style="color: #0000C0">Mypage</span>Action#index() =&gt; <span style="color: #994747">/mypage/</span>
+     * <span style="color: #0000C0">Mypage</span>Action#get$index() =&gt; <span style="color: #994747">/mypage/ of HTTP method: GET</span>
      * 
      * <span style="font-size: 130%; color: #553000">[URL Parameter]</span>
      * <span style="color: #70226C">public</span> HtmlResponse index(<span style="color: #994747">Integer pageNumber</span>) { <span style="color: #3F7E5E">// /product/list/3</span>
      * <span style="color: #70226C">public</span> HtmlResponse index(<span style="color: #994747">OptionalThing&lt;Integer&gt;</span> pageNumber) { <span style="color: #3F7E5E">// /product/list/3 or /product/list/</span>
      * 
-     * <span style="color: #3F7E5E">// /product/list/mystic/ikspiary/oneman/ (sea=mystic, land=oneman)</span>
-     * &#064;Execute(<span style="color: #994747">urlPattern</span> = <span style="color: #2A00FF">"{}/ikspiary/{}"</span>)
-     * <span style="color: #70226C">public</span> HtmlResponse index(String <span style="color: #553000">sea</span>, String <span style="color: #553000">land</span>) {
+     * <span style="color: #3F7E5E">// /product/list/mystic/piari/oneman/ (sea=mystic, land=oneman)</span>
+     * &#064;Execute(<span style="color: #994747">urlPattern</span> = <span style="color: #2A00FF">"{}/@word/{}"</span>)
+     * <span style="color: #70226C">public</span> HtmlResponse piari(String <span style="color: #553000">sea</span>, String <span style="color: #553000">land</span>) {
      * 
      * <span style="font-size: 130%; color: #553000">[Action Form]</span> <span style="color: #3F7E5E">// for POST, GET parameter or JSON body</span>
-     * <span style="color: #70226C">public</span> HtmlResponse doSignin(<span style="color: #994747">SinginForm form</span>) { <span style="color: #3F7E5E">// POST (or also GET)</span>
+     * <span style="color: #70226C">public</span> HtmlResponse signin(<span style="color: #994747">SinginForm form</span>) { <span style="color: #3F7E5E">// POST (or also GET)</span>
      * 
      * <span style="color: #3F7E5E">// e.g. /.../list/3?favoriteCode=sea&nextName=land</span>
      * <span style="color: #70226C">public</span> HtmlResponse list(<span style="color: #994747">Integer pageNumber, SinginForm form</span>) { <span style="color: #3F7E5E">// GET</span>
@@ -96,10 +97,9 @@ public interface LaActionDocs {
      * o forwardByParam(actionType, params) <span style="color: #3F7E5E">// by the GET parameter, /product/list?sea=mystic</span>
      * o forwardWith(actionType, moreUrl_or_params) <span style="color: #3F7E5E">// with various parameters</span>
      * 
-     * o toActionUrl(actionType [with chain]) <span style="color: #3F7E5E">// build action URL by action type e.g. /product/list</span>
-     * 
      * <span style="font-size: 130%; color: #553000">[User Info]</span>
      * o getUserBean() <span style="color: #3F7E5E">// get bean of login user</span>
+     * o createMessages() <span style="color: #3F7E5E">// create user messages as type-safe</span>
      * 
      * <span style="font-size: 130%; color: #553000">[Double Submit]</span>
      * o saveToken() <span style="color: #3F7E5E">// save the transaction token to session</span>
@@ -107,11 +107,29 @@ public interface LaActionDocs {
      * o verifyTokenKeep() <span style="color: #3F7E5E">// verify the request token keeping the saved token</span>
      * 
      * <span style="font-size: 130%; color: #553000">[Verify Anything]</span>
-     * o verifyOrClientError() <span style="color: #3F7E5E">// verify true or e.g. 404</span>
+     * o verifyOrClientError() <span style="color: #3F7E5E">// verify true or e.g. 400</span>
      * o verifyOrIllegalTransition() <span style="color: #3F7E5E">// verify true or illegal transition exception</span>
      * </pre>
      */
     default void document1_CallableSuperMethod() {
+        throw new IllegalStateException("Cannot call it");
+    }
+
+    /**
+     * You can call the following methods defined at super class in your actions.
+     * <pre>
+     * <span style="font-size: 130%; color: #553000">[Action Hook]</span>
+     * o hookBefore(runtime) <span style="color: #3F7E5E">// hook before action execution</span>
+     * o hookFinally(runtime) <span style="color: #3F7E5E">// hook finally of action execution</span>
+     *
+     * <span style="font-size: 130%; color: #553000">[HTML Response]</span>
+     * o setupHtmlData(runtime) <span style="color: #3F7E5E">// set up data that always needs for HTML rendering</span>
+     *
+     * <span style="font-size: 130%; color: #553000">[Application Exception]</span>
+     * o handleApplicationException(runtime, handler) <span style="color: #3F7E5E">// handle as your own rule</span>
+     * </pre>
+     */
+    default void document2_OverridableSuperMethod() {
         throw new IllegalStateException("Cannot call it");
     }
 
@@ -138,7 +156,7 @@ public interface LaActionDocs {
      * o CsrfManager csrfManager <span style="color: #3F7E5E">// e.g. beginToken(), verifyToken()</span>
      * </pre>
      */
-    default void document2_InjectableLastaComponent() {
+    default void document3_InjectableLastaComponent() {
         throw new IllegalStateException("Cannot call it");
     }
 
@@ -170,7 +188,7 @@ public interface LaActionDocs {
      *   |-web
      * </pre>
      */
-    default void document3_InjectableQuickComponent() {
+    default void document4_InjectableQuickComponent() {
         throw new IllegalStateException("Cannot call it");
     }
 
