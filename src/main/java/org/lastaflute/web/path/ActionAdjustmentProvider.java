@@ -125,7 +125,7 @@ public interface ActionAdjustmentProvider {
 
     /**
      * Adjust action response reflecting.
-     * @return The option of API response. (NullAllowed: if null, no option)
+     * @return The option of action response reflecting. (NullAllowed: if null, no option)
      */
     default ResponseReflectingOption adjustResponseReflecting() {
         return null;
@@ -136,6 +136,14 @@ public interface ActionAdjustmentProvider {
      * @return The setupper of hibernate configuration. (NullAllowed: if null, no configuration)
      */
     default VaConfigSetupper adjustValidatorConfig() {
+        return null;
+    }
+
+    /**
+     * Adjust application exception handling.
+     * @return The option of API response. (NullAllowed: if null, no option)
+     */
+    default ApplicationExceptionOption adjustApplicationExceptionHandling() {
         return null;
     }
 }

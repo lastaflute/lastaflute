@@ -27,9 +27,17 @@ public class DoubleSubmittedRequestException extends MessageResponseApplicationE
 
     public DoubleSubmittedRequestException(String msg, MessageResponseHook responseHook, UserMessages messages) {
         super(msg, responseHook, messages);
+        initializeOption();
     }
 
     public DoubleSubmittedRequestException(String msg, MessageResponseHook responseHook, UserMessages messages, Throwable cause) {
         super(msg, responseHook, messages, cause);
+        initializeOption();
+    }
+
+    protected void initializeOption() {
+        // double submit is rare case because of client application's check
+        // so enable info logging here by jflute (2017/04/15)
+        //withoutInfo(); // obviously double submit does not need info logging
     }
 }

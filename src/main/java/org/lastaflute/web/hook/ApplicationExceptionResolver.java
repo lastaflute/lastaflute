@@ -34,6 +34,7 @@ import org.lastaflute.web.exception.MessageResponseApplicationException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.exception.LoginFailureException;
 import org.lastaflute.web.login.exception.LoginUnauthorizedException;
+import org.lastaflute.web.path.ApplicationExceptionOption;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
@@ -166,33 +167,29 @@ public class ApplicationExceptionResolver {
     //                                                                       Show Handling
     //                                                                       =============
     protected void showApplicationExceptionHandling(ActionRuntime runtime, RuntimeException cause, ActionResponse response) {
-        showAppEx(cause, () -> {
+        logAppEx(cause, () -> {
             // not show forwardTo because of forwarding log later
             final StringBuilder sb = new StringBuilder();
-            sb.append("...Handling application exception:");
-            sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
-            sb.append("\n[Application Exception]");
-            sb.append("\n action   : ").append(runtime);
-            sb.append("\n response : ").append(response);
-            sessionManager.errors().get().ifPresent(errors -> {
-                sb.append("\n messages : ").append(errors.toString());
-            });
-            buildApplicationExceptionStackTrace(cause, sb, 0);
-            sb.append("\n_/_/_/_/_/_/_/_/_/_/");
+            buildAppExHeader(sb, runtime, cause, response);
+            buildAppExStackTrace(sb, cause, 0);
+            buildAppExFooter(sb);
             return sb.toString();
         });
     }
 
-    protected void showAppEx(RuntimeException cause, Supplier<String> msgSupplier) {
-        // to trace it in production just in case
-        // several exception is depend on circumstances
-        // whether application exception or not 
-        if (logger.isInfoEnabled()) {
-            logger.info(msgSupplier.get());
-        }
+    protected StringBuilder buildAppExHeader(StringBuilder sb, ActionRuntime runtime, RuntimeException cause, ActionResponse response) {
+        sb.append("...Handling application exception:");
+        sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
+        sb.append("\n[Application Exception]");
+        sb.append("\n action   : ").append(runtime);
+        sb.append("\n response : ").append(response);
+        sessionManager.errors().get().ifPresent(errors -> {
+            sb.append("\n messages : ").append(errors.toString());
+        });
+        return sb;
     }
 
-    protected void buildApplicationExceptionStackTrace(Throwable cause, StringBuilder sb, int nestLevel) {
+    protected void buildAppExStackTrace(StringBuilder sb, Throwable cause, int nestLevel) {
         sb.append(LF).append(nestLevel > 0 ? "Caused by: " : "");
         sb.append(cause.getClass().getName()).append(": ").append(cause.getMessage());
         final StackTraceElement[] stackTrace = cause.getStackTrace();
@@ -220,8 +217,37 @@ public class ApplicationExceptionResolver {
         }
         final Throwable nested = cause.getCause();
         if (nested != null && nested != cause) {
-            buildApplicationExceptionStackTrace(nested, sb, nestLevel + 1);
+            buildAppExStackTrace(sb, nested, nestLevel + 1);
         }
+    }
+
+    protected void logAppEx(RuntimeException cause, Supplier<String> msgSupplier) {
+        if (isAppExWithoutInfo(cause)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(msgSupplier.get());
+            }
+        } else { // mainly here
+            // to trace it in production just in case
+            // several exception is depend on circumstances whether application exception or not
+            if (logger.isInfoEnabled()) {
+                logger.info(msgSupplier.get());
+            }
+        }
+    }
+
+    protected boolean isAppExWithoutInfo(RuntimeException cause) {
+        if (cause instanceof LaApplicationException && ((LaApplicationException) cause).isHandledWithoutInfo()) {
+            return true;
+        }
+        final ApplicationExceptionOption option = requestManager.getActionAdjustmentProvider().adjustApplicationExceptionHandling();
+        if (option != null && option.getAppExInfoSuppressor().map(sup -> sup.isSuppress(cause)).orElse(false)) {
+            return true;
+        }
+        return false;
+    }
+
+    protected void buildAppExFooter(final StringBuilder sb) {
+        sb.append("\n_/_/_/_/_/_/_/_/_/_/");
     }
 
     // ===================================================================================
