@@ -29,23 +29,24 @@ public class ApplicationExceptionOption {
     //                                                                           =========
     protected OptionalThing<AppExInfoSuppressor> appExInfoSuppressor = OptionalThing.empty();
 
-    public static interface AppExInfoSuppressor {
-
-        boolean isSuppress(RuntimeException cause);
-    }
-
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
     // -----------------------------------------------------
     //                                       Info Suppressor
     //                                       ---------------
-    public ApplicationExceptionOption suppressNotice(AppExInfoSuppressor suppressor) {
+    public ApplicationExceptionOption suppressInfo(AppExInfoSuppressor suppressor) {
         if (suppressor == null) {
             throw new IllegalArgumentException("The argument 'suppressor' should not be null.");
         }
         this.appExInfoSuppressor = OptionalThing.of(suppressor);
         return this;
+    }
+
+    @FunctionalInterface
+    public static interface AppExInfoSuppressor {
+
+        boolean isSuppress(RuntimeException cause);
     }
 
     // ===================================================================================
