@@ -159,7 +159,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
 
     protected GodHandMonologue createGodHandMonologue(ActionRuntime runtime) {
         return newGodHandMonologue(createGodHandResource(runtime), newEmbeddedMessageKeySupplier(), handler -> {
-            handleApplicationException(handler);
+            handleApplicationException(runtime, handler);
             return handler.getResponse();
         });
     }
@@ -168,16 +168,17 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
      * Handle the application exception before framework's handling process.
      * <pre>
      * {@literal @}Override
-     * <span style="color: #77226C">protected</span> void <span style="color: #CC4747">handleApplicationException</span>(ApplicationExceptionHandler <span style="color: #553000">handler</span>) {
+     * <span style="color: #77226C">protected</span> void <span style="color: #CC4747">handleApplicationException</span>(ActionRuntime <span style="color: #553000">runtime</span>, ApplicationExceptionHandler <span style="color: #553000">handler</span>) {
      *     <span style="color: #77226C">super</span>.handleApplicationException(<span style="color: #553000">handler</span>);
      *     <span style="color: #553000">handler</span>.<span style="color: #994747">handle</span>(EntityAlreadyDeletedException.<span style="color: #77226C">class</span>, createMessages().addErrors...(<span style="color: #0000C0">GLOBAL</span>), <span style="color: #553000">cause</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
      *         <span style="color: #77226C">return</span> asHtml(<span style="color: #0000C0">path_...</span>);
      *     });
      * }
      * </pre>
+     * @param runtime The runtime object of current action. (NotNull)
      * @param handler The handler for the thrown application exception. (NotNull)
      */
-    protected void handleApplicationException(ApplicationExceptionHandler handler) { // application may override
+    protected void handleApplicationException(ActionRuntime runtime, ApplicationExceptionHandler handler) { // application may override
     }
 
     protected GodHandMonologue newGodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier supplier, HandledAppExCall call) {
@@ -200,6 +201,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     /**
+     * Set up data that always needs for HTML rendering.
      * @param runtime The runtime object of action. (NotNull)
      */
     protected void setupHtmlData(ActionRuntime runtime) { // application may override

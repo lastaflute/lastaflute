@@ -52,7 +52,7 @@ public class ApplicationExceptionHandler {
      * Handle application exception as your rule.
      * <pre>
      * {@literal @}Override
-     * <span style="color: #77226C">protected</span> void handleApplicationException(ApplicationExceptionHandler <span style="color: #553000">handler</span>) {
+     * <span style="color: #77226C">protected</span> void handleApplicationException(ActionRuntime <span style="color: #553000">runtime</span>, ApplicationExceptionHandler <span style="color: #553000">handler</span>) {
      *     <span style="color: #77226C">super</span>.handleApplicationException(<span style="color: #553000">handler</span>);
      *     <span style="color: #553000">handler</span>.<span style="color: #CC4747">handle</span>(EntityAlreadyDeletedException.<span style="color: #77226C">class</span>, createMessages().addErrors...(<span style="color: #0000C0">GLOBAL</span>), <span style="color: #553000">cause</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
      *         <span style="color: #77226C">return</span> asHtml(<span style="color: #0000C0">path_...</span>);
