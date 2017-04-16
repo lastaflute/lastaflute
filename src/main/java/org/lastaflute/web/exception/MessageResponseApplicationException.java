@@ -48,6 +48,11 @@ public class MessageResponseApplicationException extends MessagingApplicationExc
         this.responseHook = responseHook;
     }
 
+    @Override
+    public MessageResponseApplicationException withoutInfo() {
+        return (MessageResponseApplicationException) super.withoutInfo();
+    }
+
     // ===================================================================================
     //                                                                       Response Hook
     //                                                                       =============

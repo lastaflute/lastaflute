@@ -17,27 +17,22 @@ package org.lastaflute.web;
 
 import javax.annotation.Resource;
 
-import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionStage;
-import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.path.ActionPathResolver;
-import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.response.StreamResponse;
 import org.lastaflute.web.response.XmlResponse;
 import org.lastaflute.web.response.next.ForwardNext;
-import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
-import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.ActionValidator;
 
 /**
@@ -53,43 +48,43 @@ public abstract class LastaAction {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    /** The manager of time. (NotNull) */
+    /** The manager of time. (NotNull: after initialization) */
     @Resource
     private TimeManager timeManager;
 
-    /** The manager of JSON. (NotNull) */
+    /** The manager of JSON. (NotNull: after initialization) */
     @Resource
     private JsonManager jsonManager;
 
-    /** The manager of message. (NotNull) */
+    /** The manager of message. (NotNull: after initialization) */
     @Resource
     private MessageManager messageManager;
 
-    /** The manager of asynchronous. (NotNull) */
+    /** The manager of asynchronous. (NotNull: after initialization) */
     @Resource
     private AsyncManager asycnManager;
 
-    /** The stage of transaction. (NotNull) */
+    /** The stage of transaction. (NotNull: after initialization) */
     @Resource
     private TransactionStage transactionStage;
 
-    /** The manager of request. (NotNull) */
+    /** The manager of request. (NotNull: after initialization) */
     @Resource
     private RequestManager requestManager;
 
-    /** The manager of response. (NotNull) */
+    /** The manager of response. (NotNull: after initialization) */
     @Resource
     private ResponseManager responseManager;
 
-    /** The manager of session. (NotNull) */
+    /** The manager of session. (NotNull: after initialization) */
     @Resource
     private SessionManager sessionManager;
 
-    /** The manager of API. (NotNull) */
+    /** The manager of API. (NotNull: after initialization) */
     @Resource
     private ApiManager apiManager;
 
-    /** The resolver of action, e.g. it can convert action type to action path. (NotNull) */
+    /** The resolver of action, e.g. it can convert action type to action path. (NotNull: after initialization) */
     @Resource
     private ActionPathResolver actionPathResolver;
 
@@ -97,7 +92,7 @@ public abstract class LastaAction {
     //                                                                          Validation
     //                                                                          ==========
     protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> createValidator() { // overridden as type-safe
-        return createValidator(myValidationGroups());
+        return doCreateValidator(myValidationGroups());
     }
 
     protected Class<?>[] myValidationGroups() { // you can override
@@ -105,24 +100,13 @@ public abstract class LastaAction {
     }
 
     @SuppressWarnings("unchecked")
-    protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> createValidator(Class<?>... groups) { // for explicit groups
-        return new ActionValidator<MESSAGES>(messageManager // to get validation message
-                , () -> requestManager.getUserLocale() // used with messageManager
+    protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> doCreateValidator(Class<?>... groups) { // for explicit groups
+        // cannot cache here, not to keep (random) action instance
+        // (it uses the instance method createMessage() for application type)
+        return new ActionValidator<MESSAGES>(requestManager // has message manager, user locacle
                 , () -> (MESSAGES) createMessages() // for new user messages
-                , () -> handleApiValidationError() // apiFailureHook
-                , groups);
-    }
-
-    protected ApiResponse handleApiValidationError() { // for API
-        final ActionRuntime runtime = LaActionRuntimeUtil.getActionRuntime();
-        final OptionalThing<UserMessages> messages = requestManager.errors().get();
-        final ApiFailureResource resource = newApiFailureResource(runtime, messages, requestManager);
-        return requestManager.getApiManager().handleValidationError(resource);
-    }
-
-    protected ApiFailureResource newApiFailureResource(ActionRuntime runtime, OptionalThing<UserMessages> messages,
-            RequestManager requestManager) {
-        return new ApiFailureResource(runtime, messages, requestManager);
+                , groups // validator runtime groups
+        );
     }
 
     /**

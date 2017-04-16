@@ -9,24 +9,33 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
+package org.lastaflute.web.servlet.request;
 
-import org.lastaflute.core.exception.LaApplicationException;
-import org.lastaflute.web.response.ActionResponse;
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * @author jflute
+ * @since 0.9.5 (2017/04/15 Saturday)
  */
-@FunctionalInterface
-public interface ApplicationExceptionHandler {
+public class WrittenOutputStreamWrapper extends OutputStream {
 
-    /**
-     * @param appEx The original application exception, not embedded application exception. (NotNull)
-     * @return The handled response for the exception. (NullAllowed)
-     */
-    ActionResponse handle(LaApplicationException appEx);
+    protected final OutputStream nativeStream;
+
+    public WrittenOutputStreamWrapper(OutputStream nativeStream) {
+        this.nativeStream = nativeStream;
+    }
+
+    @Override
+    public void write(int b) throws IOException {
+        nativeStream.write(b);
+    }
+
+    public OutputStream getNativeStream() {
+        return nativeStream;
+    }
 }

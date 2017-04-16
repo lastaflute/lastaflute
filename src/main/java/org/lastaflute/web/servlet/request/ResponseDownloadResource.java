@@ -18,7 +18,7 @@ package org.lastaflute.web.servlet.request;
 import java.util.Map;
 
 import org.dbflute.helper.StringKeyMap;
-import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
+import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
 
 /**
@@ -33,7 +33,7 @@ public class ResponseDownloadResource {
     protected String contentType;
     protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected byte[] byteData;
-    protected WritternStreamCall streamCall;
+    protected WrittenStreamCall streamCall;
     protected WritternZipStreamCall zipStreamCall;
     protected Integer contentLength;
     protected boolean returnAsEmptyBody;
@@ -127,18 +127,18 @@ public class ResponseDownloadResource {
         this.byteData = data;
     }
 
-    public ResponseDownloadResource stream(WritternStreamCall streamCall) {
+    public ResponseDownloadResource stream(WrittenStreamCall streamCall) {
         doStream(streamCall);
         return this;
     }
 
-    public ResponseDownloadResource stream(WritternStreamCall streamCall, int contentLength) {
+    public ResponseDownloadResource stream(WrittenStreamCall streamCall, int contentLength) {
         doStream(streamCall);
         this.contentLength = contentLength;
         return this;
     }
 
-    protected void doStream(WritternStreamCall streamCall) {
+    protected void doStream(WrittenStreamCall streamCall) {
         assertArgumentNotNull("streamCall", streamCall);
         if (byteData != null) {
             throw new IllegalStateException("The byte data already exists: " + byteData);
@@ -177,7 +177,7 @@ public class ResponseDownloadResource {
         return streamCall != null;
     }
 
-    public WritternStreamCall getStreamCall() {
+    public WrittenStreamCall getStreamCall() {
         return streamCall;
     }
 

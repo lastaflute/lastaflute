@@ -59,6 +59,11 @@ public class MessagingApplicationException extends LaApplicationException {
         // resource check is in application message handling
     }
 
+    @Override
+    public MessagingApplicationException withoutInfo() {
+        return (MessagingApplicationException) super.withoutInfo();
+    }
+
     // ===================================================================================
     //                                                                 Application Message
     //                                                                 ===================

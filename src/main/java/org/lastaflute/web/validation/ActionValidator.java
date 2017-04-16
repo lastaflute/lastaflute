@@ -43,6 +43,7 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Valid;
 import javax.validation.Validation;
 import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import javax.validation.bootstrap.GenericBootstrap;
 import javax.validation.constraints.NotNull;
 import javax.validation.groups.Default;
@@ -65,8 +66,15 @@ import org.lastaflute.core.message.supplier.UserMessagesCreator;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
+import org.lastaflute.web.api.ApiFailureResource;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.response.ApiResponse;
+import org.lastaflute.web.ruts.process.ActionRuntime;
+import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.util.LaActionRuntimeUtil;
 import org.lastaflute.web.validation.exception.ClientErrorByValidatorException;
 import org.lastaflute.web.validation.exception.ValidationErrorException;
+import org.lastaflute.web.validation.exception.ValidationStoppedException;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureBean;
 import org.lastaflute.web.validation.theme.conversion.TypeFailureElement;
 import org.lastaflute.web.validation.theme.conversion.ValidateTypeFailure;
@@ -136,42 +144,70 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     // -----------------------------------------------------
+    //                                      Cached Validator
+    //                                      ----------------
+    protected static Validator cachedValidator;
+
+    // -----------------------------------------------------
     //                                               Various
     //                                               -------
+    protected static final VaConfigSetupper EMPTY_CONF_SETUPPER = conf -> {};
+    protected static final String MESSAGE_HINT_DELIMITER = "$$df:messageKeyDelimiter$$";
     protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final MessageManager messageManager;
-    protected final MessageLocaleProvider messageLocaleProvider;
-    protected final UserMessagesCreator<MESSAGES> userMessagesCreator;
-    protected final VaErrorHook apiFailureHook;
-    protected final Class<?>[] runtimeGroups; // not null
+    protected final RequestManager requestManager; // not null, *embedded in hibernate
+    protected final MessageManager messageManager; // not null, *embedded in hibernate
+    protected final MessageLocaleProvider messageLocaleProvider; // not null, *embedded in hibernate
+    protected final UserMessagesCreator<MESSAGES> messagesCreator; // not null, used by action process
+    protected final Class<?>[] runtimeGroups; // not null, used by action process
+    protected final VaErrorHook apiFailureHook; // not null, used by action process
+    protected final Validator hibernateValidator; // not null, validator is thread-safe
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionValidator(MessageManager messageManager, MessageLocaleProvider messageLocaleProvider,
-            UserMessagesCreator<MESSAGES> userMessagesCreator, VaErrorHook apiFailureHook, Class<?>... runtimeGroups) {
-        assertArgumentNotNull("messageManager", messageManager);
-        assertArgumentNotNull("messageLocaleProvider", messageLocaleProvider);
-        assertArgumentNotNull("userMessagesCreator", userMessagesCreator);
-        assertArgumentNotNull("apiFailureHook", apiFailureHook);
+    public ActionValidator(RequestManager requestManager // has message manager, user locale
+            , UserMessagesCreator<MESSAGES> messagesCreator // for new user messages
+            , Class<?>... runtimeGroups // validator runtime groups
+    ) {
+        assertArgumentNotNull("requestManager", requestManager);
+        assertArgumentNotNull("messagesCreator", messagesCreator);
         assertArgumentNotNull("runtimeGroups", runtimeGroups);
-        this.messageManager = messageManager;
-        this.messageLocaleProvider = messageLocaleProvider;
-        this.userMessagesCreator = userMessagesCreator;
-        this.apiFailureHook = apiFailureHook;
-        this.runtimeGroups = runtimeGroups;
         assertGroupsNotContainsClientError(runtimeGroups);
+        this.requestManager = requestManager;
+        this.messageManager = requestManager.getMessageManager();
+        this.messageLocaleProvider = () -> provideUserLocale();
+        this.messagesCreator = messagesCreator;
+        this.runtimeGroups = runtimeGroups;
+        this.apiFailureHook = () -> processApiValidationError();
+        this.hibernateValidator = comeOnHibernateValidator(() -> adjustValidatorConfig());
     }
 
     protected void assertGroupsNotContainsClientError(Class<?>... groups) {
         Stream.of(groups).filter(tp -> tp.equals(CLIENT_ERROR_TYPE)).findAny().ifPresent(groupType -> {
-            String msg = "Cannot specify client error as group, you can use it only at annotation: ";
-            throw new IllegalStateException(msg + Arrays.asList(groups));
+            String msg = "Cannot specify client error as group, you can use it only at annotation: " + Arrays.asList(groups);
+            throw new IllegalStateException(msg);
         });
+    }
+
+    protected Locale provideUserLocale() { // in callback
+        return requestManager.getUserLocale();
+    }
+
+    protected ApiResponse processApiValidationError() { // for API, in callback
+        final ActionRuntime runtime = LaActionRuntimeUtil.getActionRuntime();
+        final OptionalThing<UserMessages> messages = requestManager.errors().get();
+        final ApiFailureResource resource = new ApiFailureResource(runtime, messages, requestManager);
+        return requestManager.getApiManager().handleValidationError(resource);
+    }
+
+    protected VaConfigSetupper adjustValidatorConfig() { // in callback
+        final ActionAdjustmentProvider adjustmentProvider = requestManager.getActionAdjustmentProvider();
+        final VaConfigSetupper setupper = adjustmentProvider.adjustValidatorConfig();
+        return setupper != null ? setupper : EMPTY_CONF_SETUPPER;
     }
 
     // ===================================================================================
@@ -210,7 +246,6 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // -----------------------------------------------------
     //                                               Control
     //                                               -------
-
     protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
         verifyFormType(form);
         return actuallyValidate(wrapAsValidIfNeeds(form), moreValidationLambda, validationErrorLambda);
@@ -270,17 +305,76 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     // ===================================================================================
     //                                                                 Hibernate Validator
     //                                                                 ===================
+    // -----------------------------------------------------
+    //                                 Validate by Hibernate
+    //                                 ---------------------
     protected Set<ConstraintViolation<Object>> hibernateValidate(Object form, Class<?>[] groups) {
-        return comeOnHibernateValidator().validate(form, groups);
+        try {
+            return hibernateValidator.validate(form, groups);
+        } catch (RuntimeException e) {
+            handleHibernateValidatorException(form, groups, e);
+            return null; // unreachable
+        }
+    }
+
+    protected void handleHibernateValidatorException(Object form, Class<?>[] groups, RuntimeException e) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Failed to validate so stop it.");
+        br.addItem("Advice");
+        br.addElement("Confirm the nested exception message.");
+        br.addItem("Form or Body");
+        br.addElement(form.getClass().getName());
+        br.addItem("Groups");
+        br.addElement(Stream.of(groups).map(gr -> gr.getSimpleName()).collect(Collectors.joining(", ")));
+        final String msg = br.buildExceptionMessage();
+        throw new ValidationStoppedException(msg, e);
     }
 
     // -----------------------------------------------------
-    //                                    Validator Settings
-    //                                    ------------------
-    protected Validator comeOnHibernateValidator() {
-        final Configuration<?> configure = newGenericBootstrap().configure();
-        configure.messageInterpolator(newResourceBundleMessageInterpolator());
-        return configure.buildValidatorFactory().getValidator();
+    //                                     Prepare Hibernate
+    //                                     -----------------
+    protected Validator comeOnHibernateValidator(Supplier<VaConfigSetupper> configSetupperSupplier) {
+        if (isSuppressHibernateValidatorCache()) {
+            return createHibernateValidator(configSetupperSupplier);
+        } else { // basically here
+            if (cachedValidator != null) {
+                return cachedValidator;
+            }
+            synchronized (ActionValidator.class) {
+                if (cachedValidator != null) {
+                    return cachedValidator;
+                }
+                cachedValidator = createHibernateValidator(configSetupperSupplier);
+                return cachedValidator;
+            }
+        }
+    }
+
+    protected boolean isSuppressHibernateValidatorCache() { // just in case, for emergency
+        return false;
+    }
+
+    protected Validator createHibernateValidator(Supplier<VaConfigSetupper> configSetupperSupplier) {
+        return buildValidatorFactory(configSetupperSupplier.get()).getValidator(); // about 5ms
+    }
+
+    protected ValidatorFactory buildValidatorFactory(VaConfigSetupper hibernateConfigSetupper) {
+        final Configuration<?> configuration = createConfiguration();
+        setupFrameworkConfiguration(configuration);
+        setupYourConfiguration(configuration, hibernateConfigSetupper);
+        return configuration.buildValidatorFactory();
+    }
+
+    protected void setupFrameworkConfiguration(Configuration<?> configuration) {
+        configuration.messageInterpolator(newResourceBundleMessageInterpolator());
+    }
+
+    protected void setupYourConfiguration(Configuration<?> configuration, VaConfigSetupper hibernateConfigSetupper) {
+        hibernateConfigSetupper.setup(configuration);
+    }
+
+    protected Configuration<?> createConfiguration() {
+        return newGenericBootstrap().configure();
     }
 
     protected GenericBootstrap newGenericBootstrap() {
@@ -328,7 +422,11 @@ public class ActionValidator<MESSAGES extends UserMessages> {
             //final String realKey = filterMessageKey(key);
             final OptionalThing<String> opt = messageManager.findMessage(locale, key);
             checkMainMessageNotFound(opt, key);
-            return opt.orElse(null);
+            return opt.map(msg -> toHintMessage(key, msg)).orElse(null); // filtered later
+        }
+
+        protected String toHintMessage(String key, String msg) {
+            return key + MESSAGE_HINT_DELIMITER + msg;
         }
 
         protected void checkMainMessageNotFound(OptionalThing<String> opt, String key) {
@@ -431,16 +529,27 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                       Messages Assist
     //                                       ---------------
     protected MESSAGES prepareActionMessages() {
-        return userMessagesCreator.create();
+        return messagesCreator.create();
     }
 
     protected void registerActionMessage(UserMessages messages, ConstraintViolation<Object> vio) {
         final String propertyPath = extractPropertyPath(vio);
-        final String message = filterMessageItem(extractMessage(vio), propertyPath);
+        final String plainMessage = filterMessageItem(extractMessage(vio), propertyPath);
+        final String delimiter = MESSAGE_HINT_DELIMITER;
+        final String messageItself;
+        final String messageKey;
+        if (plainMessage.contains(delimiter)) { // basically here
+            messageItself = Srl.substringFirstRear(plainMessage, delimiter);
+            messageKey = Srl.substringFirstFront(plainMessage, delimiter);
+        } else { // just in case
+            messageItself = plainMessage;
+            messageKey = null;
+        }
         final ConstraintDescriptor<?> descriptor = vio.getConstraintDescriptor();
         final Annotation annotation = descriptor.getAnnotation();
-        final Set<Class<?>> groups = descriptor.getGroups();
-        messages.add(propertyPath, newDirectActionMessage(message, annotation, groups.toArray(new Class<?>[groups.size()])));
+        final Set<Class<?>> groupSet = descriptor.getGroups();
+        final Class<?>[] groups = groupSet.toArray(new Class<?>[groupSet.size()]);
+        messages.add(propertyPath, createDirectMessage(messageItself, annotation, groups, messageKey));
     }
 
     protected String extractPropertyPath(ConstraintViolation<Object> vio) {
@@ -636,7 +745,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
             completeMsg = buildDefaultTypeMessage(propertyPath, propertyType);
         }
         final ValidateTypeFailure annotation = element.getAnnotation();
-        return newDirectActionMessage(completeMsg, annotation, annotation.groups());
+        return createDirectMessage(completeMsg, annotation, annotation.groups(), messageKey);
     }
 
     protected String buildDefaultTypeMessage(String propertyPath, Class<?> propertyType) {
@@ -750,8 +859,16 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         return messageManager.findMessage(messageLocaleProvider.provide(), messageKey);
     }
 
-    protected UserMessage newDirectActionMessage(String msg, Annotation annotation, Class<?>[] groups) {
-        return UserMessage.asDirectMessage(msg, annotation, groups);
+    protected UserMessage createDirectMessage(String msg, Annotation annotation, Class<?>[] groups, String messageKey) {
+        return UserMessage.asDirectMessage(msg, annotation, groups, unbraceDirectMessageKey(messageKey));
+    }
+
+    protected String unbraceDirectMessageKey(String messageKey) {
+        if (messageKey != null && Srl.isQuotedAnything(messageKey, "{", "}")) {
+            return Srl.unquoteAnything(messageKey, "{", "}");
+        } else {
+            return messageKey;
+        }
     }
 
     // ===================================================================================

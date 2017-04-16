@@ -54,7 +54,7 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
     public NextJourney(PlannedJourneyProvider journeyProvider // fixed resource
             , String routingPath, boolean redirectTo, boolean asIs // routing resources
             , OptionalThing<Object> viewObject // for e.g. mixer2 
-    ) { // for HTML
+    ) { // for HTML (except empty HTML)
         this.journeyProvider = journeyProvider;
         this.routingPath = routingPath;
         this.redirectTo = redirectTo;
@@ -62,7 +62,7 @@ public class NextJourney implements Redirectable, Forwardable, Serializable {
         this.viewObject = viewObject;
     }
 
-    public NextJourney(PlannedJourneyProvider journeyProvider) { // for e.g. JSON, Stream
+    public NextJourney(PlannedJourneyProvider journeyProvider) { // for e.g. JSON, Stream, also empty HTML
         this.journeyProvider = journeyProvider;
         this.routingPath = null; // means no HTML
         this.redirectTo = false;

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.dbflute.system.DBFluteSystem;
 import org.dbflute.util.Srl;
 
 /**
@@ -170,15 +171,39 @@ public class UserMessages implements Serializable {
     // ===================================================================================
     //                                                                   Property Handling
     //                                                                   =================
+    /**
+     * Does the property has user message?
+     * @param property the name of property, which may have user messages. (NotNull)
+     * @return The determination, true or false.
+     */
     public boolean hasMessageOf(String property) {
+        assertArgumentNotNull("property", property);
         final UserMessageItem item = getPropertyItem(property);
         return item != null && !item.getMessageList().isEmpty();
     }
 
-    public boolean hasMessageOf(String property, String key) {
+    /**
+     * Does the property has user message for the message key?
+     * @param property the name of property, which may have user messages. (NotNull)
+     * @param messageKey The message key to find message. (NotNull)
+     * @return The determination, true or false.
+     */
+    public boolean hasMessageOf(String property, String messageKey) {
+        assertArgumentNotNull("property", property);
+        assertArgumentNotNull("messageKey", messageKey);
         final UserMessageItem item = getPropertyItem(property);
         return item != null && item.getMessageList().stream().anyMatch(message -> {
-            return message.getMessageKey().equals(resolveMessageKey(key));
+            final String myKey = resolveMessageKey(messageKey);
+            if (message.isResource()) {
+                if (myKey.equals(resolveMessageKey(message.getMessageKey()))) {
+                    return true;
+                }
+            } else { // direct message
+                if (message.getValidatorMessageKey().filter(vlkey -> resolveMessageKey(vlkey).equals(myKey)).isPresent()) {
+                    return true;
+                }
+            }
+            return false;
         });
     }
 
@@ -228,13 +253,13 @@ public class UserMessages implements Serializable {
         }
     }
 
-    protected String resolveMessageKey(String key) {
+    protected String resolveMessageKey(String messageKey) {
         final String beginMark = MESSAGES_BEGIN_MARK;
         final String endMark = MESSAGES_END_MARK;
-        if (Srl.isQuotedAnything(key, beginMark, endMark)) {
-            return Srl.unquoteAnything(key, beginMark, endMark);
+        if (Srl.isQuotedAnything(messageKey, beginMark, endMark)) {
+            return Srl.unquoteAnything(messageKey, beginMark, endMark);
         } else {
-            return key;
+            return messageKey;
         }
     }
 
@@ -311,6 +336,24 @@ public class UserMessages implements Serializable {
     }
 
     // ===================================================================================
+    //                                                                             Display
+    //                                                                             =======
+    /**
+     * @return The string for display, contains line separators. (NotNull)
+     */
+    public String toDisp() {
+        final StringBuilder sb = new StringBuilder();
+        for (String property : toPropertySet()) {
+            sb.append(ln()).append(property);
+            final Iterator<UserMessage> ite = silentAccessByIteratorOf(property);
+            while (ite.hasNext()) {
+                sb.append(ln()).append("  ").append(ite.next());
+            }
+        }
+        return Srl.ltrim(sb.toString());
+    }
+
+    // ===================================================================================
     //                                                                               Lock
     //                                                                              ======
     protected UserMessages lock() {
@@ -334,6 +377,10 @@ public class UserMessages implements Serializable {
         if (value == null) {
             throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
         }
+    }
+
+    protected String ln() {
+        return DBFluteSystem.ln();
     }
 
     // ===================================================================================

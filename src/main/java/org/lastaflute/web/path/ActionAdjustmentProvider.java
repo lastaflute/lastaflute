@@ -23,6 +23,7 @@ import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.process.ActionRuntime;
+import org.lastaflute.web.validation.VaConfigSetupper;
 
 // package is a little strange (path adjustment from the beginning...)
 // but no change for compatible
@@ -124,9 +125,25 @@ public interface ActionAdjustmentProvider {
 
     /**
      * Adjust action response reflecting.
-     * @return The option of API response. (NullAllowed: if null, no option)
+     * @return The option of action response reflecting. (NullAllowed: if null, no option)
      */
     default ResponseReflectingOption adjustResponseReflecting() {
+        return null;
+    }
+
+    /**
+     * Adjust action validator configuration. (called only once if cached)
+     * @return The setupper of hibernate configuration. (NullAllowed: if null, no configuration)
+     */
+    default VaConfigSetupper adjustValidatorConfig() {
+        return null;
+    }
+
+    /**
+     * Adjust application exception handling.
+     * @return The option of API response. (NullAllowed: if null, no option)
+     */
+    default ApplicationExceptionOption adjustApplicationExceptionHandling() {
         return null;
     }
 }

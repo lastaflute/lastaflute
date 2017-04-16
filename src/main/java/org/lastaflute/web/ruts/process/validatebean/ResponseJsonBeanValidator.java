@@ -20,9 +20,7 @@ import java.util.function.Consumer;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.core.message.supplier.MessageLocaleProvider;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -41,14 +39,9 @@ public class ResponseJsonBeanValidator extends ResponseBeanValidator {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ResponseJsonBeanValidator(MessageManager messageManager, MessageLocaleProvider messageLocaleProvider, Object actionExp,
-            boolean warning, JsonResponse<?> response) {
-        super(messageManager, messageLocaleProvider, actionExp, warning);
-        this.response = response;
-    }
-
     public ResponseJsonBeanValidator(RequestManager requestManager, Object actionExp, boolean warning, JsonResponse<?> response) {
-        this(requestManager.getMessageManager(), () -> requestManager.getUserLocale(), actionExp, warning, response);
+        super(requestManager, actionExp, warning);
+        this.response = response;
     }
 
     // ===================================================================================

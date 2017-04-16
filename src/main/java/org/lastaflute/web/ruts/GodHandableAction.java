@@ -44,7 +44,7 @@ import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.ruts.process.exception.ActionCreateFailureException;
-import org.lastaflute.web.servlet.filter.RequestLoggingFilter.WholeShowRequestAttribute;
+import org.lastaflute.web.servlet.filter.RequestLoggingFilter.WholeShowAttribute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.validation.VaErrorHook;
@@ -211,7 +211,7 @@ public class GodHandableAction implements VirtualAction {
             for (TransactionMemoriesProvider provider : providerList) {
                 provider.provide().ifPresent(result -> sb.append("\n*").append(result));
             }
-            final WholeShowRequestAttribute attribute = new WholeShowRequestAttribute(sb.toString());
+            final WholeShowAttribute attribute = new WholeShowAttribute(sb.toString().trim());
             requestManager.setAttribute(LastaWebKey.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
         }
     }

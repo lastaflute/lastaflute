@@ -16,6 +16,7 @@
 package org.lastaflute.web.ruts.process.exception;
 
 import org.lastaflute.core.exception.LaSystemException;
+import org.lastaflute.core.message.UserMessages;
 
 /**
  * @author jflute
@@ -25,11 +26,26 @@ public class ResponseBeanValidationErrorException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public ResponseBeanValidationErrorException(String msg) {
+    protected final Object bean; // not null
+    protected final UserMessages messages; // not null
+
+    public ResponseBeanValidationErrorException(String msg, Object bean, UserMessages messages) {
         super(msg);
+        this.bean = bean;
+        this.messages = messages;
     }
 
-    public ResponseBeanValidationErrorException(String msg, Throwable cause) {
+    public ResponseBeanValidationErrorException(String msg, Throwable cause, Object bean, UserMessages messages) {
         super(msg, cause);
+        this.bean = bean;
+        this.messages = messages;
+    }
+
+    public Object getBean() {
+        return bean;
+    }
+
+    public UserMessages getMessages() {
+        return messages;
     }
 }

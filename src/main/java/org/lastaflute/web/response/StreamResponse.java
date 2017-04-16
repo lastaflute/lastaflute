@@ -25,7 +25,7 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
 import org.lastaflute.web.servlet.request.ResponseManager;
-import org.lastaflute.web.servlet.request.stream.WritternStreamCall;
+import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
 
 /**
@@ -49,7 +49,7 @@ public class StreamResponse implements ActionResponse {
     protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected Integer httpStatus;
     protected byte[] byteData;
-    protected WritternStreamCall streamCall;
+    protected WrittenStreamCall streamCall;
     protected WritternZipStreamCall zipStreamCall;
     protected Integer contentLength;
     protected boolean undefined;
@@ -200,7 +200,7 @@ public class StreamResponse implements ActionResponse {
      * @param writtenStreamLambda The callback for writing stream of download data. (NotNull)
      * @return this. (NotNull)
      */
-    public StreamResponse stream(WritternStreamCall writtenStreamLambda) {
+    public StreamResponse stream(WrittenStreamCall writtenStreamLambda) {
         doStream(writtenStreamLambda);
         return this;
     }
@@ -217,13 +217,13 @@ public class StreamResponse implements ActionResponse {
      * @param contentLength The length of the content.
      * @return this. (NotNull)
      */
-    public StreamResponse stream(WritternStreamCall writtenStreamLambda, int contentLength) {
+    public StreamResponse stream(WrittenStreamCall writtenStreamLambda, int contentLength) {
         doStream(writtenStreamLambda);
         this.contentLength = contentLength;
         return this;
     }
 
-    protected void doStream(WritternStreamCall writtenStreamLambda) {
+    protected void doStream(WrittenStreamCall writtenStreamLambda) {
         assertArgumentNotNull("writtenStreamLambda", writtenStreamLambda);
         assertDefinedState("stream");
         if (byteData != null) {
@@ -277,7 +277,7 @@ public class StreamResponse implements ActionResponse {
         return byteData;
     }
 
-    public WritternStreamCall getStreamCall() {
+    public WrittenStreamCall getStreamCall() {
         return streamCall;
     }
 

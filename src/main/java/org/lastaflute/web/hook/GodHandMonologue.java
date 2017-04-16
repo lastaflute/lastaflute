@@ -19,7 +19,7 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.exception.ApplicationExceptionHandler;
+import org.lastaflute.web.hook.ApplicationExceptionResolver.HandledAppExCall;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
@@ -47,13 +47,12 @@ public class GodHandMonologue {
     protected final ApiManager apiManager;
     protected final ExceptionTranslator exceptionTranslator;
     protected final EmbeddedMessageKeySupplier typicalKeySupplier;
-    protected final ApplicationExceptionHandler applicationExceptionHandler;
+    protected final HandledAppExCall handledAppExCall;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public GodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier typicalKeySupplier,
-            ApplicationExceptionHandler applicationExceptionHandler) {
+    public GodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier typicalKeySupplier, HandledAppExCall handledAppExCall) {
         this.assistantDirector = resource.getAssistantDirector();
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
@@ -61,7 +60,7 @@ public class GodHandMonologue {
         this.apiManager = resource.getApiManager();
         this.exceptionTranslator = resource.getExceptionTranslator();
         this.typicalKeySupplier = typicalKeySupplier;
-        this.applicationExceptionHandler = applicationExceptionHandler;
+        this.handledAppExCall = handledAppExCall;
     }
 
     // ===================================================================================
@@ -96,8 +95,7 @@ public class GodHandMonologue {
     }
 
     protected ApplicationExceptionResolver createApplicationExceptionResolver() { // you can override
-        return new ApplicationExceptionResolver(assistantDirector //
-                , requestManager, sessionManager, loginManager //
-                , apiManager, typicalKeySupplier, applicationExceptionHandler);
+        return new ApplicationExceptionResolver(assistantDirector, requestManager, sessionManager, loginManager, apiManager,
+                typicalKeySupplier, handledAppExCall);
     }
 }

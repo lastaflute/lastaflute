@@ -30,6 +30,7 @@ public abstract class LaApplicationException extends RuntimeException {
     //                                                                           Attribute
     //                                                                           =========
     protected List<LaApplicationMessage> messageList; // lazy loaded
+    protected boolean handledWithoutInfo;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -40,6 +41,15 @@ public abstract class LaApplicationException extends RuntimeException {
 
     public LaApplicationException(String debugMsg, Throwable cause) {
         super(debugMsg, cause);
+    }
+
+    /**
+     * It will be handled without no INFO logging. (DEBUG instead)
+     * @return this. (NotNull)
+     */
+    public LaApplicationException withoutInfo() {
+        this.handledWithoutInfo = true;
+        return this;
     }
 
     // ===================================================================================
@@ -77,5 +87,12 @@ public abstract class LaApplicationException extends RuntimeException {
             String msg = "The value should not be null: variableName=" + variableName;
             throw new IllegalArgumentException(msg);
         }
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public boolean isHandledWithoutInfo() {
+        return handledWithoutInfo;
     }
 }

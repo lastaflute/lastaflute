@@ -29,6 +29,7 @@ import org.lastaflute.unit.mock.core.message.MockMessageManager;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
@@ -277,6 +278,12 @@ public class MockRequestManager implements RequestManager {
     @Override
     public ApiManager getApiManager() {
         return null;
+    }
+
+    @Override
+    public ActionAdjustmentProvider getActionAdjustmentProvider() {
+        return new ActionAdjustmentProvider() {
+        };
     }
 
     @Override

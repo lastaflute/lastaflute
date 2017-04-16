@@ -20,10 +20,9 @@ import java.util.function.Consumer;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
-import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.core.message.supplier.MessageLocaleProvider;
 import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
+import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
  * @author jflute
@@ -34,9 +33,8 @@ public class ResponseSimpleBeanValidator extends ResponseBeanValidator {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ResponseSimpleBeanValidator(MessageManager messageManager, MessageLocaleProvider messageLocaleProvider, Object actionExp,
-            boolean warning) {
-        super(messageManager, messageLocaleProvider, actionExp, warning);
+    public ResponseSimpleBeanValidator(RequestManager requestManager, Object actionExp, boolean warning) {
+        super(requestManager, actionExp, warning);
     }
 
     // ===================================================================================

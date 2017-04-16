@@ -9,19 +9,27 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.request.stream;
+package org.lastaflute.web.validation.exception;
 
-import java.io.IOException;
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
+ * @since 0.9.4 (2017/04/15 Saturday)
  */
-@FunctionalInterface
-public interface WritternStreamCall {
+public class ValidationStoppedException extends LaSystemException {
 
-    void callback(WritternStreamOut out) throws IOException;
+    private static final long serialVersionUID = 1L;
+
+    public ValidationStoppedException(String msg) {
+        super(msg);
+    }
+
+    public ValidationStoppedException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

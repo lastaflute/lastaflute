@@ -29,11 +29,11 @@ import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.message.exception.MessagingApplicationException;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
-import org.lastaflute.web.exception.ApplicationExceptionHandler;
 import org.lastaflute.web.exception.MessageResponseApplicationException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.exception.LoginFailureException;
 import org.lastaflute.web.login.exception.LoginUnauthorizedException;
+import org.lastaflute.web.path.ApplicationExceptionOption;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.HtmlResponse;
@@ -64,21 +64,26 @@ public class ApplicationExceptionResolver {
     protected final OptionalThing<LoginManager> loginManager;
     protected final ApiManager apiManager;
     protected final EmbeddedMessageKeySupplier embeddedMessageKeySupplier;
-    protected final ApplicationExceptionHandler applicationExceptionHandler;
+    protected final HandledAppExCall handledAppExCall;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public ApplicationExceptionResolver(FwAssistantDirector assistantDirector, RequestManager requestManager, SessionManager sessionManager,
             OptionalThing<LoginManager> loginManager, ApiManager apiManager, EmbeddedMessageKeySupplier embeddedMessageKeySupplier,
-            ApplicationExceptionHandler applicationExceptionHandler) {
+            HandledAppExCall handledAppExCall) {
         this.assistantDirector = assistantDirector;
         this.requestManager = requestManager;
         this.sessionManager = sessionManager;
         this.loginManager = loginManager;
         this.apiManager = apiManager;
         this.embeddedMessageKeySupplier = embeddedMessageKeySupplier;
-        this.applicationExceptionHandler = applicationExceptionHandler;
+        this.handledAppExCall = handledAppExCall;
+    }
+
+    public static interface HandledAppExCall {
+
+        ActionResponse handle(ApplicationExceptionHandler handler);
     }
 
     // ===================================================================================
@@ -93,14 +98,18 @@ public class ApplicationExceptionResolver {
      * @return The action response for application exception. (NotNull: and if defined, go to the path, UndefinedAllowed: unhandled as application exception)
      */
     public ActionResponse resolve(ActionRuntime runtime, RuntimeException cause) {
+        final ActionResponse handledBy = handleByApplication(cause);
         final ActionResponse response;
-        if (cause instanceof LaApplicationException) {
-            final LaApplicationException appEx = (LaApplicationException) cause;
-            final ActionResponse specified = asSpecifiedApplicationException(runtime, appEx);
-            response = specified.isDefined() ? specified : asEmbeddedApplicationException(runtime, appEx);
-            reflectEmbeddedApplicationMessagesIfExists(runtime, appEx); // saving messages to session
-        } else { // e.g. framework exception
-            response = asDBFluteApplicationException(runtime, cause); // saving messages to session
+        if (handledBy.isDefined()) { // by application
+            response = handledBy;
+        } else { // embedded
+            if (cause instanceof LaApplicationException) {
+                final LaApplicationException appEx = (LaApplicationException) cause;
+                response = asEmbeddedApplicationException(runtime, appEx);
+                reflectEmbeddedApplicationMessagesIfExists(runtime, appEx); // saving messages to session
+            } else { // e.g. framework exception
+                response = asDBFluteApplicationException(runtime, cause); // saving messages to session
+            }
         }
         if (response.isDefined()) { // #hope no session gateway when API by jflute (2016/08/06)
             if (needsApplicationExceptionApiDispatch(runtime, cause, response)) { // clearing session messages (basically)
@@ -114,15 +123,21 @@ public class ApplicationExceptionResolver {
     }
 
     // -----------------------------------------------------
-    //                                             Specified
-    //                                             ---------
-    protected ActionResponse asSpecifiedApplicationException(ActionRuntime runtime, LaApplicationException appEx) {
-        return applicationExceptionHandler.handle(appEx);
+    //                                Handled by Application
+    //                                ----------------------
+    protected ActionResponse handleByApplication(RuntimeException cause) {
+        return handledAppExCall.handle(createApplicationExceptionHandler(cause));
+    }
+
+    protected ApplicationExceptionHandler createApplicationExceptionHandler(RuntimeException cause) {
+        return new ApplicationExceptionHandler(cause, messages -> {
+            sessionManager.errors().saveMessages(messages);
+        });
     }
 
     // -----------------------------------------------------
-    //                                              Embedded
-    //                                              --------
+    //                        Embedded Application Exception
+    //                        ------------------------------
     protected ActionResponse asEmbeddedApplicationException(ActionRuntime runtime, LaApplicationException appEx) {
         ActionResponse response = ActionResponse.undefined();
         if (appEx instanceof LoginUnauthorizedException) {
@@ -146,8 +161,8 @@ public class ApplicationExceptionResolver {
     }
 
     // -----------------------------------------------------
-    //                                               DBFlute
-    //                                               -------
+    //                         DBFlute Application Exception
+    //                         -----------------------------
     protected ActionResponse asDBFluteApplicationException(ActionRuntime runtime, RuntimeException cause) {
         final ActionResponse response;
         if (cause instanceof EntityAlreadyDeletedException) {
@@ -166,33 +181,29 @@ public class ApplicationExceptionResolver {
     //                                                                       Show Handling
     //                                                                       =============
     protected void showApplicationExceptionHandling(ActionRuntime runtime, RuntimeException cause, ActionResponse response) {
-        showAppEx(cause, () -> {
+        logAppEx(cause, () -> {
             // not show forwardTo because of forwarding log later
             final StringBuilder sb = new StringBuilder();
-            sb.append("...Handling application exception:");
-            sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
-            sb.append("\n[Application Exception]");
-            sb.append("\n action   : ").append(runtime);
-            sb.append("\n response : ").append(response);
-            sessionManager.errors().get().ifPresent(errors -> {
-                sb.append("\n messages : ").append(errors.toString());
-            });
-            buildApplicationExceptionStackTrace(cause, sb, 0);
-            sb.append("\n_/_/_/_/_/_/_/_/_/_/");
+            buildAppExHeader(sb, runtime, cause, response);
+            buildAppExStackTrace(sb, cause, 0);
+            buildAppExFooter(sb);
             return sb.toString();
         });
     }
 
-    protected void showAppEx(RuntimeException cause, Supplier<String> msgSupplier) {
-        // to trace it in production just in case
-        // several exception is depend on circumstances
-        // whether application exception or not 
-        if (logger.isInfoEnabled()) {
-            logger.info(msgSupplier.get());
-        }
+    protected StringBuilder buildAppExHeader(StringBuilder sb, ActionRuntime runtime, RuntimeException cause, ActionResponse response) {
+        sb.append("...Handling application exception:");
+        sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
+        sb.append("\n[Application Exception]");
+        sb.append("\n action   : ").append(runtime);
+        sb.append("\n response : ").append(response);
+        sessionManager.errors().get().ifPresent(errors -> {
+            sb.append("\n messages : ").append(errors.toString());
+        });
+        return sb;
     }
 
-    protected void buildApplicationExceptionStackTrace(Throwable cause, StringBuilder sb, int nestLevel) {
+    protected void buildAppExStackTrace(StringBuilder sb, Throwable cause, int nestLevel) {
         sb.append(LF).append(nestLevel > 0 ? "Caused by: " : "");
         sb.append(cause.getClass().getName()).append(": ").append(cause.getMessage());
         final StackTraceElement[] stackTrace = cause.getStackTrace();
@@ -220,8 +231,37 @@ public class ApplicationExceptionResolver {
         }
         final Throwable nested = cause.getCause();
         if (nested != null && nested != cause) {
-            buildApplicationExceptionStackTrace(nested, sb, nestLevel + 1);
+            buildAppExStackTrace(sb, nested, nestLevel + 1);
         }
+    }
+
+    protected void logAppEx(RuntimeException cause, Supplier<String> msgSupplier) {
+        if (isAppExWithoutInfo(cause)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(msgSupplier.get());
+            }
+        } else { // mainly here
+            // to trace it in production just in case
+            // several exception is depend on circumstances whether application exception or not
+            if (logger.isInfoEnabled()) {
+                logger.info(msgSupplier.get());
+            }
+        }
+    }
+
+    protected boolean isAppExWithoutInfo(RuntimeException cause) {
+        if (cause instanceof LaApplicationException && ((LaApplicationException) cause).isHandledWithoutInfo()) {
+            return true;
+        }
+        final ApplicationExceptionOption option = requestManager.getActionAdjustmentProvider().adjustApplicationExceptionHandling();
+        if (option != null && option.getAppExInfoSuppressor().map(sup -> sup.isSuppress(cause)).orElse(false)) {
+            return true;
+        }
+        return false;
+    }
+
+    protected void buildAppExFooter(final StringBuilder sb) {
+        sb.append("\n_/_/_/_/_/_/_/_/_/_/");
     }
 
     // ===================================================================================

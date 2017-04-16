@@ -53,6 +53,7 @@ import org.lastaflute.web.exception.RequestAttributeNotFoundException;
 import org.lastaflute.web.exception.RequestInfoNotFoundException;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.login.UserBean;
+import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.cookie.CookieManager;
@@ -114,6 +115,9 @@ public class SimpleRequestManager implements RequestManager {
     @Resource
     protected ApiManager apiManager;
 
+    /** The provider of action adjustment. (NotNull: after initialization) */
+    protected ActionAdjustmentProvider actionAdjustmentProvider; // not DI component
+
     /** The resolver of action path. (NotNull: after initialization) */
     @Resource
     protected ActionPathResolver actionPathResolver;
@@ -140,6 +144,7 @@ public class SimpleRequestManager implements RequestManager {
     @PostConstruct
     public synchronized void initialize() {
         final FwWebDirection direction = assistWebDirection();
+        actionAdjustmentProvider = direction.assistActionAdjustmentProvider(); // as sub-attribute
         localeHandler = direction.assistUserLocaleProcessProvider();
         timeZoneProvider = direction.assistUserTimeZoneProcessProvider();
         showBootLogging();
@@ -921,6 +926,11 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public ApiManager getApiManager() {
         return apiManager;
+    }
+
+    @Override
+    public ActionAdjustmentProvider getActionAdjustmentProvider() {
+        return actionAdjustmentProvider;
     }
 
     @Override

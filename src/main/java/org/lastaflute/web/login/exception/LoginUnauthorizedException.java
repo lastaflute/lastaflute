@@ -39,10 +39,16 @@ public abstract class LoginUnauthorizedException extends LaApplicationException 
     //                                                                         ===========
     public LoginUnauthorizedException(String msg) {
         super(msg);
+        initializeOption();
     }
 
     public LoginUnauthorizedException(String msg, Throwable cause) {
         super(msg, cause);
+        initializeOption();
+    }
+
+    protected void initializeOption() {
+        withoutInfo(); // obviously login does not need info logging
     }
 
     // ===================================================================================

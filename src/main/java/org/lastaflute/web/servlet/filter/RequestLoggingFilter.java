@@ -332,11 +332,12 @@ public class RequestLoggingFilter implements Filter {
         sb.append(beginDecoration);
         sb.append(getTitlePath(request));
         sb.append(LF).append(IND);
-        buildRequestInfo(sb, request, response, false);
+        buildRequestInfo(sb, request, response, /*showResponse*/false, /*showErrorFlush*/false);
         logger.debug(sb.toString().trim());
     }
 
-    protected void buildRequestInfo(StringBuilder sb, HttpServletRequest request, HttpServletResponse response, boolean showResponse) {
+    protected void buildRequestInfo(StringBuilder sb, HttpServletRequest request, HttpServletResponse response, boolean showResponse,
+            boolean showErrorFlush) {
         sb.append("requestClass=" + request.getClass().getName());
         sb.append(" ; sessionId=").append(request.getRequestedSessionId());
 
@@ -361,8 +362,8 @@ public class RequestLoggingFilter implements Filter {
         buildRequestHeaders(sb, request);
         buildRequestParameters(sb, request);
         buildCookies(sb, request);
-        buildRequestAttributes(sb, request);
-        buildSessionAttributes(sb, request);
+        buildRequestAttributes(sb, request, showErrorFlush);
+        buildSessionAttributes(sb, request, showErrorFlush);
         if (showResponse) {
             sb.append(IND);
             buildResponseInfo(sb, request, response);
@@ -388,8 +389,8 @@ public class RequestLoggingFilter implements Filter {
         buildResponseInfo(sb, request, response);
         // hope response cookie (not request cookie)
         //buildCookies(sb, request);
-        buildRequestAttributes(sb, request);
-        buildSessionAttributes(sb, request);
+        buildRequestAttributes(sb, request, /*showErrorFlush*/false);
+        buildSessionAttributes(sb, request, /*showErrorFlush*/false);
 
         final String endDecoration;
         if (isSubRequestUrl(request)) {
@@ -496,13 +497,16 @@ public class RequestLoggingFilter implements Filter {
         return maskParamSet.contains(name);
     }
 
-    protected void buildRequestAttributes(StringBuilder sb, HttpServletRequest request) {
+    protected void buildRequestAttributes(StringBuilder sb, HttpServletRequest request, boolean showErrorFlush) {
         for (Iterator<?> it = toSortedSet(request.getAttributeNames()).iterator(); it.hasNext();) {
             final String name = (String) it.next();
             if (ERROR_ATTRIBUTE_KEY.equals(name)) {
                 continue; // because the error is handled in this filter
             }
             final Object attr = request.getAttribute(name);
+            if (cannotShowIfErrorFlush(showErrorFlush, attr)) {
+                continue;
+            }
             sb.append(IND);
             sb.append("[request] ").append(name).append("=");
             sb.append(filterAttributeDisp(attr));
@@ -510,7 +514,7 @@ public class RequestLoggingFilter implements Filter {
         }
     }
 
-    protected void buildSessionAttributes(StringBuilder sb, HttpServletRequest request) {
+    protected void buildSessionAttributes(StringBuilder sb, HttpServletRequest request, boolean showErrorFlush) {
         final HttpSession session = request.getSession(false);
         if (session == null) {
             return;
@@ -518,11 +522,18 @@ public class RequestLoggingFilter implements Filter {
         for (Iterator<?> it = toSortedSet(session.getAttributeNames()).iterator(); it.hasNext();) {
             final String name = (String) it.next();
             final Object attr = session.getAttribute(name);
+            if (cannotShowIfErrorFlush(showErrorFlush, attr)) {
+                continue;
+            }
             sb.append(IND);
             sb.append("[session] ").append(name).append("=");
             sb.append(filterAttributeDisp(attr));
             sb.append(LF);
         }
+    }
+
+    protected boolean cannotShowIfErrorFlush(boolean showErrorFlush, Object attr) {
+        return !showErrorFlush && attr instanceof WholeShowErrorFlushAttribute;
     }
 
     protected String filterAttributeDisp(Object attr) {
@@ -535,7 +546,7 @@ public class RequestLoggingFilter implements Filter {
         } else {
             stringExp = attr.toString();
         }
-        if (attr instanceof WholeShowRequestAttribute) {
+        if (attr instanceof WholeShowAttribute) {
             return convertToWholeShow(stringExp);
         } else {
             // might contain line separator in the expression
@@ -571,17 +582,25 @@ public class RequestLoggingFilter implements Filter {
 
     }
 
-    public static class WholeShowRequestAttribute {
+    public static class WholeShowAttribute {
 
         protected final Object attribute;
 
-        public WholeShowRequestAttribute(Object attribute) {
+        public WholeShowAttribute(Object attribute) {
             this.attribute = attribute;
         }
 
         @Override
         public String toString() {
-            return "wholeShow:" + (attribute != null ? attribute.toString() : null);
+            final String exp = (attribute != null ? attribute.toString().trim() : "null");
+            return "wholeShow:" + (exp.contains(LF) ? LF : "") + exp;
+        }
+    }
+
+    public static class WholeShowErrorFlushAttribute extends WholeShowAttribute {
+
+        public WholeShowErrorFlushAttribute(Object attribute) {
+            super(attribute);
         }
     }
 
@@ -655,7 +674,8 @@ public class RequestLoggingFilter implements Filter {
             }
             sb.append(LF);
             buildRequestHeaders(sb, request);
-            buildSessionAttributes(sb, request);
+            buildRequestAttributes(sb, request, /*showErrorFlush*/true);
+            buildSessionAttributes(sb, request, /*showErrorFlush*/true);
             sb.append(" Exception: ").append(cause.getClass().getName());
             sb.append(LF).append(" Message: ");
             final String causeMsg = cause.getMessage();
@@ -912,7 +932,7 @@ public class RequestLoggingFilter implements Filter {
         sb.append("/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =: ").append(getTitlePath(request));
         sb.append(LF).append(IND);
         try {
-            buildRequestInfo(sb, request, response, true);
+            buildRequestInfo(sb, request, response, /*showResponse*/true, /*showErrorFlush*/true);
         } catch (RuntimeException continued) {
             sb.append("*Failed to get request info: " + continued.getMessage());
             sb.append(LF);
