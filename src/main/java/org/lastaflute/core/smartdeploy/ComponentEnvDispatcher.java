@@ -82,7 +82,7 @@ public class ComponentEnvDispatcher {
 
     protected ComponentDef doDispatch(Class<?> componentClass, EnvDispatch dispatch) {
         final AccessibleConfig config = ContainerUtil.getComponent(AccessibleConfig.class);
-        final String devHereKey = getDevlopmentHereKey();
+        final String devHereKey = getDevlopmentHereKey(dispatch);
         if (config.get(devHereKey) == null) {
             String msg = "The property is required in the config for environment dispatch: " + devHereKey;
             throw new IllegalStateException(msg);
@@ -91,8 +91,9 @@ public class ComponentEnvDispatcher {
         return actuallyCreateComponentDef(implType);
     }
 
-    protected String getDevlopmentHereKey() {
-        return DEVELOPMENT_HERE;
+    protected String getDevlopmentHereKey(EnvDispatch dispatch) {
+        final String prop = dispatch.prop();
+        return prop != null ? prop : DEVELOPMENT_HERE;
     }
 
     // ===================================================================================
