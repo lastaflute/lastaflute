@@ -92,8 +92,7 @@ public class ComponentEnvDispatcher {
     }
 
     protected String getDevlopmentHereKey(EnvDispatch dispatch) {
-        final String prop = dispatch.prop();
-        return prop != null ? prop : DEVELOPMENT_HERE;
+        return dispatch.prop(); // has default
     }
 
     // ===================================================================================
