@@ -61,7 +61,7 @@ public interface JsonManager {
     /**
      * Create new JSON engine as another rule. <br>
      * (inheriting basic settings e.g. serializeNulls, yourCollections)
-     * @param mappingOption The optional option of (NotNull, EmptyAllowed: when default options)
+     * @param mappingOption The optional option for new another engine. (NotNull, EmptyAllowed: when default options)
      * @return The JSON engine as another rule. (NotNull)
      */
     RealJsonEngine newAnotherEngine(OptionalThing<JsonMappingOption> mappingOption);
