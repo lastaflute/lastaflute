@@ -283,4 +283,11 @@ public class SimpleJsonManager implements JsonManager {
             throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
         }
     }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public OptionalThing<JsonMappingOption> getJsonMappingOption() { // for e.g. LastaDoc
+        return jsonMappingOption;
+    }
 }
