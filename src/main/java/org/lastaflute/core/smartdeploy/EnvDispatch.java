@@ -56,11 +56,11 @@ public @interface EnvDispatch {
     Class<?> production();
 
     /**
-     * You can switch environment determiner.
+     * You can switch environment determiner as property.
      * <pre>
      * &#64;EnvDispatch(development=..., production=..., prop=DocksideMessages.MAIL_SEND_MOCK)
      * </pre>
-     * @return The key of property as environment determiner. (NotNull: default is 'development.here')
+     * @return The key of property as environment determiner, which returns true if development. (NotNull: default is 'development.here')
      */
-    String prop() default ComponentEnvDispatcher.DEVELOPMENT_HERE;
+    String devProp() default ComponentEnvDispatcher.DEVELOPMENT_HERE;
 }

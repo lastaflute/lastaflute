@@ -92,7 +92,7 @@ public class ComponentEnvDispatcher {
     }
 
     protected String getDevlopmentHereKey(EnvDispatch dispatch) {
-        return dispatch.prop(); // has default
+        return dispatch.devProp(); // has default
     }
 
     // ===================================================================================
