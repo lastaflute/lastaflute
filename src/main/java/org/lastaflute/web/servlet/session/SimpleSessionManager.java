@@ -347,7 +347,7 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     protected ScopedMessageHandler createScopedMessageHandler(String messagesKey) {
-        return new ScopedMessageHandler(this, UserMessages.GLOBAL_PROPERTY_KEY, messagesKey);
+        return new ScopedMessageHandler(this, UserMessages.GLOBAL, messagesKey);
     }
 
     protected String getInfoMessagesKey() {

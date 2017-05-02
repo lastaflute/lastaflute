@@ -39,6 +39,9 @@ public class UserMessages implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** The property key for global property (non-specific property) for protocol with HTML, JavaScipt. */
+    public static final String GLOBAL = "_global";
+
+    /** old property, use GLOBAL. This may be deprecated at future. */
     public static final String GLOBAL_PROPERTY_KEY = "_global";
 
     protected static final String LABELS_PREFIX = "labels.";
