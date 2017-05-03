@@ -63,7 +63,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    protected static final String GLOBAL = UserMessages.GLOBAL_PROPERTY_KEY;
+    protected static final String GLOBAL = UserMessages.GLOBAL;
 
     // ===================================================================================
     //                                                                           Attribute

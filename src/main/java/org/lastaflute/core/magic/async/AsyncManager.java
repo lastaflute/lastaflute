@@ -15,6 +15,9 @@
  */
 package org.lastaflute.core.magic.async;
 
+import org.lastaflute.core.magic.async.exception.ConcurrentParallelRunnerException;
+import org.lastaflute.core.magic.async.future.YourFuture;
+
 /**
  * @author jflute
  */
@@ -23,13 +26,13 @@ public interface AsyncManager {
     /**
      * Execute asynchronous process by other thread. <br>
      * <pre>
-     * <span style="color: #CC4747">async</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
+     * asyncManager.<span style="color: #CC4747">async</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
      *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
      * });
      * 
      * <span style="color: #3F7E5E">// begin asynchronous process after action transaction finished</span>
-     * return asHtml(...).<span style="color: #994747">afterTxCommit</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
-     *     async(() <span style="font-size: 120%">-</span>&gt;</span> {
+     * <span style="color: #70226C">return</span> asHtml(...).<span style="color: #994747">afterTxCommit</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *     asyncManager.async(() <span style="font-size: 120%">-</span>&gt;</span> {
      *         ...
      *     });
      * });
@@ -44,6 +47,29 @@ public interface AsyncManager {
      * </pre>
      * <p>Also you can change it from caller thread's one by interface default methods.</p>
      * @param noArgLambda The callback for asynchronous process. (NotNull)
+     * @return The your future to handle the asynchronous process. (NotNull)
      */
-    void async(ConcurrentAsyncCall noArgLambda);
+    YourFuture async(ConcurrentAsyncCall noArgLambda);
+
+    /**
+     * Execute parallel process and wait for ending of all threads.
+     * <pre>
+     * asyncManager.<span style="color: #CC4747">parallel</span>(<span style="color: #553000">runner</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     String <span style="color: #553000">parameter</span> = (String)<span style="color: #553000">runner</span>.getParameter();
+     *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
+     * }, <span style="color: #553000">op</span> <span style="font-size: 120%">-</span>&gt;</span> <span style="color: #553000">op</span>.params(Arrays.asList("sea", "land", "piari")));
+     * </pre>
+     * You can inherit...
+     * <pre>
+     * o ThreadCacheContext (copied plainly)
+     * o AccessContext (copied as fixed value)
+     * o CallbackContext (optional)
+     * 
+     * *attention: possibility of multiply threads access
+     * </pre>
+     * @param runnerLambda The callback for runner process executed as parallel. (NotNull)
+     * @param opLambda The callback for option. (NotNull)
+     * @throws ConcurrentParallelRunnerException When any runner does not reach goal.
+     */
+    void parallel(ConcurrentParallelCall runnerLambda, ConcurrentParallelOpCall opLambda);
 }

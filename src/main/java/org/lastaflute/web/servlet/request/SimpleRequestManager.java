@@ -869,7 +869,7 @@ public class SimpleRequestManager implements RequestManager {
     }
 
     protected ScopedMessageHandler createScopedMessageHandler(String messagesKey) {
-        return new ScopedMessageHandler(this, UserMessages.GLOBAL_PROPERTY_KEY, messagesKey);
+        return new ScopedMessageHandler(this, UserMessages.GLOBAL, messagesKey);
     }
 
     protected String getInfoMessagesKey() {

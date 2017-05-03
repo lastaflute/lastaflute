@@ -347,7 +347,7 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     protected ScopedMessageHandler createScopedMessageHandler(String messagesKey) {
-        return new ScopedMessageHandler(this, UserMessages.GLOBAL_PROPERTY_KEY, messagesKey);
+        return new ScopedMessageHandler(this, UserMessages.GLOBAL, messagesKey);
     }
 
     protected String getInfoMessagesKey() {
@@ -362,12 +362,16 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     protected HttpSession getSessionOrCreated() {
-        return getRequest().getSession(true);
+        return readyHttpSession(getRequest(), true);
     }
 
     protected HttpSession getSessionExisting() {
         final HttpServletRequest request = getRequest(); // null allowed when e.g. asynchronous process
-        return request != null ? request.getSession(false) : null;
+        return request != null ? readyHttpSession(request, false) : null;
+    }
+
+    protected HttpSession readyHttpSession(HttpServletRequest request, boolean create) {
+        return request.getSession(create);
     }
 
     // ===================================================================================
