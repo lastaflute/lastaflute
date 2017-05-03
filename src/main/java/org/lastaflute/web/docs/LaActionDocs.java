@@ -30,7 +30,7 @@ public interface LaActionDocs {
      * <span style="color: #0000C0">Mypage</span>Action#index() =&gt; <span style="color: #994747">/mypage/</span>
      * <span style="color: #0000C0">Mypage</span>Action#get$index() =&gt; <span style="color: #994747">/mypage/ of HTTP method: GET</span>
      * 
-     * <span style="font-size: 130%; color: #553000">[URL Parameter]</span>
+     * <span style="font-size: 130%; color: #553000">[Path Parameter]</span>
      * <span style="color: #70226C">public</span> HtmlResponse index(<span style="color: #994747">Integer pageNumber</span>) { <span style="color: #3F7E5E">// /product/list/3</span>
      * <span style="color: #70226C">public</span> HtmlResponse index(<span style="color: #994747">OptionalThing&lt;Integer&gt;</span> pageNumber) { <span style="color: #3F7E5E">// /product/list/3 or /product/list/</span>
      * 
