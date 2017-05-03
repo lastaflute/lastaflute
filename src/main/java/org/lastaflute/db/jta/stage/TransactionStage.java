@@ -38,6 +38,7 @@ public interface TransactionStage {
      *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
      * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
      * </pre>
+     * @param <RESULT> The type of transaction result.
      * @param txLambda The callback for your transaction show on the stage. (NotNull)
      * @return The optional result of the transaction show. (NullAllowed)
      */
@@ -59,6 +60,7 @@ public interface TransactionStage {
      *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
      * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
      * </pre>
+     * @param <RESULT> The type of transaction result.
      * @param txLambda The callback for your transaction show on the stage. (NotNull)
      * @return The optional result of the transaction show. (NullAllowed)
      */
@@ -66,6 +68,7 @@ public interface TransactionStage {
 
     /**
      * Execute the show in transaction by selected genre, roll-backed if exception.
+     * @param <RESULT> The type of transaction result.
      * @param txLambda The callback for your transaction show on the stage. (NotNull)
      * @param genre The genre of transaction, also contains non transaction. (NotNull)
      * @return The optional result of the transaction show. (NullAllowed)
