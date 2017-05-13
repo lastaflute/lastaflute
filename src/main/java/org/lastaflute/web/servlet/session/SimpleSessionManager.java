@@ -31,7 +31,6 @@ import javax.servlet.http.HttpSession;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
-import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.direction.FwWebDirection;
@@ -62,8 +61,11 @@ public class SimpleSessionManager implements SessionManager {
     @Resource
     protected FwAssistantDirector assistantDirector;
 
-    /** The shared storage of session for session sharing. (NotNull, EmptyAllowed: when no storage) */
+    /** The shared storage of session for session sharing. (NotNull, EmptyAllowed: if no storage) */
     protected OptionalThing<SessionSharedStorage> sessionSharedStorage = OptionalThing.empty(); // not null
+
+    /** The arranger of HTTP session for session sharing. (NotNull, EmptyAllowed: if no arranger) */
+    protected OptionalThing<HttpSessionArranger> httpSessionArranger = OptionalThing.empty(); // not null
 
     protected ScopedMessageHandler errorsHandler; // lazy loaded
     protected ScopedMessageHandler infoHandler; // lazy loaded
@@ -80,31 +82,33 @@ public class SimpleSessionManager implements SessionManager {
         final FwWebDirection direction = assistWebDirection();
         final SessionResourceProvider provider = direction.assistSessionResourceProvider();
         sessionSharedStorage = prepareSessionSharedStorage(provider);
+        httpSessionArranger = prepareHttpSessionArranger(provider);
         showBootLogging();
-    }
-
-    protected OptionalThing<SessionSharedStorage> prepareSessionSharedStorage(SessionResourceProvider provider) {
-        SessionSharedStorage specifiedStorage = null;
-        if (provider != null) {
-            specifiedStorage = provider.provideSharedStorage();
-            if (specifiedStorage == null) {
-                final String msg = "No assist for the shared storage of session.";
-                throw new FwRequiredAssistNotFoundException(msg);
-            }
-        }
-        return OptionalThing.ofNullable(specifiedStorage, () -> {
-            throw new IllegalStateException("Not found the session shared storage: " + provider);
-        });
     }
 
     protected FwWebDirection assistWebDirection() {
         return assistantDirector.assistWebDirection();
     }
 
+    protected OptionalThing<SessionSharedStorage> prepareSessionSharedStorage(SessionResourceProvider provider) {
+        final SessionSharedStorage specifiedStorage = provider != null ? provider.provideSharedStorage() : null;
+        return OptionalThing.ofNullable(specifiedStorage, () -> {
+            throw new IllegalStateException("Not found the session shared storage: " + provider);
+        });
+    }
+
+    protected OptionalThing<HttpSessionArranger> prepareHttpSessionArranger(SessionResourceProvider provider) {
+        final HttpSessionArranger specifiedStorage = provider != null ? provider.provideHttpSessionArranger() : null;
+        return OptionalThing.ofNullable(specifiedStorage, () -> {
+            throw new IllegalStateException("Not found the HTTP session arranger: " + provider);
+        });
+    }
+
     protected void showBootLogging() {
         if (logger.isInfoEnabled()) {
             logger.info("[Session Manager]");
             logger.info(" sessionSharedStorage: " + sessionSharedStorage);
+            logger.info(" httpSessionArranger: " + httpSessionArranger);
         }
     }
 
@@ -371,7 +375,15 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     protected HttpSession readyHttpSession(HttpServletRequest request, boolean create) {
-        return request.getSession(create);
+        if (httpSessionArranger.isPresent()) {
+            return httpSessionArranger.get().create(request, create); // null allowed if create is false
+        } else {
+            return request.getSession(create); // as default
+        }
+        // it should return null without default process if arranger.create() returns null  
+        //return httpSessionArranger.map(ger -> ger.create(request, create)).orElseGet(() -> {
+        //    return request.getSession(create); // as default
+        //});
     }
 
     // ===================================================================================

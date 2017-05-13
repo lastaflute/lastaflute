@@ -15,22 +15,19 @@
  */
 package org.lastaflute.web.servlet.session;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
 /**
  * @author jflute
+ * @since 0.9.7 (2017/05/13 Saturday at kamogawa)
  */
-public interface SessionResourceProvider {
+public interface HttpSessionArranger {
 
     /**
-     * @return The storage instance for session sharing. (NullAllowed: then no sharing)
+     * @param request The request of servlet. (NotNull)
+     * @param create Does it create new session when no-existing?
+     * @return The new-created or existing HTTP session. (NotNull: if create, NullAllowed: if not create)
      */
-    default SessionSharedStorage provideSharedStorage() {
-        return null;
-    }
-
-    /**
-     * @return The arranger instance of HTTP session. (NullAllowed: then use default)
-     */
-    default HttpSessionArranger provideHttpSessionArranger() {
-        return null;
-    }
+    HttpSession create(HttpServletRequest request, boolean create);
 }
