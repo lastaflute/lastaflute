@@ -31,7 +31,7 @@ import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.exception.ActionFormNotFoundException;
-import org.lastaflute.web.exception.UrlParamArgsNotFoundException;
+import org.lastaflute.web.exception.PathParamArgsNotFoundException;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
@@ -69,7 +69,7 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                     Defined Parameter
     //                                     -----------------
-    protected final OptionalThing<UrlParamArgs> urlParamArgs; // not null, empty allowed
+    protected final OptionalThing<PathParamArgs> pathParamArgs; // not null, empty allowed
     protected final OptionalThing<ActionFormMeta> formMeta; // not null, empty allowed
 
     // -----------------------------------------------------
@@ -109,20 +109,20 @@ public class ActionExecute implements Serializable {
         executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
         this.formMeta = analyzeFormMeta(executeMethod, executeArgBox);
 
-        // URL pattern (using urlParamTypeList)
-        final List<Class<?>> urlParamTypeList = executeArgBox.getUrlParamTypeList(); // not null, empty allowed
+        // URL pattern (using pathParamTypeList)
+        final List<Class<?>> pathParamTypeList = executeArgBox.getPathParamTypeList(); // not null, empty allowed
         final Map<Integer, Class<?>> optionalGenericTypeMap = executeArgBox.getOptionalGenericTypeMap();
         final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
         final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
         final UrlPatternChosenBox chosenBox =
-                urlPatternAnalyzer.choose(executeMethod, this.mappingMethodName, specifiedUrlPattern, urlParamTypeList);
+                urlPatternAnalyzer.choose(executeMethod, this.mappingMethodName, specifiedUrlPattern, pathParamTypeList);
         final UrlPatternRegexpBox regexpBox =
-                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getResolvedUrlPattern(), urlParamTypeList, optionalGenericTypeMap);
-        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), urlParamTypeList);
+                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getResolvedUrlPattern(), pathParamTypeList, optionalGenericTypeMap);
+        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), pathParamTypeList);
         this.preparedUrlPattern = newPreparedUrlPattern(chosenBox, regexpBox);
 
         // defined parameter again (uses URL pattern result)
-        this.urlParamArgs = prepareUrlParamArgs(urlParamTypeList, optionalGenericTypeMap);
+        this.pathParamArgs = preparePathParamArgs(pathParamTypeList, optionalGenericTypeMap);
 
         // check finally
         checkExecuteMethod(executeArgAnalyzer);
@@ -216,23 +216,23 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                               URL Parameter Arguments
     //                               -----------------------
-    protected OptionalThing<UrlParamArgs> prepareUrlParamArgs(List<Class<?>> urlParamTypeList,
+    protected OptionalThing<PathParamArgs> preparePathParamArgs(List<Class<?>> pathParamTypeList,
             Map<Integer, Class<?>> optionalGenericTypeMap) {
-        final UrlParamArgs args = !urlParamTypeList.isEmpty() ? newUrlParamArgs(urlParamTypeList, optionalGenericTypeMap) : null;
-        return OptionalThing.ofNullable(args, () -> throwUrlParamArgsNotFoundException());
+        final PathParamArgs args = !pathParamTypeList.isEmpty() ? newPathParamArgs(pathParamTypeList, optionalGenericTypeMap) : null;
+        return OptionalThing.ofNullable(args, () -> throwPathParamArgsNotFoundException());
     }
 
-    protected UrlParamArgs newUrlParamArgs(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap) {
-        return new UrlParamArgs(urlParamTypeList, optionalGenericTypeMap);
+    protected PathParamArgs newPathParamArgs(List<Class<?>> pathParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap) {
+        return new PathParamArgs(pathParamTypeList, optionalGenericTypeMap);
     }
 
-    protected void throwUrlParamArgsNotFoundException() {
+    protected void throwPathParamArgsNotFoundException() {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Not found the URL parameter arguments for the execute method.");
+        br.addNotice("Not found the path parameter arguments for the execute method.");
         br.addItem("Execute Method");
         br.addElement(toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
-        throw new UrlParamArgsNotFoundException(msg);
+        throw new PathParamArgsNotFoundException(msg);
     }
 
     // -----------------------------------------------------
@@ -248,7 +248,7 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                      by URL Parameter
     //                                      ----------------
-    public boolean determineTargetByUrlParameter(String paramPath) {
+    public boolean determineTargetByPathParameter(String paramPath) {
         if (restfulHttpMethod.filter(httpMethod -> !matchesWithRequestedHttpMethod(httpMethod)).isPresent()) {
             return false;
         }
@@ -269,7 +269,7 @@ public class ActionExecute implements Serializable {
     protected boolean handleOptionalParameterMapping(String paramPath) {
         // #for_now no considering type difference: index(String, OptionalThing<Integer>) but 'sea/land'
         // so cannot mapping to dockside(String hangar) if the index() exists now
-        if (hasOptionalUrlParameter()) { // e.g. any parameters are optional type
+        if (hasOptionalPathParameter()) { // e.g. any parameters are optional type
             if (indexMethod) { // e.g. index(String first, OptionalThing<String> second) with 'sea' or 'sea/land'
                 final int paramCount = Srl.count(Srl.trim(paramPath, "/"), "/") + 1; // e.g. sea/land => 2
                 return matchesParameterCount(paramCount);
@@ -287,10 +287,10 @@ public class ActionExecute implements Serializable {
         }
     }
 
-    protected boolean hasOptionalUrlParameter() {
+    protected boolean hasOptionalPathParameter() {
         // already checked here that optional parameters are defined at rear arguments
-        return urlParamArgs.map(args -> {
-            return args.getUrlParamTypeList().stream().anyMatch(tp -> isOptionalParameterType(tp));
+        return pathParamArgs.map(args -> {
+            return args.getPathParamTypeList().stream().anyMatch(tp -> isOptionalParameterType(tp));
         }).orElse(false);
     }
 
@@ -299,12 +299,12 @@ public class ActionExecute implements Serializable {
     }
 
     protected int countAllParameter() {
-        return urlParamArgs.map(args -> args.getUrlParamTypeList().size()).orElse(0);
+        return pathParamArgs.map(args -> args.getPathParamTypeList().size()).orElse(0);
     }
 
     protected int countRequiredParameter() {
-        return urlParamArgs.map(args -> {
-            return args.getUrlParamTypeList().stream().filter(tp -> {
+        return pathParamArgs.map(args -> {
+            return args.getPathParamTypeList().stream().filter(tp -> {
                 return !isOptionalParameterType(tp);
             }).count();
         }).orElse(0L).intValue();
@@ -423,10 +423,10 @@ public class ActionExecute implements Serializable {
     //                                     Defined Parameter
     //                                     -----------------
     /**
-     * @return The optional arguments of URL parameter for the method. (NotNull, EmptyAllowed: when no URL parameter)
+     * @return The optional arguments of path parameter for the method. (NotNull, EmptyAllowed: when no path parameter)
      */
-    public OptionalThing<UrlParamArgs> getUrlParamArgs() {
-        return urlParamArgs;
+    public OptionalThing<PathParamArgs> getPathParamArgs() {
+        return pathParamArgs;
     }
 
     /**

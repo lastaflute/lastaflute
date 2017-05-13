@@ -20,15 +20,15 @@ import org.lastaflute.core.exception.LaSystemException;
 /**
  * @author jflute
  */
-public class UrlParamArgsNotFoundException extends LaSystemException {
+public class PathParamArgsNotFoundException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public UrlParamArgsNotFoundException(String msg) {
+    public PathParamArgsNotFoundException(String msg) {
         super(msg);
     }
 
-    public UrlParamArgsNotFoundException(String msg, Throwable cause) {
+    public PathParamArgsNotFoundException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

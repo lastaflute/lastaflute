@@ -110,8 +110,8 @@ public class ActionFormMapper {
     private static final Logger logger = LoggerFactory.getLogger(ActionFormMapper.class);
     protected static final String MULTIPART_CONTENT_TYPE = "multipart/form-data";
     protected static final String CACHE_KEY_DECODED_PROPERTY_MAP = "requestProcessor.decodedPropertyMap";
-    protected static final String CACHE_KEY_URL_PARAM_NAMES_CACHED_SET = "requestProcessor.urlParamNames.cachedSet";
-    protected static final String CACHE_KEY_URL_PARAM_NAMES_UNIQUE_METHOD = "requestProcessor.urlParamNames.uniqueMethod";
+    protected static final String CACHE_KEY_URL_PARAM_NAMES_CACHED_SET = "requestProcessor.pathParamNames.cachedSet";
+    protected static final String CACHE_KEY_URL_PARAM_NAMES_UNIQUE_METHOD = "requestProcessor.pathParamNames.uniqueMethod";
     protected static final char NESTED_DELIM = '.';
     protected static final char INDEXED_DELIM = '[';
     protected static final char INDEXED_DELIM2 = ']';
@@ -1079,7 +1079,7 @@ public class ActionFormMapper {
             throw e;
         }
         // e.g. non-number GET but number type property
-        // suppress easy 500 error by e.g. non-number GET parameter (similar with URL parameter)
+        // suppress easy 500 error by e.g. non-number GET parameter (similar with path parameter)
         //  (o): ?seaId=123
         //  (x): ?seaId=abc *this case
         final String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case

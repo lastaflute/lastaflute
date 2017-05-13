@@ -331,7 +331,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                                                     ===============
     /**
      * Check the condition is true or it throws client error (e.g. 400 bad request) forcedly. <br>
-     * You can use this in your action process against invalid URL parameters.
+     * You can use this in your action process against invalid path parameters.
      * <pre>
      * verifyOrClientError("The pageNumber should be positive number: " + pageNumber, pageNumber &gt; 0);
      * </pre>

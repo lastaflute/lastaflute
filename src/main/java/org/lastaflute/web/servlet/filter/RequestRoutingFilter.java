@@ -35,8 +35,8 @@ import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.process.urlparam.RequestUrlParam;
-import org.lastaflute.web.ruts.process.urlparam.RequestUrlParamAnalyzer;
+import org.lastaflute.web.ruts.process.pathparam.RequestPathParam;
+import org.lastaflute.web.ruts.process.pathparam.RequestPathParamAnalyzer;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.util.LaModuleConfigUtil;
@@ -78,10 +78,10 @@ public class RequestRoutingFilter implements Filter {
     protected ActionAdjustmentProvider cachedActionAdjustmentProvider;
 
     /**
-     * The cache of URL parameter analyzer, which can be lazy-loaded when you get it.
+     * The cache of path parameter analyzer, which can be lazy-loaded when you get it.
      * Don't use these variables directly, you should use the getter. (NotNull: after lazy-load)
      */
-    protected RequestUrlParamAnalyzer cachedUrlParamAnalyzer;
+    protected RequestPathParamAnalyzer cachedPathParamAnalyzer;
 
     // -----------------------------------------------------
     //                                             Processor
@@ -245,14 +245,14 @@ public class RequestRoutingFilter implements Filter {
             throws IOException, ServletException {
         logger.debug("...Routing to action: name={} params={}", execute.getActionMapping().getActionName(), paramPath);
         LaActionExecuteUtil.setActionExecute(execute); // for e.g. tag-library use
-        getRequestProcessor().process(execute, analyzeUrlParam(execute, paramPath)); // #to_action
+        getRequestProcessor().process(execute, analyzePathParam(execute, paramPath)); // #to_action
     }
 
     // -----------------------------------------------------
-    //                                      Request UrlParam
-    //                                      ----------------
-    protected RequestUrlParam analyzeUrlParam(ActionExecute execute, String paramPath) {
-        return getUrlParamAnalyzer().analyzeUrlParam(execute, paramPath);
+    //                                     Request PathParam
+    //                                     -----------------
+    protected RequestPathParam analyzePathParam(ActionExecute execute, String paramPath) {
+        return getPathParamAnalyzer().analyzePathParam(execute, paramPath);
     }
 
     // -----------------------------------------------------
@@ -327,16 +327,16 @@ public class RequestRoutingFilter implements Filter {
         return cachedActionAdjustmentProvider;
     }
 
-    protected RequestUrlParamAnalyzer getUrlParamAnalyzer() {
-        if (cachedUrlParamAnalyzer != null) {
-            return cachedUrlParamAnalyzer;
+    protected RequestPathParamAnalyzer getPathParamAnalyzer() {
+        if (cachedPathParamAnalyzer != null) {
+            return cachedPathParamAnalyzer;
         }
         synchronized (this) {
-            if (cachedUrlParamAnalyzer != null) {
-                return cachedUrlParamAnalyzer;
+            if (cachedPathParamAnalyzer != null) {
+                return cachedPathParamAnalyzer;
             }
-            cachedUrlParamAnalyzer = new RequestUrlParamAnalyzer(getRequestManager());
+            cachedPathParamAnalyzer = new RequestPathParamAnalyzer(getRequestManager());
         }
-        return cachedUrlParamAnalyzer;
+        return cachedPathParamAnalyzer;
     }
 }

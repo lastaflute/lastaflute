@@ -24,27 +24,27 @@ import org.dbflute.util.DfTypeUtil;
 /**
  * @author jflute
  */
-public class UrlParamArgs implements Serializable {
+public class PathParamArgs implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final List<Class<?>> urlParamTypeList; // not null, read-only e.g. Integer.class, String.class
+    protected final List<Class<?>> pathParamTypeList; // not null, read-only e.g. Integer.class, String.class
     protected final Map<Integer, Class<?>> optionalGenericTypeMap; // not null, read-only, has same size as parameters
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     /**
-     * @param urlParamTypeList The read-only list of URL parameter types. (NotNull, EmptyAllowed)
-     * @param optionalGenericTypeMap The read-only map of generic type used in URL parameters, keyed by argument index. (NotNull, EmptyAllowed)
+     * @param pathParamTypeList The read-only list of path parameter types. (NotNull, EmptyAllowed)
+     * @param optionalGenericTypeMap The read-only map of generic type used in path parameters, keyed by argument index. (NotNull, EmptyAllowed)
      */
-    public UrlParamArgs(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap) {
-        assertArgumentNotNull("urlParamTypeList", urlParamTypeList);
+    public PathParamArgs(List<Class<?>> pathParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap) {
+        assertArgumentNotNull("pathParamTypeList", pathParamTypeList);
         assertArgumentNotNull("optionalGenericTypeMap", optionalGenericTypeMap);
-        this.urlParamTypeList = urlParamTypeList; // already read-only
+        this.pathParamTypeList = pathParamTypeList; // already read-only
         this.optionalGenericTypeMap = optionalGenericTypeMap; // already read-only
     }
 
@@ -52,10 +52,10 @@ public class UrlParamArgs implements Serializable {
     //                                                                              Facade
     //                                                                              ======
     public boolean isNumberTypeParameter(int index) { // contains optional generic type
-        if (urlParamTypeList.size() <= index) { // avoid out of bounds
+        if (pathParamTypeList.size() <= index) { // avoid out of bounds
             return false;
         }
-        final Class<?> parameterType = urlParamTypeList.get(index);
+        final Class<?> parameterType = pathParamTypeList.get(index);
         if (Number.class.isAssignableFrom(parameterType)) {
             return true;
         }
@@ -68,17 +68,17 @@ public class UrlParamArgs implements Serializable {
     }
 
     public int size() {
-        return urlParamTypeList.size();
+        return pathParamTypeList.size();
     }
 
     public String toDisp() {
         final StringBuilder sb = new StringBuilder();
         int index = 0;
-        for (Class<?> urlParamType : urlParamTypeList) {
+        for (Class<?> pathParamType : pathParamTypeList) {
             if (index > 0) {
                 sb.append(", ");
             }
-            sb.append(urlParamType.getSimpleName());
+            sb.append(pathParamType.getSimpleName());
             final Class<?> genericType = optionalGenericTypeMap.get(index);
             if (genericType != null) {
                 sb.append("<").append(genericType.getSimpleName()).append(">");
@@ -111,8 +111,8 @@ public class UrlParamArgs implements Serializable {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public List<Class<?>> getUrlParamTypeList() {
-        return urlParamTypeList;
+    public List<Class<?>> getPathParamTypeList() {
+        return pathParamTypeList;
     }
 
     public Map<Integer, Class<?>> getOptionalGenericTypeMap() {
