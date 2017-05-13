@@ -24,6 +24,8 @@ import java.lang.reflect.Type;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -945,20 +947,44 @@ public class ActionFormMapper {
             converted = DfTypeUtil.toLocalDateTime(exp);
         } else if (LocalTime.class.isAssignableFrom(propertyType)) {
             converted = DfTypeUtil.toLocalTime(exp);
+        } else if (ZonedDateTime.class.isAssignableFrom(propertyType)) {
+            converted = toZonedDateTime(exp, option);
         } else if (Boolean.class.isAssignableFrom(propertyType)) {
-            if (isCheckboxOn(exp)) {
-                converted = true;
-            } else {
-                if (exp instanceof String && ((String) exp).isEmpty()) { // pinpoint patch
-                    converted = null; // toBoolean("") before DBFlute-1.1.3 throws exception so avoid it
-                } else {
-                    converted = DfTypeUtil.toBoolean(exp);
-                }
-            }
+            converted = toBoolean(exp, option);
         } else if (isClassificationProperty(propertyType)) { // means CDef
             converted = toVerifiedClassification(bean, name, exp, propertyType);
         } else { // e.g. multipart form file or unsupported type
             converted = exp;
+        }
+        return converted;
+    }
+
+    protected Object toZonedDateTime(Object exp, FormMappingOption option) {
+        final Object converted;
+        if (exp == null || (exp instanceof String && ((String) exp).isEmpty())) {
+            converted = null;
+        } else {
+            // DfTypeUtil.toZonedDateTime() needs to be adjusted at DBFlute-1.1.3 so parse by myself for now
+            // (in the meantime, zoned date-time does not need flexble parsing because of almost transfer expression)
+            converted = ZonedDateTime.parse(exp.toString(), getZonedDateTimeFormatter(option));
+        }
+        return converted;
+    }
+
+    protected DateTimeFormatter getZonedDateTimeFormatter(FormMappingOption option) {
+        return option.getZonedDateTimeFormatter().orElseGet(() -> DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    }
+
+    protected Object toBoolean(Object exp, FormMappingOption option) {
+        final Object converted;
+        if (isCheckboxOn(exp)) {
+            converted = true;
+        } else {
+            if (exp instanceof String && ((String) exp).isEmpty()) { // pinpoint patch
+                converted = null; // toBoolean("") before DBFlute-1.1.3 throws exception so avoid it
+            } else {
+                converted = DfTypeUtil.toBoolean(exp);
+            }
         }
         return converted;
     }

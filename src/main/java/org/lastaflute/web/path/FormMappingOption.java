@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.path;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,6 +44,7 @@ public class FormMappingOption {
     protected boolean undefinedParameterError;
     protected Set<String> indefinableParameterSet; // null allowed
     protected List<FormYourCollectionResource> yourCollectionResourceList; // null allowed
+    protected OptionalThing<DateTimeFormatter> zonedDateTimeFormatter = OptionalThing.empty();
 
     // ===================================================================================
     //                                                                              Facade
@@ -103,6 +105,17 @@ public class FormMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                         ZonedDateTime
+    //                                         -------------
+    public FormMappingOption formatZonedDateTime(DateTimeFormatter zonedDateTimeFormatter) {
+        if (zonedDateTimeFormatter == null) {
+            throw new IllegalArgumentException("The argument 'zonedDateTimeFormatter' should not be null.");
+        }
+        this.zonedDateTimeFormatter = OptionalThing.of(zonedDateTimeFormatter);
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -110,7 +123,7 @@ public class FormMappingOption {
     public String toString() {
         final String title = DfTypeUtil.toClassTitle(this);
         return title + ":{" + keepEmptyStringParameter + ", " + simpleTextParameterFilter + ", " + undefinedParameterError + ", "
-                + indefinableParameterSet + ", " + yourCollectionResourceList + "}";
+                + indefinableParameterSet + ", " + yourCollectionResourceList + ", " + zonedDateTimeFormatter + "}";
     }
 
     // ===================================================================================
@@ -146,5 +159,12 @@ public class FormMappingOption {
     //                                       ---------------
     public List<FormYourCollectionResource> getYourCollectionResource() { // not null
         return yourCollectionResourceList != null ? yourCollectionResourceList : Collections.emptyList();
+    }
+
+    // -----------------------------------------------------
+    //                                         ZonedDateTime
+    //                                         -------------
+    public OptionalThing<DateTimeFormatter> getZonedDateTimeFormatter() {
+        return zonedDateTimeFormatter;
     }
 }
