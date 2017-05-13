@@ -942,11 +942,11 @@ public class ActionFormMapper {
             //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
             //    filtered = DfTypeUtil.toDate(exp);
         } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
-            converted = DfTypeUtil.toLocalDate(exp);
+            converted = DfTypeUtil.toLocalDate(exp); // as flexible parsing
         } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
-            converted = DfTypeUtil.toLocalDateTime(exp);
+            converted = DfTypeUtil.toLocalDateTime(exp); // as flexible parsing
         } else if (LocalTime.class.isAssignableFrom(propertyType)) {
-            converted = DfTypeUtil.toLocalTime(exp);
+            converted = DfTypeUtil.toLocalTime(exp); // as flexible parsing
         } else if (ZonedDateTime.class.isAssignableFrom(propertyType)) {
             converted = toZonedDateTime(exp, option);
         } else if (Boolean.class.isAssignableFrom(propertyType)) {
