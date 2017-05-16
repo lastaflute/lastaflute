@@ -65,13 +65,14 @@ public class ApplicationExceptionResolver {
     protected final ApiManager apiManager;
     protected final EmbeddedMessageKeySupplier embeddedMessageKeySupplier;
     protected final HandledAppExCall handledAppExCall;
+    protected final MessageValuesFilter messageValuesFilter;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public ApplicationExceptionResolver(FwAssistantDirector assistantDirector, RequestManager requestManager, SessionManager sessionManager,
             OptionalThing<LoginManager> loginManager, ApiManager apiManager, EmbeddedMessageKeySupplier embeddedMessageKeySupplier,
-            HandledAppExCall handledAppExCall) {
+            HandledAppExCall handledAppExCall, MessageValuesFilter messageValuesFilter) {
         this.assistantDirector = assistantDirector;
         this.requestManager = requestManager;
         this.sessionManager = sessionManager;
@@ -79,11 +80,17 @@ public class ApplicationExceptionResolver {
         this.apiManager = apiManager;
         this.embeddedMessageKeySupplier = embeddedMessageKeySupplier;
         this.handledAppExCall = handledAppExCall;
+        this.messageValuesFilter = messageValuesFilter;
     }
 
     public static interface HandledAppExCall {
 
         ActionResponse handle(ApplicationExceptionHandler handler);
+    }
+
+    public static interface MessageValuesFilter {
+
+        Object[] filter(LaApplicationMessage values); // null array means no filter
     }
 
     // ===================================================================================
@@ -156,8 +163,15 @@ public class ApplicationExceptionResolver {
         if (!messageList.isEmpty()) {
             logger.debug("...Saving embedded application message as action error: {}", messageList);
             sessionManager.errors().clear(); // overriding existing messages if exists
-            messageList.forEach(msg -> sessionManager.errors().add(msg.getProperty(), msg.getMessageKey(), msg.getValues()));
+            messageList.forEach(msg -> {
+                sessionManager.errors().add(msg.getProperty(), msg.getMessageKey(), filterMessageValues(msg));
+            });
         }
+    }
+
+    protected Object[] filterMessageValues(LaApplicationMessage msg) {
+        final Object[] filtered = messageValuesFilter.filter(msg); // e.g. list and map to JSON for client-managed message
+        return filtered != null ? filtered : msg.getValues(); // null means no filter
     }
 
     // -----------------------------------------------------
