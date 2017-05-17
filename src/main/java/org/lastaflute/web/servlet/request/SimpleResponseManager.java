@@ -58,11 +58,11 @@ public class SimpleResponseManager implements ResponseManager {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The resolver of action path. (NotNull: after initialization) */
     @Resource
-    protected ActionPathResolver actionPathResolver;
+    private ActionPathResolver actionPathResolver;
 
     /** The map of content type for extensions. (NullAllowed) */
     protected Map<String, String> downloadExtensionContentTypeMap;

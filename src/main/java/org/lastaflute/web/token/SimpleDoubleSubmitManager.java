@@ -58,13 +58,13 @@ public class SimpleDoubleSubmitManager implements DoubleSubmitManager {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     @Resource
-    protected MessageManager messageManager;
+    private MessageManager messageManager;
 
     @Resource
-    protected RequestManager requestManager;
+    private RequestManager requestManager;
 
     /** Does it allow to call verifyToken() before validate()? */
     protected boolean allowsVerifyTokenBeforeValidation;

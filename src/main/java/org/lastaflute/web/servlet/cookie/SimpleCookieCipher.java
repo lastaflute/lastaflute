@@ -35,7 +35,7 @@ public class SimpleCookieCipher implements CookieCipher {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The invertible cipher for cookie. (NotNull: after initialization) */
     protected InvertibleCryptographer invertibleCipher;

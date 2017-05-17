@@ -47,11 +47,11 @@ public class SimpleCookieManager implements CookieManager {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The cipher for cookie's value. (NotNull) */
     @Resource
-    protected CookieCipher cookieCipher;
+    private CookieCipher cookieCipher;
 
     /** The default path when no specified expire. (NotNull: after initialization) */
     protected String defaultPath;

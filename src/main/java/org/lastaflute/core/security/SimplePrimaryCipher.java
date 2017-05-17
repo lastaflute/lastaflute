@@ -39,7 +39,7 @@ public class SimplePrimaryCipher implements PrimaryCipher {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The invertible cipher for primary values. (NotNull: after initialization) */
     protected InvertibleCryptographer invertibleCryptographer;

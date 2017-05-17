@@ -79,48 +79,48 @@ public class SimpleRequestManager implements RequestManager {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     // -----------------------------------------------------
     //                                          Core Friends
     //                                          ------------
     /** The manager of time. (NotNull: after initialization) */
     @Resource
-    protected TimeManager timeManager;
+    private TimeManager timeManager;
 
     /** The manager of message. (NotNull: after initialization) */
     @Resource
-    protected MessageManager messageManager;
+    private MessageManager messageManager;
 
     /** The manager of JSON. (NotNull: after initialization) */
     @Resource
-    protected JsonManager jsonManager;
+    private JsonManager jsonManager;
 
     // -----------------------------------------------------
     //                                           Web Friends
     //                                           -----------
     /** The manager of response. (NotNull: after initialization) */
     @Resource
-    protected ResponseManager responseManager;
+    private ResponseManager responseManager;
 
     /** The manager of session. (NotNull: after initialization) */
     @Resource
-    protected SessionManager sessionManager;
+    private SessionManager sessionManager;
 
     /** The manager of cookie. (NotNull: after initialization) */
     @Resource
-    protected CookieManager cookieManager;
+    private CookieManager cookieManager;
 
     /** The manager of API. (NotNull: after initialization) */
     @Resource
-    protected ApiManager apiManager;
+    private ApiManager apiManager;
 
     /** The provider of action adjustment. (NotNull: after initialization) */
     protected ActionAdjustmentProvider actionAdjustmentProvider; // not DI component
 
     /** The resolver of action path. (NotNull: after initialization) */
     @Resource
-    protected ActionPathResolver actionPathResolver;
+    private ActionPathResolver actionPathResolver;
 
     // -----------------------------------------------------
     //                                    Provided Resources

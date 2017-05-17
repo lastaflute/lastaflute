@@ -30,7 +30,7 @@ public class JTATransactionStage implements TransactionStage {
     //                                                                           Attribute
     //                                                                           =========
     @Resource
-    protected TransactionManagerAdapter transactionManagerAdapter;
+    private TransactionManagerAdapter transactionManagerAdapter;
 
     // ===================================================================================
     //                                                                         Transaction

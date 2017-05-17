@@ -50,7 +50,7 @@ public class SimpleJsonManager implements JsonManager {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** Is development here? */
     protected boolean developmentHere;

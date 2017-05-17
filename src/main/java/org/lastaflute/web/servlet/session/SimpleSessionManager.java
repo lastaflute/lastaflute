@@ -59,7 +59,7 @@ public class SimpleSessionManager implements SessionManager {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The shared storage of session for session sharing. (NotNull, EmptyAllowed: if no storage) */
     protected OptionalThing<SessionSharedStorage> sessionSharedStorage = OptionalThing.empty(); // not null

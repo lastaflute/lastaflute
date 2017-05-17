@@ -47,16 +47,16 @@ public class SimpleCsrfManager implements CsrfManager {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     @Resource
-    protected RequestManager requestManager;
+    private RequestManager requestManager;
 
     @Resource
-    protected ResponseManager responseManager;
+    private ResponseManager responseManager;
 
     @Resource
-    protected SessionManager sessionManager;
+    private SessionManager sessionManager;
 
     /** The header name of CSRF token on request and response. (NotNull, Changeable) */
     protected String tokenHeaderName = DEFAULT_TOKEN_HEADER;
