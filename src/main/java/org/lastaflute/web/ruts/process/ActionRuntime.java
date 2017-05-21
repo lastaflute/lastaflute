@@ -33,7 +33,7 @@ import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionExecute;
-import org.lastaflute.web.ruts.process.urlparam.RequestUrlParam;
+import org.lastaflute.web.ruts.process.pathparam.RequestPathParam;
 import org.lastaflute.web.util.LaParamWrapperUtil;
 
 /**
@@ -49,7 +49,7 @@ public class ActionRuntime {
     //                                      ----------------
     protected final String requestPath; // current request info
     protected final ActionExecute execute; // fixed meta data
-    protected final RequestUrlParam urlParam; // of current request
+    protected final RequestPathParam pathParam; // of current request
 
     // -----------------------------------------------------
     //                                         Runtime State
@@ -70,10 +70,10 @@ public class ActionRuntime {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionRuntime(String requestPath, ActionExecute execute, RequestUrlParam urlParam) {
+    public ActionRuntime(String requestPath, ActionExecute execute, RequestPathParam pathParam) {
         this.requestPath = requestPath;
         this.execute = execute;
-        this.urlParam = urlParam;
+        this.pathParam = pathParam;
     }
 
     // ===================================================================================
@@ -268,7 +268,7 @@ public class ActionRuntime {
         sb.append("runtime:{");
         sb.append(requestPath);
         sb.append(", ").append(execute.toSimpleMethodExp());
-        sb.append(", ").append(urlParam); // e.g. urlParam:{{}}
+        sb.append(", ").append(pathParam); // e.g. pathParam:{{}}
         if (actionResponse != null) {
             sb.append(", ").append(actionResponse); // e.g. JsonResponse:{...}
         }
@@ -309,11 +309,11 @@ public class ActionRuntime {
     }
 
     /**
-     * Get the URL parameters of the request for the action.
-     * @return The object that has e.g. URL parameter values. (NotNull)
+     * Get the path parameters of the request for the action.
+     * @return The object that has e.g. path parameter values. (NotNull)
      */
-    public RequestUrlParam getRequestUrlParam() {
-        return urlParam;
+    public RequestPathParam getRequestPathParam() {
+        return pathParam;
     }
 
     // -----------------------------------------------------

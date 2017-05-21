@@ -48,7 +48,7 @@ public class ExecuteArgAnalyzer {
     //                                                                             Analyze
     //                                                                             =======
     public void analyzeExecuteArg(Method executeMethod, ExecuteArgBox box) {
-        List<Class<?>> urlParamTypeList = null; // lazy loaded
+        List<Class<?>> pathParamTypeList = null; // lazy loaded
         Parameter formParam = null;
         final Parameter[] parameters = executeMethod.getParameters();
         if (parameters.length > 0) {
@@ -62,14 +62,14 @@ public class ExecuteArgAnalyzer {
                     formParam = parameter;
                     formEnd = true;
                 } else {
-                    if (urlParamTypeList == null) {
-                        urlParamTypeList = new ArrayList<Class<?>>(4);
+                    if (pathParamTypeList == null) {
+                        pathParamTypeList = new ArrayList<Class<?>>(4);
                     }
-                    urlParamTypeList.add(parameter.getType());
+                    pathParamTypeList.add(parameter.getType());
                 }
             }
         }
-        box.setUrlParamTypeList(prepareUrlParamTypeList(urlParamTypeList));
+        box.setPathParamTypeList(preparePathParamTypeList(pathParamTypeList));
         box.setOptionalGenericTypeMap(prepareOptionalGenericTypeMap(executeMethod));
         box.setFormType(prepareFormType(formParam));
         box.setListFormParameter(prepareListFormParameter(formParam));
@@ -280,8 +280,8 @@ public class ExecuteArgAnalyzer {
         throw new ActionFormNotLastParameterException(msg);
     }
 
-    protected List<Class<?>> prepareUrlParamTypeList(List<Class<?>> urlParamTypeList) {
-        return urlParamTypeList != null ? Collections.unmodifiableList(urlParamTypeList) : Collections.emptyList();
+    protected List<Class<?>> preparePathParamTypeList(List<Class<?>> pathParamTypeList) {
+        return pathParamTypeList != null ? Collections.unmodifiableList(pathParamTypeList) : Collections.emptyList();
     }
 
     // ===================================================================================
@@ -289,17 +289,17 @@ public class ExecuteArgAnalyzer {
     //                                                                ====================
     public static class ExecuteArgBox {
 
-        protected List<Class<?>> urlParamTypeList;
+        protected List<Class<?>> pathParamTypeList;
         protected Map<Integer, Class<?>> optionalGenericTypeMap;
         protected Class<?> formType; // null allowed
         protected Parameter listFormParameter; // null allowed for e.g. JSON list
 
-        public List<Class<?>> getUrlParamTypeList() {
-            return urlParamTypeList;
+        public List<Class<?>> getPathParamTypeList() {
+            return pathParamTypeList;
         }
 
-        public void setUrlParamTypeList(List<Class<?>> urlParamTypeList) {
-            this.urlParamTypeList = urlParamTypeList;
+        public void setPathParamTypeList(List<Class<?>> pathParamTypeList) {
+            this.pathParamTypeList = pathParamTypeList;
         }
 
         public Map<Integer, Class<?>> getOptionalGenericTypeMap() {

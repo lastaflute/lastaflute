@@ -811,7 +811,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         br.addElement("        validate(body, ...) // Good");
         br.addElement("    }");
         br.addElement("");
-        br.addElement("If that helps, URL parameters on execute method arguments");
+        br.addElement("If that helps, path parameters on execute method arguments");
         br.addElement("are unneeded to validate().");
         br.addElement("If the parameter type is not OptionalThing (e.g. String, Integer),");
         br.addElement("It has been already checked as required parameter in framework.");

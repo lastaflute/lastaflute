@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process.urlparam;
+package org.lastaflute.web.ruts.process.pathparam;
 
 import java.util.Collections;
 import java.util.List;
@@ -22,28 +22,28 @@ import java.util.Map;
 /**
  * @author jflute
  */
-public class RequestUrlParam {
+public class RequestPathParam {
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final List<Class<?>> urlParamTypeList; // not null, read-only
-    protected final Map<Integer, Object> urlParamValueMap; // not null, read-only
+    protected final List<Class<?>> pathParamTypeList; // not null, read-only
+    protected final Map<Integer, Object> pathParamValueMap; // not null, read-only
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public RequestUrlParam(List<Class<?>> urlParamTypeList, Map<Integer, Object> urlParamValueMap) {
-        this.urlParamTypeList = toUnmodifiableList(urlParamTypeList);
-        this.urlParamValueMap = toUnmodifiableMap(urlParamValueMap);
+    public RequestPathParam(List<Class<?>> pathParamTypeList, Map<Integer, Object> pathParamValueMap) {
+        this.pathParamTypeList = toUnmodifiableList(pathParamTypeList);
+        this.pathParamValueMap = toUnmodifiableMap(pathParamValueMap);
     }
 
-    protected List<Class<?>> toUnmodifiableList(List<Class<?>> urlParamTypeList) {
-        return Collections.unmodifiableList(urlParamTypeList);
+    protected List<Class<?>> toUnmodifiableList(List<Class<?>> pathParamTypeList) {
+        return Collections.unmodifiableList(pathParamTypeList);
     }
 
-    protected Map<Integer, Object> toUnmodifiableMap(Map<Integer, Object> urlParamValueMap) {
-        return Collections.unmodifiableMap(urlParamValueMap);
+    protected Map<Integer, Object> toUnmodifiableMap(Map<Integer, Object> pathParamValueMap) {
+        return Collections.unmodifiableMap(pathParamValueMap);
     }
 
     // ===================================================================================
@@ -51,17 +51,17 @@ public class RequestUrlParam {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "urlParam:{" + urlParamValueMap + "}";
+        return "pathParam:{" + pathParamValueMap + "}";
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public List<Class<?>> getUrlParamTypeList() {
-        return urlParamTypeList;
+    public List<Class<?>> getPathParamTypeList() {
+        return pathParamTypeList;
     }
 
-    public Map<Integer, Object> getUrlParamValueMap() {
-        return urlParamValueMap;
+    public Map<Integer, Object> getPathParamValueMap() {
+        return pathParamValueMap;
     }
 }

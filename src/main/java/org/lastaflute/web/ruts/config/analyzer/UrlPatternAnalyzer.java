@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
-import org.lastaflute.web.exception.ActionUrlParameterDifferentArgsException;
+import org.lastaflute.web.exception.ActionPathParameterDifferentArgsException;
 import org.lastaflute.web.exception.UrlPatternBeginBraceNotFoundException;
 import org.lastaflute.web.exception.UrlPatternEndBraceNotFoundException;
 import org.lastaflute.web.exception.UrlPatternFrontOrRearSlashUnneededException;
@@ -61,14 +61,14 @@ public class UrlPatternAnalyzer {
     //                                                                              Choose
     //                                                                              ======
     public UrlPatternChosenBox choose(Method executeMethod, String mappingMethodName, String specifiedUrlPattern,
-            List<Class<?>> urlParamTypeList) {
-        checkSpecifiedUrlPattern(executeMethod, specifiedUrlPattern, urlParamTypeList);
+            List<Class<?>> pathParamTypeList) {
+        checkSpecifiedUrlPattern(executeMethod, specifiedUrlPattern, pathParamTypeList);
         final UrlPatternChosenBox chosenBox;
         if (specifiedUrlPattern != null && !specifiedUrlPattern.isEmpty()) { // e.g. urlPattern="{}"
             chosenBox = adjustUrlPatternMethodPrefix(executeMethod, specifiedUrlPattern, mappingMethodName, /*specified*/true);
         } else { // urlPattern=[no definition]
-            if (!urlParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
-                final String derivedUrlPattern = buildDerivedUrlPattern(urlParamTypeList);
+            if (!pathParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
+                final String derivedUrlPattern = buildDerivedUrlPattern(pathParamTypeList);
                 chosenBox = adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, mappingMethodName, /*non-specified*/false);
             } else { // e.g. index(), sea() *no parameter
                 chosenBox = adjustUrlPatternByMethodNameWithoutParam(mappingMethodName);
@@ -77,9 +77,9 @@ public class UrlPatternAnalyzer {
         return chosenBox;
     }
 
-    protected String buildDerivedUrlPattern(List<Class<?>> urlParamTypeList) {
+    protected String buildDerivedUrlPattern(List<Class<?>> pathParamTypeList) {
         final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < urlParamTypeList.size(); i++) {
+        for (int i = 0; i < pathParamTypeList.size(); i++) {
             sb.append(i > 0 ? "/" : "").append("{}");
         }
         return sb.toString();
@@ -134,7 +134,7 @@ public class UrlPatternAnalyzer {
     // -----------------------------------------------------
     //                                       Check Specified
     //                                       ---------------
-    protected void checkSpecifiedUrlPattern(Method executeMethod, String specifiedUrlPattern, List<Class<?>> urlParamTypeList) {
+    protected void checkSpecifiedUrlPattern(Method executeMethod, String specifiedUrlPattern, List<Class<?>> pathParamTypeList) {
         if (specifiedUrlPattern != null) {
             if (canBeAbbreviatedUrlPattern(specifiedUrlPattern)) {
                 throwUrlPatternNonsenseSettingException(executeMethod, specifiedUrlPattern);
@@ -142,7 +142,7 @@ public class UrlPatternAnalyzer {
             if (hasFrontOrRearSlashUrlPattern(specifiedUrlPattern)) {
                 throwUrlPatternFrontOrRearSlashUnneededException(executeMethod, specifiedUrlPattern);
             }
-            if (hasMethodKeywordWithOptionalArg(specifiedUrlPattern, urlParamTypeList)) {
+            if (hasMethodKeywordWithOptionalArg(specifiedUrlPattern, pathParamTypeList)) {
                 throwUrlPatternMethodKeywordWithOptionalArgException(executeMethod, specifiedUrlPattern);
             }
         }
@@ -202,8 +202,8 @@ public class UrlPatternAnalyzer {
         throw new UrlPatternFrontOrRearSlashUnneededException(msg);
     }
 
-    protected boolean hasMethodKeywordWithOptionalArg(String specifiedUrlPattern, List<Class<?>> urlParamTypeList) {
-        return specifiedUrlPattern.contains(METHOD_KEYWORD_MARK) && urlParamTypeList.stream().anyMatch(tp -> {
+    protected boolean hasMethodKeywordWithOptionalArg(String specifiedUrlPattern, List<Class<?>> pathParamTypeList) {
+        return specifiedUrlPattern.contains(METHOD_KEYWORD_MARK) && pathParamTypeList.stream().anyMatch(tp -> {
             return OptionalThing.class.isAssignableFrom(tp);
         });
     }
@@ -342,7 +342,7 @@ public class UrlPatternAnalyzer {
     // ===================================================================================
     //                                                                           to Regexp
     //                                                                           =========
-    public UrlPatternRegexpBox toRegexp(Method executeMethod, String urlPattern, List<Class<?>> urlParamTypeList,
+    public UrlPatternRegexpBox toRegexp(Method executeMethod, String urlPattern, List<Class<?>> pathParamTypeList,
             Map<Integer, Class<?>> optionalGenericTypeMap) {
         final StringBuilder sb = new StringBuilder(32);
         final char[] chars = urlPattern.toCharArray();
@@ -357,7 +357,7 @@ public class UrlPatternAnalyzer {
             } else if (currentChar == '}') { // end brace
                 assertBeginBraceExists(executeMethod, urlPattern, index, i);
                 ++parameterIndex;
-                setupParameterPattern(sb, urlParamTypeList, optionalGenericTypeMap, parameterIndex);
+                setupParameterPattern(sb, pathParamTypeList, optionalGenericTypeMap, parameterIndex);
                 final String elementName = urlPattern.substring(index + 1, i);
                 assertNoNameParameter(executeMethod, urlPattern, elementName);
                 if (varList == null) {
@@ -373,21 +373,21 @@ public class UrlPatternAnalyzer {
         return new UrlPatternRegexpBox(buildRegexpPattern(sb.toString()), varList);
     }
 
-    protected void setupParameterPattern(StringBuilder sb, List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap,
+    protected void setupParameterPattern(StringBuilder sb, List<Class<?>> pathParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap,
             int parameterIndex) {
-        if (needsNumberTypePattern(urlParamTypeList, optionalGenericTypeMap, parameterIndex)) {
+        if (needsNumberTypePattern(pathParamTypeList, optionalGenericTypeMap, parameterIndex)) {
             sb.append(ELEMENT_NUMBER_PATTERN); // to enable mapping index(Integer) and sea()
         } else {
             sb.append(ELEMENT_BASIC_PATTERN);
         }
     }
 
-    protected boolean needsNumberTypePattern(List<Class<?>> urlParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap,
+    protected boolean needsNumberTypePattern(List<Class<?>> pathParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap,
             int parameterIndex) {
-        if (urlParamTypeList.size() <= parameterIndex) {
+        if (pathParamTypeList.size() <= parameterIndex) {
             return false; // different count of parameters will be checked later so only avoid out-of-index here
         }
-        final Class<?> parameterType = urlParamTypeList.get(parameterIndex);
+        final Class<?> parameterType = pathParamTypeList.get(parameterIndex);
         if (Number.class.isAssignableFrom(parameterType)) {
             return true;
         }
@@ -550,16 +550,16 @@ public class UrlPatternAnalyzer {
     // ===================================================================================
     //                                                                Check Variable Count
     //                                                                ====================
-    public void checkUrlPatternVariableCount(Method executeMethod, List<String> urlPatternVarList, List<Class<?>> urlParamTypeList) {
-        if (urlPatternVarList.size() != urlParamTypeList.size()) {
-            throwActionUrlParameterDifferentArgsException(executeMethod, urlPatternVarList, urlParamTypeList);
+    public void checkUrlPatternVariableCount(Method executeMethod, List<String> urlPatternVarList, List<Class<?>> pathParamTypeList) {
+        if (urlPatternVarList.size() != pathParamTypeList.size()) {
+            throwActionPathParameterDifferentArgsException(executeMethod, urlPatternVarList, pathParamTypeList);
         }
     }
 
-    protected void throwActionUrlParameterDifferentArgsException(Method executeMethod, List<String> urlPatternVarList,
-            List<Class<?>> urlParamTypeList) {
+    protected void throwActionPathParameterDifferentArgsException(Method executeMethod, List<String> urlPatternVarList,
+            List<Class<?>> pathParamTypeList) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Different number of argument for URL parameter.");
+        br.addNotice("Different number of argument for path parameter.");
         br.addItem("Advice");
         br.addElement("Make sure your urlPattern or arguments.");
         br.addElement("  (x):");
@@ -573,9 +573,9 @@ public class UrlPatternAnalyzer {
         br.addItem("urlPattern Variable List");
         br.addElement(urlPatternVarList);
         br.addItem("Defined Argument List");
-        br.addElement(urlParamTypeList);
+        br.addElement(pathParamTypeList);
         final String msg = br.buildExceptionMessage();
-        throw new ActionUrlParameterDifferentArgsException(msg);
+        throw new ActionPathParameterDifferentArgsException(msg);
     }
 
     // ===================================================================================

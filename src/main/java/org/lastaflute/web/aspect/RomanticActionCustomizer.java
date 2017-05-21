@@ -196,10 +196,10 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         executeMap.values().stream().filter(execute -> {
             // if urlPattern is specified, cannot determine shadowing so skip checking
             return execute.isIndexMethod() // e.g. index() or get$index() or ...
-                    && execute.getUrlParamArgs().isPresent() // no shadowing if no parameter
+                    && execute.getPathParamArgs().isPresent() // no shadowing if no parameter
                     && !execute.getPreparedUrlPattern().isSpecified();// cannot determine shadowing if specified
         }).forEach(index -> {
-            if (index.getUrlParamArgs().get().isNumberTypeParameter(0)) { // Number has original pattern
+            if (index.getPathParamArgs().get().isNumberTypeParameter(0)) { // Number has original pattern
                 return;
             }
             // index may have String as the first argument without urlPattern here
@@ -227,7 +227,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
             return false; // #giveup cannot determine shadowing for urlPattern
         }
         // both no urlPattern here
-        if (!named.getUrlParamArgs().isPresent()) { // no parameter e.g. dockside()
+        if (!named.getPathParamArgs().isPresent()) { // no parameter e.g. dockside()
             return true; // shadowing if no urlPattern
         }
         // both has any parameters

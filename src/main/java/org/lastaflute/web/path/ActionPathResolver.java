@@ -56,15 +56,15 @@ public class ActionPathResolver {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The container instance of Seasar for this class (not root but you can get root). (NotNull) */
     @Resource
-    protected LaContainer container;
+    private LaContainer container;
 
     /** The naming convention instance of Seasar. (NotNull) */
     @Resource
-    protected NamingConvention namingConvention;
+    private NamingConvention namingConvention;
 
     /** The provider of action adjustment. (NotNull: after initialization) */
     protected ActionAdjustmentProvider actionAdjustmentProvider;

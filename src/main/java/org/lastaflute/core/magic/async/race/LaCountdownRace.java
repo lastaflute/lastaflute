@@ -222,9 +222,8 @@ public class LaCountdownRace { // migrated from DBFlute
     // ===================================================================================
     //                                                                            Callable
     //                                                                            ========
-    protected Callable<Void> createCallable(LaCountdownRaceExecution execution, final CountDownLatch ready, final CountDownLatch start,
-            final CountDownLatch goal, final LaCountdownRaceLatch ourLatch, final int entryNumber, final Object parameter,
-            final Object lockObj) {
+    protected Callable<Void> createCallable(LaCountdownRaceExecution execution, CountDownLatch ready, CountDownLatch start,
+            CountDownLatch goal, LaCountdownRaceLatch ourLatch, int entryNumber, Object parameter, Object lockObj) {
         execution.readyCaller();
         return new Callable<Void>() {
             public Void call() { // each thread here

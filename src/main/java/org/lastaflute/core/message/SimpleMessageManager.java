@@ -44,7 +44,7 @@ public class SimpleMessageManager implements MessageManager {
     //                                                                           Attribute
     //                                                                           =========
     @Resource
-    protected MessageResourcesHolder messageResourcesHolder;
+    private MessageResourcesHolder messageResourcesHolder;
 
     // ===================================================================================
     //                                                                          Initialize

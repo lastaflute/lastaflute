@@ -43,15 +43,15 @@ public class SimpleApiManager implements ApiManager {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The manager of JSON. (NotNull: after initialization) */
     @Resource
-    protected JsonManager jsonManager;
+    private JsonManager jsonManager;
 
     /** The manager of response. (NotNull: after initialization) */
     @Resource
-    protected ResponseManager responseManager;
+    private ResponseManager responseManager;
 
     /** The hook for API failures. (NotNull: after initialization) */
     protected ApiFailureHook apiFailureHook;

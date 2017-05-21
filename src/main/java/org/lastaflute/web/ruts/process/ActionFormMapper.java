@@ -24,6 +24,8 @@ import java.lang.reflect.Type;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -108,8 +110,8 @@ public class ActionFormMapper {
     private static final Logger logger = LoggerFactory.getLogger(ActionFormMapper.class);
     protected static final String MULTIPART_CONTENT_TYPE = "multipart/form-data";
     protected static final String CACHE_KEY_DECODED_PROPERTY_MAP = "requestProcessor.decodedPropertyMap";
-    protected static final String CACHE_KEY_URL_PARAM_NAMES_CACHED_SET = "requestProcessor.urlParamNames.cachedSet";
-    protected static final String CACHE_KEY_URL_PARAM_NAMES_UNIQUE_METHOD = "requestProcessor.urlParamNames.uniqueMethod";
+    protected static final String CACHE_KEY_URL_PARAM_NAMES_CACHED_SET = "requestProcessor.pathParamNames.cachedSet";
+    protected static final String CACHE_KEY_URL_PARAM_NAMES_UNIQUE_METHOD = "requestProcessor.pathParamNames.uniqueMethod";
     protected static final char NESTED_DELIM = '.';
     protected static final char INDEXED_DELIM = '[';
     protected static final char INDEXED_DELIM2 = ']';
@@ -940,25 +942,49 @@ public class ActionFormMapper {
             //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
             //    filtered = DfTypeUtil.toDate(exp);
         } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
-            converted = DfTypeUtil.toLocalDate(exp);
+            converted = DfTypeUtil.toLocalDate(exp); // as flexible parsing
         } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
-            converted = DfTypeUtil.toLocalDateTime(exp);
+            converted = DfTypeUtil.toLocalDateTime(exp); // as flexible parsing
         } else if (LocalTime.class.isAssignableFrom(propertyType)) {
-            converted = DfTypeUtil.toLocalTime(exp);
+            converted = DfTypeUtil.toLocalTime(exp); // as flexible parsing
+        } else if (ZonedDateTime.class.isAssignableFrom(propertyType)) {
+            converted = toZonedDateTime(exp, option);
         } else if (Boolean.class.isAssignableFrom(propertyType)) {
-            if (isCheckboxOn(exp)) {
-                converted = true;
-            } else {
-                if (exp instanceof String && ((String) exp).isEmpty()) { // pinpoint patch
-                    converted = null; // toBoolean("") before DBFlute-1.1.3 throws exception so avoid it
-                } else {
-                    converted = DfTypeUtil.toBoolean(exp);
-                }
-            }
+            converted = toBoolean(exp, option);
         } else if (isClassificationProperty(propertyType)) { // means CDef
             converted = toVerifiedClassification(bean, name, exp, propertyType);
         } else { // e.g. multipart form file or unsupported type
             converted = exp;
+        }
+        return converted;
+    }
+
+    protected Object toZonedDateTime(Object exp, FormMappingOption option) {
+        final Object converted;
+        if (exp == null || (exp instanceof String && ((String) exp).isEmpty())) {
+            converted = null;
+        } else {
+            // DfTypeUtil.toZonedDateTime() needs to be adjusted at DBFlute-1.1.3 so parse by myself for now
+            // (in the meantime, zoned date-time does not need flexble parsing because of almost transfer expression)
+            converted = ZonedDateTime.parse(exp.toString(), getZonedDateTimeFormatter(option));
+        }
+        return converted;
+    }
+
+    protected DateTimeFormatter getZonedDateTimeFormatter(FormMappingOption option) {
+        return option.getZonedDateTimeFormatter().orElseGet(() -> DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    }
+
+    protected Object toBoolean(Object exp, FormMappingOption option) {
+        final Object converted;
+        if (isCheckboxOn(exp)) {
+            converted = true;
+        } else {
+            if (exp instanceof String && ((String) exp).isEmpty()) { // pinpoint patch
+                converted = null; // toBoolean("") before DBFlute-1.1.3 throws exception so avoid it
+            } else {
+                converted = DfTypeUtil.toBoolean(exp);
+            }
         }
         return converted;
     }
@@ -1053,7 +1079,7 @@ public class ActionFormMapper {
             throw e;
         }
         // e.g. non-number GET but number type property
-        // suppress easy 500 error by e.g. non-number GET parameter (similar with URL parameter)
+        // suppress easy 500 error by e.g. non-number GET parameter (similar with path parameter)
         //  (o): ?seaId=123
         //  (x): ?seaId=abc *this case
         final String beanExp = bean != null ? bean.getClass().getName() : null; // null check just in case

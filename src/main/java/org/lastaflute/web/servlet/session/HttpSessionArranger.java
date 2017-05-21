@@ -9,26 +9,25 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.exception;
+package org.lastaflute.web.servlet.session;
 
-import org.lastaflute.core.exception.LaSystemException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 /**
  * @author jflute
+ * @since 0.9.7 (2017/05/13 Saturday at kamogawa)
  */
-public class UrlParamArgsDifferentCountException extends LaSystemException {
+public interface HttpSessionArranger {
 
-    private static final long serialVersionUID = 1L;
-
-    public UrlParamArgsDifferentCountException(String msg) {
-        super(msg);
-    }
-
-    public UrlParamArgsDifferentCountException(String msg, Throwable cause) {
-        super(msg, cause);
-    }
+    /**
+     * @param request The request of servlet. (NotNull)
+     * @param create Does it create new session when no-existing?
+     * @return The new-created or existing HTTP session. (NotNull: if create, NullAllowed: if not create)
+     */
+    HttpSession create(HttpServletRequest request, boolean create);
 }

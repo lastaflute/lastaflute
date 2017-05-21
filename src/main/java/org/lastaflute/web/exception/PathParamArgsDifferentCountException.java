@@ -9,28 +9,26 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.servlet.session;
+package org.lastaflute.web.exception;
+
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
  * @author jflute
  */
-public interface SessionResourceProvider {
+public class PathParamArgsDifferentCountException extends LaSystemException {
 
-    /**
-     * @return The storage instance for session sharing. (NullAllowed: then no sharing)
-     */
-    default SessionSharedStorage provideSharedStorage() {
-        return null;
+    private static final long serialVersionUID = 1L;
+
+    public PathParamArgsDifferentCountException(String msg) {
+        super(msg);
     }
 
-    /**
-     * @return The arranger instance of HTTP session. (NullAllowed: then use default)
-     */
-    default HttpSessionArranger provideHttpSessionArranger() {
-        return null;
+    public PathParamArgsDifferentCountException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

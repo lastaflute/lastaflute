@@ -20,6 +20,7 @@ import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.hook.ApplicationExceptionResolver.HandledAppExCall;
+import org.lastaflute.web.hook.ApplicationExceptionResolver.MessageValuesFilter;
 import org.lastaflute.web.login.LoginManager;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.HtmlResponse;
@@ -48,11 +49,13 @@ public class GodHandMonologue {
     protected final ExceptionTranslator exceptionTranslator;
     protected final EmbeddedMessageKeySupplier typicalKeySupplier;
     protected final HandledAppExCall handledAppExCall;
+    protected final MessageValuesFilter messageValuesFilter;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public GodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier typicalKeySupplier, HandledAppExCall handledAppExCall) {
+    public GodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier typicalKeySupplier, HandledAppExCall handledAppExCall,
+            MessageValuesFilter messageValuesFilter) {
         this.assistantDirector = resource.getAssistantDirector();
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
@@ -61,6 +64,7 @@ public class GodHandMonologue {
         this.exceptionTranslator = resource.getExceptionTranslator();
         this.typicalKeySupplier = typicalKeySupplier;
         this.handledAppExCall = handledAppExCall;
+        this.messageValuesFilter = messageValuesFilter;
     }
 
     // ===================================================================================
@@ -96,6 +100,6 @@ public class GodHandMonologue {
 
     protected ApplicationExceptionResolver createApplicationExceptionResolver() { // you can override
         return new ApplicationExceptionResolver(assistantDirector, requestManager, sessionManager, loginManager, apiManager,
-                typicalKeySupplier, handledAppExCall);
+                typicalKeySupplier, handledAppExCall, messageValuesFilter);
     }
 }

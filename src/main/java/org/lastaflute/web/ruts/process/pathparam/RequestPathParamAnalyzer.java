@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.ruts.process.urlparam;
+package org.lastaflute.web.ruts.process.pathparam;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -38,8 +38,8 @@ import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.util.LaClassificationUtil;
 import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
 import org.lastaflute.web.exception.Forced404NotFoundException;
-import org.lastaflute.web.exception.UrlParamArgsDifferentCountException;
-import org.lastaflute.web.exception.UrlParamOptionalParameterEmptyAccessException;
+import org.lastaflute.web.exception.PathParamArgsDifferentCountException;
+import org.lastaflute.web.exception.PathParamOptionalParameterEmptyAccessException;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -47,7 +47,7 @@ import org.lastaflute.web.util.LaActionExecuteUtil;
 /**
  * @author jflute
  */
-public class RequestUrlParamAnalyzer {
+public class RequestPathParamAnalyzer {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -57,20 +57,23 @@ public class RequestUrlParamAnalyzer {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public RequestUrlParamAnalyzer(RequestManager requestManager) {
+    public RequestPathParamAnalyzer(RequestManager requestManager) {
         this.requestManager = requestManager;
     }
 
     // ===================================================================================
     //                                                                             Analyze
     //                                                                             =======
+    // [attention]
+    // pathParam means path parameters or object that has the parameters
+    // paramPath means string of path for parameter from part of URL
     /**
      * @param execute The definition of action execute. (NotNull)
-     * @param paramPath The parameter path from URL. (NullAllowed)
-     * @return The object for URL parameter value that has e.g. map:{index = value} (NotNull)
+     * @param paramPath The path for parameter from part of URL. (NullAllowed)
+     * @return The object for path parameter value that has e.g. map:{index = value} (NotNull)
      */
-    public RequestUrlParam analyzeUrlParam(ActionExecute execute, String paramPath) {
-        return doAnalyzeUrlParam(execute, extractRealParamPath(execute, paramPath));
+    public RequestPathParam analyzePathParam(ActionExecute execute, String paramPath) {
+        return doAnalyzePathParam(execute, extractRealParamPath(execute, paramPath));
     }
 
     protected String extractRealParamPath(ActionExecute execute, String paramPath) {
@@ -91,59 +94,59 @@ public class RequestUrlParamAnalyzer {
         return real;
     }
 
-    protected RequestUrlParam doAnalyzeUrlParam(ActionExecute execute, String paramPath) {
-        final List<Class<?>> urlParamTypeList = execute.getUrlParamArgs().map(args -> {
-            return args.getUrlParamTypeList();
+    protected RequestPathParam doAnalyzePathParam(ActionExecute execute, String paramPath) {
+        final List<Class<?>> pathParamTypeList = execute.getPathParamArgs().map(args -> {
+            return args.getPathParamTypeList();
         }).orElse(Collections.emptyList());
-        final Map<Integer, Class<?>> optGenTypeMap = execute.getUrlParamArgs().map(args -> {
+        final Map<Integer, Class<?>> optGenTypeMap = execute.getPathParamArgs().map(args -> {
             return args.getOptionalGenericTypeMap();
         }).orElse(Collections.emptyMap());
-        final Map<Integer, Object> urlParamValueMap;
+        final Map<Integer, Object> pathParamValueMap;
         if (paramPath != null && paramPath.length() > 0) {
-            urlParamValueMap = fromParamPath(execute, paramPath, urlParamTypeList, optGenTypeMap);
+            pathParamValueMap = fromParamPath(execute, paramPath, pathParamTypeList, optGenTypeMap);
         } else {
-            urlParamValueMap = withoutParamPath(execute, urlParamTypeList);
+            pathParamValueMap = withoutParamPath(execute, pathParamTypeList);
         }
-        assertUrlParamArgsCountMatches(execute, paramPath, urlParamTypeList, urlParamValueMap);
-        checkRequiredParameter(execute, paramPath, urlParamValueMap, optGenTypeMap);
-        return newRequestUrlParam(urlParamTypeList, urlParamValueMap);
+        assertPathParamArgsCountMatches(execute, paramPath, pathParamTypeList, pathParamValueMap);
+        checkRequiredParameter(execute, paramPath, pathParamValueMap, optGenTypeMap);
+        return newRequestPathParam(pathParamTypeList, pathParamValueMap);
     }
 
-    protected RequestUrlParam newRequestUrlParam(List<Class<?>> urlParamTypeList, Map<Integer, Object> urlParamValueMap) {
-        return new RequestUrlParam(urlParamTypeList, urlParamValueMap);
+    protected RequestPathParam newRequestPathParam(List<Class<?>> pathParamTypeList, Map<Integer, Object> pathParamValueMap) {
+        return new RequestPathParam(pathParamTypeList, pathParamValueMap);
     }
 
     // -----------------------------------------------------
     //                                        from ParamPath
     //                                        --------------
-    protected Map<Integer, Object> fromParamPath(ActionExecute execute, String paramPath, List<Class<?>> urlParamTypeList,
+    protected Map<Integer, Object> fromParamPath(ActionExecute execute, String paramPath, List<Class<?>> pathParamTypeList,
             Map<Integer, Class<?>> optGenTypeMap) {
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
         // e.g. index(String first) /product/list/2/
-        //  => urlPatternRegexp=^([^/]+)$, paramPath=2, urlParamTypeList=[String]
+        //  => urlPatternRegexp=^([^/]+)$, paramPath=2, pathParamTypeList=[String]
         // 
         // e.g. sea(String first) /product/list/sea/2/
-        //  => urlPatternRegexp=^sea/([^/]+)$, paramPath=2, urlParamTypeList=[String]
+        //  => urlPatternRegexp=^sea/([^/]+)$, paramPath=2, pathParamTypeList=[String]
         // 
         // e.g. land(String first, String second) /product/list/sea/2/3/
-        //  => urlPatternRegexp=^land/([^/]+)/([^/]+)$, paramPath=2/3, urlParamTypeList=[String, String]
+        //  => urlPatternRegexp=^land/([^/]+)/([^/]+)$, paramPath=2/3, pathParamTypeList=[String, String]
         // _/_/_/_/_/_/_/_/_/_/
-        final List<String> paramList = prepareParamList(execute, paramPath, urlParamTypeList);
-        final Map<Integer, Object> valueMap = new LinkedHashMap<Integer, Object>(urlParamTypeList.size());
+        final List<String> paramList = prepareParamList(execute, paramPath, pathParamTypeList);
+        final Map<Integer, Object> valueMap = new LinkedHashMap<Integer, Object>(pathParamTypeList.size());
         int index = 0;
-        for (Class<?> paramType : urlParamTypeList) {
+        for (Class<?> paramType : pathParamTypeList) {
             final String plainValue = paramList.get(index);
-            valueMap.put(index, filterUrlParam(execute, index, paramType, optGenTypeMap, plainValue));
+            valueMap.put(index, filterPathParam(execute, index, paramType, optGenTypeMap, plainValue));
             ++index;
         }
         return Collections.unmodifiableMap(valueMap);
     }
 
-    protected List<String> prepareParamList(ActionExecute execute, String paramPath, List<Class<?>> urlParamTypeList) {
-        final List<String> paramList = new ArrayList<String>(urlParamTypeList.size());
+    protected List<String> prepareParamList(ActionExecute execute, String paramPath, List<Class<?>> pathParamTypeList) {
+        final List<String> paramList = new ArrayList<String>(pathParamTypeList.size());
         final Matcher matcher = execute.getPreparedUrlPattern().matcher(adjustParamPathPrefix(execute, paramPath));
         if (matcher.find()) {
-            for (int i = 0; i < urlParamTypeList.size(); i++) {
+            for (int i = 0; i < pathParamTypeList.size(); i++) {
                 paramList.add(matcher.group(i + 1)); // group 1 origin (0 provides all string)
             }
         } else { // e.g. optional parameter and actually no set it
@@ -151,7 +154,7 @@ public class RequestUrlParamAnalyzer {
             for (String element : elementList) {
                 paramList.add(element); // group 1 origin (0 provides all string)
             }
-            final int diffCount = urlParamTypeList.size() - elementList.size();
+            final int diffCount = pathParamTypeList.size() - elementList.size();
             for (int i = 0; i < diffCount; i++) { // adjust to same count
                 paramList.add(null); // dummy value e.g. for optional parameter
             }
@@ -174,27 +177,27 @@ public class RequestUrlParamAnalyzer {
     // -----------------------------------------------------
     //                                     without ParamPath
     //                                     -----------------
-    protected Map<Integer, Object> withoutParamPath(ActionExecute execute, List<Class<?>> urlParamTypeList) {
-        final Map<Integer, Object> urlParamValueMap;
-        if (!urlParamTypeList.isEmpty()) { // e.g. /sea/land/3/ but /sea/land/
-            final Map<Integer, Object> valueMap = new LinkedHashMap<Integer, Object>(urlParamTypeList.size());
+    protected Map<Integer, Object> withoutParamPath(ActionExecute execute, List<Class<?>> pathParamTypeList) {
+        final Map<Integer, Object> pathParamValueMap;
+        if (!pathParamTypeList.isEmpty()) { // e.g. /sea/land/3/ but /sea/land/
+            final Map<Integer, Object> valueMap = new LinkedHashMap<Integer, Object>(pathParamTypeList.size());
             int index = 0;
-            for (Class<?> paramType : urlParamTypeList) {
+            for (Class<?> paramType : pathParamTypeList) {
                 final Object value = isOptionalParameterType(paramType) ? createEmptyOptional(execute, index, paramType) : null;
                 valueMap.put(index, value); // null value checked later
                 ++index;
             }
-            urlParamValueMap = Collections.unmodifiableMap(valueMap);
+            pathParamValueMap = Collections.unmodifiableMap(valueMap);
         } else {
-            urlParamValueMap = Collections.emptyMap();
+            pathParamValueMap = Collections.emptyMap();
         }
-        return urlParamValueMap;
+        return pathParamValueMap;
     }
 
     // ===================================================================================
     //                                                                Filter URL Parameter
     //                                                                ====================
-    protected Object filterUrlParam(ActionExecute execute, int index, Class<?> paramType, Map<Integer, Class<?>> optGenTypeMap,
+    protected Object filterPathParam(ActionExecute execute, int index, Class<?> paramType, Map<Integer, Class<?>> optGenTypeMap,
             String plainValue) {
         if (plainValue == null || plainValue.isEmpty()) {
             if (optGenTypeMap.containsKey(index)) { // optional parameter
@@ -205,10 +208,10 @@ public class RequestUrlParamAnalyzer {
         }
         final String decoded = urlDecode(plainValue);
         try {
-            return doFilterUrlParam(execute, index, paramType, optGenTypeMap, decoded);
+            return doFilterPathParam(execute, index, paramType, optGenTypeMap, decoded);
         } catch (NumberFormatException | ParseDateException | ParseBooleanException e) { // conversion failures
             // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-            // suppress easy 500 error by e.g. non-number URL parameter
+            // suppress easy 500 error by e.g. non-number path parameter
             //  (o): /edit/123/
             //  (x): /edit/abc/ *this case
             // 
@@ -232,7 +235,7 @@ public class RequestUrlParamAnalyzer {
         }
     }
 
-    protected Object doFilterUrlParam(ActionExecute execute, int index, Class<?> paramType, Map<Integer, Class<?>> optGenTypeMap,
+    protected Object doFilterPathParam(ActionExecute execute, int index, Class<?> paramType, Map<Integer, Class<?>> optGenTypeMap,
             String exp) {
         final Object filtered;
         if (paramType.isPrimitive()) {
@@ -259,7 +262,7 @@ public class RequestUrlParamAnalyzer {
         } else if (isOptionalParameterType(paramType)) {
             final Class<?> optGenType = optGenTypeMap.get(index);
             if (optGenType != null) {
-                final Object paramValue = doFilterUrlParam(execute, index, optGenType, optGenTypeMap, exp);
+                final Object paramValue = doFilterPathParam(execute, index, optGenType, optGenTypeMap, exp);
                 filtered = createPresentOptional(paramType, paramValue);
             } else { // basically no way
                 throwOptionalGenericTypeNotFoundException(execute, index, paramType, optGenTypeMap, exp);
@@ -282,7 +285,7 @@ public class RequestUrlParamAnalyzer {
 
     protected void handleClassificationUnknownCodeException(ActionExecute execute, Object filtered, ClassificationUnknownCodeException e) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Cannot convert the code of the URL parameter to the classification:");
+        sb.append("Cannot convert the code of the path parameter to the classification:");
         sb.append("\n[Classification Convert Failure]");
         sb.append("\n").append(execute);
         sb.append("\ncode=").append(filtered);
@@ -346,7 +349,7 @@ public class RequestUrlParamAnalyzer {
     }
 
     protected String buildOptionalGenericDisp(ActionExecute execute, int index) {
-        return execute.getUrlParamArgs().map(args -> {
+        return execute.getPathParamArgs().map(args -> {
             final Class<?> genericType = args.getOptionalGenericTypeMap().get(index);
             return genericType != null ? "<" + genericType.getName() + ">" : "";
         }).orElse("");
@@ -355,19 +358,19 @@ public class RequestUrlParamAnalyzer {
     // ===================================================================================
     //                                                                Assert URL Parameter
     //                                                                ====================
-    protected void assertUrlParamArgsCountMatches(ActionExecute execute, String paramPath, List<Class<?>> urlParamTypeList,
-            Map<Integer, Object> urlParamValueMap) {
-        if (urlParamTypeList.size() != urlParamValueMap.size()) {
-            throwUrlParamArgsDifferentCountException(execute, paramPath, urlParamTypeList, urlParamValueMap);
+    protected void assertPathParamArgsCountMatches(ActionExecute execute, String paramPath, List<Class<?>> pathParamTypeList,
+            Map<Integer, Object> pathParamValueMap) {
+        if (pathParamTypeList.size() != pathParamValueMap.size()) {
+            throwPathParamArgsDifferentCountException(execute, paramPath, pathParamTypeList, pathParamValueMap);
         }
     }
 
-    protected void throwUrlParamArgsDifferentCountException(ActionExecute execute, String paramPath, List<Class<?>> urlParamTypeList,
-            Map<Integer, Object> urlParamValueMap) {
+    protected void throwPathParamArgsDifferentCountException(ActionExecute execute, String paramPath, List<Class<?>> pathParamTypeList,
+            Map<Integer, Object> pathParamValueMap) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Different count of URL parameters from URL pattern.");
+        br.addNotice("Different count of path parameters from URL pattern.");
         br.addItem("Advice");
-        br.addElement("The count of URL parameters defined at execute method");
+        br.addElement("The count of path parameters defined at execute method");
         br.addElement("should be same as definition in URL pattern.");
         br.addElement("  (x):");
         br.addElement("    @Execute(urlPattern = \"{}/sea/{}\")");
@@ -383,34 +386,34 @@ public class RequestUrlParamAnalyzer {
         br.addItem("Parameter Path");
         br.addElement(paramPath);
         br.addItem("Defined Args");
-        br.addElement(urlParamTypeList);
+        br.addElement(pathParamTypeList);
         br.addItem("Value Map");
-        br.addElement(urlParamValueMap);
+        br.addElement(pathParamValueMap);
         final String msg = br.buildExceptionMessage();
-        throw new UrlParamArgsDifferentCountException(msg);
+        throw new PathParamArgsDifferentCountException(msg);
     }
 
-    protected void checkRequiredParameter(ActionExecute execute, String paramPath, Map<Integer, Object> urlParamValueMap,
+    protected void checkRequiredParameter(ActionExecute execute, String paramPath, Map<Integer, Object> pathParamValueMap,
             Map<Integer, Class<?>> optGenTypeMap) {
-        for (Entry<Integer, Object> entry : urlParamValueMap.entrySet()) {
+        for (Entry<Integer, Object> entry : pathParamValueMap.entrySet()) {
             final Integer index = entry.getKey();
             final Object value = entry.getValue();
             if (optGenTypeMap.containsKey(index)) { // not required
                 if (value == null || !(value instanceof OptionalThing)) { // no way
-                    throwIllegalOptionalHandlingException(execute, paramPath, urlParamValueMap, optGenTypeMap, index, value);
+                    throwIllegalOptionalHandlingException(execute, paramPath, pathParamValueMap, optGenTypeMap, index, value);
                 }
                 continue;
             } else { // required
                 if (value == null) { // already filtered, e.g. empty string to null
                     throwExecuteParameterMismatchException(buildRequiredPropertyNotFoundMessage(execute, paramPath, index));
                 } else if (value instanceof OptionalThing) { // no way
-                    throwIllegalOptionalHandlingException(execute, paramPath, urlParamValueMap, optGenTypeMap, index, value);
+                    throwIllegalOptionalHandlingException(execute, paramPath, pathParamValueMap, optGenTypeMap, index, value);
                 }
             }
         }
     }
 
-    protected void throwIllegalOptionalHandlingException(ActionExecute execute, String paramPath, Map<Integer, Object> urlParamValueMap,
+    protected void throwIllegalOptionalHandlingException(ActionExecute execute, String paramPath, Map<Integer, Object> pathParamValueMap,
             Map<Integer, Class<?>> optGenTypeMap, int index, Object value) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Illegal optional handling. (Framework Exception)");
@@ -418,8 +421,8 @@ public class RequestUrlParamAnalyzer {
         br.addElement(execute);
         br.addItem("Parameter Path");
         br.addElement(paramPath);
-        br.addItem("URLParameter Value Map");
-        br.addElement(urlParamValueMap);
+        br.addItem("Path Parameter Value Map");
+        br.addElement(pathParamValueMap);
         br.addItem("Optional GenericType Map");
         br.addElement(optGenTypeMap);
         br.addItem("Parameter Index");
@@ -472,11 +475,11 @@ public class RequestUrlParamAnalyzer {
     //                                        --------------
     protected OptionalThing<Object> createEmptyOptional(ActionExecute execute, int fixedIndex, Class<?> paramType) {
         return OptionalThing.ofNullable(null, () -> {
-            throwUrlParamOptionalParameterEmptyAccessException(execute, fixedIndex, paramType);
+            throwPathParamOptionalParameterEmptyAccessException(execute, fixedIndex, paramType);
         });
     }
 
-    protected void throwUrlParamOptionalParameterEmptyAccessException(ActionExecute execute, int index, Class<?> paramType) {
+    protected void throwPathParamOptionalParameterEmptyAccessException(ActionExecute execute, int index, Class<?> paramType) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("The empty optional parameter was accessed.");
         br.addItem("Advice");
@@ -500,6 +503,6 @@ public class RequestUrlParamAnalyzer {
         br.addItem("Parameter Type");
         br.addElement(paramType);
         final String msg = br.buildExceptionMessage();
-        throw new UrlParamOptionalParameterEmptyAccessException(msg);
+        throw new PathParamOptionalParameterEmptyAccessException(msg);
     }
 }

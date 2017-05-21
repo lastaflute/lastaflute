@@ -20,11 +20,11 @@ import org.lastaflute.core.exception.LaSystemException;
 /**
  * @author jflute
  */
-public class UrlParamOptionalParameterEmptyAccessException extends LaSystemException {
+public class PathParamOptionalParameterEmptyAccessException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    public UrlParamOptionalParameterEmptyAccessException(String msg) {
+    public PathParamOptionalParameterEmptyAccessException(String msg) {
         super(msg);
     }
 }

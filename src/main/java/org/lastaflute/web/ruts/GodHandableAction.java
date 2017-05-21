@@ -313,8 +313,8 @@ public class GodHandableAction implements VirtualAction {
 
     protected Object[] toRequestArgs(OptionalThing<VirtualForm> optForm) {
         final List<Object> paramList = new ArrayList<Object>(4);
-        execute.getUrlParamArgs().ifPresent(args -> {
-            paramList.addAll(runtime.getRequestUrlParam().getUrlParamValueMap().values());
+        execute.getPathParamArgs().ifPresent(args -> {
+            paramList.addAll(runtime.getRequestPathParam().getPathParamValueMap().values());
         });
         optForm.ifPresent(form -> paramList.add(form.getRealForm()));
         return !paramList.isEmpty() ? paramList.toArray(new Object[paramList.size()]) : EMPTY_ARRAY;

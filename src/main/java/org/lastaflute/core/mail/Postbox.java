@@ -44,7 +44,7 @@ public class Postbox {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** Everybody knows, it's post office. (NullAllowed: null means no mail) */
     protected PostOffice postOffice;

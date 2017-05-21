@@ -22,6 +22,7 @@ import javax.annotation.Resource;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
+import org.lastaflute.core.exception.LaApplicationMessage;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.time.TimeManager;
@@ -33,6 +34,7 @@ import org.lastaflute.web.exception.RequestIllegalTransitionException;
 import org.lastaflute.web.hook.ActionHook;
 import org.lastaflute.web.hook.ApplicationExceptionHandler;
 import org.lastaflute.web.hook.ApplicationExceptionResolver.HandledAppExCall;
+import org.lastaflute.web.hook.ApplicationExceptionResolver.MessageValuesFilter;
 import org.lastaflute.web.hook.EmbeddedMessageKey.SimpleEmbeddedMessageKeySupplier;
 import org.lastaflute.web.hook.EmbeddedMessageKeySupplier;
 import org.lastaflute.web.hook.GodHandEpilogue;
@@ -161,7 +163,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
         return newGodHandMonologue(createGodHandResource(runtime), newEmbeddedMessageKeySupplier(), handler -> {
             handleApplicationException(runtime, handler);
             return handler.getResponse();
-        });
+        }, msg -> filterApplicationExceptionMessageValues(runtime, msg));
     }
 
     /**
@@ -181,8 +183,19 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     protected void handleApplicationException(ActionRuntime runtime, ApplicationExceptionHandler handler) { // application may override
     }
 
-    protected GodHandMonologue newGodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier supplier, HandledAppExCall call) {
-        return new GodHandMonologue(resource, supplier, call);
+    /**
+     * Filter the message values of application exception, saved in session.
+     * @param runtime The runtime object of current action. (NotNull)
+     * @param msg The message of application exception, which has message values. (NotNull)
+     * @return The filtered message values. (NullAllowed: then no filter)
+     */
+    protected Object[] filterApplicationExceptionMessageValues(ActionRuntime runtime, LaApplicationMessage msg) {
+        return null; // means no filter as default
+    }
+
+    protected GodHandMonologue newGodHandMonologue(GodHandResource resource, EmbeddedMessageKeySupplier supplier, HandledAppExCall call,
+            MessageValuesFilter filter) {
+        return new GodHandMonologue(resource, supplier, call, filter);
     }
 
     // -----------------------------------------------------
@@ -331,7 +344,7 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     //                                                                     ===============
     /**
      * Check the condition is true or it throws client error (e.g. 400 bad request) forcedly. <br>
-     * You can use this in your action process against invalid URL parameters.
+     * You can use this in your action process against invalid path parameters.
      * <pre>
      * verifyOrClientError("The pageNumber should be positive number: " + pageNumber, pageNumber &gt; 0);
      * </pre>

@@ -20,6 +20,7 @@ import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
@@ -74,6 +75,10 @@ public interface Java8TimeGsonAdaptable {
                 @SuppressWarnings("unchecked")
                 final TypeAdapter<T> pter = (TypeAdapter<T>) createTypeAdapterLocalTime();
                 return pter;
+            } else if (ZonedDateTime.class.isAssignableFrom(rawType)) {
+                @SuppressWarnings("unchecked")
+                final TypeAdapter<T> pter = (TypeAdapter<T>) createTypeAdapterZonedDateTime();
+                return pter;
             } else {
                 return null;
             }
@@ -89,6 +94,10 @@ public interface Java8TimeGsonAdaptable {
 
         protected TypeAdapterLocalTime createTypeAdapterLocalTime() {
             return new TypeAdapterLocalTime(option);
+        }
+
+        protected TypeAdapterZonedDateTime createTypeAdapterZonedDateTime() {
+            return new TypeAdapterZonedDateTime(option);
         }
     }
 
@@ -145,7 +154,7 @@ public interface Java8TimeGsonAdaptable {
             return option.isNullToEmptyWriting();
         }
 
-        private DateTimeFormatter prepareDateTimeFormatter() {
+        protected DateTimeFormatter prepareDateTimeFormatter() {
             DateTimeFormatter formatter = null;
             final Field field = LaJsonFieldingContext.getJsonFieldOnThread();
             if (field != null) { // no way but avoid stop
@@ -263,6 +272,32 @@ public interface Java8TimeGsonAdaptable {
         @Override
         protected Class<?> getDateType() {
             return LocalTime.class;
+        }
+    }
+
+    class TypeAdapterZonedDateTime extends AbstractTypeDateTimeAdapter<ZonedDateTime> {
+
+        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+        protected final DateTimeFormatter realFormatter;
+
+        public TypeAdapterZonedDateTime(JsonMappingOption option) {
+            super(option);
+            realFormatter = option.getLocalTimeFormatter().orElse(DEFAULT_FORMATTER);
+        }
+
+        @Override
+        protected DateTimeFormatter getDateTimeFormatter() {
+            return realFormatter;
+        }
+
+        @Override
+        protected ZonedDateTime fromTemporal(TemporalAccessor temporal) {
+            return ZonedDateTime.from(temporal);
+        }
+
+        @Override
+        protected Class<?> getDateType() {
+            return ZonedDateTime.class;
         }
     }
 

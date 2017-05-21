@@ -78,7 +78,7 @@ public class ActionMapping {
     // optional unused for performance
     public ActionExecute findActionExecute(String paramPath) { // null allowed when not found
         for (ActionExecute execute : executeMap.values()) {
-            if (execute.determineTargetByUrlParameter(paramPath)) {
+            if (execute.determineTargetByPathParameter(paramPath)) {
                 return execute;
             }
         }

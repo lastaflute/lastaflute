@@ -49,7 +49,7 @@ public class SimpleTimeManager implements TimeManager {
     //                                                                           =========
     /** The assistant director (AD) for framework. (NotNull: after initialization) */
     @Resource
-    protected FwAssistantDirector assistantDirector;
+    private FwAssistantDirector assistantDirector;
 
     /** The handler of business time. (NotNull: after initialization) */
     protected BusinessTimeHandler businessTimeHandler;

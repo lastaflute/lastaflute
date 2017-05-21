@@ -37,6 +37,7 @@ public class JsonMappingOption {
     protected OptionalThing<DateTimeFormatter> localDateFormatter = OptionalThing.empty(); // not null
     protected OptionalThing<DateTimeFormatter> localDateTimeFormatter = OptionalThing.empty(); // not null
     protected OptionalThing<DateTimeFormatter> localTimeFormatter = OptionalThing.empty(); // not null
+    protected OptionalThing<DateTimeFormatter> zonedDateTimeFormatter = OptionalThing.empty(); // not null
     protected OptionalThing<Function<Object, Boolean>> booleanDeserializer = OptionalThing.empty(); // not null
     protected OptionalThing<Function<Boolean, Object>> booleanSerializer = OptionalThing.empty(); // not null
     protected boolean emptyToNullReading; // e.g. String, Integer, LocalDate, ... (except List)
@@ -66,6 +67,7 @@ public class JsonMappingOption {
         localDateFormatter = another.getLocalDateFormatter();
         localDateTimeFormatter = another.getLocalDateTimeFormatter();
         localTimeFormatter = another.getLocalTimeFormatter();
+        zonedDateTimeFormatter = another.getZonedDateTimeFormatter();
         booleanDeserializer = another.getBooleanDeserializer();
         booleanSerializer = another.getBooleanSerializer();
         emptyToNullReading = another.isEmptyToNullReading();
@@ -82,6 +84,9 @@ public class JsonMappingOption {
     // ===================================================================================
     //                                                                      Option Setting
     //                                                                      ==============
+    // -----------------------------------------------------
+    //                                             Date Time
+    //                                             ---------
     public JsonMappingOption formatLocalDateBy(DateTimeFormatter localDateFormatter) {
         if (localDateFormatter == null) {
             throw new IllegalArgumentException("The argument 'localDateFormatter' should not be null.");
@@ -106,6 +111,17 @@ public class JsonMappingOption {
         return this;
     }
 
+    public JsonMappingOption formatZonedDateTimeBy(DateTimeFormatter zonedDateTimeFormatter) {
+        if (zonedDateTimeFormatter == null) {
+            throw new IllegalArgumentException("The argument 'zonedDateTimeFormatter' should not be null.");
+        }
+        this.zonedDateTimeFormatter = OptionalThing.of(zonedDateTimeFormatter);
+        return this;
+    }
+
+    // -----------------------------------------------------
+    //                                               Boolean
+    //                                               -------
     public JsonMappingOption deserializeBooleanBy(Function<Object, Boolean> booleanDeserializer) {
         if (booleanDeserializer == null) {
             throw new IllegalArgumentException("The argument 'booleanDeserializer' should not be null.");
@@ -122,6 +138,9 @@ public class JsonMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                         Null or Empty
+    //                                         -------------
     /**
      * Set up as empty-to-null reading.
      * @return this. (NotNull)
@@ -140,6 +159,9 @@ public class JsonMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                             Quotation
+    //                                             ---------
     /**
      * Setup as everywhere-quote writing, e.g. even if Integer, quote it.
      * @return this. (NotNull)
@@ -149,6 +171,9 @@ public class JsonMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                        Reading Filter
+    //                                        --------------
     public JsonMappingOption filterSimpleTextReading(JsonSimpleTextReadingFilter simpleTextReadingFilter) {
         if (simpleTextReadingFilter == null) {
             throw new IllegalArgumentException("The argument 'simpleTextReadingFilter' should not be null.");
@@ -157,6 +182,9 @@ public class JsonMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                    List Null or Empty
+    //                                    ------------------
     /**
      * Set up as list-null-to-empty reading. (null value of List is read as empty list)
      * @return this. (NotNull)
@@ -175,6 +203,9 @@ public class JsonMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                          Field Naming
+    //                                          ------------
     /**
      * Set up as list-null-to-empty writing. (null value of List is writtern as empty list)
      * @param fieldNaming The type of field naming. (NotNull)
@@ -188,6 +219,9 @@ public class JsonMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                      Your Collections
+    //                                      ----------------
     /**
      * Set up the your collections for JSON property. <br>
      * You can use e.g. ImmutableList (Eclipse Collections) as JSON property type.
@@ -212,6 +246,7 @@ public class JsonMappingOption {
         localDateFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
         localDateTimeFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
         localTimeFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
+        zonedDateTimeFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
         booleanDeserializer.ifPresent(zer -> sb.append(delimiter).append(zer));
         booleanSerializer.ifPresent(zer -> sb.append(delimiter).append(zer));
         if (emptyToNullReading) {
@@ -247,6 +282,10 @@ public class JsonMappingOption {
 
     public OptionalThing<DateTimeFormatter> getLocalTimeFormatter() {
         return localTimeFormatter;
+    }
+
+    public OptionalThing<DateTimeFormatter> getZonedDateTimeFormatter() {
+        return zonedDateTimeFormatter;
     }
 
     public OptionalThing<Function<Object, Boolean>> getBooleanDeserializer() {

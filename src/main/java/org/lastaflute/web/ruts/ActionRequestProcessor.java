@@ -34,7 +34,7 @@ import org.lastaflute.web.ruts.process.ActionFormMapper;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.ruts.process.actioncoins.ActionCoinsHelper;
-import org.lastaflute.web.ruts.process.urlparam.RequestUrlParam;
+import org.lastaflute.web.ruts.process.pathparam.RequestPathParam;
 import org.lastaflute.web.ruts.renderer.HtmlRenderer;
 import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
 import org.lastaflute.web.servlet.request.RequestManager;
@@ -90,14 +90,14 @@ public class ActionRequestProcessor {
     // ===================================================================================
     //                                                                             Process
     //                                                                             =======
-    public void process(ActionExecute execute, RequestUrlParam urlParam) throws IOException, ServletException {
+    public void process(ActionExecute execute, RequestPathParam pathParam) throws IOException, ServletException {
         // initializing and clearing thread cache here so you can use thread cache in your action execute
         final boolean exists = ThreadCacheContext.exists();
         try {
             if (!exists) { // inherits existing cache when nested call e.g. forward
                 ThreadCacheContext.initialize();
             }
-            final ActionRuntime runtime = createActionRuntime(execute, urlParam);
+            final ActionRuntime runtime = createActionRuntime(execute, pathParam);
             fire(runtime); // #to_action
         } finally {
             if (!exists) {
@@ -106,8 +106,8 @@ public class ActionRequestProcessor {
         }
     }
 
-    protected ActionRuntime createActionRuntime(ActionExecute execute, RequestUrlParam urlParam) {
-        return new ActionRuntime(getRequestManager().getRequestPath(), execute, urlParam);
+    protected ActionRuntime createActionRuntime(ActionExecute execute, RequestPathParam pathParam) {
+        return new ActionRuntime(getRequestManager().getRequestPath(), execute, pathParam);
     }
 
     // ===================================================================================
@@ -115,7 +115,7 @@ public class ActionRequestProcessor {
     //                                                                              ======
     /**
      * Fire the action, creating, populating, performing and to next.
-     * @param runtime The runtime meta of action execute, which has action execute, URL parameter and states. (NotNull)
+     * @param runtime The runtime meta of action execute, which has action execute, path parameter and states. (NotNull)
      * @throws IOException When the action fails about the IO.
      * @throws ServletException When the action fails about the Servlet.
      */
