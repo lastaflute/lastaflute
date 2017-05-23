@@ -18,7 +18,7 @@ package org.lastaflute.core.magic.async.race;
 import java.util.concurrent.CountDownLatch;
 
 import org.dbflute.helper.thread.CountDownRaceLatch;
-import org.dbflute.helper.thread.exception.ThreadFireFailureException;
+import org.lastaflute.core.magic.async.race.exception.LaCountdownRaceFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,7 +101,7 @@ public class LaCountdownRaceLatch {
             latch.await();
         } catch (InterruptedException e) {
             String msg = "Failed to await by your latch: latch=" + latch;
-            throw new ThreadFireFailureException(msg, e);
+            throw new LaCountdownRaceFailureException(msg, e);
         }
     }
 
