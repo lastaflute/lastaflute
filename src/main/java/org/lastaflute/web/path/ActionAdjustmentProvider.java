@@ -67,6 +67,16 @@ public interface ActionAdjustmentProvider {
     }
 
     /**
+     * Is the request routing treated as 404 not found forcedly?
+     * @param request The request object provided from filter. (NotNull)
+     * @param requestPath The path of request to search action (before customization). (NotNull)
+     * @return The determination, true or false. If true, returns 404 response immediately.
+     */
+    default boolean isForced404NotFoundRouting(HttpServletRequest request, String requestPath) {
+        return false;
+    }
+
+    /**
      * Is the request routing except forcedly?
      * @param request The request object provided from filter. (NotNull)
      * @param requestPath The path of request to search action (before customization). (NotNull)
