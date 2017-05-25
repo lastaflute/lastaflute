@@ -191,10 +191,25 @@ public class RequestLoggingFilter implements Filter {
         }
         final HttpServletRequest request = (HttpServletRequest) servRequest;
         final HttpServletResponse response = (HttpServletResponse) servResponse;
-        if (isAlreadyBegun() || !isTargetPath(request)) { // e.g. forwarding to JSP or .html
+        if (isAlreadyBegun()) { // e.g. forwarding to JSP or .html
             chain.doFilter(request, response);
+        } else if (!isTargetPath(request)) { // e.g. .css, .js
+            staticResourceFilter(request, response, chain);
         } else { // target top level process
             actuallyFilter(chain, request, response);
+        }
+    }
+
+    protected void staticResourceFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        final Long before = System.currentTimeMillis(); // used in not only debug but also error
+        try {
+            chain.doFilter(request, response);
+        } catch (RequestClientErrorException e) { // e.g. forcedly 404
+            handleClientError(request, response, e);
+        } catch (RuntimeException e) { // similar to main process
+            sendInternalServerError(request, response, e);
+            logError(request, response, "*RuntimeException occurred.", before, e);
         }
     }
 
