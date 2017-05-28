@@ -21,22 +21,65 @@ package org.lastaflute.db.jta.stage;
  */
 public class BegunTx<RESULT> {
 
-    protected RESULT result;
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final TransactionGenre genre; // not null
+    protected RESULT result; // null allowed
     protected boolean rollbackOnly;
 
-    public RESULT getResult() {
-        return result;
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public BegunTx(TransactionGenre genre) {
+        this.genre = genre;
     }
 
+    // ===================================================================================
+    //                                                                   Transaction Genre
+    //                                                                   =================
+    public boolean isRequired() {
+        return TransactionGenre.REQUIRED.equals(genre);
+    }
+
+    public boolean isRequiresNew() {
+        return TransactionGenre.REQUIRES_NEW.equals(genre);
+    }
+
+    // ===================================================================================
+    //                                                                  Transaction Result
+    //                                                                  ==================
+    /**
+     * Returns the result of the transaction process to caller.
+     * <pre>
+     * <span style="color: #3F7E5E">// if returns anything to caller</span> 
+     * <span style="color: #994747">Member member</span> = (Member)requiresNew(<span style="color: #553000">tx</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     update(...);
+     *     Member member = select(...);
+     *     <span style="color: #553000">tx</span>.<span style="color: #CC4747">returns</span>(member); <span style="color: #3F7E5E">// for return</span>
+     * }).<span style="color: #994747">get()</span>; <span style="color: #3F7E5E">// optional handling</span>
+     * </pre>
+     * @param result The result of the transaction process. (NullAllowed: means no result)
+     */
     public void returns(RESULT result) {
         this.result = result;
     }
 
-    public boolean isRollbackOnly() {
-        return rollbackOnly;
-    }
-
+    // ===================================================================================
+    //                                                                       Rollback Only
+    //                                                                       =============
     public void rollbackOnly() {
         rollbackOnly = true;
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public RESULT getResult() {
+        return result;
+    }
+
+    public boolean isRollbackOnly() {
+        return rollbackOnly;
     }
 }

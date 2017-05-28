@@ -40,7 +40,7 @@ public class JTATransactionStage implements TransactionStage {
     public <RESULT> OptionalThing<RESULT> required(TransactionShow<RESULT> txLambda) {
         try {
             return wrapOptional((RESULT) transactionManagerAdapter.required(adapter -> {
-                return doPerform(txLambda, adapter);
+                return doPerform(txLambda, adapter, TransactionGenre.REQUIRED);
             }), txLambda);
         } catch (Throwable e) {
             handleTransactionFailure(txLambda, e);
@@ -56,7 +56,7 @@ public class JTATransactionStage implements TransactionStage {
         } else { // basically here
             try {
                 return wrapOptional((RESULT) transactionManagerAdapter.requiresNew(adapter -> {
-                    return doPerform(txLambda, adapter);
+                    return doPerform(txLambda, adapter, TransactionGenre.REQUIRES_NEW);
                 }), txLambda);
             } catch (Throwable e) {
                 handleTransactionFailure(txLambda, e);
@@ -65,9 +65,10 @@ public class JTATransactionStage implements TransactionStage {
         }
     }
 
-    protected <RESULT> RESULT doPerform(TransactionShow<RESULT> txLambda, TransactionManagerAdapter adapter) throws Throwable {
+    protected <RESULT> RESULT doPerform(TransactionShow<RESULT> txLambda, TransactionManagerAdapter adapter, TransactionGenre genre)
+            throws Throwable {
         try {
-            final BegunTx<RESULT> tx = newBegunTransaction();
+            final BegunTx<RESULT> tx = newBegunTransaction(genre);
             txLambda.perform(tx);
             if (tx.isRollbackOnly()) { // e.g. when validation error
                 adapter.setRollbackOnly();
@@ -99,7 +100,7 @@ public class JTATransactionStage implements TransactionStage {
         } else if (TransactionGenre.REQUIRES_NEW.equals(genre)) {
             return requiresNew(txLambda);
         } else if (TransactionGenre.NONE.equals(genre)) {
-            final BegunTx<RESULT> tx = newBegunTransaction();
+            final BegunTx<RESULT> tx = newBegunTransaction(TransactionGenre.NONE);
             txLambda.perform(tx);
             return wrapOptional(tx.getResult(), txLambda);
         } else { // no way
@@ -110,8 +111,8 @@ public class JTATransactionStage implements TransactionStage {
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
-    protected <RESULT> BegunTx<RESULT> newBegunTransaction() {
-        return new BegunTx<RESULT>();
+    protected <RESULT> BegunTx<RESULT> newBegunTransaction(TransactionGenre genre) {
+        return new BegunTx<RESULT>(genre);
     }
 
     protected <RESULT> OptionalThing<RESULT> wrapOptional(RESULT result, TransactionShow<RESULT> txLambda) {

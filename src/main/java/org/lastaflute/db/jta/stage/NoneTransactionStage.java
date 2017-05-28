@@ -55,7 +55,7 @@ public class NoneTransactionStage implements TransactionStage {
     //                                                                        Small Helper
     //                                                                        ============
     protected <RESULT> BegunTx<RESULT> newBegunTransaction() {
-        return new BegunTx<RESULT>();
+        return new BegunTx<RESULT>(TransactionGenre.NONE);
     }
 
     protected <RESULT> OptionalThing<RESULT> wrapOptional(RESULT result, TransactionShow<RESULT> txLambda) {
