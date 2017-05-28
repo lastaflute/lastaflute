@@ -57,9 +57,18 @@ public class PreparedAccessContext { // similar to DBFlute context implementatio
      * Is existing prepared access-context on thread?
      * @return The determination, true or false.
      */
-    public static boolean isExistAccessContextOnThread() {
+    public static boolean existsAccessContextOnThread() {
         final Stack<AccessContext> stack = threadLocal.get();
         return stack != null ? !stack.isEmpty() : false;
+    }
+
+    /**
+     * Is existing prepared access-context on thread?
+     * @return The determination, true or false.
+     * @deprecated use exists(), this is old style from DBFlute
+     */
+    public static boolean isExistAccessContextOnThread() {
+        return existsAccessContextOnThread();
     }
 
     /**

@@ -23,7 +23,7 @@ import java.util.Stack;
  * This can be nested.
  * @author jflute
  */
-public class TransactionTimeContext { // similar to DBFlute context implementation
+public class TransactionTimeContext {
 
     /** The thread-local for this. */
     private static final ThreadLocal<Stack<Date>> threadLocal = new ThreadLocal<Stack<Date>>();

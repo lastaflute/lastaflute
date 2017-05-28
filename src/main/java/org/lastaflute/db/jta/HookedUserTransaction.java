@@ -119,7 +119,7 @@ public class HookedUserTransaction extends LaUserTransaction {
         final TimeManager timeManager = getTimeManager();
         final Date transactionTime = timeManager.flashDate();
         TransactionTimeContext.setTransactionTime(transactionTime);
-        if (PreparedAccessContext.isExistAccessContextOnThread()) {
+        if (PreparedAccessContext.existsAccessContextOnThread()) {
             PreparedAccessContext.beginAccessContext();
         }
     }
@@ -129,7 +129,7 @@ public class HookedUserTransaction extends LaUserTransaction {
     }
 
     protected void clearContext() {
-        if (PreparedAccessContext.isExistAccessContextOnThread()) {
+        if (PreparedAccessContext.existsAccessContextOnThread()) {
             PreparedAccessContext.endAccessContext();
         }
         TransactionTimeContext.clear();

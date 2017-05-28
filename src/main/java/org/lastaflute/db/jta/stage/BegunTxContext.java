@@ -55,7 +55,7 @@ public class BegunTxContext { // similar to DBFlute context implementation
      * Is existing prepared begun-tx on thread?
      * @return The determination, true or false.
      */
-    public static boolean isExistBegunTxOnThread() {
+    public static boolean existsBegunTxOnThread() {
         final Stack<BegunTx<?>> stack = threadLocal.get();
         return stack != null ? !stack.isEmpty() : false;
     }
