@@ -22,7 +22,7 @@ import org.dbflute.hook.AccessContext;
 /**
  * @author jflute
  */
-public class PreparedAccessContext {
+public class PreparedAccessContext { // similar to DBFlute context implementation
 
     /** The thread-local for this. */
     private static final ThreadLocal<Stack<AccessContext>> threadLocal = new ThreadLocal<Stack<AccessContext>>();
@@ -80,7 +80,7 @@ public class PreparedAccessContext {
     }
 
     /**
-     * Begin access context use for DBFlute. <br>
+     * Begin access-context use for DBFlute. <br>
      * You can update entities after calling this.
      */
     public static void beginAccessContext() {
@@ -91,7 +91,7 @@ public class PreparedAccessContext {
     }
 
     /**
-     * End access context use for DBFlute.
+     * End access-context use for DBFlute.
      */
     public static void endAccessContext() {
         AccessContext.clearAccessContextOnThread();

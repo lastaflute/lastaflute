@@ -16,7 +16,7 @@
 package org.lastaflute.db.jta.stage;
 
 /**
- * @param <RESULT> The type of result.
+ * @param <RESULT> The type of transaction result.
  * @author jflute
  */
 public class BegunTx<RESULT> {

@@ -13,54 +13,58 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.magic;
+package org.lastaflute.db.jta.stage;
 
-import java.util.Date;
 import java.util.Stack;
 
 /**
- * The context of transaction time. <br>
- * This can be nested.
  * @author jflute
  */
-public class TransactionTimeContext { // similar to DBFlute context implementation
+public class BegunTxContext { // similar to DBFlute context implementation
 
     /** The thread-local for this. */
-    private static final ThreadLocal<Stack<Date>> threadLocal = new ThreadLocal<Stack<Date>>();
+    private static final ThreadLocal<Stack<BegunTx<?>>> threadLocal = new ThreadLocal<Stack<BegunTx<?>>>();
 
     /**
-     * Get the value of the transaction time.
-     * @return The value of the transaction time. (NullAllowed)
+     * Get prepared begun-tx on thread.
+     * @return The context of DB access. (NullAllowed)
      */
-    public static Date getTransactionTime() {
-        final Stack<Date> stack = threadLocal.get();
+    public static BegunTx<?> getBegunTxOnThread() {
+        final Stack<BegunTx<?>> stack = threadLocal.get();
         return stack != null ? stack.peek() : null;
     }
 
     /**
-     * Set the value of the transaction time.
-     * @param transactionTime The value of the transaction time. (NotNull)
+     * Set prepared begun-tx on thread.
+     * @param begunTx The context of DB access. (NotNull)
      */
-    public static void setTransactionTime(Date transactionTime) {
-        if (transactionTime == null) {
-            String msg = "The argument 'transactionTime' should not be null.";
+    public static void setBegunTxOnThread(BegunTx<?> begunTx) {
+        if (begunTx == null) {
+            String msg = "The argument[begunTx] must not be null.";
             throw new IllegalArgumentException(msg);
         }
-        Stack<Date> stack = threadLocal.get();
+        Stack<BegunTx<?>> stack = threadLocal.get();
         if (stack == null) {
-            stack = new Stack<Date>();
+            stack = new Stack<BegunTx<?>>();
             threadLocal.set(stack);
         }
-        stack.push(transactionTime);
+        stack.add(begunTx);
     }
 
-    public static boolean exists() {
-        final Stack<Date> stack = threadLocal.get();
+    /**
+     * Is existing prepared begun-tx on thread?
+     * @return The determination, true or false.
+     */
+    public static boolean isExistBegunTxOnThread() {
+        final Stack<BegunTx<?>> stack = threadLocal.get();
         return stack != null ? !stack.isEmpty() : false;
     }
 
-    public static void clear() {
-        final Stack<Date> stack = threadLocal.get();
+    /**
+     * Clear prepared begun-tx on thread.
+     */
+    public static void clearBegunTxOnThread() {
+        final Stack<BegunTx<?>> stack = threadLocal.get();
         if (stack != null) {
             stack.pop(); // remove latest
             if (stack.isEmpty()) {

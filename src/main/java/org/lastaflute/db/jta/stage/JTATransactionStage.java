@@ -33,14 +33,14 @@ public class JTATransactionStage implements TransactionStage {
     private TransactionManagerAdapter transactionManagerAdapter;
 
     // ===================================================================================
-    //                                                                         Transaction
-    //                                                                         ===========
+    //                                                               Transaction Interface
+    //                                                               =====================
     @SuppressWarnings("unchecked")
     @Override
     public <RESULT> OptionalThing<RESULT> required(TransactionShow<RESULT> txLambda) {
         try {
             return wrapOptional((RESULT) transactionManagerAdapter.required(adapter -> {
-                return doPerform(txLambda, adapter, TransactionGenre.REQUIRED);
+                return performTx(txLambda, adapter, TransactionGenre.REQUIRED);
             }), txLambda);
         } catch (Throwable e) {
             handleTransactionFailure(txLambda, e);
@@ -56,29 +56,12 @@ public class JTATransactionStage implements TransactionStage {
         } else { // basically here
             try {
                 return wrapOptional((RESULT) transactionManagerAdapter.requiresNew(adapter -> {
-                    return doPerform(txLambda, adapter, TransactionGenre.REQUIRES_NEW);
+                    return performTx(txLambda, adapter, TransactionGenre.REQUIRES_NEW);
                 }), txLambda);
             } catch (Throwable e) {
                 handleTransactionFailure(txLambda, e);
                 return null; // unreachable
             }
-        }
-    }
-
-    protected <RESULT> RESULT doPerform(TransactionShow<RESULT> txLambda, TransactionManagerAdapter adapter, TransactionGenre genre)
-            throws Throwable {
-        try {
-            final BegunTx<RESULT> tx = newBegunTransaction(genre);
-            txLambda.perform(tx);
-            if (tx.isRollbackOnly()) { // e.g. when validation error
-                adapter.setRollbackOnly();
-            }
-            return tx.getResult();
-        } catch (Throwable e) {
-            // same as DefaultTransactionCallback
-            // forcedly roll-backed if exception in 'required' transaction scope
-            adapter.setRollbackOnly();
-            throw e;
         }
     }
 
@@ -105,6 +88,29 @@ public class JTATransactionStage implements TransactionStage {
             return wrapOptional(tx.getResult(), txLambda);
         } else { // no way
             throw new IllegalStateException("Unknown genre: " + genre);
+        }
+    }
+
+    // ===================================================================================
+    //                                                                 Perform Transaction
+    //                                                                 ===================
+    protected <RESULT> RESULT performTx(TransactionShow<RESULT> txLambda, TransactionManagerAdapter adapter, TransactionGenre genre)
+            throws Throwable {
+        final BegunTx<RESULT> tx = newBegunTransaction(genre);
+        BegunTxContext.setBegunTxOnThread(tx);
+        try {
+            txLambda.perform(tx);
+            if (tx.isRollbackOnly()) { // e.g. when validation error
+                adapter.setRollbackOnly();
+            }
+            return tx.getResult();
+        } catch (Throwable e) {
+            // same as DefaultTransactionCallback
+            // forcedly roll-backed if exception in 'required' transaction scope
+            adapter.setRollbackOnly();
+            throw e;
+        } finally {
+            BegunTxContext.clearBegunTxOnThread();
         }
     }
 
