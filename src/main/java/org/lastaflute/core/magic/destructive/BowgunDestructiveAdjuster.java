@@ -65,9 +65,27 @@ public class BowgunDestructiveAdjuster {
     public static void restoreBowgunAll() {
         assertUnlocked();
         if (logger.isInfoEnabled()) {
-            logger.info("...Restoring bowgun destructive adjuster");
+            logger.info("...Restoring all bowgun destructive adjusters");
         }
         asyncToNormalSync = false;
+        requiresNewToRequired = false;
+        lock();
+    }
+
+    public static void restoreBowgunAsyncToNormalSync() {
+        assertUnlocked();
+        if (logger.isInfoEnabled()) {
+            logger.info("...Restoring bowgun destructive adjuster of async");
+        }
+        asyncToNormalSync = false;
+        lock();
+    }
+
+    public static void restoreBowgunRequiresNewToRequired() {
+        assertUnlocked();
+        if (logger.isInfoEnabled()) {
+            logger.info("...Restoring bowgun destructive adjuster of requiresNew");
+        }
         requiresNewToRequired = false;
         lock();
     }
