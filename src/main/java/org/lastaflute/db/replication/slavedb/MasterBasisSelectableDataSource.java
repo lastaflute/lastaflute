@@ -15,14 +15,19 @@
  */
 package org.lastaflute.db.replication.slavedb;
 
+import javax.annotation.Resource;
 import javax.sql.DataSource;
 
+import org.lastaflute.db.replication.selectable.SelectableDataSourceHolder;
 import org.lastaflute.db.replication.selectable.SelectableDataSourceProxy;
 
 /**
  * @author jflute
  */
 public class MasterBasisSelectableDataSource extends SelectableDataSourceProxy {
+
+    @Resource
+    private SelectableDataSourceHolder selectableDataSourceHolder; // needs selectable_datasource.xml
 
     /**
      * Get the real data-source selected. <br>
