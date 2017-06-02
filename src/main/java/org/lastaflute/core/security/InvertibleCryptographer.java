@@ -49,8 +49,8 @@ public class InvertibleCryptographer {
     protected final String algorithm;
     protected final SecretKey skey;
     protected final String encoding;
-    protected Cipher encryptoCipher;
-    protected Cipher decryptoCipher;
+    protected Cipher encryptingCipher;
+    protected Cipher decryptingCipher;
 
     // ===================================================================================
     //                                                                         Constructor
@@ -91,7 +91,7 @@ public class InvertibleCryptographer {
     //                                                                          Initialize
     //                                                                          ==========
     protected synchronized void initialize() {
-        if (encryptoCipher != null) {
+        if (encryptingCipher != null) {
             return;
         }
         assertInit();
@@ -109,10 +109,10 @@ public class InvertibleCryptographer {
 
     protected void doInitializeCipher() {
         try {
-            encryptoCipher = Cipher.getInstance(algorithm);
-            encryptoCipher.init(Cipher.ENCRYPT_MODE, skey);
-            decryptoCipher = Cipher.getInstance(algorithm);
-            decryptoCipher.init(Cipher.DECRYPT_MODE, skey);
+            encryptingCipher = Cipher.getInstance(algorithm);
+            encryptingCipher.init(Cipher.ENCRYPT_MODE, skey);
+            decryptingCipher = Cipher.getInstance(algorithm);
+            decryptingCipher.init(Cipher.DECRYPT_MODE, skey);
         } catch (NoSuchAlgorithmException e) {
             throw new CipherFailureException("Failed by unknown algorithm: " + algorithm, e);
         } catch (NoSuchPaddingException e) {
@@ -139,15 +139,14 @@ public class InvertibleCryptographer {
     //                                                                     Encrypt/Decrypt
     //                                                                     ===============
     /**
-     * Encrypt the text as invertible. <br>
-     * If the specified text is null or empty, it returns the text without encrypting.
-     * @param plainText The plain text to be encrypted. (NotNull)
-     * @return The encrypted text from the plain text. (NotNull)
+     * Encrypt the text as invertible.
+     * @param plainText The plain text to be encrypted. (NotNull, EmptyAllowed)
+     * @return The encrypted text from the plain text. (NotNull, EmptyAllowed: depends on algorithm)
      * @throws CipherFailureException When the cipher fails.
      */
     public synchronized String encrypt(String plainText) {
         assertArgumentNotNull("plainText", plainText);
-        if (encryptoCipher == null) {
+        if (encryptingCipher == null) {
             initialize();
         }
         return new String(encodeHex(doEncrypt(plainText)));
@@ -155,7 +154,7 @@ public class InvertibleCryptographer {
 
     protected byte[] doEncrypt(String plainText) {
         try {
-            return encryptoCipher.doFinal(plainText.getBytes(encoding));
+            return encryptingCipher.doFinal(plainText.getBytes(encoding));
         } catch (IllegalBlockSizeException e) {
             throw new CipherFailureException("Failed by illegal block size: " + plainText, e);
         } catch (BadPaddingException e) {
@@ -167,14 +166,13 @@ public class InvertibleCryptographer {
 
     /**
      * Decrypt the encrypted text (back to plain text). <br>
-     * If the specified text is null or empty, it returns the text without decrypting.
-     * @param encryptedText The encrypted text to be decrypted. (NotNull)
-     * @return The plain text from the encrypted text. (NotNull)
+     * @param encryptedText The encrypted text to be decrypted. (NotNull, EmptyAllowed)
+     * @return The plain text from the encrypted text. (NotNull, EmptyAllowed: if secret key is empty)
      * @throws CipherFailureException When the cipher fails.
      */
     public synchronized String decrypt(String encryptedText) {
         assertArgumentNotNull("encryptedText", encryptedText);
-        if (decryptoCipher == null) {
+        if (decryptingCipher == null) {
             initialize();
         }
         try {
@@ -186,7 +184,7 @@ public class InvertibleCryptographer {
 
     protected byte[] doDecrypt(String cryptedText) {
         try {
-            return decryptoCipher.doFinal(decodeHex(cryptedText.toCharArray()));
+            return decryptingCipher.doFinal(decodeHex(cryptedText.toCharArray()));
         } catch (IllegalBlockSizeException e) {
             throw new CipherFailureException("Failed by illegal block size: " + cryptedText, e);
         } catch (BadPaddingException e) {
