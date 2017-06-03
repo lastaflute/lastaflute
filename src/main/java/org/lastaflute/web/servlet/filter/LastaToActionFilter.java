@@ -102,10 +102,11 @@ public class LastaToActionFilter implements Filter {
             final FwCoreDirection coreDirection = assistantDirector.assistCoreDirection();
             final String domainTitle = coreDirection.assistDomainTitle();
             final String environmentTitle = coreDirection.assistEnvironmentTitle();
+            final String frameworkDebugExp = coreDirection.isFrameworkDebug() ? " *frameworkDebug" : "";
             logger.info("_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
             logger.info(" the system has been initialized:");
             logger.info("");
-            logger.info("  -> " + domainTitle + " (" + environmentTitle + ")");
+            logger.info("  -> " + domainTitle + " (" + environmentTitle + ")" + frameworkDebugExp);
             logger.info("_/_/_/_/_/_/_/_/_/_/");
         }
     }
