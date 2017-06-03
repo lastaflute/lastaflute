@@ -278,6 +278,9 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
+    // -----------------------------------------------------
+    //                                         Loose Address
+    //                                         -------------
     /**
      * Suppress strict check of address format.
      * @return this. (NotNull)
@@ -287,6 +290,9 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                               Dry Run
+    //                                               -------
     /**
      * Set up as dry-run. <br>
      * Not send it actually, only preparation, e.g. for preview. <br>
@@ -296,6 +302,34 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
         postcard.dryrun();
     }
 
+    /**
+     * Set up as dry-run by given text. <br>
+     * Not send it actually, only preparation, e.g. for preview. <br>
+     * You can get complete plain or HTML text from postcard.
+     * @param subject The subject as given text. (NotNull)
+     * @param plainBody The plain body (template) as given text. (NotNull)
+     */
+    public void dryrunByGivenText(String subject, String plainBody) {
+        postcard.dryrun();
+        postcard.overrideBodyFile(subject, plainBody);
+    }
+
+    /**
+     * Set up as dry-run by given text. <br>
+     * Not send it actually, only preparation, e.g. for preview. <br>
+     * You can get complete plain or HTML text from postcard.
+     * @param subject The subject as given text. (NotNull)
+     * @param plainBody The plain body (template) as given text. (NotNull)
+     * @param htmlBody The HTML body (template) as given text. (NotNull)
+     */
+    public void dryrunByGivenText(String subject, String plainBody, String htmlBody) {
+        postcard.dryrun();
+        postcard.overrideBodyFile(subject, plainBody).alsoHtmlBody(htmlBody);
+    }
+
+    // -----------------------------------------------------
+    //                                                Author
+    //                                                ------
     /**
      * Write message author on this postcard. (used in logging)
      * @param messageAuthor The instance that expresses the message author. (NotNull)

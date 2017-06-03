@@ -33,7 +33,7 @@ public class SelectableDataSourceProxy implements DataSource {
     //                                                                           Attribute
     //                                                                           =========
     @Resource
-    protected SelectableDataSourceHolder selectableDataSourceHolder; // needs selectable_datasource.xml
+    private SelectableDataSourceHolder selectableDataSourceHolder; // needs selectable_datasource.xml
 
     // ===================================================================================
     //                                                                 Selected DataSource

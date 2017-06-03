@@ -22,7 +22,7 @@ import org.dbflute.hook.AccessContext;
 /**
  * @author jflute
  */
-public class PreparedAccessContext {
+public class PreparedAccessContext { // similar to DBFlute context implementation
 
     /** The thread-local for this. */
     private static final ThreadLocal<Stack<AccessContext>> threadLocal = new ThreadLocal<Stack<AccessContext>>();
@@ -57,9 +57,18 @@ public class PreparedAccessContext {
      * Is existing prepared access-context on thread?
      * @return The determination, true or false.
      */
-    public static boolean isExistAccessContextOnThread() {
+    public static boolean existsAccessContextOnThread() {
         final Stack<AccessContext> stack = threadLocal.get();
         return stack != null ? !stack.isEmpty() : false;
+    }
+
+    /**
+     * Is existing prepared access-context on thread?
+     * @return The determination, true or false.
+     * @deprecated use exists(), this is old style from DBFlute
+     */
+    public static boolean isExistAccessContextOnThread() {
+        return existsAccessContextOnThread();
     }
 
     /**
@@ -80,7 +89,7 @@ public class PreparedAccessContext {
     }
 
     /**
-     * Begin access context use for DBFlute. <br>
+     * Begin access-context use for DBFlute. <br>
      * You can update entities after calling this.
      */
     public static void beginAccessContext() {
@@ -91,7 +100,7 @@ public class PreparedAccessContext {
     }
 
     /**
-     * End access context use for DBFlute.
+     * End access-context use for DBFlute.
      */
     public static void endAccessContext() {
         AccessContext.clearAccessContextOnThread();

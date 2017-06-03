@@ -23,19 +23,17 @@ import org.lastaflute.core.security.exception.CipherFailureException;
 public interface PrimaryCipher {
 
     /**
-     * Encrypt the text as invertible. <br>
-     * If the specified text is null or empty, it returns the text without encrypting.
-     * @param plainText The plain text to be encrypted. (NotNull)
-     * @return The encrypted text from the plain text. (NotNull)
+     * Encrypt the text as invertible.
+     * @param plainText The plain text to be encrypted. (NotNull, EmptyAllowed)
+     * @return The encrypted text from the plain text. (NotNull, EmptyAllowed: depends on algorithm)
      * @throws CipherFailureException When the cipher fails.
      */
     String encrypt(String plainText);
 
     /**
-     * Decrypt the encrypted text (back to plain text). <br>
-     * If the specified text is null or empty, it returns the text without decrypting.
-     * @param encryptedText The encrypted text to be decrypted. (NotNull)
-     * @return The plain text from the encrypted text. (NotNull)
+     * Decrypt the encrypted text (back to plain text).
+     * @param encryptedText The encrypted text to be decrypted. (NotNull, EmptyAllowed)
+     * @return The plain text from the encrypted text. (NotNull, EmptyAllowed: if secret key is empty)
      * @throws CipherFailureException When the cipher fails.
      */
     String decrypt(String encryptedText);
@@ -43,8 +41,8 @@ public interface PrimaryCipher {
     /**
      * Encrypt the text as one-way code. <br/>
      * If the specified text is null or empty, it returns the text without encrypting.
-     * @param plainText The plain text to be encrypted. (NotNull)
-     * @return The encrypted text as one-way code. (NotNull)
+     * @param plainText The plain text to be encrypted. (NotNull, EmptyAllowed)
+     * @return The encrypted text as one-way code. (NotNull, EmptyAllowed: depends on algorithm)
      * @throws CipherFailureException When the cipher fails.
      */
     String oneway(String plainText);

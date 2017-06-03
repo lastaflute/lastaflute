@@ -29,6 +29,9 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.twowaysql.SqlAnalyzer;
 import org.dbflute.twowaysql.context.CommandContext;
 import org.dbflute.twowaysql.context.CommandContextCreator;
+import org.dbflute.twowaysql.factory.NodeAdviceFactory;
+import org.dbflute.twowaysql.node.BoundValue;
+import org.dbflute.twowaysql.node.EmbeddedVariableNode;
 import org.dbflute.twowaysql.node.Node;
 import org.dbflute.twowaysql.pmbean.SimpleMapPmb;
 import org.dbflute.util.DfCollectionUtil;
@@ -220,22 +223,72 @@ public class SimpleTemplateManager implements TemplateManager {
         sb.append(lineNumber > 1 ? LF : "").append(line);
     }
 
-    // -----------------------------------------------------
-    //                                      Analyze Template
-    //                                      ----------------
+    // ===================================================================================
+    //                                                                    Analyze Template
+    //                                                                    ================
     protected Node analyze(String templateText) {
         return createSqlAnalyzer(templateText, true).analyze();
     }
 
+    // almost same as mailflute
     protected SqlAnalyzer createSqlAnalyzer(String templateText, boolean blockNullParameter) {
         final SqlAnalyzer analyzer = new SqlAnalyzer(templateText, blockNullParameter) {
+            @Override
             protected String filterAtFirst(String sql) {
                 return sql; // keep body
+            }
+
+            @Override
+            protected EmbeddedVariableNode newEmbeddedVariableNode(String expr, String testValue, String specifiedSql,
+                    boolean blockNullParameter, NodeAdviceFactory adviceFactory, boolean replaceOnly, boolean terminalDot,
+                    boolean overlookNativeBinding) {
+                return createTemplikeEmbeddedVariableNode(expr, testValue, specifiedSql, blockNullParameter, adviceFactory, replaceOnly,
+                        terminalDot, overlookNativeBinding);
             }
         }.overlookNativeBinding().switchBindingToReplaceOnlyEmbedded(); // adjust for plain template
         return analyzer;
     }
 
+    protected EmbeddedVariableNode createTemplikeEmbeddedVariableNode(String expr, String testValue, String specifiedSql,
+            boolean blockNullParameter, NodeAdviceFactory adviceFactory, boolean replaceOnly, boolean terminalDot,
+            boolean overlookNativeBinding) {
+        return new EmbeddedVariableNode(expr, testValue, specifiedSql, blockNullParameter, adviceFactory, replaceOnly, terminalDot,
+                overlookNativeBinding) {
+            @Override
+            protected void setupBoundValue(BoundValue boundValue) {
+                super.setupBoundValue(boundValue);
+                setupOrElseValueIfNeeds(boundValue, _optionDef);
+            }
+        };
+    }
+
+    protected void setupOrElseValueIfNeeds(BoundValue boundValue, String optionDef) {
+        final Object targetValue = boundValue.getTargetValue();
+        if (targetValue == null && Srl.is_NotNull_and_NotTrimmedEmpty(optionDef)) {
+            final List<String> optionList = Srl.splitListTrimmed(optionDef, "|");
+            final String orElseBegin = "orElse(";
+            final String orElseEnd = ")";
+            optionList.stream().filter(op -> {
+                return op.startsWith(orElseBegin) && op.endsWith(orElseEnd);
+            }).findFirst().ifPresent(op -> { // e.g. /*pmb.sea:orElse('land')*/
+                final ScopeInfo scope = Srl.extractScopeWide(op, orElseBegin, orElseEnd);
+                final String content = scope.getContent().trim();
+                if (!Srl.isQuotedSingle(content)) { // string only supported, is enough in MailFlute
+                    throwTemplateOrElseValueNotQuotedException(optionDef);
+                }
+                boundValue.setTargetValue(Srl.unquoteSingle(content));
+            });
+        }
+    }
+
+    protected void throwTemplateOrElseValueNotQuotedException(String optionDef) {
+        String msg = "The orElse() value for template should be single-quoted e.g. orElse('sea') but: " + optionDef;
+        throw new IllegalStateException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                     Prepare Context
+    //                                                                     ===============
     protected CommandContext prepareContext(Object pmb) {
         final Object filteredPmb = filterPmb(pmb);
         final String[] argNames = new String[] { "pmb" };

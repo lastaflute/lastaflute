@@ -33,14 +33,14 @@ public class JTATransactionStage implements TransactionStage {
     private TransactionManagerAdapter transactionManagerAdapter;
 
     // ===================================================================================
-    //                                                                         Transaction
-    //                                                                         ===========
+    //                                                               Transaction Interface
+    //                                                               =====================
     @SuppressWarnings("unchecked")
     @Override
     public <RESULT> OptionalThing<RESULT> required(TransactionShow<RESULT> txLambda) {
         try {
             return wrapOptional((RESULT) transactionManagerAdapter.required(adapter -> {
-                return doPerform(txLambda, adapter);
+                return performTx(txLambda, adapter, TransactionGenre.REQUIRED);
             }), txLambda);
         } catch (Throwable e) {
             handleTransactionFailure(txLambda, e);
@@ -56,28 +56,12 @@ public class JTATransactionStage implements TransactionStage {
         } else { // basically here
             try {
                 return wrapOptional((RESULT) transactionManagerAdapter.requiresNew(adapter -> {
-                    return doPerform(txLambda, adapter);
+                    return performTx(txLambda, adapter, TransactionGenre.REQUIRES_NEW);
                 }), txLambda);
             } catch (Throwable e) {
                 handleTransactionFailure(txLambda, e);
                 return null; // unreachable
             }
-        }
-    }
-
-    protected <RESULT> RESULT doPerform(TransactionShow<RESULT> txLambda, TransactionManagerAdapter adapter) throws Throwable {
-        try {
-            final BegunTx<RESULT> tx = newBegunTransaction();
-            txLambda.perform(tx);
-            if (tx.isRollbackOnly()) { // e.g. when validation error
-                adapter.setRollbackOnly();
-            }
-            return tx.getResult();
-        } catch (Throwable e) {
-            // same as DefaultTransactionCallback
-            // forcedly roll-backed if exception in 'required' transaction scope
-            adapter.setRollbackOnly();
-            throw e;
         }
     }
 
@@ -99,7 +83,7 @@ public class JTATransactionStage implements TransactionStage {
         } else if (TransactionGenre.REQUIRES_NEW.equals(genre)) {
             return requiresNew(txLambda);
         } else if (TransactionGenre.NONE.equals(genre)) {
-            final BegunTx<RESULT> tx = newBegunTransaction();
+            final BegunTx<RESULT> tx = newBegunTransaction(TransactionGenre.NONE);
             txLambda.perform(tx);
             return wrapOptional(tx.getResult(), txLambda);
         } else { // no way
@@ -108,10 +92,33 @@ public class JTATransactionStage implements TransactionStage {
     }
 
     // ===================================================================================
+    //                                                                 Perform Transaction
+    //                                                                 ===================
+    protected <RESULT> RESULT performTx(TransactionShow<RESULT> txLambda, TransactionManagerAdapter adapter, TransactionGenre genre)
+            throws Throwable {
+        final BegunTx<RESULT> tx = newBegunTransaction(genre);
+        BegunTxContext.setBegunTxOnThread(tx);
+        try {
+            txLambda.perform(tx);
+            if (tx.isRollbackOnly()) { // e.g. when validation error
+                adapter.setRollbackOnly();
+            }
+            return tx.getResult();
+        } catch (Throwable e) {
+            // same as DefaultTransactionCallback
+            // forcedly roll-backed if exception in 'required' transaction scope
+            adapter.setRollbackOnly();
+            throw e;
+        } finally {
+            BegunTxContext.clearBegunTxOnThread();
+        }
+    }
+
+    // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
-    protected <RESULT> BegunTx<RESULT> newBegunTransaction() {
-        return new BegunTx<RESULT>();
+    protected <RESULT> BegunTx<RESULT> newBegunTransaction(TransactionGenre genre) {
+        return new BegunTx<RESULT>(genre);
     }
 
     protected <RESULT> OptionalThing<RESULT> wrapOptional(RESULT result, TransactionShow<RESULT> txLambda) {

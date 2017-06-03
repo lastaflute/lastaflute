@@ -28,7 +28,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
+import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.web.exception.Forced404NotFoundException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ActionFoundPathHandler;
 import org.lastaflute.web.path.ActionPathResolver;
@@ -103,6 +105,7 @@ public class RequestRoutingFilter implements Filter {
         final HttpServletRequest httpReq = (HttpServletRequest) servReq;
         final HttpServletResponse httpRes = (HttpServletResponse) servRes;
         final String requestPath = extractActionRequestPath(httpReq);
+        handleForced404NotFoundRouting(httpReq, requestPath);
         if (!isRoutingTarget(httpReq, requestPath)) { // e.g. foo.jsp, foo.do, foo.js, foo.css
             chain.doFilter(httpReq, httpRes);
             return;
@@ -127,8 +130,9 @@ public class RequestRoutingFilter implements Filter {
             }
         }
         // no routing here
-        showExpectedRouting(requestPath, resolver);
-        chain.doFilter(servReq, servRes);
+        showExpectedRouting(requestPath, resolver); // for developer
+        handleNoRoutingRequest(httpReq, requestPath); // 404 if it needs
+        chain.doFilter(servReq, servRes); // to next filter outside LastaFlute
     }
 
     protected String extractActionRequestPath(HttpServletRequest request) {
@@ -143,9 +147,11 @@ public class RequestRoutingFilter implements Filter {
         return getRequestManager().getRequestPath();
     }
 
-    protected String extractContextPath(HttpServletRequest req) {
-        final String contextPath = req.getContextPath();
-        return contextPath.equals("/") ? "" : contextPath;
+    protected void handleForced404NotFoundRouting(HttpServletRequest request, String requestPath) {
+        final ActionAdjustmentProvider adjustmentProvider = getActionAdjustmentProvider();
+        if (adjustmentProvider.isForced404NotFoundRouting(request, requestPath)) {
+            throw new Forced404NotFoundException("Forcedly 404 not found routing: " + requestPath, UserMessages.empty());
+        }
     }
 
     protected boolean isRoutingTarget(HttpServletRequest request, String requestPath) {
@@ -168,9 +174,14 @@ public class RequestRoutingFilter implements Filter {
         return requestPath.indexOf('.') >= 0 && !requestPath.endsWith("/");
     }
 
-    protected ActionFoundPathHandler createActionPathHandler(HttpServletRequest httpReq, HttpServletResponse httpRes, String contextPath) {
+    protected String extractContextPath(HttpServletRequest req) {
+        final String contextPath = req.getContextPath();
+        return contextPath.equals("/") ? "" : contextPath;
+    }
+
+    protected ActionFoundPathHandler createActionPathHandler(HttpServletRequest request, HttpServletResponse response, String contextPath) {
         return (requestPath, actionName, paramPath, execByParam) -> {
-            return routingToAction(httpReq, httpRes, contextPath, requestPath, actionName, paramPath, execByParam);
+            return routingToAction(request, response, contextPath, requestPath, actionName, paramPath, execByParam);
         };
     }
 
@@ -179,6 +190,13 @@ public class RequestRoutingFilter implements Filter {
             if (!requestPath.contains(".")) { // e.g. routing target can be adjusted so may be .jpg
                 logger.debug(resolver.prepareExpectedRoutingMessage(requestPath));
             }
+        }
+    }
+
+    protected void handleNoRoutingRequest(HttpServletRequest request, String requestPath) {
+        final ActionAdjustmentProvider adjustmentProvider = getActionAdjustmentProvider();
+        if (adjustmentProvider.isNoRoutingRequestAs404NotFound(request, requestPath)) {
+            throw new Forced404NotFoundException("No routing request: " + requestPath, UserMessages.empty());
         }
     }
 

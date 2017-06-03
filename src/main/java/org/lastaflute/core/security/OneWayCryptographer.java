@@ -59,10 +59,9 @@ public class OneWayCryptographer {
     //                                                                             Encrypt
     //                                                                             =======
     /**
-     * Encrypt the text as one-way code. <br>
-     * If the specified text is null or empty, it returns the text without encrypting.
-     * @param plainText The plain text to be encrypted. (NullAllowed: if null, returns null)
-     * @return The encrypted text as one-way code. (NullAllowed: when the text is null, EmptyAllowed: if empty specified)
+     * Encrypt the text as one-way code.
+     * @param plainText The plain text to be encrypted. (NotNull, EmptyAllowed)
+     * @return The encrypted text as one-way code. (NotNull, EmptyAllowed: depends on algorithm)
      * @throws CipherFailureException When the cipher fails.
      */
     public String oneway(String plainText) {
