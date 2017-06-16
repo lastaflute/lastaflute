@@ -16,6 +16,8 @@
 package org.lastaflute.core.template;
 
 import java.io.InputStream;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -258,31 +260,75 @@ public class SimpleTemplateManager implements TemplateManager {
             protected void setupBoundValue(BoundValue boundValue) {
                 super.setupBoundValue(boundValue);
                 setupOrElseValueIfNeeds(boundValue, _optionDef);
+                setupFormatAsValueIfNeeds(boundValue, _optionDef);
             }
         };
     }
 
+    // -----------------------------------------------------
+    //                                              orElse()
+    //                                              --------
     protected void setupOrElseValueIfNeeds(BoundValue boundValue, String optionDef) {
-        final Object targetValue = boundValue.getTargetValue();
-        if (targetValue == null && Srl.is_NotNull_and_NotTrimmedEmpty(optionDef)) {
-            final List<String> optionList = Srl.splitListTrimmed(optionDef, "|");
-            final String orElseBegin = "orElse(";
-            final String orElseEnd = ")";
-            optionList.stream().filter(op -> {
-                return op.startsWith(orElseBegin) && op.endsWith(orElseEnd);
-            }).findFirst().ifPresent(op -> { // e.g. /*pmb.sea:orElse('land')*/
-                final ScopeInfo scope = Srl.extractScopeWide(op, orElseBegin, orElseEnd);
-                final String content = scope.getContent().trim();
-                if (!Srl.isQuotedSingle(content)) { // string only supported, is enough in MailFlute
-                    throwTemplateOrElseValueNotQuotedException(optionDef);
-                }
-                boundValue.setTargetValue(Srl.unquoteSingle(content));
-            });
+        if (Srl.is_Null_or_TrimmedEmpty(optionDef)) {
+            return;
         }
+        final Object targetValue = boundValue.getTargetValue();
+        if (targetValue != null) {
+            return;
+        }
+        final List<String> optionList = Srl.splitListTrimmed(optionDef, "|");
+        final String orElseBegin = "orElse(";
+        final String orElseEnd = ")";
+        optionList.stream().filter(op -> {
+            return op.startsWith(orElseBegin) && op.endsWith(orElseEnd);
+        }).findFirst().ifPresent(op -> { // e.g. /*pmb.sea:orElse('land')*/
+            final ScopeInfo scope = Srl.extractScopeWide(op, orElseBegin, orElseEnd);
+            final String content = scope.getContent().trim();
+            if (!Srl.isQuotedSingle(content)) { // string only supported, is enough here
+                throwTemplateOrElseValueNotQuotedException(optionDef);
+            }
+            boundValue.setTargetValue(Srl.unquoteSingle(content));
+        });
     }
 
     protected void throwTemplateOrElseValueNotQuotedException(String optionDef) {
         String msg = "The orElse() value for template should be single-quoted e.g. orElse('sea') but: " + optionDef;
+        throw new IllegalStateException(msg);
+    }
+
+    // -----------------------------------------------------
+    //                                            formatAs()
+    //                                            ----------
+    protected void setupFormatAsValueIfNeeds(BoundValue boundValue, String optionDef) {
+        if (Srl.is_Null_or_TrimmedEmpty(optionDef)) {
+            return;
+        }
+        final Object targetValue = boundValue.getTargetValue();
+        if (targetValue == null) {
+            return;
+        }
+        if (targetValue instanceof TemporalAccessor) { // e.g. LocalDate, LocalDateTime
+            final TemporalAccessor temporal = (TemporalAccessor) targetValue;
+            final List<String> optionList = Srl.splitListTrimmed(optionDef, "|");
+            final String formatAsBegin = "formatAs(";
+            final String formatAsEnd = ")";
+            optionList.stream().filter(op -> {
+                return op.startsWith(formatAsBegin) && op.endsWith(formatAsEnd);
+            }).findFirst().ifPresent(op -> { // e.g. /*pmb.sea:formatAs('yyyy/MM/dd')*/
+                final ScopeInfo scope = Srl.extractScopeWide(op, formatAsBegin, formatAsEnd);
+                final String content = scope.getContent().trim();
+                if (!Srl.isQuotedSingle(content)) {
+                    throwTemplateFormatAsValueNotQuotedException(optionDef);
+                }
+                final String datePattern = Srl.unquoteSingle(content);
+                final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(datePattern);
+                boundValue.setTargetValue(formatter.format(temporal));
+            });
+        }
+    }
+
+    protected void throwTemplateFormatAsValueNotQuotedException(String optionDef) {
+        String msg = "The formatAs() value for template should be single-quoted e.g. formatAs('sea') but: " + optionDef;
         throw new IllegalStateException(msg);
     }
 
