@@ -143,9 +143,10 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         return new ObjectiveProperties(resourcePath) { // for e.g. checking existence and filtering value
             @Override
             public String get(String propertyKey) {
-                final String propertyValue = super.get(propertyKey);
-                verifyPropertyValue(propertyKey, propertyValue);
-                return filterPropertyAsDefault(propertyFilter.filter(propertyKey, propertyValue));
+                final String plainValue = super.get(propertyKey); // may be null if not found
+                final String filteredValue = propertyFilter.filter(propertyKey, plainValue);
+                verifyPropertyValue(propertyKey, filteredValue); // null checked
+                return filterPropertyAsDefault(filteredValue); // not null here
             }
         };
     }
