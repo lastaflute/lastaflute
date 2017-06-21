@@ -44,6 +44,12 @@ public class SimpleTimeManager implements TimeManager {
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(SimpleTimeManager.class);
 
+    // -----------------------------------------------------
+    //                                              Stateful
+    //                                              --------
+    protected static CurrentTimeProvider bowgunCurrentTimeProvider; // used for current
+    protected static boolean locked = true;
+
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
@@ -144,41 +150,54 @@ public class SimpleTimeManager implements TimeManager {
 
     @Override
     public Date currentUtilDate() {
-        if (TransactionTimeContext.exists()) {
-            final Date transactionTime = TransactionTimeContext.getTransactionTime();
-            return new Date(transactionTime.getTime());
-        }
-        return flashDate();
+        return new Date(currentTimeMillis());
     }
 
     @Override
     public Timestamp currentTimestamp() {
-        if (TransactionTimeContext.exists()) {
-            final Date transactionTime = TransactionTimeContext.getTransactionTime();
-            return new Timestamp(transactionTime.getTime());
-        }
         return new Timestamp(currentTimeMillis());
     }
 
     @Override
     public Date flashDate() {
-        return new Date(currentTimeMillis());
+        return new Date(flashTimeMillis());
     }
 
     // -----------------------------------------------------
     //                                         Adjusted Time
     //                                         -------------
     protected long currentTimeMillis() {
+        return deriveNow(true);
+    }
+
+    protected long flashTimeMillis() {
+        return deriveNow(false);
+    }
+
+    protected long deriveNow(boolean syncWithTx) {
+        if (bowgunCurrentTimeProvider != null) { // most prior for e.g. UnitTest
+            synchronized (SimpleTimeManager.class) { // because it may be set as null
+                if (bowgunCurrentTimeProvider != null) {
+                    return bowgunCurrentTimeProvider.currentTimeMillis();
+                }
+            }
+        }
+        if (syncWithTx) {
+            if (TransactionTimeContext.exists()) {
+                final Date transactionTime = TransactionTimeContext.getTransactionTime();
+                return transactionTime.getTime();
+            }
+        }
         if (developmentProvider != null) {
             final boolean dynamicAbsolute = developmentProvider.isAdjustAbsoluteMode();
             final long dynamicAdjust = developmentProvider.provideAdjustTimeMillis();
-            return doCurrentTimeMillis(dynamicAbsolute, dynamicAdjust);
+            return doDeriveNow(dynamicAbsolute, dynamicAdjust);
         } else {
-            return doCurrentTimeMillis(adjustAbsoluteMode, adjustTimeMillis);
+            return doDeriveNow(adjustAbsoluteMode, adjustTimeMillis);
         }
     }
 
-    protected long doCurrentTimeMillis(boolean absolute, long adjust) {
+    protected long doDeriveNow(boolean absolute, long adjust) {
         if (absolute) {
             return adjust;
         } else {
@@ -215,6 +234,54 @@ public class SimpleTimeManager implements TimeManager {
     /** {@inheritDoc} */
     public TimeZone getBusinessTimeZone() {
         return businessTimeHandler.getBusinessTimeZone();
+    }
+
+    // ===================================================================================
+    //                                                          Bowgun CurrentTimeProvider
+    //                                                          ==========================
+    public static void shootBowgunCurrentTimeProvider(CurrentTimeProvider currentTimeProvider) {
+        synchronized (SimpleTimeManager.class) { // to block while using provider
+            assertUnlocked();
+            if (logger.isInfoEnabled()) {
+                logger.info("...Shooting bowgun current-time provider: " + currentTimeProvider);
+            }
+            bowgunCurrentTimeProvider = currentTimeProvider;
+            lock(); // auto-lock here, because of deep world
+        }
+    }
+
+    // ===================================================================================
+    //                                                                         Config Lock
+    //                                                                         ===========
+    public static boolean isLocked() {
+        return locked;
+    }
+
+    public static void lock() {
+        if (locked) {
+            return;
+        }
+        if (logger.isInfoEnabled()) {
+            logger.info("...Locking the time manager!");
+        }
+        locked = true;
+    }
+
+    public static void unlock() {
+        if (!locked) {
+            return;
+        }
+        if (logger.isInfoEnabled()) {
+            logger.info("...Unlocking the time manager!");
+        }
+        locked = false;
+    }
+
+    protected static void assertUnlocked() {
+        if (!isLocked()) {
+            return;
+        }
+        throw new IllegalStateException("The time manager is locked.");
     }
 
     // ===================================================================================

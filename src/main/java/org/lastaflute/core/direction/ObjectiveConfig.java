@@ -133,10 +133,13 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
 
     protected PropertyFilter preparePropertyFilter() {
         if (bowgunPropertyFilter != null) {
-            return (key, value) -> bowgunPropertyFilter.filter(key, propertyFilter.filter(key, value));
-        } else {
-            return propertyFilter;
+            synchronized (ObjectiveConfig.class) { // because it may be set as null
+                if (bowgunPropertyFilter != null) {
+                    return (key, value) -> bowgunPropertyFilter.filter(key, propertyFilter.filter(key, value));
+                }
+            }
         }
+        return propertyFilter;
     }
 
     protected ObjectiveProperties newObjectiveProperties(String resourcePath, PropertyFilter propertyFilter) {
@@ -270,13 +273,15 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     // ===================================================================================
     //                                                               Bowgun PropertyFilter
     //                                                               =====================
-    public static void shootBowgunPropertyFilter(PropertyFilter propertyFilter) {
-        assertUnlocked();
-        if (logger.isInfoEnabled()) {
-            logger.info("...Shooting bowgun property filter: " + propertyFilter);
+    public static void shootBowgunPropertyFilter(PropertyFilter propertyFilter) { // should be before initialize()
+        synchronized (ObjectiveConfig.class) { // to block while using provider
+            assertUnlocked();
+            if (logger.isInfoEnabled()) {
+                logger.info("...Shooting bowgun property filter: " + propertyFilter);
+            }
+            bowgunPropertyFilter = propertyFilter;
+            lock(); // auto-lock here, because of deep world
         }
-        bowgunPropertyFilter = propertyFilter;
-        lock(); // auto-lock here, because of deep world
     }
 
     // ===================================================================================
