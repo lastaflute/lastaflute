@@ -26,17 +26,25 @@ import java.lang.annotation.Target;
  * You should use creator that can handle this, e.g. RomanticLogicCreator.
  * <pre>
  * e.g.
- *  &#64;EnvDispatch(development=FooLogicVirtual.class, production=FooLogicReal.class)
- *  public interface FooLogic {
+ *  &#64;EnvDispatch(development=SeaLogicDevelopment.class, production=SeaLogicProduction.class)
+ *  public interface SeaLogic {
  *  }
  *  
  *  // for development
- *  public class FooLogicVirtual implements FooLogic {
+ *  public class SeaLogicDevelopment implements SeaLogic {
  *  }
  *  
  *  // for production
- *  public class FooLogicReal implements FooLogic {
+ *  public class SeaLogicProduction implements SeaLogic {
  *  }
+ * </pre>
+ * <p>
+ * Implementation class suffixes should not be 'Logic' to avoid duplicate registration in cool-deploy.
+ * So the suffixes 'Development' and 'Production' are recommended.
+ * </p>
+ * <pre>
+ * x DevelopmentSeaLogic
+ * o SeaLogicDevelopment
  * </pre>
  * @author jflute
  */

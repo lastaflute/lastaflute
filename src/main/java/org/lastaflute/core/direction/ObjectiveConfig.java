@@ -20,7 +20,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -96,6 +98,9 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         prepareHotDeploy();
     }
 
+    // -----------------------------------------------------
+    //                                                Direct
+    //                                                ------
     protected void direct() {
         final FwAssistDirection direction = assistAssistDirection();
         appResource = filterEnvSwitching(direction.assistAppConfig());
@@ -121,6 +126,9 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         return (propertyKey, propertyValue) -> propertyValue;
     }
 
+    // -----------------------------------------------------
+    //                                  Objective Properties
+    //                                  --------------------
     protected ObjectiveProperties prepareObjectiveProperties() {
         final ObjectiveProperties makingProp = newObjectiveProperties(appResource, preparePropertyFilter());
         makingProp.checkImplicitOverride();
@@ -131,21 +139,14 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         return makingProp;
     }
 
-    protected PropertyFilter preparePropertyFilter() {
-        if (bowgunPropertyFilter != null) {
-            return (key, value) -> bowgunPropertyFilter.filter(key, propertyFilter.filter(key, value));
-        } else {
-            return propertyFilter;
-        }
-    }
-
     protected ObjectiveProperties newObjectiveProperties(String resourcePath, PropertyFilter propertyFilter) {
         return new ObjectiveProperties(resourcePath) { // for e.g. checking existence and filtering value
             @Override
             public String get(String propertyKey) {
-                final String propertyValue = super.get(propertyKey);
-                verifyPropertyValue(propertyKey, propertyValue);
-                return filterPropertyAsDefault(propertyFilter.filter(propertyKey, propertyValue));
+                final String plainValue = super.get(propertyKey); // may be null if not found
+                final String filteredValue = propertyFilter.filter(propertyKey, plainValue);
+                verifyPropertyValue(propertyKey, filteredValue); // null checked
+                return filterPropertyAsDefault(filteredValue); // not null here
             }
         };
     }
@@ -171,6 +172,44 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
         return propertyValue != null ? propertyValue.trim() : null; // rear space is unneeded as business
     }
 
+    // -----------------------------------------------------
+    //                                       Property Filter
+    //                                       ---------------
+    protected PropertyFilter preparePropertyFilter() {
+        final Map<String, String> generatedDefaultMap = prepareGeneratedDefaultMap();
+        if (generatedDefaultMap.isEmpty()) { // mainly here
+            return doPrepareEmbeddedPropertyFilter();
+        } else {
+            return doPrepareWrappedDefaultablePropertyFilter(generatedDefaultMap);
+        }
+    }
+
+    protected Map<String, String> prepareGeneratedDefaultMap() { // may be overridden by generated class
+        // mutable for overriding method, get only but concurrent just in case (and cannot be null value)
+        return new ConcurrentHashMap<String, String>();
+    }
+
+    protected PropertyFilter doPrepareEmbeddedPropertyFilter() {
+        if (bowgunPropertyFilter != null) {
+            synchronized (ObjectiveConfig.class) { // because it may be set as null
+                if (bowgunPropertyFilter != null) {
+                    return (key, value) -> bowgunPropertyFilter.filter(key, propertyFilter.filter(key, value));
+                }
+            }
+        }
+        return propertyFilter;
+    }
+
+    protected PropertyFilter doPrepareWrappedDefaultablePropertyFilter(Map<String, String> generatedDefaultMap) {
+        return (propertyKey, propertyValue) -> {
+            final String filtered = doPrepareEmbeddedPropertyFilter().filter(propertyKey, propertyValue);
+            return filtered != null ? filtered : generatedDefaultMap.get(propertyKey);
+        };
+    }
+
+    // -----------------------------------------------------
+    //                                          Boot Logging
+    //                                          ------------
     protected void showBootLogging() {
         if (logger.isInfoEnabled()) {
             logger.info("[Objective Config]");
@@ -269,13 +308,15 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
     // ===================================================================================
     //                                                               Bowgun PropertyFilter
     //                                                               =====================
-    public static void shootBowgunPropertyFilter(PropertyFilter propertyFilter) {
-        assertUnlocked();
-        if (logger.isInfoEnabled()) {
-            logger.info("...Shooting bowgun property filter: " + propertyFilter);
+    public static void shootBowgunPropertyFilter(PropertyFilter propertyFilter) { // should be before initialize()
+        synchronized (ObjectiveConfig.class) { // to block while using provider
+            assertUnlocked();
+            if (logger.isInfoEnabled()) {
+                logger.info("...Shooting bowgun property filter: " + propertyFilter);
+            }
+            bowgunPropertyFilter = propertyFilter;
+            lock(); // auto-lock here, because of deep world
         }
-        bowgunPropertyFilter = propertyFilter;
-        lock(); // auto-lock here, because of deep world
     }
 
     // ===================================================================================

@@ -23,8 +23,8 @@ public interface PropertyFilter {
 
     /**
      * @param propertyKey The key of property. (NotNull)
-     * @param propertyValue The value of property. (NullAllowed: if null, returns null)
-     * @return The filtered value or plain. (NullAllowed: when the original value is null)
+     * @param propertyValue The value of property. (NullAllowed: when property is not found)
+     * @return The filtered value or plain. (NullAllowed: but may be null-checked)
      */
     String filter(String propertyKey, String propertyValue);
 }
