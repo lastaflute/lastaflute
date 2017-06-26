@@ -17,6 +17,7 @@ package org.lastaflute.core.smartdeploy;
 
 import java.lang.reflect.Modifier;
 
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.core.direction.AccessibleConfig;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ComponentDef;
@@ -46,17 +47,19 @@ public class ComponentEnvDispatcher {
     protected final AutoBindingDef autoBindingDef;
     protected final boolean externalBinding;
     protected final ComponentCustomizer customizer;
+    protected final String nameSuffix; // to check duplicate registration
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public ComponentEnvDispatcher(NamingConvention namingConvention, InstanceDef instanceDef, AutoBindingDef autoBindingDef,
-            boolean externalBinding, ComponentCustomizer customizer) {
+            boolean externalBinding, ComponentCustomizer customizer, String nameSuffix) {
         this.namingConvention = namingConvention;
         this.instanceDef = instanceDef;
         this.autoBindingDef = autoBindingDef;
         this.externalBinding = externalBinding;
         this.customizer = customizer;
+        this.nameSuffix = nameSuffix;
     }
 
     // ===================================================================================
@@ -74,7 +77,7 @@ public class ComponentEnvDispatcher {
     //                                                                            Dispatch
     //                                                                            ========
     public ComponentDef dispatch(Class<?> componentClass) {
-        if (!canDispatch(componentClass)) { // just in case
+        if (!canDispatch(componentClass)) { // already checked but just in case
             return null;
         }
         return doDispatch(componentClass, findEnvDispatch(componentClass));
@@ -88,6 +91,7 @@ public class ComponentEnvDispatcher {
             throw new IllegalStateException(msg);
         }
         final Class<?> implType = config.is(devHereKey) ? dispatch.development() : dispatch.production();
+        checkImplementationSuffix(componentClass, implType);
         return actuallyCreateComponentDef(implType);
     }
 
@@ -95,12 +99,30 @@ public class ComponentEnvDispatcher {
         return dispatch.devProp(); // has default
     }
 
+    protected void checkImplementationSuffix(Class<?> componentClass, final Class<?> implType) {
+        if (implType.getSimpleName().endsWith(nameSuffix)) {
+            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("The suffix of env-dispatch implementation class should not be '" + nameSuffix + "'.");
+            br.addItem("Advice");
+            br.addElement("Duplicate registration (in cool-deploy) if same suffix,");
+            br.addElement("so make suer your implementation classes like this:");
+            br.addElement("  (x): DevelopmentSeaLogic");
+            br.addElement("  (o): SeaLogicDevelopment");
+            br.addItem("Interface");
+            br.addElement(componentClass.getName());
+            br.addItem("Implementation");
+            br.addElement(implType.getName());
+            final String msg = br.buildExceptionMessage();
+            throw new IllegalStateException(msg);
+        }
+    }
+
     // ===================================================================================
     //                                                                     Actually Create
     //                                                                     ===============
     protected ComponentDef actuallyCreateComponentDef(Class<?> implType) {
         final Class<?> targetClass = namingConvention.toCompleteClass(implType);
-        checkImplClass(targetClass);
+        checkImplementationCanBeCreated(targetClass);
         final AnnotationHandler handler = AnnotationHandlerFactory.getAnnotationHandler();
         final ComponentDef cd = handler.createComponentDef(targetClass, instanceDef, autoBindingDef, externalBinding);
         if (cd.getComponentName() == null) {
@@ -115,7 +137,7 @@ public class ComponentEnvDispatcher {
         return cd;
     }
 
-    protected void checkImplClass(Class<?> targetClass) {
+    protected void checkImplementationCanBeCreated(Class<?> targetClass) {
         if (targetClass.isInterface() || Modifier.isAbstract(targetClass.getModifiers())) {
             String msg = "Not implementation class for environment dispatch: " + targetClass;
             throw new IllegalStateException(msg);

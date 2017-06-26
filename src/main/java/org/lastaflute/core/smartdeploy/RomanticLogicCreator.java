@@ -94,7 +94,7 @@ public class RomanticLogicCreator extends LogicCreator {
 
     protected ComponentEnvDispatcher createEnvDispatcher() {
         return new ComponentEnvDispatcher(getNamingConvention(), getInstanceDef(), getAutoBindingDef(), isExternalBinding(),
-                getCustomizer());
+                getCustomizer(), getNameSuffix());
     }
 
     // ===================================================================================
