@@ -84,6 +84,7 @@ public class ComponentEnvDispatcher {
     }
 
     protected ComponentDef doDispatch(Class<?> componentClass, EnvDispatch dispatch) {
+        checkImplementationSuffix(componentClass, dispatch);
         final AccessibleConfig config = ContainerUtil.getComponent(AccessibleConfig.class);
         final String devHereKey = getDevlopmentHereKey(dispatch);
         if (config.get(devHereKey) == null) {
@@ -91,15 +92,15 @@ public class ComponentEnvDispatcher {
             throw new IllegalStateException(msg);
         }
         final Class<?> implType = config.is(devHereKey) ? dispatch.development() : dispatch.production();
-        checkImplementationSuffix(componentClass, implType);
         return actuallyCreateComponentDef(implType);
     }
 
-    protected String getDevlopmentHereKey(EnvDispatch dispatch) {
-        return dispatch.devProp(); // has default
+    protected void checkImplementationSuffix(Class<?> componentClass, EnvDispatch dispatch) {
+        doCheckImplementationSuffix(componentClass, dispatch.development());
+        doCheckImplementationSuffix(componentClass, dispatch.production());
     }
 
-    protected void checkImplementationSuffix(Class<?> componentClass, final Class<?> implType) {
+    protected void doCheckImplementationSuffix(Class<?> componentClass, Class<?> implType) {
         if (implType.getSimpleName().endsWith(nameSuffix)) {
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
             br.addNotice("The suffix of env-dispatch implementation class should not be '" + nameSuffix + "'.");
@@ -115,6 +116,10 @@ public class ComponentEnvDispatcher {
             final String msg = br.buildExceptionMessage();
             throw new IllegalStateException(msg);
         }
+    }
+
+    protected String getDevlopmentHereKey(EnvDispatch dispatch) {
+        return dispatch.devProp(); // has default
     }
 
     // ===================================================================================
