@@ -44,6 +44,7 @@ import org.lastaflute.web.validation.Required;
 
 /**
  * @author jflute
+ * @since 1.0.0 (2017/08/10 Thursday)
  */
 public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
 
