@@ -33,13 +33,13 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.util.DfReflectionUtil;
-import org.hibernate.validator.constraints.NotBlank;
-import org.hibernate.validator.constraints.NotEmpty;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;

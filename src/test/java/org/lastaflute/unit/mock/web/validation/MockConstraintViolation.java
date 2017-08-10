@@ -27,6 +27,7 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Path;
 import javax.validation.Payload;
 import javax.validation.metadata.ConstraintDescriptor;
+import javax.validation.metadata.ValidateUnwrappedValue;
 
 import org.dbflute.util.DfCollectionUtil;
 import org.hibernate.validator.internal.engine.path.PathImpl;
@@ -145,6 +146,16 @@ public class MockConstraintViolation implements ConstraintViolation<Object> {
             @Override
             public boolean isReportAsSingleViolation() {
                 return false;
+            }
+
+            @Override
+            public ValidateUnwrappedValue getValueUnwrapping() {
+                return null;
+            }
+
+            @Override
+            public <U> U unwrap(Class<U> type) {
+                return null;
             }
         };
     }

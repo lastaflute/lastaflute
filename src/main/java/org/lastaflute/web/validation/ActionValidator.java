@@ -54,7 +54,7 @@ import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
-import org.hibernate.validator.constraints.NotEmpty;
+import org.hibernate.validator.constraints.Length;
 import org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator;
 import org.hibernate.validator.spi.resourceloading.ResourceBundleLocator;
 import org.lastaflute.core.magic.ThreadCacheContext;
@@ -101,7 +101,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     //                                       Javax/Hibernate
     //                                       ---------------
     public static final String JAVAX_CONSTRAINTS_PKG = NotNull.class.getPackage().getName();
-    public static final String HIBERNATE_CONSTRAINTS_PKG = NotEmpty.class.getPackage().getName();
+    public static final String HIBERNATE_CONSTRAINTS_PKG = Length.class.getPackage().getName();
 
     // -----------------------------------------------------
     //                                                Groups
