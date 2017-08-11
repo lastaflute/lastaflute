@@ -274,12 +274,11 @@ public class ActionRequestProcessor {
     }
 
     protected void showInOutLogIfNeeds(ActionRuntime runtime) {
-        if (inOutLogger == null) { // double check just in case
-            return;
-        }
         final RequestManager requestManager = getRequestManager();
         InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
-            inOutLogger.showInOutLog(requestManager, runtime, keeper);
+            if (inOutLogger != null) { // double check just in case
+                inOutLogger.showInOutLog(requestManager, runtime, keeper);
+            }
         });
     }
 
