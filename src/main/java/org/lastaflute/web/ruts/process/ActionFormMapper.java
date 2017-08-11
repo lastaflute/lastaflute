@@ -81,6 +81,7 @@ import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
+import org.lastaflute.web.ruts.inoutlogging.InOutLogKeeper;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
@@ -160,14 +161,19 @@ public class ActionFormMapper {
         }
         final FormMappingOption option = adjustFormMapping(); // not null
         final Object realForm = virtualForm.getRealForm(); // not null
-        for (Entry<String, Object> entry : getAllParameters(multipartHandler).entrySet()) {
-            final String name = entry.getKey();
-            final Object value = entry.getValue();
-            try {
-                setProperty(virtualForm, realForm, name, value, null, option, null, null);
-            } catch (Throwable cause) {
-                handleIllegalPropertyPopulateException(realForm, name, value, runtime, cause); // adjustment here
+        final Map<String, Object> allParameters = getAllParameters(multipartHandler);
+        try {
+            for (Entry<String, Object> entry : allParameters.entrySet()) {
+                final String name = entry.getKey();
+                final Object value = entry.getValue();
+                try {
+                    setProperty(virtualForm, realForm, name, value, null, option, null, null);
+                } catch (Throwable cause) {
+                    handleIllegalPropertyPopulateException(realForm, name, value, runtime, cause); // adjustment here
+                }
             }
+        } finally {
+            keepParameterForInOutLoggingIfNeeds(allParameters);
         }
     }
 
@@ -241,6 +247,10 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg, cause);
     }
 
+    protected void keepParameterForInOutLoggingIfNeeds(Map<String, Object> allParameters) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepRequestParameter(allParameters));
+    }
+
     // ===================================================================================
     //                                                                           JSON Body
     //                                                                           =========
@@ -273,6 +283,7 @@ public class ActionFormMapper {
                 logger.debug("#flow ...Parsing JSON from request body:{}", buildJsonBodyDebugDisplay(body));
             }
             keepRequestBodyForErrorFlush(virtualForm, body);
+            keepRequestBodyForInOutLoggingIfNeeds(body);
             return body;
         } catch (RuntimeException e) {
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
@@ -288,15 +299,19 @@ public class ActionFormMapper {
         }
     }
 
+    protected String buildJsonBodyDebugDisplay(String value) {
+        // want to show all as parameter, but limit just in case to avoid large logging
+        final String trimmed = value.trim();
+        return !trimmed.isEmpty() ? "\n" + Srl.cut(trimmed, 800, "...") : " *empty body"; // might have rear LF
+    }
+
     protected void keepRequestBodyForErrorFlush(VirtualForm virtualForm, String body) {
         // request body can be read only once so needs to keep it for error logging
         requestManager.setAttribute(LastaWebKey.REQUEST_BODY_KEY, new WholeShowErrorFlushAttribute(body));
     }
 
-    protected String buildJsonBodyDebugDisplay(String value) {
-        // want to show all as parameter, but limit just in case to avoid large logging
-        final String trimmed = value.trim();
-        return !trimmed.isEmpty() ? "\n" + Srl.cut(trimmed, 800, "...") : " *empty body"; // might have rear LF
+    protected void keepRequestBodyForInOutLoggingIfNeeds(String requestBody) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepRequestBody(requestBody));
     }
 
     // -----------------------------------------------------

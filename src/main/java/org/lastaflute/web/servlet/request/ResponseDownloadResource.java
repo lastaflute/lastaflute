@@ -75,10 +75,6 @@ public class ResponseDownloadResource {
         return contentType != null;
     }
 
-    public String getContentType() {
-        return contentType;
-    }
-
     // ===================================================================================
     //                                                                              Header
     //                                                                              ======
@@ -102,10 +98,6 @@ public class ResponseDownloadResource {
 
     public boolean hasContentDisposition() {
         return headerMap.containsKey(ResponseManager.HEADER_CONTENT_DISPOSITION);
-    }
-
-    public Map<String, String[]> getHeaderMap() {
-        return headerMap;
     }
 
     // ===================================================================================
@@ -169,28 +161,12 @@ public class ResponseDownloadResource {
         return byteData != null;
     }
 
-    public byte[] getByteData() {
-        return byteData;
-    }
-
     public boolean hasStreamCall() {
         return streamCall != null;
     }
 
-    public WrittenStreamCall getStreamCall() {
-        return streamCall;
-    }
-
     public boolean hasZipStreamCall() {
         return zipStreamCall != null;
-    }
-
-    public WritternZipStreamCall getZipStreamCall() {
-        return zipStreamCall;
-    }
-
-    public Integer getContentLength() {
-        return contentLength;
     }
 
     // ===================================================================================
@@ -218,7 +194,7 @@ public class ResponseDownloadResource {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "{" + fileName + ", " + contentType + ", " + headerMap + "}";
+        return "download:{" + fileName + ", " + contentType + ", " + headerMap + "}";
     }
 
     // ===================================================================================
@@ -226,5 +202,29 @@ public class ResponseDownloadResource {
     //                                                                            ========
     public String getFileName() {
         return fileName;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public Map<String, String[]> getHeaderMap() {
+        return headerMap;
+    }
+
+    public byte[] getByteData() {
+        return byteData;
+    }
+
+    public WrittenStreamCall getStreamCall() {
+        return streamCall;
+    }
+
+    public WritternZipStreamCall getZipStreamCall() {
+        return zipStreamCall;
+    }
+
+    public Integer getContentLength() {
+        return contentLength;
     }
 }

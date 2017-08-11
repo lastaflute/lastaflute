@@ -32,10 +32,12 @@ import org.lastaflute.web.response.render.RenderData;
 import org.lastaflute.web.ruts.NextJourney;
 import org.lastaflute.web.ruts.NextJourney.PlannedJourneyProvider;
 import org.lastaflute.web.ruts.VirtualForm;
+import org.lastaflute.web.ruts.inoutlogging.InOutLogKeeper;
 import org.lastaflute.web.ruts.process.ActionRuntime.DisplayDataValidator;
 import org.lastaflute.web.ruts.process.validatebean.ResponseHtmlBeanValidator;
 import org.lastaflute.web.ruts.process.validatebean.ResponseJsonBeanValidator;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.servlet.request.ResponseDownloadResource;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,6 +125,7 @@ public class ActionResponseReflector {
                     saveErrorsToSession(response);
                 }
                 showHtmlTransition(response);
+                keepHtmlBodyForInOutLoggingIfNeeds(response);
             }, response);
         }
     }
@@ -255,6 +258,7 @@ public class ActionResponseReflector {
             } else { // mainly here
                 json = requestManager.getJsonManager().toJson(response.getJsonResult());
             }
+            keepOriginalBodyForInOutLoggingIfNeeds(json);
             response.getCallback().ifPresent(callback -> {
                 final String script = callback + "(" + json + ")";
                 responseManager.writeAsJavaScript(script);
@@ -306,7 +310,9 @@ public class ActionResponseReflector {
             if (response.isReturnAsEmptyBody()) {
                 return;
             }
-            responseManager.writeAsXml(response.getXmlStr(), response.getEncoding());
+            final String xmlStr = response.getXmlStr();
+            keepOriginalBodyForInOutLoggingIfNeeds(xmlStr);
+            responseManager.writeAsXml(xmlStr, response.getEncoding());
         });
     }
 
@@ -321,7 +327,9 @@ public class ActionResponseReflector {
             // needs to be handled in download()
             //setupActionResponseHeader(responseManager, response);
             setupActionResponseHttpStatus(responseManager, response);
-            responseManager.download(response.toDownloadResource());
+            final ResponseDownloadResource resource = response.toDownloadResource();
+            keepStreamBodyForInOutLoggingIfNeeds(resource);
+            responseManager.download(resource);
         });
     }
 
@@ -342,6 +350,30 @@ public class ActionResponseReflector {
 
     protected NextJourney createSelfContainedJourney(PlannedJourneyProvider journeyProcessor) {
         return new NextJourney(journeyProcessor);
+    }
+
+    // ===================================================================================
+    //                                                                       InOut Logging
+    //                                                                       =============
+    protected void keepHtmlBodyForInOutLoggingIfNeeds(HtmlResponse response) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
+            final String routingPath = response.getRoutingPath();
+            final String body = "(" + (response.isRedirectTo() ? "...Redirecting to " : "...Forwarding to ") + routingPath + ")";
+            keeper.keepResponseBody(body);
+        });
+    }
+
+    protected void keepOriginalBodyForInOutLoggingIfNeeds(String responseBody) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepResponseBody(responseBody));
+    }
+
+    protected void keepStreamBodyForInOutLoggingIfNeeds(ResponseDownloadResource resource) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
+            final String fileName = resource.getFileName();
+            final String contentType = resource.getContentType();
+            final String body = "(...Downloading fileName=" + fileName + ", contentType=" + contentType + ")";
+            keeper.keepResponseBody(body);
+        });
     }
 
     // ===================================================================================

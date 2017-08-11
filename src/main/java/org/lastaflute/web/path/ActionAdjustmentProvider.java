@@ -184,4 +184,16 @@ public interface ActionAdjustmentProvider {
     default ApplicationExceptionOption adjustApplicationExceptionHandling() {
         return null;
     }
+
+    // ===================================================================================
+    //                                                                       InOut Logging
+    //                                                                       =============
+    /**
+     * Does it use in-out logging of action? (show e.g. request parameter and response body as INFO) <br>
+     * The logger name is "lastaflute.inout".
+     * @return The determination, true or false. If false, no logging.
+     */
+    default boolean isUseInOutLogging() {
+        return false;
+    }
 }
