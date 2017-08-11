@@ -41,11 +41,21 @@ public class RequestedSqlCount {
     public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append("{total=").append(getTotalCountOfSql());
-        sb.append(", selectCB=").append(getCountOfSelectCB());
-        sb.append(", entityUpdate=").append(getCountOfEntityUpdate());
-        sb.append(", queryUpdate=").append(getCountOfQueryUpdate());
-        sb.append(", outsideSql=").append(getCountOfOutsideSql());
-        sb.append(", procedure=").append(getCountOfProcedure());
+        if (countOfSelectCB > 0) {
+            sb.append(", selectCB=").append(countOfSelectCB);
+        }
+        if (countOfEntityUpdate > 0) {
+            sb.append(", entityUpdate=").append(countOfEntityUpdate);
+        }
+        if (countOfQueryUpdate > 0) {
+            sb.append(", queryUpdate=").append(countOfQueryUpdate);
+        }
+        if (countOfOutsideSql > 0) {
+            sb.append(", outsideSql=").append(countOfOutsideSql);
+        }
+        if (countOfProcedure > 0) {
+            sb.append(", procedure=").append(countOfProcedure);
+        }
         sb.append("}");
         return sb.toString();
     }

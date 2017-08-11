@@ -44,6 +44,13 @@ public class InOutLogger {
     protected static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     // ===================================================================================
+    //                                                                             Logging
+    //                                                                             =======
+    protected void log(String msg) { // define at top for small line number
+        logger.info(msg);
+    }
+
+    // ===================================================================================
     //                                                                               Show
     //                                                                              ======
     public void showInOutLog(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
@@ -108,7 +115,7 @@ public class InOutLogger {
                 alreadyLineSep = buildInOut(sb, "mailCount", count.toString(), alreadyLineSep);
             }
         }
-        logger.info(sb.toString());
+        log(sb.toString());
     }
 
     protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep) {

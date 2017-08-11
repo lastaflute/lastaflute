@@ -37,9 +37,15 @@ public class RequestedMailCount {
     public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append("{posting=").append(countOfPosting);
-        sb.append(", alsoHtml=").append(countOfAlsoHtml);
-        sb.append(", dryrun=").append(countOfDryrun);
-        sb.append(", forcedlyDirect=").append(countOfForcedlyDirect);
+        if (countOfAlsoHtml > 0) {
+            sb.append(", alsoHtml=").append(countOfAlsoHtml);
+        }
+        if (countOfDryrun > 0) {
+            sb.append(", dryrun=").append(countOfDryrun);
+        }
+        if (countOfForcedlyDirect > 0) {
+            sb.append(", forcedlyDirect=").append(countOfForcedlyDirect);
+        }
         sb.append("}");
         return sb.toString();
     }
