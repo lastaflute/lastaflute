@@ -20,6 +20,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -33,6 +34,7 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfStringUtil;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.Srl;
 import org.dbflute.util.Srl.ScopeInfo;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
@@ -196,7 +198,7 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
         return resolveLabelVariableMessage(locale, key, message, callerKeySet);
     }
 
-    protected String formatMessage(Locale locale, String key, Object args[]) {
+    protected String formatMessage(Locale locale, String key, Object[] args) {
         MessageFormat format = null;
         final String formatKey = messageKey(locale, key);
         synchronized (formatMap) {
@@ -206,12 +208,33 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
                 if (formatString == null) {
                     return returnNull ? null : ("???" + formatKey + "???");
                 }
-                format = new MessageFormat(escape(formatString));
+                format = new MessageFormat(escape(redefineArgsIfNeeds(formatString)));
                 format.setLocale(locale);
                 formatMap.put(formatKey, format);
             }
         }
         return format.format(args);
+    }
+
+    protected String redefineArgsIfNeeds(String formatString) {
+        if (!formatString.contains("{") || !formatString.contains("}")) { // no parameter
+            return formatString;
+        }
+        final List<ScopeInfo> scopeList = Srl.extractScopeList(formatString, "{", "}");
+        if (!scopeList.stream()
+                .map(info -> info.getContent()) // to content list
+                .filter(tent -> !Srl.isNumberHarfAll(tent)) // named only (non-number only)
+                .findAny()
+                .isPresent()) { // no named exists, number only
+            return formatString; // no need to redefine
+        }
+        final Map<String, String> fromToMap = new LinkedHashMap<String, String>(scopeList.size());
+        int index = 0;
+        for (ScopeInfo scopeInfo : scopeList) {
+            fromToMap.put(scopeInfo.getScope(), "{" + index + "}");
+            ++index;
+        }
+        return Srl.replaceBy(formatString, fromToMap);
     }
 
     protected String doGetMessage(Locale locale, String key) {
