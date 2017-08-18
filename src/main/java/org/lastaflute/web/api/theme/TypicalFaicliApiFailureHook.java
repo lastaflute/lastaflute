@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.api.theme;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,8 +23,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
@@ -34,12 +33,12 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.api.ApiFailureResource;
-import org.lastaflute.web.api.theme.TypicalFaicliApiFailureHook.FaicliUnifiedFailureResult.FaicliFailureErrorPart;
+import org.lastaflute.web.api.theme.FaicliUnifiedFailureResult.FaicliFailureErrorPart;
+import org.lastaflute.web.api.theme.FaicliUnifiedFailureResult.FaicliUnifiedFailureType;
 import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
-import org.lastaflute.web.validation.Required;
 
 /**
  * @author jflute
@@ -56,10 +55,14 @@ public abstract class TypicalFaicliApiFailureHook implements ApiFailureHook {
     //                                                                          Definition
     //                                                                          ==========
     protected static final int BUSINESS_FAILURE_STATUS = HttpServletResponse.SC_BAD_REQUEST;
+    protected static final String LF = "\n";
 
     // ===================================================================================
     //                                                                    Business Failure
     //                                                                    ================
+    // -----------------------------------------------------
+    //                                      Validation Error
+    //                                      ----------------
     @Override
     public ApiResponse handleValidationError(ApiFailureResource resource) {
         final FaicliUnifiedFailureType failureType = FaicliUnifiedFailureType.VALIDATION_ERROR;
@@ -67,6 +70,9 @@ public abstract class TypicalFaicliApiFailureHook implements ApiFailureHook {
         return asJson(result).httpStatus(prepareBusinessFailureStatus());
     }
 
+    // -----------------------------------------------------
+    //                                 Application Exception
+    //                                 ---------------------
     @Override
     public ApiResponse handleApplicationException(ApiFailureResource resource, RuntimeException cause) {
         final FaicliUnifiedFailureType failureType = FaicliUnifiedFailureType.BUSINESS_ERROR;
@@ -74,6 +80,9 @@ public abstract class TypicalFaicliApiFailureHook implements ApiFailureHook {
         return asJson(result).httpStatus(prepareBusinessFailureStatus());
     }
 
+    // -----------------------------------------------------
+    //                                        Failure Status
+    //                                        --------------
     protected int prepareBusinessFailureStatus() {
         return BUSINESS_FAILURE_STATUS;
     }
@@ -81,13 +90,52 @@ public abstract class TypicalFaicliApiFailureHook implements ApiFailureHook {
     // ===================================================================================
     //                                                                      System Failure
     //                                                                      ==============
+    // -----------------------------------------------------
+    //                                      Client Exception
+    //                                      ----------------
     @Override
     public OptionalThing<ApiResponse> handleClientException(ApiFailureResource resource, RuntimeException cause) {
         final FaicliUnifiedFailureType failureType = FaicliUnifiedFailureType.CLIENT_ERROR;
         final FaicliUnifiedFailureResult result = createFailureResult(failureType, resource, cause);
+        adjustClientExceptionErrors(resource, cause, result);
         return OptionalThing.of(asJson(result)); // HTTP status will be automatically sent as client error for the cause
     }
 
+    protected void adjustClientExceptionErrors(ApiFailureResource resource, RuntimeException cause, FaicliUnifiedFailureResult result) {
+        if (isShowClientExceptionMessage(resource, cause, result)) {
+            result.errors.add(prepareClientExceptionThrownPart(resource, cause, result));
+        }
+        if (isSuppressClientExceptionErrors(resource, cause, result)) {
+            result.errors.clear();
+        }
+    }
+
+    protected boolean isShowClientExceptionMessage(ApiFailureResource resource, RuntimeException cause, FaicliUnifiedFailureResult result) {
+        return false; // should be false if production as public API
+    }
+
+    protected FaicliFailureErrorPart prepareClientExceptionThrownPart(ApiFailureResource resource, RuntimeException cause,
+            FaicliUnifiedFailureResult result) {
+        final Map<String, Object> data = new LinkedHashMap<String, Object>();
+        data.put("type", cause.getClass().getName());
+        data.put("message", buildClientExceptionMessage(cause));
+        return new FaicliFailureErrorPart(UserMessages.GLOBAL, "THROWN_EXCEPTION", data);
+    }
+
+    protected String buildClientExceptionMessage(RuntimeException cause) {
+        final StringBuilder sb = new StringBuilder();
+        buildSmartStackTrace(sb, cause, 0);
+        return sb.toString();
+    }
+
+    protected boolean isSuppressClientExceptionErrors(ApiFailureResource resource, RuntimeException cause,
+            FaicliUnifiedFailureResult result) { // for e.g. security
+        return false;
+    }
+
+    // -----------------------------------------------------
+    //                                      Server Exception
+    //                                      ----------------
     @Override
     public OptionalThing<ApiResponse> handleServerException(ApiFailureResource resource, Throwable cause) {
         return OptionalThing.empty(); // means empty body, HTTP status will be automatically sent as server error
@@ -151,9 +199,10 @@ public abstract class TypicalFaicliApiFailureHook implements ApiFailureHook {
     //                                        Failure Errors
     //                                        --------------
     protected List<FaicliFailureErrorPart> toErrors(ApiFailureResource resource, Map<String, List<String>> propertyMessageMap) {
-        return propertyMessageMap.entrySet().stream().flatMap(entry -> {
+        final List<FaicliFailureErrorPart> partList = propertyMessageMap.entrySet().stream().flatMap(entry -> {
             return toFailureErrorPart(resource, entry.getKey(), entry.getValue()).stream();
         }).collect(Collectors.toList());
+        return new ArrayList<FaicliFailureErrorPart>(partList); // mutable for additional errors
     }
 
     protected List<FaicliFailureErrorPart> toFailureErrorPart(ApiFailureResource resource, String field, List<String> messageList) {
@@ -267,41 +316,38 @@ public abstract class TypicalFaicliApiFailureHook implements ApiFailureHook {
         return new FaicliFailureErrorPart(field, code, data);
     }
 
-    public static class FaicliUnifiedFailureResult {
-
-        @Required
-        public final FaicliUnifiedFailureType cause;
-
-        @NotNull
-        @Valid
-        public final List<FaicliFailureErrorPart> errors;
-
-        public static class FaicliFailureErrorPart { // as client-managed message way
-
-            @Required
-            public final String field;
-
-            @Required
-            public final String code; // for client-managed message
-
-            @NotNull
-            public final Map<String, Object> data; // for client-managed message
-
-            public FaicliFailureErrorPart(String field, String code, Map<String, Object> data) {
-                this.field = field;
-                this.code = code;
-                this.data = data;
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    protected void buildSmartStackTrace(StringBuilder sb, Throwable cause, int nestLevel) { // similar to application exception's one
+        sb.append(LF).append(nestLevel > 0 ? "Caused by: " : "");
+        sb.append(cause.getClass().getName()).append(": ").append(cause.getMessage());
+        final StackTraceElement[] stackTrace = cause.getStackTrace();
+        if (stackTrace == null) { // just in case
+            return;
+        }
+        final int limit = nestLevel == 0 ? 10 : 3;
+        int index = 0;
+        for (StackTraceElement element : stackTrace) {
+            if (index > limit) { // not all because it's not error
+                sb.append(LF).append("  ...");
+                break;
             }
+            final String className = element.getClassName();
+            final String fileName = element.getFileName(); // might be null
+            final int lineNumber = element.getLineNumber();
+            final String methodName = element.getMethodName();
+            sb.append(LF).append("  at ").append(className).append(".").append(methodName);
+            sb.append("(").append(fileName);
+            if (lineNumber >= 0) {
+                sb.append(":").append(lineNumber);
+            }
+            sb.append(")");
+            ++index;
         }
-
-        public FaicliUnifiedFailureResult(FaicliUnifiedFailureType cause, List<FaicliFailureErrorPart> errors) {
-            this.cause = cause;
-            this.errors = errors;
+        final Throwable nested = cause.getCause();
+        if (nested != null && nested != cause) {
+            buildSmartStackTrace(sb, nested, nestLevel + 1);
         }
-    }
-
-    public static enum FaicliUnifiedFailureType {
-        VALIDATION_ERROR, BUSINESS_ERROR, CLIENT_ERROR // used by application
-        , SERVER_ERROR // basically used by 500.json
     }
 }
