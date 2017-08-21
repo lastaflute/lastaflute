@@ -21,6 +21,7 @@ import java.util.Map;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
+import org.lastaflute.core.util.Lato;
 import org.lastaflute.web.validation.Required;
 
 /**
@@ -67,5 +68,10 @@ public class FaicliUnifiedFailureResult {
     public FaicliUnifiedFailureResult(FaicliUnifiedFailureType cause, List<FaicliFailureErrorPart> errors) {
         this.cause = cause;
         this.errors = errors;
+    }
+
+    @Override
+    public String toString() {
+        return Lato.string(this);
     }
 }
