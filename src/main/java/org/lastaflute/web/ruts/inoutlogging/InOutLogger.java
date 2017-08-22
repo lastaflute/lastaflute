@@ -63,9 +63,20 @@ public class InOutLogger {
     }
 
     protected void doShowInOutLog(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
+        final String whole = buildWhole(requestManager, runtime, keeper);
+        if (keeper.getOption().isAsync()) {
+            requestManager.getAsyncManager().async(() -> log(whole));
+        } else { // basically here
+            log(whole); // also no wait because of after writing response (except redirection)
+        }
+    }
+
+    protected String buildWhole(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
+        final InOutLogOption option = keeper.getOption();
         final StringBuilder sb = new StringBuilder();
         final String requestPath = requestManager.getRequestPath();
-        sb.append(requestPath);
+        final String httpMethod = requestManager.getHttpMethod().orElse("unknown");
+        sb.append(httpMethod).append(" ").append(requestPath);
         final String actionName = runtime.getActionType().getSimpleName();
         final String methodName = runtime.getActionExecute().getExecuteMethod().getName();
         sb.append(" ").append(actionName).append("@").append(methodName).append("()");
@@ -87,17 +98,22 @@ public class InOutLogger {
             sb.append(" #").append(Integer.toHexString(failureCause.hashCode()));
         }
         boolean alreadyLineSep = false;
-        final String requestParameterExp = buildRequestParameterExp(keeper);
-        if (requestParameterExp != null) {
-            alreadyLineSep = buildInOut(sb, "requestParameter", requestParameterExp, alreadyLineSep);
+        final String paramsExp = buildRequestParameterExp(keeper);
+        if (paramsExp != null) {
+            final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
+            alreadyLineSep = buildInOut(sb, "requestParameter", realExp, alreadyLineSep);
         }
         if (keeper.getRequestBody().isPresent()) {
             final String body = keeper.getRequestBody().get();
-            alreadyLineSep = buildInOut(sb, "requestBody", body, alreadyLineSep);
+            final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
+            alreadyLineSep = buildInOut(sb, "requestBody", realExp, alreadyLineSep);
         }
         if (keeper.getResponseBody().isPresent()) {
-            final String body = keeper.getResponseBody().get();
-            alreadyLineSep = buildInOut(sb, "responseBody", body, alreadyLineSep);
+            if (!keeper.getOption().isSuppressResponseBody()) {
+                final String body = keeper.getResponseBody().get();
+                final String realExp = option.getResponseBodyFilter().map(filter -> filter.apply(body)).orElse(body);
+                alreadyLineSep = buildInOut(sb, "responseBody", realExp, alreadyLineSep);
+            }
         }
         final OptionalThing<RequestedSqlCount> optSql =
                 requestManager.getAttribute(LastaWebKey.DBFLUTE_SQL_COUNT_KEY, RequestedSqlCount.class);
@@ -115,12 +131,12 @@ public class InOutLogger {
                 alreadyLineSep = buildInOut(sb, "mailCount", count.toString(), alreadyLineSep);
             }
         }
-        log(sb.toString());
+        return sb.toString();
     }
 
     protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep) {
         boolean nowLineSep = alreadyLineSep;
-        if (value.contains("\n")) {
+        if (value != null && value.contains("\n")) {
             sb.append("\n").append(title).append(":").append("\n");
             nowLineSep = true;
         } else {

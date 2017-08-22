@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonManager;
+import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.web.api.ApiManager;
@@ -377,6 +378,12 @@ public interface RequestManager extends ScopedAttributeHolder {
      * @return The injected manager of JSON. (NotNull)
      */
     JsonManager getJsonManager();
+
+    /**
+     * Get the manager of asynchronous.
+     * @return The injected manager of asynchronous. (NotNull)
+     */
+    AsyncManager getAsyncManager();
 
     // -----------------------------------------------------
     //                                           Web Friends

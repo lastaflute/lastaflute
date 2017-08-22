@@ -36,6 +36,7 @@ import org.dbflute.util.DfStringUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
+import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
@@ -95,6 +96,10 @@ public class SimpleRequestManager implements RequestManager {
     /** The manager of JSON. (NotNull: after initialization) */
     @Resource
     private JsonManager jsonManager;
+
+    /** The manager of asynchronous. (NotNull: after initialization) */
+    @Resource
+    private AsyncManager asyncManager;
 
     // -----------------------------------------------------
     //                                           Web Friends
@@ -903,6 +908,11 @@ public class SimpleRequestManager implements RequestManager {
     @Override
     public JsonManager getJsonManager() {
         return jsonManager;
+    }
+
+    @Override
+    public AsyncManager getAsyncManager() {
+        return asyncManager;
     }
 
     // -----------------------------------------------------

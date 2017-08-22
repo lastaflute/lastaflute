@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonManager;
+import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.unit.mock.core.message.MockMessageManager;
@@ -257,6 +258,11 @@ public class MockRequestManager implements RequestManager {
 
     @Override
     public JsonManager getJsonManager() {
+        return null;
+    }
+
+    @Override
+    public AsyncManager getAsyncManager() {
         return null;
     }
 

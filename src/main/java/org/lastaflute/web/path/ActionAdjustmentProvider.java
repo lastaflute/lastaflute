@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
+import org.lastaflute.web.ruts.inoutlogging.InOutLogOption;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.validation.VaConfigSetupper;
 
@@ -195,5 +196,15 @@ public interface ActionAdjustmentProvider {
      */
     default boolean isUseInOutLogging() {
         return false;
+    }
+
+    /**
+     * Adjust in-out logging of action? (e.g. suppress response body) <br>
+     * Called per one request so you should cache your option instance. <br>
+     * And called only when isUseInOutLogging() returns true.
+     * @return The option of in-out logging. (NullAllowed: then no option)
+     */
+    default InOutLogOption adjustInOutLogging() {
+        return null;
     }
 }
