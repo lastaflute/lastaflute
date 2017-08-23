@@ -92,7 +92,7 @@ public class ActionRequestProcessor {
     }
 
     protected InOutLogger prepareInOutLogger(ModuleConfig moduleConfig) {
-        return InOutLogKeeper.isUseInOutLogging(getRequestManager()) ? createIntOutLogger() : null;
+        return InOutLogKeeper.isEnabled(getRequestManager()) ? createIntOutLogger() : null;
     }
 
     protected InOutLogger createIntOutLogger() {

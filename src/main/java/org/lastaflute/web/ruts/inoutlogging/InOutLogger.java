@@ -51,10 +51,17 @@ public class InOutLogger {
         logger.info(msg);
     }
 
+    public static boolean isLoggerEnabled() { // used by keeper's determination
+        return logger.isInfoEnabled();
+    }
+
     // ===================================================================================
     //                                                                               Show
     //                                                                              ======
     public void showInOutLog(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
+        if (!isLoggerEnabled()) { // e.g. option is true but no logger settings
+            return;
+        }
         // no async for now, because this process is after response committed by jflute (2017/08/11)
         try {
             doShowInOutLog(requestManager, runtime, keeper);

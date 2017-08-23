@@ -52,15 +52,15 @@ public class InOutLogKeeper {
     // ===================================================================================
     //                                                                  Core Determination
     //                                                                  ==================
-    public static boolean isUseInOutLogging(RequestManager requestManager) {
-        return requestManager.getActionAdjustmentProvider().isUseInOutLogging();
+    public static boolean isEnabled(RequestManager requestManager) {
+        return requestManager.getActionAdjustmentProvider().isUseInOutLogging() && InOutLogger.isLoggerEnabled();
     }
 
     // ===================================================================================
     //                                                                      Prepare Keeper
     //                                                                      ==============
     public static OptionalThing<InOutLogKeeper> prepare(RequestManager requestManager) {
-        return isUseInOutLogging(requestManager) ? OptionalThing.of(doPrepare(requestManager)) : OptionalThing.empty();
+        return isEnabled(requestManager) ? OptionalThing.of(doPrepare(requestManager)) : OptionalThing.empty();
     }
 
     protected static InOutLogKeeper doPrepare(RequestManager requestManager) {
