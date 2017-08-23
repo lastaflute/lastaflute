@@ -26,8 +26,16 @@ public interface ConcurrentAsyncCall {
      */
     void callback();
 
-    default boolean asPrimary() {
+    default boolean asPrimary() { // for compatible, keep as forcing option
         return false;
+    }
+
+    default ConcurrentAsyncImportance importance() {
+        return null; // as default
+    }
+
+    enum ConcurrentAsyncImportance {
+        PRIMARY, SECONDARY, TERTIARY
     }
 
     default ConcurrentAsyncOption option() {

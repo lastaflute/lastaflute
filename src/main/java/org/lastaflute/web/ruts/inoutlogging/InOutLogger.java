@@ -22,6 +22,7 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTraceViewUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.magic.async.ConcurrentAsyncCall;
 import org.lastaflute.core.mail.RequestedMailCount;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RequestedSqlCount;
 import org.lastaflute.web.LastaWebKey;
@@ -65,7 +66,7 @@ public class InOutLogger {
     protected void doShowInOutLog(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
         final String whole = buildWhole(requestManager, runtime, keeper);
         if (keeper.getOption().isAsync()) {
-            requestManager.getAsyncManager().async(() -> log(whole));
+            asyncShow(requestManager, whole);
         } else { // basically here
             log(whole); // also no wait because of after writing response (except redirection)
         }
@@ -147,6 +148,20 @@ public class InOutLogger {
         }
         sb.append(value == null || !value.isEmpty() ? value : "(empty)");
         return nowLineSep;
+    }
+
+    protected void asyncShow(RequestManager requestManager, String whole) {
+        requestManager.getAsyncManager().async(new ConcurrentAsyncCall() {
+            @Override
+            public ConcurrentAsyncImportance importance() {
+                return ConcurrentAsyncImportance.TERTIARY; // as low priority
+            }
+
+            @Override
+            public void callback() {
+                log(whole);
+            }
+        });
     }
 
     // ===================================================================================
