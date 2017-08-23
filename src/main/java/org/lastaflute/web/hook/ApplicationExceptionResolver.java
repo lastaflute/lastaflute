@@ -209,6 +209,7 @@ public class ApplicationExceptionResolver {
         sb.append("...Handling application exception:");
         sb.append("\n_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
         sb.append("\n[Application Exception]");
+        sb.append(" #").append(Integer.toHexString(cause.hashCode()));
         sb.append("\n action   : ").append(runtime);
         sb.append("\n response : ").append(response);
         sessionManager.errors().get().ifPresent(errors -> {

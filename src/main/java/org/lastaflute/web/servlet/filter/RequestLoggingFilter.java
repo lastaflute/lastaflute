@@ -710,6 +710,7 @@ public class RequestLoggingFilter implements Filter {
             final StringBuilder sb = new StringBuilder();
             sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/");
             sb.append(LF).append("...Sending error as '").append(title).append("' manually");
+            sb.append(" #").append(Integer.toHexString(cause.hashCode()));
             sb.append(LF).append(" Request: ").append(request.getRequestURI());
             final String queryString = request.getQueryString();
             if (queryString != null && !queryString.isEmpty()) {
