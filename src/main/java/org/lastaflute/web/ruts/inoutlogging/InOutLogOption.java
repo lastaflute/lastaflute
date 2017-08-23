@@ -50,11 +50,19 @@ public class InOutLogOption {
         return this;
     }
 
+    /**
+     * Suppress response body. (remove response body from in-out log)
+     * @return this. (NotNull)
+     */
     public InOutLogOption suppressResponseBody() {
         suppressResponseBody = true;
         return this;
     }
 
+    /**
+     * @param requestParameterFilter The filter of request parameters, no filter if returns null. (NotNull)
+     * @return this. (NotNull)
+     */
     public InOutLogOption filterRequestParameter(Function<String, String> requestParameterFilter) {
         if (requestParameterFilter == null) {
             throw new IllegalArgumentException("The argument 'requestParameterFilter' should not be null.");
@@ -63,6 +71,10 @@ public class InOutLogOption {
         return this;
     }
 
+    /**
+     * @param requestBodyFilter The filter of request body, no filter if returns null. (NotNull)
+     * @return this. (NotNull)
+     */
     public InOutLogOption filterRequestBody(Function<String, String> requestBodyFilter) {
         if (requestBodyFilter == null) {
             throw new IllegalArgumentException("The argument 'requestBodyFilter' should not be null.");
@@ -71,6 +83,10 @@ public class InOutLogOption {
         return this;
     }
 
+    /**
+     * @param responseBodyFilter The filter of response body, no filter if returns null. (NotNull)
+     * @return this. (NotNull)
+     */
     public InOutLogOption filterResponseBody(Function<String, String> responseBodyFilter) {
         if (responseBodyFilter == null) {
             throw new IllegalArgumentException("The argument 'responseBodyFilter' should not be null.");

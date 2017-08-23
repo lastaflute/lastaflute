@@ -77,6 +77,9 @@ public class InOutLogger {
         final String requestPath = requestManager.getRequestPath();
         final String httpMethod = requestManager.getHttpMethod().orElse("unknown");
         sb.append(httpMethod).append(" ").append(requestPath);
+        // not use HTTP status because of not fiexed yet here when e.g. exception
+        // (and in-out logging is not access log and you can derive it by exception type)
+        //requestManager.getResponseManager().getResponse().getStatus();
         final String actionName = runtime.getActionType().getSimpleName();
         final String methodName = runtime.getActionExecute().getExecuteMethod().getName();
         sb.append(" ").append(actionName).append("@").append(methodName).append("()");
