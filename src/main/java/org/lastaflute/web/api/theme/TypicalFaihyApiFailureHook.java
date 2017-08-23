@@ -102,12 +102,21 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
     }
 
     protected void adjustClientExceptionErrors(ApiFailureResource resource, RuntimeException cause, FaihyUnifiedFailureResult result) {
-        if (isShowClientExceptionMessage(resource, cause, result)) {
-            result.errors.add(prepareClientExceptionThrownPart(resource, cause, result));
+        if (isShowClientExceptionErrors(resource, cause, result)) {
+            if (isShowClientExceptionMessage(resource, cause, result)) {
+                result.errors.add(prepareClientExceptionThrownPart(resource, cause, result));
+            }
+        } else { // not show errors, basically here
+            result.errors.clear(); // simple implementation for now
         }
-        if (isSuppressClientExceptionErrors(resource, cause, result)) {
-            result.errors.clear();
-        }
+    }
+
+    protected boolean isShowClientExceptionErrors(ApiFailureResource resource, RuntimeException cause, FaihyUnifiedFailureResult result) { // for e.g. security
+        // basically client error does not need to return user messages
+        // and it should be no information for security in production of public server
+        // and you can get information of client error by server log (INFO level logging)
+        // so framework returns false as default
+        return false; // you may set true if development.here for e.g. JSON API client developers
     }
 
     protected boolean isShowClientExceptionMessage(ApiFailureResource resource, RuntimeException cause, FaihyUnifiedFailureResult result) {
@@ -131,11 +140,6 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
 
     protected String buildClientExceptionThrownServerManaged() {
         return "Make sure your request."; // used as title
-    }
-
-    protected boolean isSuppressClientExceptionErrors(ApiFailureResource resource, RuntimeException cause,
-            FaihyUnifiedFailureResult result) { // for e.g. security
-        return false;
     }
 
     // -----------------------------------------------------
