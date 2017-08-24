@@ -1477,7 +1477,9 @@ public class ActionFormMapper {
 
     protected JsonDebugChallenge createJsonDebugChallenge(Map<String, Object> retryMap, String propertyName, Class<?> propertyType,
             Integer elementIndex) {
-        return new JsonDebugChallenge(propertyName, propertyType, retryMap.get(propertyName), elementIndex);
+        final JsonManager jsonManager = requestManager.getJsonManager();
+        final Object mappedValue = retryMap.get(propertyName);
+        return new JsonDebugChallenge(jsonManager, propertyName, propertyType, mappedValue, elementIndex);
     }
 
     // ===================================================================================
