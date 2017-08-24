@@ -19,6 +19,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.dbflute.optional.OptionalThing;
@@ -35,8 +36,11 @@ public class JsonMappingOption {
     //                                                                           Attribute
     //                                                                           =========
     protected OptionalThing<DateTimeFormatter> localDateFormatter = OptionalThing.empty(); // not null
+    protected OptionalThing<Predicate<String>> localDateFormattingTrigger = OptionalThing.empty(); // not null, for reading
     protected OptionalThing<DateTimeFormatter> localDateTimeFormatter = OptionalThing.empty(); // not null
+    protected OptionalThing<Predicate<String>> localDateTimeFormattingTrigger = OptionalThing.empty(); // not null, for reading
     protected OptionalThing<DateTimeFormatter> localTimeFormatter = OptionalThing.empty(); // not null
+    protected OptionalThing<Predicate<String>> localTimeFormattingTrigger = OptionalThing.empty(); // not null, for reading
     protected OptionalThing<DateTimeFormatter> zonedDateTimeFormatter = OptionalThing.empty(); // not null
     protected OptionalThing<Function<Object, Boolean>> booleanDeserializer = OptionalThing.empty(); // not null
     protected OptionalThing<Function<Boolean, Object>> booleanSerializer = OptionalThing.empty(); // not null
@@ -65,8 +69,11 @@ public class JsonMappingOption {
     //                                                                      ==============
     public JsonMappingOption acceptAnother(JsonMappingOption another) {
         localDateFormatter = another.getLocalDateFormatter();
+        localDateFormattingTrigger = another.getLocalDateFormattingTrigger();
         localDateTimeFormatter = another.getLocalDateTimeFormatter();
+        localDateTimeFormattingTrigger = another.getLocalDateTimeFormattingTrigger();
         localTimeFormatter = another.getLocalTimeFormatter();
+        localTimeFormattingTrigger = another.getLocalTimeFormattingTrigger();
         zonedDateTimeFormatter = another.getZonedDateTimeFormatter();
         booleanDeserializer = another.getBooleanDeserializer();
         booleanSerializer = another.getBooleanSerializer();
@@ -95,6 +102,15 @@ public class JsonMappingOption {
         return this;
     }
 
+    public JsonMappingOption formatLocalDateBy(DateTimeFormatter localDateFormatter, Predicate<String> formattingTrigger) {
+        formatLocalDateBy(localDateFormatter);
+        if (formattingTrigger == null) {
+            throw new IllegalArgumentException("The argument 'formattingTrigger' should not be null.");
+        }
+        this.localDateFormattingTrigger = OptionalThing.of(formattingTrigger);
+        return this;
+    }
+
     public JsonMappingOption formatLocalDateTimeBy(DateTimeFormatter localDateTimeFormatter) {
         if (localDateTimeFormatter == null) {
             throw new IllegalArgumentException("The argument 'localDateTimeFormatter' should not be null.");
@@ -103,11 +119,29 @@ public class JsonMappingOption {
         return this;
     }
 
+    public JsonMappingOption formatLocalDateTimeBy(DateTimeFormatter localDateTimeFormatter, Predicate<String> formattingTrigger) {
+        formatLocalDateTimeBy(localDateTimeFormatter);
+        if (formattingTrigger == null) {
+            throw new IllegalArgumentException("The argument 'formattingTrigger' should not be null.");
+        }
+        this.localDateTimeFormattingTrigger = OptionalThing.of(formattingTrigger);
+        return this;
+    }
+
     public JsonMappingOption formatLocalTimeBy(DateTimeFormatter localTimeFormatter) {
         if (localTimeFormatter == null) {
             throw new IllegalArgumentException("The argument 'localTimeFormatter' should not be null.");
         }
         this.localTimeFormatter = OptionalThing.of(localTimeFormatter);
+        return this;
+    }
+
+    public JsonMappingOption formatLocalTimeBy(DateTimeFormatter localTimeFormatter, Predicate<String> formattingTrigger) {
+        formatLocalTimeBy(localTimeFormatter);
+        if (formattingTrigger == null) {
+            throw new IllegalArgumentException("The argument 'formattingTrigger' should not be null.");
+        }
+        this.localTimeFormattingTrigger = OptionalThing.of(formattingTrigger);
         return this;
     }
 
@@ -244,8 +278,11 @@ public class JsonMappingOption {
         final StringBuilder sb = new StringBuilder();
         final String delimiter = ", ";
         localDateFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
+        localDateFormattingTrigger.ifPresent(ger -> sb.append("(triggered)"));
         localDateTimeFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
+        localDateTimeFormattingTrigger.ifPresent(ger -> sb.append("(triggered)"));
         localTimeFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
+        localTimeFormattingTrigger.ifPresent(ger -> sb.append("(triggered)"));
         zonedDateTimeFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
         booleanDeserializer.ifPresent(zer -> sb.append(delimiter).append(zer));
         booleanSerializer.ifPresent(zer -> sb.append(delimiter).append(zer));
@@ -276,12 +313,24 @@ public class JsonMappingOption {
         return localDateFormatter;
     }
 
+    public OptionalThing<Predicate<String>> getLocalDateFormattingTrigger() {
+        return localDateFormattingTrigger;
+    }
+
     public OptionalThing<DateTimeFormatter> getLocalDateTimeFormatter() {
         return localDateTimeFormatter;
     }
 
+    public OptionalThing<Predicate<String>> getLocalDateTimeFormattingTrigger() {
+        return localDateTimeFormattingTrigger;
+    }
+
     public OptionalThing<DateTimeFormatter> getLocalTimeFormatter() {
         return localTimeFormatter;
+    }
+
+    public OptionalThing<Predicate<String>> getLocalTimeFormattingTrigger() {
+        return localTimeFormattingTrigger;
     }
 
     public OptionalThing<DateTimeFormatter> getZonedDateTimeFormatter() {
