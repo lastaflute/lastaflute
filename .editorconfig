@@ -1,0 +1,15 @@
+root = true
+ 
+[*]
+indent_style = space
+charset = utf-8
+end_of_line = lf
+
+[*.{html,xml,css}]
+indent_style = tab
+
+[*.{js,json}]
+indent_size = 2
+
+[{.project,.classpath}]
+indent_style = tab
