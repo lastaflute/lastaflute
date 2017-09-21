@@ -220,7 +220,14 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         assertArgumentNotNull("form", form);
         assertArgumentNotNull("moreValidationLambda", moreValidationLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
+        keepValidatorErrorHook(validationErrorLambda);
         return doValidate(form, moreValidationLambda, validationErrorLambda);
+    }
+
+    protected void keepValidatorErrorHook(VaErrorHook validationErrorLambda) { // for e.g. remote-api
+        if (ThreadCacheContext.exists()) {
+            ThreadCacheContext.registerValidatorErrorHook(validationErrorLambda);
+        }
     }
 
     public void throwValidationError(UserMessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
@@ -241,6 +248,16 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     public void throwValidationErrorApi(UserMessagesCreator<MESSAGES> noArgInLambda) {
         assertArgumentNotNull("noArgInLambda", noArgInLambda);
         throwValidationErrorException(noArgInLambda.create(), apiFailureHook);
+    }
+
+    // -----------------------------------------------------
+    //                                         Simply Facade
+    //                                         -------------
+    public ValidationSuccess simplyValidate(Object form) { // for e.g. response bean validator
+        assertArgumentNotNull("form", form);
+        return doValidate(form, unused -> {}, () -> {
+            throw new IllegalStateException("unused here, no way");
+        });
     }
 
     // -----------------------------------------------------

@@ -92,9 +92,7 @@ public abstract class ResponseBeanValidator {
     protected abstract OptionalThing<Class<?>[]> getValidatorGroups();
 
     protected void executeValidator(ActionValidator<UserMessages> validator, Object bean) {
-        validator.validate(bean, unused -> {}, () -> {
-            throw new IllegalStateException("unused here, no way");
-        });
+        validator.simplyValidate(bean);
     }
 
     // ===================================================================================
