@@ -397,6 +397,12 @@ public class GodHandableAction implements VirtualAction {
                     sb.append(LF).append("   ").append(ite.next());
                 }
             });
+            final Throwable nested = cause.getCause();
+            if (nested != null) { // e.g. from remote api
+                sb.append(LF).append(" - - - - - - - - - -");
+                sb.append(LF).append(" caused by ").append(nested.getClass().getSimpleName()).append(":");
+                sb.append(LF).append(nested.getMessage());
+            }
             sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/");
             logger.debug(sb.toString());
         }
