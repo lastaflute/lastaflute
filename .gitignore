@@ -1,5 +1,16 @@
+# common
 /target
+/build
 /bin
-/*.iml
-/.idea
 .DS_Store
+
+# IntelliJ IDEA
+/.idea/artifacts
+/.idea/libraries
+/.idea/modules
+/.idea/compiler.xml
+/.idea/modules.xml
+/.idea/vcs.xml
+/.idea/workspace.xml
+/*.iml
+/out

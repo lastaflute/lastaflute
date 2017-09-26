@@ -30,6 +30,8 @@ import org.lastaflute.db.jta.stage.VestibuleTxProvider;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ModuleConfig;
+import org.lastaflute.web.ruts.inoutlogging.InOutLogKeeper;
+import org.lastaflute.web.ruts.inoutlogging.InOutLogger;
 import org.lastaflute.web.ruts.process.ActionFormMapper;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.ActionRuntime;
@@ -53,6 +55,7 @@ public class ActionRequestProcessor {
     protected ModuleConfig moduleConfig;
     protected ActionCoinsHelper actionCoinsHelper;
     protected ActionFormMapper actionFormMapper;
+    protected InOutLogger inOutLogger; // null allowed if unused logging
 
     // -----------------------------------------------------
     //                                     Lazy-Loaded Cache
@@ -77,6 +80,7 @@ public class ActionRequestProcessor {
         this.moduleConfig = moduleConfig;
         this.actionCoinsHelper = createActionCoinHelper(moduleConfig);
         this.actionFormMapper = createActionFormPopulator(moduleConfig);
+        this.inOutLogger = prepareInOutLogger(moduleConfig);
     }
 
     protected ActionCoinsHelper createActionCoinHelper(ModuleConfig moduleConfig) {
@@ -85,6 +89,14 @@ public class ActionRequestProcessor {
 
     protected ActionFormMapper createActionFormPopulator(ModuleConfig moduleConfig) {
         return new ActionFormMapper(moduleConfig, getAssistantDirector(), getRequestManager());
+    }
+
+    protected InOutLogger prepareInOutLogger(ModuleConfig moduleConfig) {
+        return InOutLogKeeper.isEnabled(getRequestManager()) ? createIntOutLogger() : null;
+    }
+
+    protected InOutLogger createIntOutLogger() {
+        return new InOutLogger();
     }
 
     // ===================================================================================
@@ -98,7 +110,12 @@ public class ActionRequestProcessor {
                 ThreadCacheContext.initialize();
             }
             final ActionRuntime runtime = createActionRuntime(execute, pathParam);
-            fire(runtime); // #to_action
+            beginInOutLoggingIfNeeds();
+            try {
+                fire(runtime); // #to_action
+            } finally {
+                showInOutLogIfNeeds(runtime);
+            }
         } finally {
             if (!exists) {
                 ThreadCacheContext.clear();
@@ -244,6 +261,25 @@ public class ActionRequestProcessor {
         br.addElement(journey);
         final String msg = br.buildExceptionMessage();
         throw new IllegalStateException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                       InOut Logging
+    //                                                                       =============
+    protected void beginInOutLoggingIfNeeds() {
+        final RequestManager requestManager = getRequestManager();
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
+            keeper.keepBeginDateTime(requestManager.getTimeManager().currentDateTime());
+        });
+    }
+
+    protected void showInOutLogIfNeeds(ActionRuntime runtime) {
+        final RequestManager requestManager = getRequestManager();
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
+            if (inOutLogger != null) { // double check just in case
+                inOutLogger.showInOutLog(requestManager, runtime, keeper);
+            }
+        });
     }
 
     // ===================================================================================

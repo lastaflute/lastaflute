@@ -39,6 +39,11 @@ public class ValidationErrorException extends RuntimeException {
     //                                                                         Constructor
     //                                                                         ===========
     public ValidationErrorException(Class<?>[] runtimeGroups, UserMessages messages, VaErrorHook errorHook) {
+        this(runtimeGroups, messages, errorHook, null);
+    }
+
+    public ValidationErrorException(Class<?>[] runtimeGroups, UserMessages messages, VaErrorHook errorHook, Throwable cause) {
+        super("Validation Error for user input: " + messages, cause);
         if (runtimeGroups == null) {
             throw new IllegalArgumentException("The argument 'runtimeGroups' should not be null.");
         }

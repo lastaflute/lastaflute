@@ -58,6 +58,7 @@ import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.exception.ExceptionTranslator;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.magic.ThreadCompleted;
+import org.lastaflute.core.magic.async.ConcurrentAsyncCall.ConcurrentAsyncImportance;
 import org.lastaflute.core.magic.async.ConcurrentAsyncOption.ConcurrentAsyncInheritType;
 import org.lastaflute.core.magic.async.exception.ConcurrentParallelRunnerException;
 import org.lastaflute.core.magic.async.future.BasicYourFuture;
@@ -110,6 +111,9 @@ public class SimpleAsyncManager implements AsyncManager {
     /** The secondary service of executor for asynchronous process. (NotNull: after initialization) */
     protected ExecutorService secondaryExecutorService;
 
+    /** The tertiary service of executor for asynchronous process. (NotNull: after initialization) */
+    protected ExecutorService tertiaryExecutorService;
+
     /** The service of executor for waiting queue. (NullAllowed: lazy-loaded) */
     protected ExecutorService waitingQueueExecutorService;
 
@@ -134,6 +138,7 @@ public class SimpleAsyncManager implements AsyncManager {
         }
         primaryExecutorService = createDefaultPrimaryExecutorService(provider);
         secondaryExecutorService = createDefaultSecondaryExecutorService(provider);
+        tertiaryExecutorService = createDefaultSecondaryExecutorService(provider);
         showBootLogging();
     }
 
@@ -235,11 +240,12 @@ public class SimpleAsyncManager implements AsyncManager {
             logger.info(" defaultConcurrentAsyncOption: " + defaultConcurrentAsyncOption);
             logger.info(" primaryExecutorService: " + buildExecutorNamedExp(primaryExecutorService));
             logger.info(" secondaryExecutorService: " + buildExecutorNamedExp(secondaryExecutorService));
+            logger.info(" tertiaryExecutorService: " + buildExecutorNamedExp(tertiaryExecutorService));
         }
     }
 
     protected String buildExecutorNamedExp(ExecutorService executor) {
-        return primaryExecutorService.getClass().getSimpleName() + buildExecutorHashExp(executor);
+        return executor.getClass().getSimpleName() + buildExecutorHashExp(executor);
     }
 
     // ===================================================================================
@@ -249,10 +255,23 @@ public class SimpleAsyncManager implements AsyncManager {
     public YourFuture async(ConcurrentAsyncCall noArgLambda) {
         assertThreadCallbackNotNull(noArgLambda);
         assertExecutorServiceValid();
-        if (noArgLambda.asPrimary()) {
+        if (noArgLambda.asPrimary()) { // forcing option
             return doAsyncPrimary(noArgLambda);
         } else {
-            return doAsyncSecondary(noArgLambda);
+            final ConcurrentAsyncImportance importance = noArgLambda.importance();
+            if (importance != null) {
+                if (ConcurrentAsyncImportance.PRIMARY.equals(importance)) {
+                    return doAsyncPrimary(noArgLambda);
+                } else if (ConcurrentAsyncImportance.SECONDARY.equals(importance)) {
+                    return doAsyncSecondary(noArgLambda);
+                } else if (ConcurrentAsyncImportance.TERTIARY.equals(importance)) {
+                    return doAsyncTertiary(noArgLambda);
+                } else { // no way
+                    throw new IllegalStateException("Unknown importance: " + importance);
+                }
+            } else {
+                return doAsyncSecondary(noArgLambda); // as default
+            }
         }
     }
 
@@ -262,6 +281,10 @@ public class SimpleAsyncManager implements AsyncManager {
 
     protected YourFuture doAsyncSecondary(ConcurrentAsyncCall callback) {
         return actuallyAsync(callback, secondaryExecutorService, "secondary");
+    }
+
+    protected YourFuture doAsyncTertiary(ConcurrentAsyncCall callback) {
+        return actuallyAsync(callback, tertiaryExecutorService, "tertiary");
     }
 
     protected YourFuture actuallyAsync(ConcurrentAsyncCall callback, ExecutorService service, String title) {

@@ -22,10 +22,12 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.util.DfTypeUtil;
-import org.dbflute.util.DfTypeUtil.ParseDateException;
+import org.lastaflute.core.json.JsonManager;
+import org.lastaflute.core.util.LaClassificationUtil;
+import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,7 @@ public class JsonDebugChallenge {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final JsonManager jsonManager;
     protected final String propertyName;
     protected final Class<?> propertyType;
     protected final Object mappedValue; // null allowed
@@ -50,7 +53,9 @@ public class JsonDebugChallenge {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public JsonDebugChallenge(String propertyName, Class<?> propertyType, Object mappedValue, Integer elementIndex) {
+    public JsonDebugChallenge(JsonManager jsonManager, String propertyName, Class<?> propertyType, Object mappedValue,
+            Integer elementIndex) {
+        this.jsonManager = jsonManager;
         this.propertyName = propertyName;
         this.propertyType = propertyType;
         this.mappedValue = filterMappedValue(propertyType, mappedValue);
@@ -62,21 +67,21 @@ public class JsonDebugChallenge {
             return null;
         }
         final Class<?> valueType = mappedValue.getClass();
-        if (propertyType.isAssignableFrom(valueType)) {
+        if (propertyType.isAssignableFrom(valueType)) { // e.g. String to String
             return mappedValue;
         }
         try {
             if (mappedValue instanceof String) {
                 final String plainStr = (String) mappedValue;
-                try {
-                    if (LocalDate.class.isAssignableFrom(propertyType)) {
-                        return DfTypeUtil.toLocalDate(plainStr, "yyyy-MM-dd");
-                    } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
-                        return DfTypeUtil.toLocalDateTime(plainStr, "yyyy-MM-dd'T'HH:mm:ss");
-                    } else if (LocalTime.class.isAssignableFrom(propertyType)) {
-                        return DfTypeUtil.toLocalTime(plainStr, "HH:mm:ss");
-                    }
-                } catch (ParseDateException ignored) {}
+                if (LocalDate.class.isAssignableFrom(propertyType)) {
+                    return parseStr("seaDate", plainStr, bean -> bean.seaDate);
+                } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
+                    return parseStr("seaDateTime", plainStr, bean -> bean.seaDateTime);
+                } else if (LocalTime.class.isAssignableFrom(propertyType)) {
+                    return parseStr("seaTime", plainStr, bean -> bean.seaTime);
+                } else if (LaClassificationUtil.isCls(propertyType)) {
+                    return parseCls(propertyType, plainStr);
+                }
             } else if (mappedValue instanceof Double) { // Gson converts to double if "20" when map
                 final Double plainDouble = (Double) mappedValue;
                 if (Integer.class.isAssignableFrom(propertyType)) {
@@ -96,10 +101,41 @@ public class JsonDebugChallenge {
                 }
             }
         } catch (RuntimeException continued) { // just in case
-            String msg = "Cannot filter the mapped value: mappedValue={}, valueType={}";
+            String msg = "*Cannot filter the mapped value: mappedValue={}, valueType={}";
             logger.debug(msg, mappedValue, valueType, continued);
         }
         return mappedValue;
+    }
+
+    // ===================================================================================
+    //                                                                     Checking Helper
+    //                                                                     ===============
+    protected Object parseStr(String key, String plainStr, Function<MappingCheckingBean, Object> parsedProvider) {
+        return fromJson(jsonManager, key, plainStr).map(bean -> parsedProvider.apply(bean)).orElse(plainStr);
+    }
+
+    protected Object parseCls(Class<?> propertyType, String plainStr) {
+        try {
+            return LaClassificationUtil.toCls(propertyType, plainStr);
+        } catch (ClassificationUnknownCodeException e) { // simple message because of catched later
+            return plainStr;
+        }
+    }
+
+    protected OptionalThing<MappingCheckingBean> fromJson(JsonManager jsonManager, String key, String plainStr) {
+        final String json = "{\"" + key + "\":\"" + plainStr + "\"}";
+        try {
+            return OptionalThing.of(jsonManager.fromJson(json, MappingCheckingBean.class));
+        } catch (RuntimeException ignored) {
+            return OptionalThing.empty();
+        }
+    }
+
+    public static class MappingCheckingBean {
+
+        public LocalDate seaDate;
+        public LocalDateTime seaDateTime;
+        public LocalTime seaTime;
     }
 
     // ===================================================================================

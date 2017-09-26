@@ -25,6 +25,7 @@ import org.dbflute.util.DfCollectionUtil;
 import org.lastaflute.core.mail.PostedMailCounter;
 import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
+import org.lastaflute.web.validation.VaErrorHook;
 
 /**
  * The context of thread cache. <br>
@@ -53,8 +54,9 @@ public class ThreadCacheContext {
     // -----------------------------------------------------
     //                                            Validation
     //                                            ----------
-    public static final String FW_VALIDATOR_CALLED = "fw:validatorCalled";
-    public static final String FW_VALIDATOR_TYPE_FAILURE = "fw:validatorTypeFailure";
+    public static final String FW_VALIDATOR_CALLED = "fw:validatorCalled"; // for e.g. call check
+    public static final String FW_VALIDATOR_ERROR_HOOK = "fw:validatorErrorHook"; // for e.g. remote-api
+    public static final String FW_VALIDATOR_TYPE_FAILURE = "fw:validatorTypeFailure"; // for e.g. main validation process 
 
     // -----------------------------------------------------
     //                                           Transaction
@@ -215,6 +217,14 @@ public class ThreadCacheContext {
 
     public static void markValidatorCalled() {
         setObject(FW_VALIDATOR_CALLED, MARK_OBJ);
+    }
+
+    public static VaErrorHook findValidatorErrorHook() {
+        return exists() ? getObject(FW_VALIDATOR_ERROR_HOOK) : null;
+    }
+
+    public static void registerValidatorErrorHook(VaErrorHook errorHook) {
+        setObject(FW_VALIDATOR_ERROR_HOOK, errorHook);
     }
 
     public static Object findValidatorTypeFailure(Class<?> keyType) { // object not to depend on web

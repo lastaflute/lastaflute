@@ -18,8 +18,11 @@ package org.lastaflute.web.ruts.message.objective;
 import java.io.Serializable;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -28,11 +31,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfStringUtil;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.Srl;
 import org.dbflute.util.Srl.ScopeInfo;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
@@ -128,6 +133,9 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
     // ===================================================================================
     //                                                                         Get Message
     //                                                                         ===========
+    // -----------------------------------------------------
+    //                                                Facade
+    //                                                ------
     @Override
     public String getMessage(Locale locale, String key) {
         assertArgumentNotNull("locale", locale);
@@ -189,6 +197,18 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
         }
     }
 
+    // -----------------------------------------------------
+    //                                          Actually Get
+    //                                          ------------
+    protected String doGetMessage(Locale locale, String key) { // no arguments
+        // almost same as super's (seasar's) process
+        // only changed is how to get bundle
+        final MessageResourceBundle bundle = getBundle(locale);
+        final String message = bundle.get(key);
+        final Set<String> callerKeySet = createCallerKeySet();
+        return resolveLabelVariableMessage(locale, key, message, callerKeySet); // also resolve label variables
+    }
+
     protected String doGetMessage(Locale locale, String key, Object[] args) {
         final List<Object> resolvedList = resolveLabelParameter(locale, key, args);
         final String message = formatMessage(locale, key, resolvedList.toArray());
@@ -196,7 +216,7 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
         return resolveLabelVariableMessage(locale, key, message, callerKeySet);
     }
 
-    protected String formatMessage(Locale locale, String key, Object args[]) {
+    protected String formatMessage(Locale locale, String key, Object[] args) {
         MessageFormat format = null;
         final String formatKey = messageKey(locale, key);
         synchronized (formatMap) {
@@ -206,7 +226,7 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
                 if (formatString == null) {
                     return returnNull ? null : ("???" + formatKey + "???");
                 }
-                format = new MessageFormat(escape(formatString));
+                format = new MessageFormat(escape(redefineArgsIfNeeds(formatString)));
                 format.setLocale(locale);
                 formatMap.put(formatKey, format);
             }
@@ -214,17 +234,125 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
         return format.format(args);
     }
 
-    protected String doGetMessage(Locale locale, String key) {
-        // almost same as super's (seasar's) process
-        // only changed is how to get bundle
-        final MessageResourceBundle bundle = getBundle(locale);
-        final String message = bundle.get(key);
-        final Set<String> callerKeySet = createCallerKeySet();
-        return resolveLabelVariableMessage(locale, key, message, callerKeySet); // also resolve label variables
-    }
-
     protected HashSet<String> createCallerKeySet() {
         return new LinkedHashSet<String>(4); // order for exception message
+    }
+
+    // -----------------------------------------------------
+    //                                    Redefine Arguments
+    //                                    ------------------
+    protected String redefineArgsIfNeeds(String formatString) {
+        if (!formatString.contains("{") || !formatString.contains("}")) { // no parameter
+            return formatString;
+        }
+        final List<ScopeInfo> plainVariableList = Srl.extractScopeList(formatString, "{", "}");
+        if (!plainVariableList.stream()
+                .map(info -> info.getContent()) // to content list
+                .filter(tent -> !Srl.isNumberHarfAll(tent)) // named only (non-number only)
+                .findAny() // one or zero
+                .isPresent()) { // no named exists, number only
+            return formatString; // no need to redefine
+        }
+        createVariableOrderAgent().orderScopeList(plainVariableList);
+        final Map<String, String> fromToMap = new LinkedHashMap<String, String>(plainVariableList.size());
+        int index = 0;
+        for (ScopeInfo scopeInfo : plainVariableList) {
+            fromToMap.put(scopeInfo.getScope(), "{" + index + "}");
+            ++index;
+        }
+        return buildRedefinedMessage(formatString, fromToMap);
+    }
+
+    protected VariableOrderAgent createVariableOrderAgent() {
+        return new VariableOrderAgent();
+    }
+
+    public static class VariableOrderAgent { // copied from JavaPropertiesReader #for_now, use it future
+
+        public void orderScopeList(List<ScopeInfo> variableScopeList) {
+            Collections.sort(variableScopeList, (o1, o2) -> { // ...after all, split indexed and named
+                return Srl.isNumberHarfAll(o1.getContent()) ? -1 : 0;
+            });
+            orderIndexedOnly(variableScopeList); // e.g. {2}-{sea}-{0}-{land}-{1} to {0}-{sea}-{1}-{land}-{2}
+            orderNamedOnly(variableScopeList); // e.g. {2}-{sea}-{0}-{land}-{1} to {0}-{land}-{1}-{sea}-{2}
+        }
+
+        protected void orderIndexedOnly(List<ScopeInfo> variableStringList) {
+            final Map<Integer, ScopeInfo> namedMap = new LinkedHashMap<Integer, ScopeInfo>();
+            for (int i = 0; i < variableStringList.size(); i++) {
+                final ScopeInfo element = variableStringList.get(i);
+                if (!Srl.isNumberHarfAll(element.getContent())) {
+                    namedMap.put(i, element);
+                }
+            }
+            final List<ScopeInfo> sortedList = variableStringList.stream()
+                    .filter(el -> Srl.isNumberHarfAll(el.getContent()))
+                    .sorted(Comparator.comparing(el -> filterNumber(el.getContent()), Comparator.naturalOrder()))
+                    .collect(Collectors.toList());
+            namedMap.forEach((key, value) -> {
+                sortedList.add(key, value);
+            });
+            variableStringList.clear();
+            variableStringList.addAll(sortedList);
+        }
+
+        protected String filterNumber(String el) {
+            final String ltrimmed = Srl.ltrim(el, "0"); // zero suppressed e.g. "007" to "7"
+            if (ltrimmed.isEmpty() && el.contains("0")) { // e.g. "000"
+                return "0";
+            } else {
+                return ltrimmed;
+            }
+        }
+
+        protected void orderNamedOnly(List<ScopeInfo> variableStringList) {
+            final Map<Integer, ScopeInfo> indexedMap = new LinkedHashMap<Integer, ScopeInfo>();
+            for (int i = 0; i < variableStringList.size(); i++) {
+                final ScopeInfo element = variableStringList.get(i);
+                if (Srl.isNumberHarfAll(element.getContent())) {
+                    indexedMap.put(i, element);
+                }
+            }
+            final List<ScopeInfo> sortedList = variableStringList.stream().filter(el -> {
+                return !Srl.isNumberHarfAll(el.getContent());
+            }).sorted((o1, o2) -> {
+                final String v1 = o1.getContent();
+                final String v2 = o2.getContent();
+                if (isSpecialNamedOrder(v1, v2)) {
+                    return -1;
+                } else if (isSpecialNamedOrder(v2, v1)) {
+                    return 1;
+                }
+                return v1.compareTo(v2);
+            }).collect(Collectors.toList());
+            indexedMap.forEach((key, value) -> {
+                sortedList.add(key, value);
+            });
+            variableStringList.clear();
+            variableStringList.addAll(sortedList);
+        }
+
+        protected boolean isSpecialNamedOrder(String v1, String v2) {
+            return v1.equals("min") && v2.equals("max") // used by e.g. Hibernate Validator
+                    || v1.equals("minimum") && v2.equals("maximum") //
+                    || v1.equals("start") && v2.equals("end") //
+                    || v1.equals("before") && v2.equals("after") //
+            ;
+        }
+    }
+
+    protected String buildRedefinedMessage(String formatString, Map<String, String> fromToMap) {
+        final List<ScopeInfo> baseList = Srl.extractScopeList(formatString, "{", "}"); // e.g. sea:{0}, land:{showbase}, piari
+        final StringBuilder sb = new StringBuilder();
+        for (ScopeInfo scopeInfo : baseList) {
+            String previous = scopeInfo.substringInterspaceToPrevious(); // e.g. "sea:", ", land:"
+            String scope = scopeInfo.getScope(); // e.g. "{0}", "{showbase}"
+            sb.append(previous).append(fromToMap.get(scope));
+        }
+        if (!baseList.isEmpty()) { // always true, just in case
+            sb.append(baseList.get(baseList.size() - 1).substringInterspaceToNext()); // e.g. ", piari"
+        }
+        return sb.toString();
     }
 
     // ===================================================================================

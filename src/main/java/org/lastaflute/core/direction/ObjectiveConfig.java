@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
+import org.dbflute.helper.jprop.JavaPropertiesReader;
+import org.dbflute.helper.jprop.JavaPropertiesStreamProvider;
 import org.dbflute.helper.jprop.ObjectiveProperties;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
@@ -148,6 +150,12 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
                 verifyPropertyValue(propertyKey, filteredValue); // null checked
                 return filterPropertyAsDefault(filteredValue); // not null here
             }
+
+            // #for_now patch for old DBFlute version before 1.1.4, will delete if upgrade dependency
+            @Override
+            protected JavaPropertiesReader createJavaPropertiesReader(String title) {
+                return newPatchedReader(title, createJavaPropertiesStreamProvider()).encodeAs(_streamEncoding);
+            }
         };
     }
 
@@ -170,6 +178,25 @@ public class ObjectiveConfig implements AccessibleConfig, Serializable {
 
     protected String filterPropertyTrimming(String propertyValue) {
         return propertyValue != null ? propertyValue.trim() : null; // rear space is unneeded as business
+    }
+
+    protected JavaPropertiesReader newPatchedReader(String title, JavaPropertiesStreamProvider provider) {
+        return new JavaPropertiesReader(title, provider) {
+            @Override
+            protected JavaPropertiesReader newJavaPropertiesReader(String title, JavaPropertiesStreamProvider provider) {
+                return new JavaPropertiesReader(title, provider) {
+                    @Override
+                    protected JavaPropertiesReader newJavaPropertiesReader(String title, JavaPropertiesStreamProvider provider) {
+                        return new JavaPropertiesReader(title, provider) {
+                            @Override
+                            protected JavaPropertiesReader newJavaPropertiesReader(String title, JavaPropertiesStreamProvider provider) {
+                                return super.newJavaPropertiesReader(title, provider).encodeAs(_streamEncoding);
+                            }
+                        }.encodeAs(_streamEncoding);
+                    }
+                }.encodeAs(_streamEncoding);
+            }
+        };
     }
 
     // -----------------------------------------------------

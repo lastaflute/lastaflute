@@ -62,24 +62,16 @@ public class UserMessage implements Serializable {
         this.validatorMessageKey = null;
     }
 
-    protected UserMessage(String messageItself, Annotation validatorAnnotation, Class<?>[] validatorGroups, String validatorMessageKey) { // for e.g. hibernate validator
+    protected UserMessage(String messageItself // direct message (not message key)
+            , Annotation validatorAnnotation, Class<?>[] validatorGroups, String validatorMessageKey // annotation info
+    ) { // for e.g. hibernate validator
         assertArgumentNotNull("messageItself", messageItself);
-        assertArgumentNotNull("validatorAnnotation", validatorAnnotation);
-        // message key might be not required, because of possible that it cannot get it
-        //assertArgumentNotNull("validatorMessageKey", validatorMessageKey);
-        assertArgumentNotNull("annotationGroups", validatorGroups);
         this.messageKey = messageItself;
         this.values = EMPTY_VALUES;
         this.resource = false;
         this.validatorAnnotation = validatorAnnotation;
         this.validatorGroups = validatorGroups;
         this.validatorMessageKey = validatorMessageKey;
-    }
-
-    // factory method to avoid argument mistake, and this is internal method for framework
-    public static UserMessage asDirectMessage(String messageItself, Annotation validatorAnnotation, Class<?>[] validatorGroups,
-            String validatorMessageKey) {
-        return new UserMessage(messageItself, validatorAnnotation, validatorGroups, validatorMessageKey);
     }
 
     protected String filterMessageKey(String messageKey) {
@@ -103,6 +95,19 @@ public class UserMessage implements Serializable {
         } else {
             return key;
         }
+    }
+
+    // -----------------------------------------------------
+    //                                        Factory Method
+    //                                        --------------
+    // factory methods to avoid argument mistake, and this is internal method for framework
+    public static UserMessage asDirectMessage(String messageItself) { // for e.g. remote api
+        return new UserMessage(messageItself, null, null, null);
+    }
+
+    public static UserMessage asDirectMessage(String messageItself, Annotation validatorAnnotation, Class<?>[] validatorGroups,
+            String validatorMessageKey) { // for e.g. hibernate validator
+        return new UserMessage(messageItself, validatorAnnotation, validatorGroups, validatorMessageKey);
     }
 
     // ===================================================================================

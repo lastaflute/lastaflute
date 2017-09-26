@@ -24,6 +24,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
+import java.util.function.Predicate;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.core.json.JsonMappingOption;
@@ -47,8 +48,8 @@ import com.google.gson.stream.JsonWriter;
 public interface Java8TimeGsonAdaptable {
 
     // ===================================================================================
-    //                                                                        Type Adapter
-    //                                                                        ============
+    //                                                                Type Adapter Factory
+    //                                                                ====================
     class DateTimeTypeAdapterFactory implements TypeAdapterFactory {
 
         protected final JsonMappingOption option;
@@ -101,6 +102,9 @@ public interface Java8TimeGsonAdaptable {
         }
     }
 
+    // ===================================================================================
+    //                                                               Abstract Type Adapter
+    //                                                               =====================
     abstract class AbstractTypeDateTimeAdapter<DATE extends TemporalAccessor> extends TypeAdapter<DATE> implements LaJsonFieldingAvailable {
 
         protected final JsonMappingOption option;
@@ -111,6 +115,9 @@ public interface Java8TimeGsonAdaptable {
             this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
+        // -----------------------------------------------------
+        //                                                 Read
+        //                                                ------
         @Override
         public DATE read(JsonReader in) throws IOException {
             if (in.peek() == JsonToken.NULL) {
@@ -121,7 +128,7 @@ public interface Java8TimeGsonAdaptable {
             if (isEmptyToNullReading() && "".equals(exp)) { // option
                 return null;
             }
-            final DateTimeFormatter formatter = prepareDateTimeFormatter();
+            final DateTimeFormatter formatter = prepareReadDateTimeFormatter(exp);
             try {
                 return formatter.parse(exp, temporal -> fromTemporal(temporal));
             } catch (DateTimeParseException e) {
@@ -141,12 +148,35 @@ public interface Java8TimeGsonAdaptable {
             return option.isEmptyToNullReading();
         }
 
+        protected DateTimeFormatter prepareReadDateTimeFormatter(String exp) {
+            final DateTimeFormatter formatter = findAnnotatedFormatter();
+            return formatter != null ? formatter : chooseReadDateTimeFormatter(exp);
+        }
+
+        protected DateTimeFormatter chooseReadDateTimeFormatter(String exp) {
+            final DateTimeFormatter defalutFormatter = getDefalutFormatter(); // not null
+            final DateTimeFormatter optionFormatter = getOptionFormatter(); // null allowed
+            final Predicate<String> readFormattingTrigger = getReadFormattingTrigger(); // null allowed
+            if (optionFormatter != null) {
+                if (readFormattingTrigger != null) {
+                    return readFormattingTrigger.test(exp) ? optionFormatter : defalutFormatter;
+                } else {
+                    return optionFormatter;
+                }
+            } else {
+                return defalutFormatter;
+            }
+        }
+
+        // -----------------------------------------------------
+        //                                                 Write
+        //                                                 -----
         @Override
         public void write(JsonWriter out, DATE value) throws IOException {
             if (isNullToEmptyWriting() && value == null) { // option
                 out.value("");
             } else { // mainly here
-                out.value(value != null ? prepareDateTimeFormatter().format(value) : null);
+                out.value(value != null ? prepareWriteDateTimeFormatter(value).format(value) : null);
             }
         }
 
@@ -154,23 +184,30 @@ public interface Java8TimeGsonAdaptable {
             return option.isNullToEmptyWriting();
         }
 
-        protected DateTimeFormatter prepareDateTimeFormatter() {
-            DateTimeFormatter formatter = null;
+        protected DateTimeFormatter prepareWriteDateTimeFormatter(DATE value) {
+            final DateTimeFormatter formatter = findAnnotatedFormatter();
+            return formatter != null ? formatter : chooseWriteDateTimeFormatter(value);
+        }
+
+        protected DateTimeFormatter chooseWriteDateTimeFormatter(DATE value) {
+            final DateTimeFormatter optionFormatter = getOptionFormatter(); // null allowed
+            return optionFormatter != null ? optionFormatter : getDefalutFormatter(); // no trigger for now
+        }
+
+        // -----------------------------------------------------
+        //                                          Assist Logic
+        //                                          ------------
+        protected DateTimeFormatter findAnnotatedFormatter() {
             final Field field = LaJsonFieldingContext.getJsonFieldOnThread();
             if (field != null) { // no way but avoid stop
                 final JsonDatePattern anno = field.getAnnotation(JsonDatePattern.class);
                 if (anno != null) {
                     final String pattern = anno.value();
-                    formatter = DateTimeFormatter.ofPattern(pattern); // #hope can be cached? by jflute
+                    return DateTimeFormatter.ofPattern(pattern); // #hope can be cached? by jflute
                 }
             }
-            if (formatter == null) {
-                formatter = getDateTimeFormatter(); // not null
-            }
-            return formatter;
+            return null;
         }
-
-        protected abstract DateTimeFormatter getDateTimeFormatter();
 
         protected abstract DATE fromTemporal(TemporalAccessor temporal);
 
@@ -195,21 +232,27 @@ public interface Java8TimeGsonAdaptable {
         }
 
         protected abstract Class<?> getDateType();
+
+        public abstract DateTimeFormatter getDefalutFormatter(); // not null
+
+        public abstract DateTimeFormatter getOptionFormatter(); // null allowed
+
+        public abstract Predicate<String> getReadFormattingTrigger(); // null allowed
     }
 
+    // ===================================================================================
+    //                                                          Type Adapter for LocalDate
+    //                                                          ==========================
     class TypeAdapterLocalDate extends AbstractTypeDateTimeAdapter<LocalDate> {
 
         public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
-        protected final DateTimeFormatter realFormatter;
+        protected final DateTimeFormatter optionFormatter; // null allowed
+        protected final Predicate<String> readFormattingTrigger; // null allowed
 
         public TypeAdapterLocalDate(JsonMappingOption option) {
             super(option);
-            realFormatter = option.getLocalDateFormatter().orElse(DEFAULT_FORMATTER);
-        }
-
-        @Override
-        protected DateTimeFormatter getDateTimeFormatter() {
-            return realFormatter;
+            optionFormatter = option.getLocalDateFormatter().orElse(null);
+            readFormattingTrigger = option.getLocalDateFormattingTrigger().orElse(null);
         }
 
         @Override
@@ -221,21 +264,36 @@ public interface Java8TimeGsonAdaptable {
         protected Class<?> getDateType() {
             return LocalDate.class;
         }
-    }
 
-    class TypeAdapterLocalDateTime extends AbstractTypeDateTimeAdapter<LocalDateTime> {
-
-        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-        protected final DateTimeFormatter realFormatter;
-
-        public TypeAdapterLocalDateTime(JsonMappingOption option) {
-            super(option);
-            realFormatter = option.getLocalDateTimeFormatter().orElse(DEFAULT_FORMATTER);
+        @Override
+        public DateTimeFormatter getDefalutFormatter() {
+            return DEFAULT_FORMATTER;
         }
 
         @Override
-        protected DateTimeFormatter getDateTimeFormatter() {
-            return realFormatter;
+        public DateTimeFormatter getOptionFormatter() {
+            return optionFormatter;
+        }
+
+        @Override
+        public Predicate<String> getReadFormattingTrigger() {
+            return readFormattingTrigger;
+        }
+    }
+
+    // ===================================================================================
+    //                                                      Type Adapter for LocalDateTime
+    //                                                      ==============================
+    class TypeAdapterLocalDateTime extends AbstractTypeDateTimeAdapter<LocalDateTime> {
+
+        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        protected final DateTimeFormatter optionFormatter; // null allowed
+        protected final Predicate<String> readFormattingTrigger; // null allowed
+
+        public TypeAdapterLocalDateTime(JsonMappingOption option) {
+            super(option);
+            optionFormatter = option.getLocalDateTimeFormatter().orElse(null);
+            readFormattingTrigger = option.getLocalDateTimeFormattingTrigger().orElse(null);
         }
 
         @Override
@@ -247,21 +305,36 @@ public interface Java8TimeGsonAdaptable {
         protected Class<?> getDateType() {
             return LocalDateTime.class;
         }
-    }
 
-    class TypeAdapterLocalTime extends AbstractTypeDateTimeAdapter<LocalTime> {
-
-        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_LOCAL_TIME;
-        protected final DateTimeFormatter realFormatter;
-
-        public TypeAdapterLocalTime(JsonMappingOption option) {
-            super(option);
-            realFormatter = option.getLocalTimeFormatter().orElse(DEFAULT_FORMATTER);
+        @Override
+        public DateTimeFormatter getDefalutFormatter() {
+            return DEFAULT_FORMATTER;
         }
 
         @Override
-        protected DateTimeFormatter getDateTimeFormatter() {
-            return realFormatter;
+        public DateTimeFormatter getOptionFormatter() {
+            return optionFormatter;
+        }
+
+        @Override
+        public Predicate<String> getReadFormattingTrigger() {
+            return readFormattingTrigger;
+        }
+    }
+
+    // ===================================================================================
+    //                                                          Type Adapter for LocalTime
+    //                                                          ==========================
+    class TypeAdapterLocalTime extends AbstractTypeDateTimeAdapter<LocalTime> {
+
+        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_LOCAL_TIME;
+        protected final DateTimeFormatter optionFormatter; // null allowed
+        protected final Predicate<String> readFormattingTrigger; // null allowed
+
+        public TypeAdapterLocalTime(JsonMappingOption option) {
+            super(option);
+            optionFormatter = option.getLocalTimeFormatter().orElse(null);
+            readFormattingTrigger = option.getLocalTimeFormattingTrigger().orElse(null);
         }
 
         @Override
@@ -273,21 +346,34 @@ public interface Java8TimeGsonAdaptable {
         protected Class<?> getDateType() {
             return LocalTime.class;
         }
-    }
 
-    class TypeAdapterZonedDateTime extends AbstractTypeDateTimeAdapter<ZonedDateTime> {
-
-        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
-        protected final DateTimeFormatter realFormatter;
-
-        public TypeAdapterZonedDateTime(JsonMappingOption option) {
-            super(option);
-            realFormatter = option.getLocalTimeFormatter().orElse(DEFAULT_FORMATTER);
+        @Override
+        public DateTimeFormatter getDefalutFormatter() {
+            return DEFAULT_FORMATTER;
         }
 
         @Override
-        protected DateTimeFormatter getDateTimeFormatter() {
-            return realFormatter;
+        public DateTimeFormatter getOptionFormatter() {
+            return optionFormatter;
+        }
+
+        @Override
+        public Predicate<String> getReadFormattingTrigger() {
+            return readFormattingTrigger;
+        }
+    }
+
+    // ===================================================================================
+    //                                                      Type Adapter for ZonedDateTime
+    //                                                      ==============================
+    class TypeAdapterZonedDateTime extends AbstractTypeDateTimeAdapter<ZonedDateTime> {
+
+        public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+        protected final DateTimeFormatter optionFormatter; // null allowed
+
+        public TypeAdapterZonedDateTime(JsonMappingOption option) {
+            super(option);
+            optionFormatter = option.getZonedDateTimeFormatter().orElse(null);
         }
 
         @Override
@@ -298,6 +384,21 @@ public interface Java8TimeGsonAdaptable {
         @Override
         protected Class<?> getDateType() {
             return ZonedDateTime.class;
+        }
+
+        @Override
+        public DateTimeFormatter getDefalutFormatter() {
+            return DEFAULT_FORMATTER;
+        }
+
+        @Override
+        public DateTimeFormatter getOptionFormatter() {
+            return optionFormatter;
+        }
+
+        @Override
+        public Predicate<String> getReadFormattingTrigger() {
+            return null; // no trigger for now
         }
     }
 

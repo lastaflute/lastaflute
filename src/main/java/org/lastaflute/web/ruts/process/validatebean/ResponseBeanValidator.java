@@ -17,8 +17,6 @@
 package org.lastaflute.web.ruts.process.validatebean;
 
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -27,9 +25,7 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
-import org.lastaflute.di.helper.beans.BeanDesc;
-import org.lastaflute.di.helper.beans.PropertyDesc;
-import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
+import org.lastaflute.core.util.Lato;
 import org.lastaflute.web.ruts.process.exception.ResponseBeanValidationErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.validation.ActionValidator;
@@ -96,9 +92,7 @@ public abstract class ResponseBeanValidator {
     protected abstract OptionalThing<Class<?>[]> getValidatorGroups();
 
     protected void executeValidator(ActionValidator<UserMessages> validator, Object bean) {
-        validator.validate(bean, unused -> {}, () -> {
-            throw new IllegalStateException("unused here, no way");
-        });
+        validator.simplyValidate(bean);
     }
 
     // ===================================================================================
@@ -122,24 +116,22 @@ public abstract class ResponseBeanValidator {
     //                                        Message Helper
     //                                        --------------
     protected void setupItemValidatedBean(ExceptionMessageBuilder br, Object bean) {
-        final Class<?> beanType = bean.getClass();
         br.addItem("Validated Bean");
-        br.addElement(beanType);
-        final String jsonExp = bean.toString();
-        br.addElement(jsonExp);
-        if ((jsonExp == null || !jsonExp.contains("\n"))
-                && !(List.class.isAssignableFrom(beanType) || Map.class.isAssignableFrom(beanType))) {
-            br.addItem("Bean Property");
-            try {
-                final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(beanType);
-                final int propertyDescSize = beanDesc.getPropertyDescSize();
-                for (int i = 0; i < propertyDescSize; i++) {
-                    final PropertyDesc pd = beanDesc.getPropertyDesc(i);
-                    br.addElement(pd.getPropertyName() + ": " + pd.getValue(bean));
-                }
-            } catch (RuntimeException ignored) {
-                br.addElement("*Failed to get field values by BeanDesc: " + Srl.cut(ignored.getMessage(), 50, "..."));
-            }
+        br.addElement(bean.getClass().getName());
+        br.addElement(bean.toString()); // don't know whether overridden method or not
+        br.addItem("Property Values");
+        try {
+            br.addElement(Lato.string(bean)); // contains nested bean
+
+            // cannot support nested bean's properties
+            //final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(beanType);
+            //final int propertyDescSize = beanDesc.getPropertyDescSize();
+            //for (int i = 0; i < propertyDescSize; i++) {
+            //    final PropertyDesc pd = beanDesc.getPropertyDesc(i);
+            //    br.addElement(pd.getPropertyName() + ": " + pd.getValue(bean));
+            //}
+        } catch (RuntimeException ignored) {
+            br.addElement("*Failed to get field values: " + Srl.cut(ignored.getMessage(), 50, "..."));
         }
     }
 

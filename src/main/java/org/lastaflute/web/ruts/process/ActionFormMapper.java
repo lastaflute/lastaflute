@@ -81,6 +81,7 @@ import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
+import org.lastaflute.web.ruts.inoutlogging.InOutLogKeeper;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
 import org.lastaflute.web.ruts.multipart.MultipartResourceProvider;
@@ -160,14 +161,19 @@ public class ActionFormMapper {
         }
         final FormMappingOption option = adjustFormMapping(); // not null
         final Object realForm = virtualForm.getRealForm(); // not null
-        for (Entry<String, Object> entry : getAllParameters(multipartHandler).entrySet()) {
-            final String name = entry.getKey();
-            final Object value = entry.getValue();
-            try {
-                setProperty(virtualForm, realForm, name, value, null, option, null, null);
-            } catch (Throwable cause) {
-                handleIllegalPropertyPopulateException(realForm, name, value, runtime, cause); // adjustment here
+        final Map<String, Object> allParameters = getAllParameters(multipartHandler);
+        try {
+            for (Entry<String, Object> entry : allParameters.entrySet()) {
+                final String name = entry.getKey();
+                final Object value = entry.getValue();
+                try {
+                    setProperty(virtualForm, realForm, name, value, null, option, null, null);
+                } catch (Throwable cause) {
+                    handleIllegalPropertyPopulateException(realForm, name, value, runtime, cause); // adjustment here
+                }
             }
+        } finally {
+            keepParameterForInOutLoggingIfNeeds(allParameters);
         }
     }
 
@@ -241,6 +247,10 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg, cause);
     }
 
+    protected void keepParameterForInOutLoggingIfNeeds(Map<String, Object> allParameters) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepRequestParameter(allParameters));
+    }
+
     // ===================================================================================
     //                                                                           JSON Body
     //                                                                           =========
@@ -273,6 +283,7 @@ public class ActionFormMapper {
                 logger.debug("#flow ...Parsing JSON from request body:{}", buildJsonBodyDebugDisplay(body));
             }
             keepRequestBodyForErrorFlush(virtualForm, body);
+            keepRequestBodyForInOutLoggingIfNeeds(body);
             return body;
         } catch (RuntimeException e) {
             final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
@@ -288,15 +299,19 @@ public class ActionFormMapper {
         }
     }
 
+    protected String buildJsonBodyDebugDisplay(String value) {
+        // want to show all as parameter, but limit just in case to avoid large logging
+        final String trimmed = value.trim();
+        return !trimmed.isEmpty() ? "\n" + Srl.cut(trimmed, 800, "...") : " *empty body"; // might have rear LF
+    }
+
     protected void keepRequestBodyForErrorFlush(VirtualForm virtualForm, String body) {
         // request body can be read only once so needs to keep it for error logging
         requestManager.setAttribute(LastaWebKey.REQUEST_BODY_KEY, new WholeShowErrorFlushAttribute(body));
     }
 
-    protected String buildJsonBodyDebugDisplay(String value) {
-        // want to show all as parameter, but limit just in case to avoid large logging
-        final String trimmed = value.trim();
-        return !trimmed.isEmpty() ? "\n" + Srl.cut(trimmed, 800, "...") : " *empty body"; // might have rear LF
+    protected void keepRequestBodyForInOutLoggingIfNeeds(String requestBody) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepRequestBody(requestBody));
     }
 
     // -----------------------------------------------------
@@ -428,13 +443,13 @@ public class ActionFormMapper {
                 final String rear = name.substring(minIndex + 1);
                 setProperty(virtualForm, simpleProperty, rear, value, pathSb, option, bean, front); // *recursive
             } else if (minIndex == indexedIndex) { // e.g. sea[0]
-                final IndexParsedResult result = parseIndex(name.substring(indexedIndex + 1));
+                final IndexParsedResult result = parseIndex(name.substring(indexedIndex + 1)); // e.g. "0]"
                 final int[] resultIndexes = result.indexes;
                 final String resultName = result.name;
                 final String front = name.substring(0, indexedIndex);
-                if (resultName == null || resultName.isEmpty()) {
+                if (resultName == null || resultName.isEmpty()) { // e.g. sea[0]
                     setIndexedProperty(bean, front, resultIndexes, value);
-                } else {
+                } else { // e.g. sea[0][0], sea[0].mystic
                     final Object indexedProperty = prepareIndexedProperty(bean, front, resultIndexes);
                     setProperty(virtualForm, indexedProperty, resultName, value, pathSb, option, bean, front); // *recursive
                 }
@@ -450,7 +465,7 @@ public class ActionFormMapper {
 
     protected static class IndexParsedResult {
         public int[] indexes = new int[0];
-        public String name;
+        public String name; // next name e.g. "" from "sea[0]", "1]" from "sea[0][1]", "mystic" from "sea[0].mystic"
     }
 
     protected int minIndex(int index1, int index2) {
@@ -1149,7 +1164,7 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                         Parse Index
     //                                                                         ===========
-    protected IndexParsedResult parseIndex(String name) { // override for checking indexed property
+    protected IndexParsedResult parseIndex(String name) { // name is e.g. "0]" or "0][0]" or "0].mystic"
         final IndexParsedResult parseResult;
         try {
             parseResult = doParseIndex(name);
@@ -1161,21 +1176,21 @@ public class ActionFormMapper {
         return parseResult;
     }
 
-    protected IndexParsedResult doParseIndex(String name) {
+    protected IndexParsedResult doParseIndex(String name) { // name is e.g. "0]" or "0][1]" or "0].mystic"
         IndexParsedResult result = new IndexParsedResult();
         while (true) {
-            int index = name.indexOf(INDEXED_DELIM2);
-            if (index < 0) {
+            int endIndex = name.indexOf(INDEXED_DELIM2);
+            if (endIndex < 0) {
                 throw new IllegalArgumentException(INDEXED_DELIM2 + " is not found in " + name);
             }
-            result.indexes = LdiArrayUtil.add(result.indexes, Integer.valueOf(name.substring(0, index)).intValue());
-            name = name.substring(index + 1);
+            result.indexes = LdiArrayUtil.add(result.indexes, Integer.valueOf(name.substring(0, endIndex)).intValue());
+            name = name.substring(endIndex + 1);
             if (name.length() == 0) {
                 break;
-            } else if (name.charAt(0) == INDEXED_DELIM) {
-                name = name.substring(1);
-            } else if (name.charAt(0) == NESTED_DELIM) {
-                name = name.substring(1);
+            } else if (name.charAt(0) == INDEXED_DELIM) { // e.g. "[1]" from "0][1]"
+                name = name.substring(1); // e.g. "1]"
+            } else if (name.charAt(0) == NESTED_DELIM) { // e.g. ".mystic" from "0].mystic"
+                name = name.substring(1); // e.g. "mystic"
                 break;
             } else {
                 throw new IllegalArgumentException(name);
@@ -1380,6 +1395,13 @@ public class ActionFormMapper {
     protected void throwIndexedPropertyNotListArrayException(BeanDesc beanDesc, PropertyDesc pd) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("The indexed property was not list or array.");
+        br.addItem("Advice");
+        br.addElement("Confirm the property type in your form.");
+        if ("ImmutableList".equals(pd.getPropertyType().getSimpleName())) { // patch message
+            br.addElement("And if you use ImmutableList of Eclipse Collections (as option),");
+            br.addElement("unfortunately it is not supported as indexed property.");
+            br.addElement("So use 'java.util.List'.");
+        }
         br.addItem("ActionForm");
         br.addElement(getRealClass(beanDesc.getBeanClass()));
         br.addItem("Property");
@@ -1455,7 +1477,9 @@ public class ActionFormMapper {
 
     protected JsonDebugChallenge createJsonDebugChallenge(Map<String, Object> retryMap, String propertyName, Class<?> propertyType,
             Integer elementIndex) {
-        return new JsonDebugChallenge(propertyName, propertyType, retryMap.get(propertyName), elementIndex);
+        final JsonManager jsonManager = requestManager.getJsonManager();
+        final Object mappedValue = retryMap.get(propertyName);
+        return new JsonDebugChallenge(jsonManager, propertyName, propertyType, mappedValue, elementIndex);
     }
 
     // ===================================================================================

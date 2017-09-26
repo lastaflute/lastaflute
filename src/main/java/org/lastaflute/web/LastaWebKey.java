@@ -41,6 +41,7 @@ public interface LastaWebKey {
     String DOUBLE_SUBMITTED_KEY = "lastaflute.action.DOUBLE_SUBMITTED_MARK"; // Request
     String FIRST_SUBMITTED_KEY = "lastaflute.action.FIRST_SUBMITTED_MARK"; // Request
     String REQUEST_BODY_KEY = "lastaflute.action.REQUEST_BODY"; // Request
+    String INOUT_LOGGING_KEY = "lastaflute.action.INOUT_LOGGING"; // Request
 
     String DBFLUTE_SQL_COUNT_KEY = "lastaflute.dbflute.SQL_COUNT"; // Request
     String DBFLUTE_TRANSACTION_MEMORIES_KEY = "lastaflute.dbflute.TRANSACTION_MEMORIES"; // Request

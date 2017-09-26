@@ -106,10 +106,6 @@ public class StreamResponse implements ActionResponse {
         return contentType != null;
     }
 
-    public String getContentType() {
-        return contentType;
-    }
-
     // ===================================================================================
     //                                                                              Header
     //                                                                              ======
@@ -123,11 +119,6 @@ public class StreamResponse implements ActionResponse {
         }
         headerMap.put(name, values);
         return this;
-    }
-
-    @Override
-    public Map<String, String[]> getHeaderMap() {
-        return Collections.unmodifiableMap(headerMap);
     }
 
     public StreamResponse headerContentDispositionAttachment() { // used as default
@@ -273,22 +264,6 @@ public class StreamResponse implements ActionResponse {
         contentTypeZip(); // forcedly
     }
 
-    public byte[] getByteData() {
-        return byteData;
-    }
-
-    public WrittenStreamCall getStreamCall() {
-        return streamCall;
-    }
-
-    public WritternZipStreamCall getZipStreamCall() {
-        return zipStreamCall;
-    }
-
-    public Integer getContentLength() {
-        return contentLength;
-    }
-
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
@@ -416,6 +391,35 @@ public class StreamResponse implements ActionResponse {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    public String getFileName() {
+        return fileName;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    @Override
+    public Map<String, String[]> getHeaderMap() {
+        return Collections.unmodifiableMap(headerMap);
+    }
+
+    public byte[] getByteData() {
+        return byteData;
+    }
+
+    public WrittenStreamCall getStreamCall() {
+        return streamCall;
+    }
+
+    public WritternZipStreamCall getZipStreamCall() {
+        return zipStreamCall;
+    }
+
+    public Integer getContentLength() {
+        return contentLength;
+    }
+
     @Override
     public boolean isReturnAsEmptyBody() {
         return returnAsEmptyBody;

@@ -390,12 +390,19 @@ public class GodHandableAction implements VirtualAction {
             sb.append(Stream.of(cause.getRuntimeGroups()).map(tp -> {
                 return tp.getSimpleName() + ".class";
             }).collect(Collectors.toList()));
+            sb.append(" #").append(Integer.toHexString(cause.hashCode()));
             messages.toPropertySet().forEach(property -> {
                 sb.append(LF).append(" ").append(property);
                 for (Iterator<UserMessage> ite = messages.silentAccessByIteratorOf(property); ite.hasNext();) {
                     sb.append(LF).append("   ").append(ite.next());
                 }
             });
+            final Throwable nested = cause.getCause();
+            if (nested != null) { // e.g. from remote api
+                sb.append(LF).append(" - - - - - - - - - -");
+                sb.append(LF).append(" caused by ").append(nested.getClass().getSimpleName()).append(":");
+                sb.append(LF).append(nested.getMessage());
+            }
             sb.append(LF).append("_/_/_/_/_/_/_/_/_/_/");
             logger.debug(sb.toString());
         }
