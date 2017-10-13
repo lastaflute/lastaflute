@@ -99,29 +99,31 @@ public class InOutLogger {
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
         // Request: requestParameter, requestBody
         // _/_/_/_/_/_/_/_/_/_/
-        if (willBeLineSeparatedLater(keeper)) {
-            sb.append("\n"); // line-separate request beginning point for view
-            alreadyLineSep = true;
-        }
         final String paramsExp = buildRequestParameterExp(keeper);
         if (paramsExp != null) {
+            if (willBeLineSeparatedLater(keeper) && !paramsExp.contains("\n") && !alreadyLineSep) {
+                sb.append("\n"); // line-separate request beginning point for view
+                alreadyLineSep = true;
+            }
             final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
             alreadyLineSep = buildInOut(sb, "requestParameter", realExp, alreadyLineSep);
         }
-        if (keeper.getRequestBody().isPresent()) {
-            final String body = keeper.getRequestBody().get();
+        if (keeper.getRequestBodyContent().isPresent()) {
+            final String body = keeper.getRequestBodyContent().get();
+            final String title = "requestBody(" + keeper.getRequestBodyType().orElse("unknown") + ")";
             final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-            alreadyLineSep = buildInOut(sb, "requestBody", realExp, alreadyLineSep);
+            alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep);
         }
 
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
         // Response: responseBody
         // _/_/_/_/_/_/_/_/_/_/
-        if (keeper.getResponseBody().isPresent()) {
-            if (!keeper.getOption().isSuppressResponseBody()) {
-                final String body = keeper.getResponseBody().get();
+        if (!keeper.getOption().isSuppressResponseBody()) {
+            if (keeper.getResponseBodyContent().isPresent()) {
+                final String body = keeper.getResponseBodyContent().get();
+                final String title = "responseBody(" + keeper.getRequestBodyType().orElse("unknown") + ")";
                 final String realExp = option.getResponseBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-                alreadyLineSep = buildInOut(sb, "responseBody", realExp, alreadyLineSep);
+                alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep);
             }
         }
 
@@ -196,7 +198,7 @@ public class InOutLogger {
     }
 
     protected boolean willBeLineSeparatedLater(InOutLogKeeper keeper) {
-        return keeper.getResponseBody().filter(body -> { // response body may have line separator
+        return keeper.getResponseBodyContent().filter(body -> { // response body may have line separator
             return !keeper.getOption().isSuppressResponseBody() && body.contains("\n");
         }).isPresent();
     }

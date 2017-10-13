@@ -25,8 +25,6 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.NonShowAttribute;
 import org.lastaflute.web.servlet.request.RequestManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
@@ -37,7 +35,6 @@ public class InOutLogKeeper {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(InOutLogKeeper.class);
     private static final InOutLogOption emptyOption = new InOutLogOption(); // should be immutable but non for now
 
     // ===================================================================================
@@ -46,8 +43,10 @@ public class InOutLogKeeper {
     protected InOutLogOption option; // null allowed
     protected LocalDateTime beginDateTime; // null allowed until beginning
     protected Map<String, Object> requestParameterMap; // null allowed if e.g. no parameter
-    protected String requestBody; // null allowed if e.g. no body
-    protected String responseBody; // null allowed if e.g. no body
+    protected String requestBodyContent; // null allowed if e.g. no body
+    protected String requestBodyType; // body format e.g. json, xml, null allowed if e.g. no body or null body
+    protected String responseBodyContent; // null allowed if e.g. no body or null body
+    protected String responseBodyType; // body format e.g. json, xml, null allowed until response or if e.g. no body
 
     // ===================================================================================
     //                                                                  Core Determination
@@ -80,7 +79,7 @@ public class InOutLogKeeper {
     // ===================================================================================
     //                                                                       Accept Option
     //                                                                       =============
-    public void acceptOption(InOutLogOption option) {
+    public void acceptOption(InOutLogOption option) { // null allowed if no settings
         this.option = option;
     }
 
@@ -88,41 +87,47 @@ public class InOutLogKeeper {
     //                                                                         Keep Facade
     //                                                                         ===========
     public void keepBeginDateTime(LocalDateTime beginDateTime) {
-        if (beginDateTime == null) {
-            throw new IllegalArgumentException("The argument 'beginDateTime' should not be null.");
-        }
+        assertArgumentNotNull("beginDateTime", beginDateTime);
         this.beginDateTime = beginDateTime;
     }
 
-    public void keepRequestParameter(Map<String, Object> allParameters) {
-        if (allParameters == null) {
-            throw new IllegalArgumentException("The argument 'allParameters' should not be null.");
-        }
-        try {
-            for (Entry<String, Object> entry : allParameters.entrySet()) {
-                addRequestParameter(entry.getKey(), entry.getValue());
-            }
-        } catch (RuntimeException continued) { // as not main process
-            logger.debug("Failed to register request parameters as in-out log: {}", allParameters, continued);
+    public void keepRequestParameter(Map<String, Object> parameterMap) {
+        assertArgumentNotNull("parameterMap", parameterMap);
+        for (Entry<String, Object> entry : parameterMap.entrySet()) {
+            addRequestParameter(entry.getKey(), entry.getValue());
         }
     }
 
     protected void addRequestParameter(String key, Object value) { // value may be null!? accept it just in case
-        if (key == null) {
-            throw new IllegalArgumentException("The argument 'key' should not be null.");
-        }
+        assertArgumentNotNull("key", key);
         if (requestParameterMap == null) {
             requestParameterMap = new LinkedHashMap<String, Object>();
         }
         requestParameterMap.put(key, value);
     }
 
-    public void keepRequestBody(String requestBody) { // accept null just in case
-        this.requestBody = requestBody;
+    public void keepRequestBody(String requestBodyContent, String requestBodyType) { // accept null just in case
+        assertArgumentNotNull("requestBodyType", requestBodyType);
+        this.requestBodyContent = requestBodyContent;
+        this.requestBodyType = requestBodyType;
     }
 
-    public void keepResponseBody(String responseBody) { // accept null just in case
-        this.responseBody = responseBody;
+    public void keepResponseBody(String responseBodyContent, String responseBodyType) { // accept null just in case
+        assertArgumentNotNull("responseBodyType", responseBodyType);
+        this.responseBodyContent = responseBodyContent;
+        this.responseBodyType = responseBodyType;
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected void assertArgumentNotNull(String variableName, Object value) {
+        if (variableName == null) {
+            throw new IllegalArgumentException("The variableName should not be null.");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("The argument '" + variableName + "' should not be null.");
+        }
     }
 
     // ===================================================================================
@@ -136,22 +141,33 @@ public class InOutLogKeeper {
         return OptionalThing.ofNullable(beginDateTime, () -> {
             throw new IllegalStateException("Not found the begin date-time.");
         });
-
     }
 
     public Map<String, Object> getRequestParameterMap() { // not null
         return requestParameterMap != null ? Collections.unmodifiableMap(requestParameterMap) : Collections.emptyMap();
     }
 
-    public OptionalThing<String> getRequestBody() {
-        return OptionalThing.ofNullable(requestBody, () -> {
-            throw new IllegalStateException("Not found the request body.");
+    public OptionalThing<String> getRequestBodyContent() {
+        return OptionalThing.ofNullable(requestBodyContent, () -> {
+            throw new IllegalStateException("Not found the request body content.");
         });
     }
 
-    public OptionalThing<String> getResponseBody() {
-        return OptionalThing.ofNullable(responseBody, () -> {
-            throw new IllegalStateException("Not found the response body.");
+    public OptionalThing<String> getRequestBodyType() {
+        return OptionalThing.ofNullable(requestBodyType, () -> {
+            throw new IllegalStateException("Not found the request body type.");
+        });
+    }
+
+    public OptionalThing<String> getResponseBodyContent() {
+        return OptionalThing.ofNullable(responseBodyContent, () -> {
+            throw new IllegalStateException("Not found the response body content.");
+        });
+    }
+
+    public OptionalThing<String> getResponseBodyType() {
+        return OptionalThing.ofNullable(responseBodyType, () -> {
+            throw new IllegalStateException("Not found the response body type.");
         });
     }
 }
