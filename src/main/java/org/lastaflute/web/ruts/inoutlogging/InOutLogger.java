@@ -90,6 +90,7 @@ public class InOutLogger {
         setupBasic(sb, requestManager, runtime);
         setupBegin(sb, keeper);
         setupPerformance(sb, requestManager, keeper);
+        setupProcess(sb, keeper);
         setupUserAgent(sb, requestManager);
         setupCause(sb, runtime);
 
@@ -165,7 +166,7 @@ public class InOutLogger {
     protected void setupBegin(StringBuilder sb, InOutLogKeeper keeper) {
         final String beginExp = keeper.getBeginDateTime().map(begin -> {
             return dateTimeFormatter.format(begin);
-        }).orElse("no begin"); // basically no way, just in case
+        }).orElse("no begun"); // basically no way, just in case
         sb.append(" (").append(beginExp).append(")");
     }
 
@@ -174,18 +175,19 @@ public class InOutLogger {
             final long before = DfTypeUtil.toDate(begin).getTime();
             final long after = DfTypeUtil.toDate(flashDateTime(requestManager)).getTime();
             return DfTraceViewUtil.convertToPerformanceView(after - before);
-        }).orElse("no end");
+        }).orElse("no ended");
         sb.append(" [").append(performanceCost).append("]");
     }
 
-    protected LocalDateTime flashDateTime(RequestManager requestManager) { // flash not to depends on transaction
-        final TimeManager timeManager = requestManager.getTimeManager();
-        return DfTypeUtil.toLocalDateTime(timeManager.flashDate(), timeManager.getBusinessTimeZone());
+    protected void setupProcess(StringBuilder sb, InOutLogKeeper keeper) {
+        keeper.getProcessHash().ifPresent(hash -> { // basically present
+            sb.append(" #").append(hash);
+        }); // no else because of sub item
     }
 
     protected void setupUserAgent(StringBuilder sb, RequestManager requestManager) {
         requestManager.getHeaderUserAgent().ifPresent(userAgent -> {
-            sb.append(" userAgent:{").append(Srl.cut(userAgent, 50, "...")).append("}");
+            sb.append(" userAgent:{").append(Srl.cut(userAgent, 50, "...")).append("}"); // may be too big so cut
         });
     }
 
@@ -206,6 +208,11 @@ public class InOutLogger {
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
+    protected LocalDateTime flashDateTime(RequestManager requestManager) { // flash not to depends on transaction
+        final TimeManager timeManager = requestManager.getTimeManager();
+        return DfTypeUtil.toLocalDateTime(timeManager.flashDate(), timeManager.getBusinessTimeZone());
+    }
+
     protected String buildRequestParameterExp(InOutLogKeeper keeper) {
         final Map<String, Object> parameterMap = keeper.getRequestParameterMap();
         if (parameterMap.isEmpty()) {

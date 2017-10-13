@@ -16,6 +16,7 @@
 package org.lastaflute.core.magic;
 
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +48,12 @@ public class ThreadCacheContext {
     // -----------------------------------------------------
     //                                             Core Item
     //                                             ---------
+    public static final String FW_BEGIN_TIME = "fw:beginTime";
+    public static final String FW_PROCESS_HASH = "fw:processHash";
+
+    // -----------------------------------------------------
+    //                                            Basic Item
+    //                                            ----------
     public static final String FW_REQUEST_PATH = "fw:requestPath";
     public static final String FW_ENTRY_METHOD = "fw:entryMethod";
     public static final String FW_USER_BEAN = "fw:userBean";
@@ -184,6 +191,25 @@ public class ThreadCacheContext {
     // -----------------------------------------------------
     //                                             Core Item
     //                                             ---------
+    public static String findBeginTime() {
+        return exists() ? (String) getObject(FW_BEGIN_TIME) : null;
+    }
+
+    public static void registerBeginTime(LocalDateTime beginTime) {
+        setObject(FW_BEGIN_TIME, beginTime);
+    }
+
+    public static String findProcessHash() {
+        return exists() ? (String) getObject(FW_PROCESS_HASH) : null;
+    }
+
+    public static void registerProcessHash(String processHash) {
+        setObject(FW_PROCESS_HASH, processHash);
+    }
+
+    // -----------------------------------------------------
+    //                                            Basic Item
+    //                                            ----------
     public static String findRequestPath() {
         return exists() ? (String) getObject(FW_REQUEST_PATH) : null;
     }

@@ -113,11 +113,11 @@ public class ActionRequestProcessor {
                 ThreadCacheContext.initialize();
             }
             final ActionRuntime runtime = createActionRuntime(execute, pathParam);
-            beginInOutLoggingIfNeeds();
+            beforeFire();
             try {
                 fire(runtime); // #to_action
             } finally {
-                showInOutLogIfNeeds(runtime);
+                finallyFire(runtime);
             }
         } finally {
             if (!exists) {
@@ -128,6 +128,31 @@ public class ActionRequestProcessor {
 
     protected ActionRuntime createActionRuntime(ActionExecute execute, RequestPathParam pathParam) {
         return new ActionRuntime(getRequestManager().getRequestPath(), execute, pathParam);
+    }
+
+    // -----------------------------------------------------
+    //                                        Before/Finally
+    //                                        --------------
+    protected void beforeFire() {
+        final LocalDateTime beginTime = askBeginTime();
+        final String processHash = askProcessHash(beginTime);
+        ThreadCacheContext.registerBeginTime(beginTime);
+        ThreadCacheContext.registerProcessHash(processHash);
+        beginInOutLoggingIfNeeds(beginTime, processHash);
+    }
+
+    protected LocalDateTime askBeginTime() { // not in transaction but flash just in case
+        final TimeManager timeManager = getRequestManager().getTimeManager();
+        return DfTypeUtil.toLocalDateTime(timeManager.flashDate(), timeManager.getBusinessTimeZone());
+    }
+
+    protected String askProcessHash(LocalDateTime beginTime) {
+        final String bestEffortUnique = beginTime.toString() + Thread.currentThread().getName();
+        return Integer.toHexString(bestEffortUnique.hashCode());
+    }
+
+    protected void finallyFire(ActionRuntime runtime) {
+        showInOutLogIfNeeds(runtime);
     }
 
     // ===================================================================================
@@ -269,12 +294,10 @@ public class ActionRequestProcessor {
     // ===================================================================================
     //                                                                       InOut Logging
     //                                                                       =============
-    protected void beginInOutLoggingIfNeeds() {
-        final RequestManager requestManager = getRequestManager();
-        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
-            final TimeManager timeManager = requestManager.getTimeManager();
-            final LocalDateTime beginDateTime = DfTypeUtil.toLocalDateTime(timeManager.flashDate(), timeManager.getBusinessTimeZone());
-            keeper.keepBeginDateTime(beginDateTime);
+    protected void beginInOutLoggingIfNeeds(LocalDateTime beginTime, String processHash) {
+        InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
+            keeper.keepBeginDateTime(beginTime);
+            keeper.keepProcessHash(processHash);
         });
     }
 

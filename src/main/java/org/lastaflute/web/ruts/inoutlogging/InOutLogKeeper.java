@@ -42,6 +42,7 @@ public class InOutLogKeeper {
     //                                                                           =========
     protected InOutLogOption option; // null allowed
     protected LocalDateTime beginDateTime; // null allowed until beginning
+    protected String processHash; // null allowed until beginning
     protected Map<String, Object> requestParameterMap; // null allowed if e.g. no parameter
     protected String requestBodyContent; // null allowed if e.g. no body
     protected String requestBodyType; // body format e.g. json, xml, null allowed if e.g. no body or null body
@@ -89,6 +90,11 @@ public class InOutLogKeeper {
     public void keepBeginDateTime(LocalDateTime beginDateTime) {
         assertArgumentNotNull("beginDateTime", beginDateTime);
         this.beginDateTime = beginDateTime;
+    }
+
+    public void keepProcessHash(String processHash) {
+        assertArgumentNotNull("processHash", processHash);
+        this.processHash = processHash;
     }
 
     public void keepRequestParameter(Map<String, Object> parameterMap) {
@@ -140,6 +146,12 @@ public class InOutLogKeeper {
     public OptionalThing<LocalDateTime> getBeginDateTime() {
         return OptionalThing.ofNullable(beginDateTime, () -> {
             throw new IllegalStateException("Not found the begin date-time.");
+        });
+    }
+
+    public OptionalThing<String> getProcessHash() {
+        return OptionalThing.ofNullable(processHash, () -> {
+            throw new IllegalStateException("Not found the process hash.");
         });
     }
 
