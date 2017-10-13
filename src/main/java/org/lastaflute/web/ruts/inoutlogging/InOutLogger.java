@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.ruts.inoutlogging;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.magic.async.ConcurrentAsyncCall;
 import org.lastaflute.core.mail.RequestedMailCount;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RequestedSqlCount;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.process.ActionRuntime;
@@ -58,7 +60,7 @@ public class InOutLogger {
     // ===================================================================================
     //                                                                               Show
     //                                                                              ======
-    public void showInOutLog(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
+    public void show(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
         if (!isLoggerEnabled()) { // e.g. option is true but no logger settings
             return;
         }
@@ -79,36 +81,28 @@ public class InOutLogger {
         }
     }
 
+    // ===================================================================================
+    //                                                                         Build Whole
+    //                                                                         ===========
     protected String buildWhole(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
         final InOutLogOption option = keeper.getOption();
         final StringBuilder sb = new StringBuilder();
-        final String requestPath = requestManager.getRequestPath();
-        final String httpMethod = requestManager.getHttpMethod().orElse("unknown");
-        sb.append(httpMethod).append(" ").append(requestPath);
-        // not use HTTP status because of not fiexed yet here when e.g. exception
-        // (and in-out logging is not access log and you can derive it by exception type)
-        //requestManager.getResponseManager().getResponse().getStatus();
-        final String actionName = runtime.getActionType().getSimpleName();
-        final String methodName = runtime.getActionExecute().getExecuteMethod().getName();
-        sb.append(" ").append(actionName).append("@").append(methodName).append("()");
-        final String beginExp = keeper.getBeginDateTime().map(begin -> {
-            return dateTimeFormatter.format(begin);
-        }).orElse("no begun"); // basically no way, just in case
-        sb.append(" (").append(beginExp).append(")");
-        keeper.getBeginDateTime().ifPresent(begin -> {
-            final long before = DfTypeUtil.toDate(begin).getTime();
-            final long after = DfTypeUtil.toDate(requestManager.getTimeManager().currentDateTime()).getTime();
-            sb.append(" [").append(DfTraceViewUtil.convertToPerformanceView(after - before)).append("]");
-        });
-        requestManager.getHeaderUserAgent().ifPresent(userAgent -> {
-            sb.append(" {").append(Srl.cut(userAgent, 50, "...")).append("}");
-        });
-        final RuntimeException failureCause = runtime.getFailureCause();
-        if (failureCause != null) {
-            sb.append(" *").append(failureCause.getClass().getSimpleName());
-            sb.append(" #").append(Integer.toHexString(failureCause.hashCode()));
-        }
+        setupBasic(sb, requestManager, runtime);
+        setupBegin(sb, keeper);
+        setupPerformance(sb, requestManager, keeper);
+        setupUserAgent(sb, requestManager);
+        setupCause(sb, runtime);
+
+        // in-out data here
         boolean alreadyLineSep = false;
+
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Request: requestParameter, requestBody
+        // _/_/_/_/_/_/_/_/_/_/
+        if (willBeLineSeparatedLater(keeper)) {
+            sb.append("\n"); // line-separate request beginning point for view
+            alreadyLineSep = true;
+        }
         final String paramsExp = buildRequestParameterExp(keeper);
         if (paramsExp != null) {
             final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
@@ -119,6 +113,10 @@ public class InOutLogger {
             final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
             alreadyLineSep = buildInOut(sb, "requestBody", realExp, alreadyLineSep);
         }
+
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Response: responseBody
+        // _/_/_/_/_/_/_/_/_/_/
         if (keeper.getResponseBody().isPresent()) {
             if (!keeper.getOption().isSuppressResponseBody()) {
                 final String body = keeper.getResponseBody().get();
@@ -126,6 +124,10 @@ public class InOutLogger {
                 alreadyLineSep = buildInOut(sb, "responseBody", realExp, alreadyLineSep);
             }
         }
+
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Various: sqlCount, mailCount
+        // _/_/_/_/_/_/_/_/_/_/
         final OptionalThing<RequestedSqlCount> optSql =
                 requestManager.getAttribute(LastaWebKey.DBFLUTE_SQL_COUNT_KEY, RequestedSqlCount.class);
         if (optSql.isPresent()) {
@@ -142,38 +144,66 @@ public class InOutLogger {
                 alreadyLineSep = buildInOut(sb, "mailCount", count.toString(), alreadyLineSep);
             }
         }
+
         return sb.toString();
     }
 
-    protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep) {
-        boolean nowLineSep = alreadyLineSep;
-        if (value != null && value.contains("\n")) {
-            sb.append("\n").append(title).append(":").append("\n");
-            nowLineSep = true;
-        } else {
-            sb.append(alreadyLineSep ? "\n" : " ").append(title).append(":");
-        }
-        sb.append(value == null || !value.isEmpty() ? value : "(empty)");
-        return nowLineSep;
+    protected void setupBasic(StringBuilder sb, RequestManager requestManager, ActionRuntime runtime) {
+        final String requestPath = requestManager.getRequestPath();
+        final String httpMethod = requestManager.getHttpMethod().orElse("unknown");
+        sb.append(httpMethod).append(" ").append(requestPath);
+        // not use HTTP status because of not fiexed yet here when e.g. exception
+        // (and in-out logging is not access log and you can derive it by exception type)
+        //requestManager.getResponseManager().getResponse().getStatus();
+        final String actionName = runtime.getActionType().getSimpleName();
+        final String methodName = runtime.getActionExecute().getExecuteMethod().getName();
+        sb.append(" ").append(actionName).append("@").append(methodName).append("()");
     }
 
-    protected void asyncShow(RequestManager requestManager, String whole) {
-        requestManager.getAsyncManager().async(new ConcurrentAsyncCall() {
-            @Override
-            public ConcurrentAsyncImportance importance() {
-                return ConcurrentAsyncImportance.TERTIARY; // as low priority
-            }
+    protected void setupBegin(StringBuilder sb, InOutLogKeeper keeper) {
+        final String beginExp = keeper.getBeginDateTime().map(begin -> {
+            return dateTimeFormatter.format(begin);
+        }).orElse("no begin"); // basically no way, just in case
+        sb.append(" (").append(beginExp).append(")");
+    }
 
-            @Override
-            public void callback() {
-                log(whole);
-            }
+    protected void setupPerformance(StringBuilder sb, RequestManager requestManager, InOutLogKeeper keeper) {
+        final String performanceCost = keeper.getBeginDateTime().map(begin -> {
+            final long before = DfTypeUtil.toDate(begin).getTime();
+            final long after = DfTypeUtil.toDate(flashDateTime(requestManager)).getTime();
+            return DfTraceViewUtil.convertToPerformanceView(after - before);
+        }).orElse("no end");
+        sb.append(" [").append(performanceCost).append("]");
+    }
+
+    protected LocalDateTime flashDateTime(RequestManager requestManager) { // flash not to depends on transaction
+        final TimeManager timeManager = requestManager.getTimeManager();
+        return DfTypeUtil.toLocalDateTime(timeManager.flashDate(), timeManager.getBusinessTimeZone());
+    }
+
+    protected void setupUserAgent(StringBuilder sb, RequestManager requestManager) {
+        requestManager.getHeaderUserAgent().ifPresent(userAgent -> {
+            sb.append(" userAgent:{").append(Srl.cut(userAgent, 50, "...")).append("}");
         });
     }
 
+    protected void setupCause(StringBuilder sb, ActionRuntime runtime) {
+        final RuntimeException failureCause = runtime.getFailureCause();
+        if (failureCause != null) {
+            sb.append(" *").append(failureCause.getClass().getSimpleName());
+            sb.append(" #").append(Integer.toHexString(failureCause.hashCode()));
+        }
+    }
+
+    protected boolean willBeLineSeparatedLater(InOutLogKeeper keeper) {
+        return keeper.getResponseBody().filter(body -> { // response body may have line separator
+            return !keeper.getOption().isSuppressResponseBody() && body.contains("\n");
+        }).isPresent();
+    }
+
     // ===================================================================================
-    //                                                                   Request Parameter
-    //                                                                   =================
+    //                                                                        Assist Logic
+    //                                                                        ============
     protected String buildRequestParameterExp(InOutLogKeeper keeper) {
         final Map<String, Object> parameterMap = keeper.getRequestParameterMap();
         if (parameterMap.isEmpty()) {
@@ -209,10 +239,32 @@ public class InOutLogger {
         return sb.toString();
     }
 
+    protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep) {
+        boolean nowLineSep = alreadyLineSep;
+        if (value != null && value.contains("\n")) {
+            sb.append("\n").append(title).append(":").append("\n");
+            nowLineSep = true;
+        } else {
+            sb.append(alreadyLineSep ? "\n" : " ").append(title).append(":");
+        }
+        sb.append(value == null || !value.isEmpty() ? value : "(empty)");
+        return nowLineSep;
+    }
+
     // ===================================================================================
-    //                                                                        Assist Logic
+    //                                                                        Asynchronous
     //                                                                        ============
-    protected String getDelimiter(String exp) {
-        return exp.contains("\n") ? "\n" : " ";
+    protected void asyncShow(RequestManager requestManager, String whole) {
+        requestManager.getAsyncManager().async(new ConcurrentAsyncCall() {
+            @Override
+            public ConcurrentAsyncImportance importance() {
+                return ConcurrentAsyncImportance.TERTIARY; // as low priority
+            }
+
+            @Override
+            public void callback() {
+                log(whole);
+            }
+        });
     }
 }

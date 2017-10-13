@@ -16,13 +16,16 @@
 package org.lastaflute.web.ruts;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 import javax.servlet.ServletException;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.NoneTransactionStage;
 import org.lastaflute.db.jta.stage.TransactionStage;
@@ -269,7 +272,9 @@ public class ActionRequestProcessor {
     protected void beginInOutLoggingIfNeeds() {
         final RequestManager requestManager = getRequestManager();
         InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
-            keeper.keepBeginDateTime(requestManager.getTimeManager().currentDateTime());
+            final TimeManager timeManager = requestManager.getTimeManager();
+            final LocalDateTime beginDateTime = DfTypeUtil.toLocalDateTime(timeManager.flashDate(), timeManager.getBusinessTimeZone());
+            keeper.keepBeginDateTime(beginDateTime);
         });
     }
 
@@ -277,7 +282,7 @@ public class ActionRequestProcessor {
         final RequestManager requestManager = getRequestManager();
         InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
             if (inOutLogger != null) { // double check just in case
-                inOutLogger.showInOutLog(requestManager, runtime, keeper);
+                inOutLogger.show(requestManager, runtime, keeper);
             }
         });
     }
