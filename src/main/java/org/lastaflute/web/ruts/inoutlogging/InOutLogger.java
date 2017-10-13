@@ -44,7 +44,7 @@ public class InOutLogger {
     //                                                                          ==========
     public static final String LOGGER_NAME = "lastaflute.inout";
     protected static final Logger logger = LoggerFactory.getLogger(LOGGER_NAME);
-    protected static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    protected static final DateTimeFormatter beginTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     // ===================================================================================
     //                                                                             Logging
@@ -165,7 +165,7 @@ public class InOutLogger {
 
     protected void setupBegin(StringBuilder sb, InOutLogKeeper keeper) {
         final String beginExp = keeper.getBeginDateTime().map(begin -> {
-            return dateTimeFormatter.format(begin);
+            return beginTimeFormatter.format(begin);
         }).orElse("no begun"); // basically no way, just in case
         sb.append(" (").append(beginExp).append(")");
     }
