@@ -27,6 +27,7 @@ import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.magic.async.ConcurrentAsyncCall;
 import org.lastaflute.core.mail.RequestedMailCount;
+import org.lastaflute.core.remoteapi.RequestedRemoteApiCount;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RequestedSqlCount;
 import org.lastaflute.web.LastaWebKey;
@@ -142,8 +143,8 @@ public class InOutLogger {
             }
         }
 
-        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-        // Various: sqlCount, mailCount
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Various: sqlCount, mailCount, remoteApiCount
         // _/_/_/_/_/_/_/_/_/_/
         final OptionalThing<RequestedSqlCount> optSql =
                 requestManager.getAttribute(LastaWebKey.DBFLUTE_SQL_COUNT_KEY, RequestedSqlCount.class);
@@ -159,6 +160,14 @@ public class InOutLogger {
             final RequestedMailCount count = optMail.get();
             if (count.getCountOfPosting() > 0) {
                 alreadyLineSep = buildInOut(sb, "mailCount", count.toString(), alreadyLineSep);
+            }
+        }
+        final OptionalThing<RequestedRemoteApiCount> optRemoteApi =
+                requestManager.getAttribute(LastaWebKey.REMOTEAPI_COUNT_KEY, RequestedRemoteApiCount.class);
+        if (optRemoteApi.isPresent()) {
+            final RequestedRemoteApiCount count = optRemoteApi.get();
+            if (!count.getFacadeCountMap().isEmpty()) {
+                alreadyLineSep = buildInOut(sb, "remoteApiCount", count.toString(), alreadyLineSep);
             }
         }
 
