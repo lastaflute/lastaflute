@@ -43,18 +43,11 @@ import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
  */
 public class GodHandPrologue {
-
-    // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(GodHandPrologue.class);
 
     // ===================================================================================
     //                                                                           Attribute
