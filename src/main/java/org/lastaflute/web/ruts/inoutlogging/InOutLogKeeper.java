@@ -48,6 +48,7 @@ public class InOutLogKeeper {
     protected String requestBodyType; // body format e.g. json, xml, null allowed if e.g. no body or null body
     protected String responseBodyContent; // null allowed if e.g. no body or null body
     protected String responseBodyType; // body format e.g. json, xml, null allowed until response or if e.g. no body
+    protected Throwable frameworkCause; // runtime has only application's one so keep here, null allowed
 
     // ===================================================================================
     //                                                                  Core Determination
@@ -124,6 +125,11 @@ public class InOutLogKeeper {
         this.responseBodyType = responseBodyType;
     }
 
+    public void keepFrameworkCause(Throwable frameworkCause) {
+        assertArgumentNotNull("frameworkCause", frameworkCause);
+        this.frameworkCause = frameworkCause;
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -180,6 +186,12 @@ public class InOutLogKeeper {
     public OptionalThing<String> getResponseBodyType() {
         return OptionalThing.ofNullable(responseBodyType, () -> {
             throw new IllegalStateException("Not found the response body type.");
+        });
+    }
+
+    public OptionalThing<Throwable> getFrameworkCause() {
+        return OptionalThing.ofNullable(frameworkCause, () -> {
+            throw new IllegalStateException("Not found the framework cause.");
         });
     }
 }

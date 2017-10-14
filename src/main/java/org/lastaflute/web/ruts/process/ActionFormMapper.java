@@ -15,7 +15,6 @@
  */
 package org.lastaflute.web.ruts.process;
 
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -141,7 +140,7 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                            Populate
     //                                                                            ========
-    public void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> optForm) throws IOException, ServletException {
+    public void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> optForm) throws ServletException {
         if (!optForm.isPresent()) {
             return;
         }
@@ -254,7 +253,7 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                           JSON Body
     //                                                                           =========
-    protected boolean handleJsonBody(ActionRuntime runtime, VirtualForm virtualForm) throws IOException {
+    protected boolean handleJsonBody(ActionRuntime runtime, VirtualForm virtualForm) {
         if (isJsonBodyForm(virtualForm.getFormMeta().getFormType())) {
             mappingJsonBody(runtime, virtualForm, prepareJsonFromRequestBody(virtualForm));
             return true;

@@ -116,6 +116,9 @@ public class ActionRequestProcessor {
             beforeFire();
             try {
                 fire(runtime); // #to_action
+            } catch (RuntimeException | IOException | ServletException e) {
+                catchFire(e);
+                throw e;
             } finally {
                 finallyFire(runtime);
             }
@@ -149,6 +152,13 @@ public class ActionRequestProcessor {
     protected String askProcessHash(LocalDateTime beginTime) {
         final String bestEffortUnique = beginTime.toString() + Thread.currentThread().getName();
         return Integer.toHexString(bestEffortUnique.hashCode());
+    }
+
+    protected void catchFire(Throwable cause) {
+        // action exceptions are already translated to ServletException here
+        // then basically runtime has it as failure cause so no need to keep in this case
+        // but it can be framework cause even if application throws and catches as business handling
+        keepInOutLogFrameworkCauseIfNeeds(cause);
     }
 
     protected void finallyFire(ActionRuntime runtime) {
@@ -208,7 +218,7 @@ public class ActionRequestProcessor {
         getRequestManager().setAttribute(execute.getFormMeta().get().getFormKey(), value);
     }
 
-    protected void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> form) throws IOException, ServletException {
+    protected void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> form) throws ServletException {
         actionFormMapper.populateParameter(runtime, form);
     }
 
@@ -234,7 +244,7 @@ public class ActionRequestProcessor {
     }
 
     protected NextJourney performAction(VirtualAction action, OptionalThing<VirtualForm> form, ActionRuntime runtime)
-            throws IOException, ServletException {
+            throws ServletException {
         try {
             return action.execute(form); // #to_action
         } catch (RuntimeException e) {
@@ -245,7 +255,7 @@ public class ActionRequestProcessor {
     }
 
     protected NextJourney handleActionFailureException(VirtualAction action, OptionalThing<VirtualForm> optForm, ActionRuntime runtime,
-            RuntimeException cause) throws IOException, ServletException {
+            RuntimeException cause) throws ServletException {
         throw new ServletException(cause);
     }
 
@@ -298,6 +308,12 @@ public class ActionRequestProcessor {
         InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
             keeper.keepBeginDateTime(beginTime);
             keeper.keepProcessHash(processHash);
+        });
+    }
+
+    protected void keepInOutLogFrameworkCauseIfNeeds(Throwable frameworkCause) {
+        InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
+            keeper.keepFrameworkCause(frameworkCause);
         });
     }
 

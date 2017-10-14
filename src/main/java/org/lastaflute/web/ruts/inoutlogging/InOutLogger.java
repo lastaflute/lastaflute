@@ -19,6 +19,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
+import javax.servlet.ServletException;
+
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTraceViewUtil;
 import org.dbflute.util.DfTypeUtil;
@@ -87,12 +89,12 @@ public class InOutLogger {
     protected String buildWhole(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
         final InOutLogOption option = keeper.getOption();
         final StringBuilder sb = new StringBuilder();
-        setupBasic(sb, requestManager, runtime);
+        setupBasic(sb, requestManager, runtime, keeper);
         setupBegin(sb, keeper);
         setupPerformance(sb, requestManager, keeper);
         setupProcess(sb, keeper);
-        setupCaller(sb, requestManager);
-        setupCause(sb, runtime);
+        setupCaller(sb, requestManager, keeper);
+        setupCause(sb, runtime, keeper);
 
         // in-out data here
         boolean alreadyLineSep = false;
@@ -163,7 +165,7 @@ public class InOutLogger {
         return sb.toString();
     }
 
-    protected void setupBasic(StringBuilder sb, RequestManager requestManager, ActionRuntime runtime) {
+    protected void setupBasic(StringBuilder sb, RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
         final String requestPath = requestManager.getRequestPath();
         final String httpMethod = requestManager.getHttpMethod().orElse("unknown");
         sb.append(httpMethod).append(" ").append(requestPath);
@@ -197,18 +199,35 @@ public class InOutLogger {
         }); // no else because of sub item
     }
 
-    protected void setupCaller(StringBuilder sb, RequestManager requestManager) {
+    protected void setupCaller(StringBuilder sb, RequestManager requestManager, InOutLogKeeper keeper) {
         requestManager.getHeaderUserAgent().ifPresent(userAgent -> {
             sb.append(" caller:{").append(Srl.cut(userAgent, 50, "...")).append("}"); // may be too big so cut
         });
     }
 
-    protected void setupCause(StringBuilder sb, ActionRuntime runtime) {
+    protected void setupCause(StringBuilder sb, ActionRuntime runtime, InOutLogKeeper keeper) {
         final RuntimeException failureCause = runtime.getFailureCause();
         if (failureCause != null) {
-            sb.append(" *").append(failureCause.getClass().getSimpleName());
-            sb.append(" #").append(Integer.toHexString(failureCause.hashCode()));
+            doSetupCause(sb, failureCause);
+        } else { // application does not have exception but framework may have...
+            keeper.getFrameworkCause().ifPresent(frameworkCause -> {
+                if (frameworkCause instanceof ServletException) {
+                    final Throwable rootCause = ((ServletException) frameworkCause).getRootCause();
+                    if (rootCause != null) { // the servlet exception is simple wrapper
+                        doSetupCause(sb, rootCause);
+                    } else { // the servlet exception is main exception
+                        doSetupCause(sb, frameworkCause);
+                    }
+                } else { // basically framework's runtime exception or IO exception
+                    doSetupCause(sb, frameworkCause);
+                }
+            });
         }
+    }
+
+    protected void doSetupCause(StringBuilder sb, Throwable cause) {
+        sb.append(" *").append(cause.getClass().getSimpleName());
+        sb.append(" #").append(Integer.toHexString(cause.hashCode()));
     }
 
     protected boolean willBeLineSeparatedLater(InOutLogKeeper keeper) {
