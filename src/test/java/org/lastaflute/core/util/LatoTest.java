@@ -14,7 +14,7 @@ import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrDstorePart;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrLandPart;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrLandPart.ToStrShowBase;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrPiaryPart;
-import org.lastaflute.unit.mock.db.MockCDef;
+import org.lastaflute.unit.mock.db.MockOldCDef;
 import org.lastaflute.web.validation.Required;
 
 /**
@@ -27,7 +27,7 @@ public class LatoTest extends PlainTestCase {
         assertEquals("", Lato.string(""));
         assertEquals("1", Lato.string(1));
         assertEquals("2016-09-09", Lato.string(LocalDate.of(2016, 9, 9)));
-        assertEquals(MockCDef.MemberStatus.Formalized.code(), Lato.string(MockCDef.MemberStatus.Formalized));
+        assertEquals(MockOldCDef.MemberStatus.Formalized.code(), Lato.string(MockOldCDef.MemberStatus.Formalized));
         assertContains(Lato.string(new ToStrSeaBean()), "{seaId=null, seaName=null, seaAccount=null, ");
         assertEquals(Lato.string(new ToStrSeaBean()), Lato.string(new ToStrSeaBean() {
         }));

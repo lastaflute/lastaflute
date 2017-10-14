@@ -26,7 +26,7 @@ import org.dbflute.utflute.core.cannonball.CannonballCar;
 import org.dbflute.utflute.core.cannonball.CannonballOption;
 import org.dbflute.utflute.core.cannonball.CannonballRun;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
-import org.lastaflute.unit.mock.db.MockCDef;
+import org.lastaflute.unit.mock.db.MockOldCDef;
 
 /**
  * @author jflute
@@ -215,7 +215,7 @@ public class GsonJsonEngineTest extends PlainTestCase {
         MockUser mockUser = new MockUser();
         mockUser.id = 2;
         mockUser.name = "land";
-        mockUser.validFlg = MockCDef.Flg.True;
+        mockUser.validFlg = MockOldCDef.Flg.True;
 
         // ## Act ##
         String json = engine.toJson(mockUser);
@@ -230,7 +230,7 @@ public class GsonJsonEngineTest extends PlainTestCase {
         // ## Assert ##
         log(fromJson);
         assertEquals("land", fromJson.name);
-        assertEquals(MockCDef.Flg.True, fromJson.validFlg);
+        assertEquals(MockOldCDef.Flg.True, fromJson.validFlg);
     }
 
     // ===================================================================================
@@ -389,7 +389,7 @@ public class GsonJsonEngineTest extends PlainTestCase {
         assertNull(user.status);
         assertEquals(LocalDate.of(2015, 12, 15), user.birthdate);
         assertNull(user.formalizedDatetime);
-        assertEquals(MockCDef.Flg.True, user.validFlg);
+        assertEquals(MockOldCDef.Flg.True, user.validFlg);
         assertTrue(user.primitiveFlg);
         log(engine.toJson(user)); // expect no exception
     }
@@ -577,7 +577,7 @@ public class GsonJsonEngineTest extends PlainTestCase {
         public LocalDate birthdate;
         public LocalDateTime formalizedDatetime;
         public LocalTime morningCallTime;
-        public MockCDef.Flg validFlg;
+        public MockOldCDef.Flg validFlg;
         public boolean primitiveFlg;
         public Boolean wrapperFlg;
         public List<String> stringList;
