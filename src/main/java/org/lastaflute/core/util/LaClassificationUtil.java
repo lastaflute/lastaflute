@@ -112,6 +112,8 @@ public class LaClassificationUtil {
     public static OptionalThing<Classification> findByCode(Class<?> cdefType, Object code) {
         assertArgumentNotNull("cdefType", cdefType);
         assertArgumentNotNull("code", code);
+
+        // #hope switch to nativeFindByCode() in future (lastaflute always uses dbflute version containing of()) by jflute
         final Object result = nativeCodeOf(cdefType, code);
         if (result == null) {
             return OptionalThing.empty();
@@ -137,6 +139,8 @@ public class LaClassificationUtil {
     public static OptionalThing<ClassificationMeta> findMeta(Class<?> defmetaType, String classificationName) {
         assertArgumentNotNull("defmetaType", defmetaType);
         assertArgumentNotNull("classificationName", classificationName);
+
+        // #hope switch to nativeFindMeta() in future (lastaflute always uses dbflute version containing of()) by jflute
         final Object result;
         try {
             result = nativeMetaOf(defmetaType, classificationName);
@@ -165,9 +169,69 @@ public class LaClassificationUtil {
     //                                                                       Native Method
     //                                                                       =============
     // -----------------------------------------------------
+    //                                          cls.of(code)
+    //                                          ------------
+    protected static OptionalThing<Classification> nativeFindByCode(Class<?> cdefType, Object code) {
+        assertArgumentNotNull("cdefType", cdefType);
+        assertArgumentNotNull("code", code);
+        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(cdefType);
+        final String methodName = "of";
+        final Method method;
+        try {
+            method = beanDesc.getMethod(methodName, new Class<?>[] { Object.class });
+        } catch (BeanMethodNotFoundException e) {
+            String msg = "Failed to get the method " + methodName + "() of the classification type: " + cdefType;
+            throw new ClassificationFindByCodeMethodNotFoundException(msg, e);
+        }
+        @SuppressWarnings("unchecked")
+        final OptionalThing<Classification> opt =
+                (OptionalThing<Classification>) DfReflectionUtil.invokeStatic(method, new Object[] { code });
+        return opt;
+    }
+
+    public static class ClassificationFindByCodeMethodNotFoundException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public ClassificationFindByCodeMethodNotFoundException(String msg, BeanMethodNotFoundException e) {
+            super(msg, e);
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                       meta.find(name)
+    //                                       ---------------
+    protected static OptionalThing<ClassificationMeta> nativeFindMeta(Class<?> defmetaType, String classificationName) { // old method
+        assertArgumentNotNull("defmetaType", defmetaType);
+        assertArgumentNotNull("classificationName", classificationName);
+        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(defmetaType);
+        final String methodName = "find";
+        final Method method;
+        try {
+            method = beanDesc.getMethod(methodName, new Class<?>[] { String.class });
+        } catch (BeanMethodNotFoundException e) {
+            String msg = "Failed to get the method " + methodName + "() of the def-meta type: " + defmetaType;
+            throw new ClassificationMetaFindMethodNotFoundException(msg, e);
+        }
+        @SuppressWarnings("unchecked")
+        OptionalThing<ClassificationMeta> opt =
+                (OptionalThing<ClassificationMeta>) DfReflectionUtil.invokeStatic(method, new Object[] { classificationName });
+        return opt;
+    }
+
+    public static class ClassificationMetaFindMethodNotFoundException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public ClassificationMetaFindMethodNotFoundException(String msg, BeanMethodNotFoundException e) {
+            super(msg, e);
+        }
+    }
+
+    // -----------------------------------------------------
     //                                               Code-of
     //                                               -------
-    public static Object nativeCodeOf(Class<?> cdefType, Object code) {
+    public static Object nativeCodeOf(Class<?> cdefType, Object code) { // old method
         assertArgumentNotNull("cdefType", cdefType);
         assertArgumentNotNull("code", code);
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(cdefType);
@@ -194,11 +258,11 @@ public class LaClassificationUtil {
     // -----------------------------------------------------
     //                                               Meta of
     //                                               -------
-    public static Object nativeMetaOf(Class<?> defmetaType, String classificationName) {
+    public static Object nativeMetaOf(Class<?> defmetaType, String classificationName) { // old method
         assertArgumentNotNull("defmetaType", defmetaType);
         assertArgumentNotNull("classificationName", classificationName);
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(defmetaType);
-        final String methodName = "meta"; // might be changed later
+        final String methodName = "meta";
         final Method method;
         try {
             method = beanDesc.getMethod(methodName, new Class<?>[] { String.class });
