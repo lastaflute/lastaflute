@@ -122,7 +122,7 @@ public class InOutLogger {
         if (!keeper.getOption().isSuppressResponseBody()) {
             if (keeper.getResponseBodyContent().isPresent()) {
                 final String body = keeper.getResponseBodyContent().get();
-                final String title = "responseBody(" + keeper.getRequestBodyType().orElse("unknown") + ")";
+                final String title = "responseBody(" + keeper.getResponseBodyType().orElse("unknown") + ")";
                 final String realExp = option.getResponseBodyFilter().map(filter -> filter.apply(body)).orElse(body);
                 alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep);
             }
