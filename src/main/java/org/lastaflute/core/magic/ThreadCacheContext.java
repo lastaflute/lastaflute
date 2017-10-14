@@ -21,9 +21,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfCollectionUtil;
 import org.lastaflute.core.mail.PostedMailCounter;
+import org.lastaflute.core.remoteapi.CalledRemoteApiCounter;
 import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.validation.VaErrorHook;
@@ -43,7 +45,7 @@ public class ThreadCacheContext {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Object MARK_OBJ = new Object();
+    protected static final Object MARK_OBJ = new Object();
 
     // -----------------------------------------------------
     //                                             Core Item
@@ -75,6 +77,20 @@ public class ThreadCacheContext {
     //                                                ------
     public static final String FW_MAIL_COUNTER = "fw:mailCounter";
 
+    // -----------------------------------------------------
+    //                                             RemoteApi
+    //                                             ---------
+    public static final String FW_REMOTE_API_COUNTER = "fw:remoteApiCounter";
+    public static final String FW_REMOTE_API_COUNTER_INITIALIZER = "fw:remoteApiCounterInitializer";
+    protected static final RemoteApiCounterInitializer remoteApiCounterInitializer = new RemoteApiCounterInitializer();
+
+    protected static class RemoteApiCounterInitializer implements IndependentProcessor, ThreadCompleted {
+
+        public void process() {
+            registerRemoteApiCounter(new CalledRemoteApiCounter());
+        }
+    }
+
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
@@ -100,6 +116,9 @@ public class ThreadCacheContext {
     public static void initialize() {
         clear();
         threadLocal.set(new HashMap<String, Object>());
+
+        // for e.g. Lasta RemoteApi-0.3.7 (depends on LastaFlute-1.0.0), deleted at future
+        setObject(FW_REMOTE_API_COUNTER_INITIALIZER, remoteApiCounterInitializer);
     }
 
     // ===================================================================================
@@ -303,5 +322,16 @@ public class ThreadCacheContext {
 
     public static void registerMailCounter(PostedMailCounter memories) {
         setObject(FW_MAIL_COUNTER, memories);
+    }
+
+    // -----------------------------------------------------
+    //                                             RemoteApi
+    //                                             ---------
+    public static CalledRemoteApiCounter findRemoteApiCounter() {
+        return exists() ? getObject(FW_REMOTE_API_COUNTER) : null;
+    }
+
+    public static void registerRemoteApiCounter(CalledRemoteApiCounter memories) {
+        setObject(FW_REMOTE_API_COUNTER, memories);
     }
 }

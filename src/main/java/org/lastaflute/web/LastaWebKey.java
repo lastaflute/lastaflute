@@ -46,4 +46,5 @@ public interface LastaWebKey {
     String DBFLUTE_SQL_COUNT_KEY = "lastaflute.dbflute.SQL_COUNT"; // Request
     String DBFLUTE_TRANSACTION_MEMORIES_KEY = "lastaflute.dbflute.TRANSACTION_MEMORIES"; // Request
     String MAILFLUTE_MAIL_COUNT_KEY = "lastaflute.mailflute.MAIL_COUNT"; // Request
+    String REMOTEAPI_COUNT_KEY = "lastaflute.remoteapi.REMOTE_API_COUNT"; // Request
 }
