@@ -355,8 +355,10 @@ public class SimpleAsyncManager implements AsyncManager {
             sb.append("#flow #async ...Finishing asynchronous call as ").append(keyword).append(":");
             sb.append(LF).append("[Asynchronous Result]");
             sb.append(LF).append(" performanceView: ").append(toPerformanceView(before, after));
-            extractSqlCounter().ifPresent(counter -> {
-                sb.append(LF).append(" sqlCount: ").append(counter.toLineDisp());
+            extractSqlCounter().ifPresent(counter -> { // present even if total is zero
+                if (counter.getTotalCountOfSql() > 0) { // not required in asynchronous process
+                    sb.append(LF).append(" sqlCount: ").append(counter.toLineDisp());
+                }
             });
             extractMailCounter().ifPresent(counter -> {
                 sb.append(LF).append(" mailCount: ").append(counter.toLineDisp());
