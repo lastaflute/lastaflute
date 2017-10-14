@@ -113,7 +113,7 @@ public class LaClassificationUtil {
         assertArgumentNotNull("cdefType", cdefType);
         assertArgumentNotNull("code", code);
 
-        // #hope switch to nativeFindByCode() in future (lastaflute always uses dbflute version containing of()) by jflute
+        // #hope switch to nativeFindByCode() in future (can be over DBFlute-1.1.1) by jflute
         final Object result = nativeCodeOf(cdefType, code);
         if (result == null) {
             return OptionalThing.empty();
@@ -140,7 +140,7 @@ public class LaClassificationUtil {
         assertArgumentNotNull("defmetaType", defmetaType);
         assertArgumentNotNull("classificationName", classificationName);
 
-        // #hope switch to nativeFindMeta() in future (lastaflute always uses dbflute version containing of()) by jflute
+        // #hope switch to nativeFindMeta() in future (can be over DBFlute-1.1.1) by jflute
         final Object result;
         try {
             result = nativeMetaOf(defmetaType, classificationName);

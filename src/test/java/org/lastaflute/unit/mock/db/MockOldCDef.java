@@ -32,7 +32,7 @@ import org.dbflute.jdbc.ClassificationUndefinedHandlingType;
 /**
  * @author jflute
  */
-public interface MockOldCDef extends Classification {
+public interface MockOldCDef extends Classification { // for DBFlute-1.1.1
 
     /** The empty array for no sisters. */
     String[] EMPTY_SISTERS = new String[] {};
