@@ -91,7 +91,7 @@ public class InOutLogger {
         setupBegin(sb, keeper);
         setupPerformance(sb, requestManager, keeper);
         setupProcess(sb, keeper);
-        setupUserAgent(sb, requestManager);
+        setupCaller(sb, requestManager);
         setupCause(sb, runtime);
 
         // in-out data here
@@ -102,18 +102,30 @@ public class InOutLogger {
         // _/_/_/_/_/_/_/_/_/_/
         final String paramsExp = buildRequestParameterExp(keeper);
         if (paramsExp != null) {
-            if (willBeLineSeparatedLater(keeper) && !paramsExp.contains("\n") && !alreadyLineSep) {
+            final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
+            String noSepDelim = " "; // as default (if same line show)
+            if (willBeLineSeparatedLater(keeper) && !realExp.contains("\n") && !alreadyLineSep) {
                 sb.append("\n"); // line-separate request beginning point for view
+                noSepDelim = "";
+            }
+            alreadyLineSep = buildInOut(sb, "requestParameter", realExp, alreadyLineSep, noSepDelim);
+            if (noSepDelim.isEmpty()) { // means already line-separate
                 alreadyLineSep = true;
             }
-            final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
-            alreadyLineSep = buildInOut(sb, "requestParameter", realExp, alreadyLineSep);
         }
         if (keeper.getRequestBodyContent().isPresent()) {
             final String body = keeper.getRequestBodyContent().get();
             final String title = "requestBody(" + keeper.getRequestBodyType().orElse("unknown") + ")";
             final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-            alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep);
+            String noSepDelim = " "; // as default (if same line show)
+            if (willBeLineSeparatedLater(keeper) && !realExp.contains("\n") && !alreadyLineSep) {
+                sb.append("\n"); // line-separate request beginning point for view
+                noSepDelim = "";
+            }
+            alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep, noSepDelim);
+            if (noSepDelim.isEmpty()) { // means already line-separate
+                alreadyLineSep = true;
+            }
         }
 
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
@@ -185,9 +197,9 @@ public class InOutLogger {
         }); // no else because of sub item
     }
 
-    protected void setupUserAgent(StringBuilder sb, RequestManager requestManager) {
+    protected void setupCaller(StringBuilder sb, RequestManager requestManager) {
         requestManager.getHeaderUserAgent().ifPresent(userAgent -> {
-            sb.append(" userAgent:{").append(Srl.cut(userAgent, 50, "...")).append("}"); // may be too big so cut
+            sb.append(" caller:{").append(Srl.cut(userAgent, 50, "...")).append("}"); // may be too big so cut
         });
     }
 
@@ -249,12 +261,16 @@ public class InOutLogger {
     }
 
     protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep) {
+        return buildInOut(sb, title, value, alreadyLineSep, " ");
+    }
+
+    protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep, String noSepDelim) {
         boolean nowLineSep = alreadyLineSep;
         if (value != null && value.contains("\n")) {
             sb.append("\n").append(title).append(":").append("\n");
             nowLineSep = true;
         } else {
-            sb.append(alreadyLineSep ? "\n" : " ").append(title).append(":");
+            sb.append(alreadyLineSep ? "\n" : noSepDelim).append(title).append(":");
         }
         sb.append(value == null || !value.isEmpty() ? value : "(empty)");
         return nowLineSep;
