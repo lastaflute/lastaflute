@@ -34,6 +34,7 @@ import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.config.ExecuteOption;
+import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.util.LaModuleConfigUtil;
 
 /**
@@ -48,7 +49,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     @Override
     public void customize(ComponentDef componentDef) {
         final ActionMapping actionMapping = createActionMapping(componentDef);
-        LaModuleConfigUtil.getModuleConfig().addActionMapping(actionMapping);
+        getModuleConfig().addActionMapping(actionMapping);
     }
 
     // ===================================================================================
@@ -98,12 +99,6 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement(actionDef);
         final String msg = br.buildExceptionMessage();
         throw new ActionPackageHasUpperCaseException(msg);
-    }
-
-    protected ActionAdjustmentProvider comeOnAdjustmentProvider() {
-        final FwAssistantDirector director = ContainerUtil.getComponent(FwAssistantDirector.class);
-        final FwWebDirection direction = director.assistWebDirection();
-        return direction.assistActionAdjustmentProvider();
     }
 
     protected ActionMapping newActionMapping(ComponentDef actionDef, String actionName, ActionAdjustmentProvider adjustmentProvider) {
@@ -390,5 +385,18 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
 
     protected boolean isExecuteMethod(Method actionMethod) {
         return LdiModifierUtil.isPublic(actionMethod) && getExecuteAnnotation(actionMethod) != null;
+    }
+
+    // ===================================================================================
+    //                                                                           Component
+    //                                                                           =========
+    protected ModuleConfig getModuleConfig() {
+        return LaModuleConfigUtil.getModuleConfig();
+    }
+
+    protected ActionAdjustmentProvider comeOnAdjustmentProvider() {
+        final FwAssistantDirector director = ContainerUtil.getComponent(FwAssistantDirector.class);
+        final FwWebDirection direction = director.assistWebDirection();
+        return direction.assistActionAdjustmentProvider();
     }
 }
