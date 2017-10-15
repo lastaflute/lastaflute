@@ -32,7 +32,7 @@ public class PathParamArgs implements Serializable {
     //                                                                           Attribute
     //                                                                           =========
     protected final List<Class<?>> pathParamTypeList; // not null, read-only e.g. Integer.class, String.class
-    protected final Map<Integer, Class<?>> optionalGenericTypeMap; // not null, read-only, has same size as parameters
+    protected final Map<Integer, Class<?>> optionalGenericTypeMap; // key is argument index, not null, read-only
 
     // ===================================================================================
     //                                                                         Constructor
