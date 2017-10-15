@@ -43,7 +43,7 @@ public class ActionMapping {
     // all not null
     protected final ComponentDef actionDef;
     protected final BeanDesc actionDesc;
-    protected final String actionName;
+    protected final String actionName; // actually actionDef's component name, used as mapping key in module config
     protected final ActionAdjustmentProvider adjustmentProvider;
     protected final ArrayMap<String, ActionExecute> executeMap = new ArrayMap<String, ActionExecute>(); // array to get first
 
