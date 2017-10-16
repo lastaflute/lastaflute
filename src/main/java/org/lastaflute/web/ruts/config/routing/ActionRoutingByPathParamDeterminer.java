@@ -37,8 +37,7 @@ public class ActionRoutingByPathParamDeterminer {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final RequestManager requestManager; // not null
-    protected final Supplier<String> callerExpCall;
+    protected final Supplier<String> callerExpCall; // not null
     protected final String mappingMethodName; // not null
     protected final OptionalThing<String> restfulHttpMethod; // not null, empty allowed
     protected final boolean indexMethod;
@@ -48,10 +47,9 @@ public class ActionRoutingByPathParamDeterminer {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionRoutingByPathParamDeterminer(RequestManager requestManager, Supplier<String> callerExpCall, String mappingMethodName,
+    public ActionRoutingByPathParamDeterminer(Supplier<String> callerExpCall, String mappingMethodName,
             OptionalThing<String> restfulHttpMethod, boolean indexMethod, OptionalThing<PathParamArgs> pathParamArgs,
             PreparedUrlPattern preparedUrlPattern) {
-        this.requestManager = requestManager;
         this.callerExpCall = callerExpCall;
         this.mappingMethodName = mappingMethodName;
         this.restfulHttpMethod = restfulHttpMethod;
@@ -63,8 +61,8 @@ public class ActionRoutingByPathParamDeterminer {
     // ===================================================================================
     //                                                                           Determine
     //                                                                           =========
-    public boolean determine(String paramPath) {
-        if (restfulHttpMethod.filter(httpMethod -> !matchesWithRequestedHttpMethod(httpMethod)).isPresent()) {
+    public boolean determine(RequestManager requestManager, String paramPath) {
+        if (restfulHttpMethod.filter(httpMethod -> !matchesWithRequestedHttpMethod(requestManager, httpMethod)).isPresent()) {
             return false;
         }
         if (!isParameterEmpty(paramPath)) { // e.g. sea, sea/dockside
@@ -84,7 +82,7 @@ public class ActionRoutingByPathParamDeterminer {
         }
     }
 
-    protected boolean matchesWithRequestedHttpMethod(String httpMethod) {
+    protected boolean matchesWithRequestedHttpMethod(RequestManager requestManager, String httpMethod) {
         return requestManager.isHttpMethod(httpMethod);
     }
 
