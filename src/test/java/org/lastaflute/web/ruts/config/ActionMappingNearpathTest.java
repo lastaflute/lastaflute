@@ -1,16 +1,10 @@
 package org.lastaflute.web.ruts.config;
 
-import java.lang.reflect.Method;
-
 import org.dbflute.optional.OptionalThing;
-import org.dbflute.util.Srl;
-import org.lastaflute.di.core.meta.impl.ComponentDefImpl;
 import org.lastaflute.unit.UnitLastaFluteTestCase;
 import org.lastaflute.unit.mock.db.MockOldCDef;
 import org.lastaflute.web.Execute;
 import org.lastaflute.web.LastaAction;
-import org.lastaflute.web.aspect.RomanticActionCustomizer;
-import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.response.HtmlResponse;
 
 /**
@@ -29,7 +23,7 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
     // ===================================================================================
     //                                                                               Basic
     //                                                                               =====
-    public void test_paramPath_byword01_number_to_string() {
+    public void test_paramPath_byword01_string_to_number() {
         ActionMapping mapping = prepareMapping(NearpathByword01Str2numAction.class);
         assertExecute(mapping, index, "sea");
         assertExecute(mapping, nonno, "sea/named");
@@ -40,6 +34,7 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
         assertExecute(mapping, nonno, "1/land");
         assertExecute(mapping, index, "-1");
         assertExecute(mapping, named, "-1/named");
+        assertExecute(mapping, nonno, "-1/land");
     }
 
     private static class NearpathByword01Str2numAction extends LastaAction {
@@ -82,15 +77,43 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
         }
     }
 
+    public void test_paramPath_byword05_optional_string_to_number() {
+        ActionMapping mapping = prepareMapping(NearpathByword05Optstr2numAction.class);
+        assertExecute(mapping, index, "sea");
+        assertExecute(mapping, nonno, "sea/named");
+        assertExecute(mapping, nonno, "sea/land");
+        assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, index, "1");
+        assertExecute(mapping, named, "1/named");
+        assertExecute(mapping, nonno, "1/land");
+        assertExecute(mapping, index, "-1");
+        assertExecute(mapping, named, "-1/named");
+    }
+
+    private static class NearpathByword05Optstr2numAction extends LastaAction {
+
+        @Execute
+        public HtmlResponse index(OptionalThing<String> first) {
+            return HtmlResponse.asEmptyBody();
+        }
+
+        @Execute(urlPattern = "{}/@word")
+        public HtmlResponse named(Integer first) {
+            return HtmlResponse.asEmptyBody();
+        }
+    }
+
     // ===================================================================================
-    //                                                                            Optional
-    //                                                                            ========
-    public void test_paramPath_byword05_optional_on_string_to_number() {
-        ActionMapping mapping = prepareMapping(NearpathByword05Optonstr2numAction.class);
+    //                                                                     Second Optional
+    //                                                                     ===============
+    public void test_paramPath_byword10_optional_string_for_string_to_number() {
+        ActionMapping mapping = prepareMapping(NearpathByword10Optstr4str2numAction.class);
         assertExecute(mapping, index, "sea");
         assertExecute(mapping, index, "sea/named");
         assertExecute(mapping, index, "sea/land");
         assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, index, "sea/1"); // #hope nonno
+        assertExecute(mapping, index, "sea/-1"); // #hope nonno
 
         assertExecute(mapping, index, "1");
         assertExecute(mapping, index, "1/named"); // hide
@@ -101,7 +124,7 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
         assertExecute(mapping, index, "-1/land");
     }
 
-    private static class NearpathByword05Optonstr2numAction extends LastaAction {
+    private static class NearpathByword10Optstr4str2numAction extends LastaAction {
 
         @Execute
         public HtmlResponse index(String first, OptionalThing<String> second) {
@@ -114,12 +137,14 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
         }
     }
 
-    public void test_paramPath_byword06_optional_on_number_string() {
-        ActionMapping mapping = prepareMapping(NearpathByword06Optonnum2strAction.class);
-        assertExecute(mapping, nonno, "sea");
-        assertExecute(mapping, named, "sea/named"); // by number check
-        assertExecute(mapping, nonno, "sea/land");
+    public void test_paramPath_byword11_optional_string_for_number_to_string() {
+        ActionMapping mapping = prepareMapping(NearpathByword11Optstr4num2strAction.class);
+        assertExecute(mapping, index, "sea"); // #hope nonno
+        assertExecute(mapping, index, "sea/named"); // #hope named
+        assertExecute(mapping, index, "sea/land"); // #hope nonno
         assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, index, "sea/1"); // #hope nonno
+        assertExecute(mapping, index, "sea/-1"); // #hope nonno
 
         assertExecute(mapping, index, "1");
         assertExecute(mapping, index, "1/named"); // hide
@@ -132,7 +157,7 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
         assertExecute(mapping, index, "-1/land");
     }
 
-    private static class NearpathByword06Optonnum2strAction extends LastaAction {
+    private static class NearpathByword11Optstr4num2strAction extends LastaAction {
 
         @Execute
         public HtmlResponse index(Integer first, OptionalThing<String> second) {
@@ -145,30 +170,32 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
         }
     }
 
-    public void test_paramPath_byword07_optional_on_cls_to_string() {
-        ActionMapping mapping = prepareMapping(NearpathByword07Optoncls2strAction.class);
-        assertExecute(mapping, nonno, "sea");
-        assertExecute(mapping, named, "sea/named"); // by classification check
-        assertExecute(mapping, nonno, "sea/land"); // by classification check
+    public void test_paramPath_byword12_optional_string_on_cls_to_string() {
+        ActionMapping mapping = prepareMapping(NearpathByword12Optstr4cls2strAction.class);
+        assertExecute(mapping, index, "sea"); // #hope nonno
+        assertExecute(mapping, index, "sea/named"); // #hope named
+        assertExecute(mapping, index, "sea/land"); // #hope nonno
         assertExecute(mapping, nonno, "sea/land/piari");
 
         assertExecute(mapping, index, "FML");
         assertExecute(mapping, index, "FML/named");
         assertExecute(mapping, index, "FML/land");
         assertExecute(mapping, nonno, "FML/land/piari");
+        assertExecute(mapping, index, "FML/1");
+        assertExecute(mapping, index, "FML/-1");
 
-        assertExecute(mapping, nonno, "1");
-        assertExecute(mapping, named, "1/named"); // by classification check
+        assertExecute(mapping, index, "1"); // #hope nonno
+        assertExecute(mapping, index, "1/named"); // #hope named
         assertExecute(mapping, nonno, "1/named/piari");
-        assertExecute(mapping, nonno, "1/land"); // by classification check
+        assertExecute(mapping, index, "1/land"); // #hope nonno
 
-        assertExecute(mapping, nonno, "-1");
-        assertExecute(mapping, named, "-1/named"); // by classification check
+        assertExecute(mapping, index, "-1"); // #hope nonno
+        assertExecute(mapping, index, "-1/named"); // #hope named
         assertExecute(mapping, nonno, "-1/named/piari");
-        assertExecute(mapping, nonno, "-1/land"); // by classification check
+        assertExecute(mapping, index, "-1/land"); // #hope nonno
     }
 
-    private static class NearpathByword07Optoncls2strAction extends LastaAction {
+    private static class NearpathByword12Optstr4cls2strAction extends LastaAction {
 
         @Execute
         public HtmlResponse index(MockOldCDef.MemberStatus first, OptionalThing<String> second) {
@@ -181,30 +208,32 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
         }
     }
 
-    public void test_paramPath_byword08_optional_on_cls_to_number() {
-        ActionMapping mapping = prepareMapping(NearpathByword08Optoncls2numAction.class);
-        assertExecute(mapping, nonno, "sea");
-        assertExecute(mapping, nonno, "sea/named"); // by classification check
-        assertExecute(mapping, nonno, "sea/land"); // by classification check
+    public void test_paramPath_byword13_optional_string_on_cls_to_number() {
+        ActionMapping mapping = prepareMapping(NearpathByword13Optstr4cls2numAction.class);
+        assertExecute(mapping, index, "sea"); // #hope nonno
+        assertExecute(mapping, index, "sea/named"); // #hope nonno
+        assertExecute(mapping, index, "sea/land"); // #hope nonno
         assertExecute(mapping, nonno, "sea/land/piari");
 
         assertExecute(mapping, index, "FML");
         assertExecute(mapping, index, "FML/named");
         assertExecute(mapping, index, "FML/land");
         assertExecute(mapping, nonno, "FML/land/piari");
+        assertExecute(mapping, index, "FML/1");
+        assertExecute(mapping, index, "FML/-1");
 
-        assertExecute(mapping, nonno, "1");
-        assertExecute(mapping, named, "1/named"); // by classification check
+        assertExecute(mapping, index, "1"); // #hope nonno
+        assertExecute(mapping, index, "1/named"); // #hope named
         assertExecute(mapping, nonno, "1/named/piari");
-        assertExecute(mapping, nonno, "1/land");
+        assertExecute(mapping, index, "1/land"); // #hope nonno
 
-        assertExecute(mapping, nonno, "-1");
-        assertExecute(mapping, named, "-1/named"); // by classification check
+        assertExecute(mapping, index, "-1"); // #hope nonno
+        assertExecute(mapping, index, "-1/named"); // #hope named
         assertExecute(mapping, nonno, "-1/named/piari");
-        assertExecute(mapping, nonno, "-1/land");
+        assertExecute(mapping, index, "-1/land"); // #hope nonno
     }
 
-    private static class NearpathByword08Optoncls2numAction extends LastaAction {
+    private static class NearpathByword13Optstr4cls2numAction extends LastaAction {
 
         @Execute
         public HtmlResponse index(MockOldCDef.MemberStatus first, OptionalThing<String> second) {
@@ -217,10 +246,103 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
         }
     }
 
+    public void test_paramPath_byword15_optional_number_for_string_to_number() {
+        ActionMapping mapping = prepareMapping(NearpathByword15Optnum4str2numAction.class);
+        assertExecute(mapping, index, "sea");
+        assertExecute(mapping, index, "sea/named"); // #hope nonno
+        assertExecute(mapping, index, "sea/land"); // #hope nonno
+        assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, index, "sea/1");
+        assertExecute(mapping, index, "sea/-1");
+
+        assertExecute(mapping, index, "1");
+        assertExecute(mapping, index, "1/named"); // #hope nonno
+        assertExecute(mapping, index, "1/land"); // #hope nonno
+
+        assertExecute(mapping, index, "-1");
+        assertExecute(mapping, index, "-1/named"); // #hope nonno
+        assertExecute(mapping, index, "-1/land"); // #hope nonno
+    }
+
+    private static class NearpathByword15Optnum4str2numAction extends LastaAction {
+
+        @Execute
+        public HtmlResponse index(String first, OptionalThing<Integer> second) {
+            return HtmlResponse.asEmptyBody();
+        }
+
+        @Execute(urlPattern = "{}/@word")
+        public HtmlResponse named(Integer first) {
+            return HtmlResponse.asEmptyBody();
+        }
+    }
+
+    public void test_paramPath_byword16_optional_number_for_number_to_string() {
+        ActionMapping mapping = prepareMapping(NearpathByword16Optnum4num2strAction.class);
+        assertExecute(mapping, index, "sea"); // #hope nonno
+        assertExecute(mapping, index, "sea/named"); // #hope nonno
+        assertExecute(mapping, index, "sea/land"); // #hope nonno
+        assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, index, "sea/1"); // #hope nonno
+        assertExecute(mapping, index, "sea/-1"); // #hope nonno
+
+        assertExecute(mapping, index, "1");
+        assertExecute(mapping, index, "1/named"); // #hope named
+        assertExecute(mapping, index, "1/land"); // #hope nonno
+
+        assertExecute(mapping, index, "-1");
+        assertExecute(mapping, index, "-1/named"); // #hope named
+        assertExecute(mapping, index, "-1/land"); // #hope nonno
+    }
+
+    private static class NearpathByword16Optnum4num2strAction extends LastaAction {
+
+        @Execute
+        public HtmlResponse index(Integer first, OptionalThing<Integer> second) {
+            return HtmlResponse.asEmptyBody();
+        }
+
+        @Execute(urlPattern = "{}/@word")
+        public HtmlResponse named(String first) {
+            return HtmlResponse.asEmptyBody();
+        }
+    }
+
+    public void test_paramPath_byword19_optional_string_for_optional_to_string() {
+        ActionMapping mapping = prepareMapping(NearpathByword19Optstr4optstr2strAction.class);
+        assertExecute(mapping, index, "sea");
+        assertExecute(mapping, index, "sea/named"); // hide, should be named? however compatible...
+        assertExecute(mapping, index, "sea/land");
+        assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, index, "sea/1");
+        assertExecute(mapping, index, "sea/-1");
+
+        assertExecute(mapping, index, "1");
+        assertExecute(mapping, index, "1/named"); // hide, should be named? however compatible...
+        assertExecute(mapping, index, "1/land");
+
+        assertExecute(mapping, index, "-1");
+        assertExecute(mapping, index, "-1/named"); // hide, should be named? however compatible...
+        assertExecute(mapping, index, "-1/land");
+    }
+
+    private static class NearpathByword19Optstr4optstr2strAction extends LastaAction {
+
+        @Execute
+        public HtmlResponse index(OptionalThing<String> first, OptionalThing<String> second) {
+            return HtmlResponse.asEmptyBody();
+        }
+
+        @Execute(urlPattern = "{}/@word")
+        public HtmlResponse named(String first) {
+            return HtmlResponse.asEmptyBody();
+        }
+    }
+
     // ===================================================================================
     //                                                                               Theme
     //                                                                               =====
-    public void test_paramPath_byword10_named_parade() {
+    public void test_paramPath_byword20_named_parade() {
         ActionMapping mapping = prepareMapping(NearpathByword10NamedparadeAction.class);
         assertExecute(mapping, "sea", "1/sea");
         assertExecute(mapping, "sea", "1/sea");
@@ -256,36 +378,10 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
     //                                                                        Assist Logic
     //                                                                        ============
     private ActionMapping prepareMapping(Class<?> componentClass) {
-        String actionName = Srl.initUncap(componentClass.getSimpleName());
-        ComponentDefImpl actionDef = new ComponentDefImpl(componentClass, actionName);
-        ModuleConfig moduleConfig = new ModuleConfig();
-        RomanticActionCustomizer customizer = new RomanticActionCustomizer() {
-            @Override
-            protected ModuleConfig getModuleConfig() {
-                return moduleConfig;
-            }
-
-            @Override
-            protected ActionAdjustmentProvider comeOnAdjustmentProvider() {
-                return new ActionAdjustmentProvider() {
-                };
-            }
-        };
-        customizer.customize(actionDef);
-        ActionMapping mapping = moduleConfig.findActionMapping(actionName).get();
-        return mapping;
+        return ActionMappingBasicTest.prepareMapping(componentClass);
     }
 
     private void assertExecute(ActionMapping mapping, String methodName, String paramPath) {
-        ActionExecute execute = mapping.findActionExecute(paramPath);
-        if (nonno.equals(methodName)) {
-            assertNull("The execute method exists: paramPath=" + paramPath + ", execute=" + execute, execute);
-        } else {
-            assertNotNull("Not found the action execute: paramPath=" + paramPath, execute);
-            Method executeMethod = execute.getExecuteMethod();
-            assertNotNull("Not found the execute method: paramPath=" + paramPath, executeMethod);
-            String actualName = executeMethod.getName();
-            assertEquals(methodName, actualName);
-        }
+        ActionMappingBasicTest.assertExecute(mapping, methodName, paramPath);
     }
 }
