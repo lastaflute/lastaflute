@@ -2,6 +2,7 @@ package org.lastaflute.web.ruts.config;
 
 import java.lang.reflect.Method;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.di.core.meta.impl.ComponentDefImpl;
 import org.lastaflute.unit.UnitLastaFluteTestCase;
@@ -152,6 +153,9 @@ public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
         }
     }
 
+    // ===================================================================================
+    //                                                                      Classification
+    //                                                                      ==============
     public void test_paramPath_basic10_cls_to_string() {
         ActionMapping mapping = prepareMapping(Basic10Cls2strAction.class);
         assertExecute(mapping, index, "sea"); // #hope nonno
@@ -178,6 +182,116 @@ public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
 
         @Execute
         public HtmlResponse index(MockOldCDef.MemberStatus first) {
+            return HtmlResponse.asEmptyBody();
+        }
+
+        @Execute
+        public HtmlResponse named(String first) {
+            return HtmlResponse.asEmptyBody();
+        }
+    }
+
+    public void test_paramPath_basic11_cls_to_number() {
+        ActionMapping mapping = prepareMapping(Basic11Cls2numAction.class);
+        assertExecute(mapping, index, "sea"); // #hope nonno
+        assertExecute(mapping, nonno, "sea/named");
+        assertExecute(mapping, nonno, "sea/land");
+        assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, index, "FML");
+        assertExecute(mapping, nonno, "FML/named");
+        assertExecute(mapping, nonno, "FML/land");
+        assertExecute(mapping, nonno, "FML/land/piari");
+        assertExecute(mapping, nonno, "named/sea");
+        assertExecute(mapping, nonno, "named/sea/land");
+        assertExecute(mapping, named, "named/1");
+        assertExecute(mapping, nonno, "named/1/land");
+        assertExecute(mapping, index, "1"); // #hope nonno
+        assertExecute(mapping, nonno, "1/named");
+        assertExecute(mapping, nonno, "1/land");
+        assertExecute(mapping, index, "-1"); // #hope nonno
+        assertExecute(mapping, nonno, "-1/named");
+        assertExecute(mapping, nonno, "-1/land");
+    }
+
+    private static class Basic11Cls2numAction extends LastaAction {
+
+        @Execute
+        public HtmlResponse index(MockOldCDef.MemberStatus first) {
+            return HtmlResponse.asEmptyBody();
+        }
+
+        @Execute
+        public HtmlResponse named(Integer first) {
+            return HtmlResponse.asEmptyBody();
+        }
+    }
+
+    // ===================================================================================
+    //                                                                            Optional
+    //                                                                            ========
+    public void test_paramPath_basic25_optional_cls_to_string() {
+        ActionMapping mapping = prepareMapping(Basic25Optcls2strAction.class);
+        assertExecute(mapping, index, "sea"); // #hope nonno
+        assertExecute(mapping, nonno, "sea/named");
+        assertExecute(mapping, nonno, "sea/land");
+        assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, index, "FML");
+        assertExecute(mapping, nonno, "FML/named");
+        assertExecute(mapping, nonno, "FML/land");
+        assertExecute(mapping, nonno, "FML/land/piari");
+        assertExecute(mapping, named, "named/sea");
+        assertExecute(mapping, nonno, "named/sea/land");
+        assertExecute(mapping, named, "named/1");
+        assertExecute(mapping, nonno, "named/1/land");
+        assertExecute(mapping, index, "1"); // #hope nonno
+        assertExecute(mapping, nonno, "1/named");
+        assertExecute(mapping, nonno, "1/land");
+        assertExecute(mapping, index, "-1"); // #hope nonno
+        assertExecute(mapping, nonno, "-1/named");
+        assertExecute(mapping, nonno, "-1/land");
+    }
+
+    private static class Basic25Optcls2strAction extends LastaAction {
+
+        @Execute
+        public HtmlResponse index(OptionalThing<MockOldCDef.MemberStatus> first) {
+            return HtmlResponse.asEmptyBody();
+        }
+
+        @Execute
+        public HtmlResponse named(String first) {
+            return HtmlResponse.asEmptyBody();
+        }
+    }
+
+    public void test_paramPath_basic35_optional_cls_more_to_string() {
+        ActionMapping mapping = prepareMapping(Basic35Optclsmore2strAction.class);
+        assertExecute(mapping, index, "sea"); // #hope nonno
+        assertExecute(mapping, index, "sea/named"); // #hope nonno
+        assertExecute(mapping, index, "sea/land"); // #hope nonno
+        assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, index, "FML");
+        assertExecute(mapping, index, "FML/0");
+        assertExecute(mapping, index, "FML/1");
+        assertExecute(mapping, index, "FML/named"); // #hope nonno
+        assertExecute(mapping, index, "FML/land"); // #hope nonno
+        assertExecute(mapping, nonno, "FML/land/piari");
+        assertExecute(mapping, index, "named/sea"); // #hope named
+        assertExecute(mapping, nonno, "named/sea/land");
+        assertExecute(mapping, index, "named/1"); // #hope named
+        assertExecute(mapping, nonno, "named/1/land");
+        assertExecute(mapping, index, "1"); // #hope nonno
+        assertExecute(mapping, index, "1/named"); // #hope nonno
+        assertExecute(mapping, index, "1/land"); // #hope nonno
+        assertExecute(mapping, index, "-1"); // #hope nonno
+        assertExecute(mapping, index, "-1/named"); // #hope nonno
+        assertExecute(mapping, index, "-1/land"); // #hope nonno
+    }
+
+    private static class Basic35Optclsmore2strAction extends LastaAction {
+
+        @Execute
+        public HtmlResponse index(OptionalThing<MockOldCDef.MemberStatus> first, OptionalThing<MockOldCDef.Flg> second) {
             return HtmlResponse.asEmptyBody();
         }
 

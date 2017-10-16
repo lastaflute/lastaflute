@@ -11,7 +11,7 @@ import org.lastaflute.web.response.HtmlResponse;
  * @author jflute
  * @since 1.0.1 (2017/10/16 Monday at bay maihama)
  */
-public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
+public class ActionMappingNearpathBywordTest extends UnitLastaFluteTestCase {
 
     // ===================================================================================
     //                                                                          Definition
@@ -77,6 +77,9 @@ public class ActionMappingNearpathTest extends UnitLastaFluteTestCase {
         }
     }
 
+    // ===================================================================================
+    //                                                                      First Optional
+    //                                                                      ==============
     public void test_paramPath_byword05_optional_string_to_number() {
         ActionMapping mapping = prepareMapping(NearpathByword05Optstr2numAction.class);
         assertExecute(mapping, index, "sea");
