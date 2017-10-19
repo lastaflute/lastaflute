@@ -32,7 +32,7 @@ import org.dbflute.jdbc.ClassificationUndefinedHandlingType;
 /**
  * @author jflute
  */
-public interface MockCDef extends Classification {
+public interface MockOldCDef extends Classification { // for DBFlute-1.1.1
 
     /** The empty array for no sisters. */
     String[] EMPTY_SISTERS = new String[] {};
@@ -41,7 +41,7 @@ public interface MockCDef extends Classification {
     @SuppressWarnings("unchecked")
     Map<String, Object> EMPTY_SUB_ITEM_MAP = (Map<String, Object>) Collections.EMPTY_MAP;
 
-    public enum Flg implements MockCDef {
+    public enum Flg implements MockOldCDef {
         True("1", "Yes", new String[] { "true" }), False("0", "No", new String[] { "false" });
         private static final Map<String, Flg> _codeValueMap = new HashMap<String, Flg>();
 
@@ -81,7 +81,7 @@ public interface MockCDef extends Classification {
         }
 
         public ClassificationMeta meta() {
-            return MockCDef.DefMeta.Flg;
+            return MockOldCDef.DefMeta.Flg;
         }
 
         public boolean inGroup(String groupName) {
@@ -142,7 +142,7 @@ public interface MockCDef extends Classification {
         }
     }
 
-    public enum MemberStatus implements MockCDef {
+    public enum MemberStatus implements MockOldCDef {
         Formalized("FML", "Formalized", EMPTY_SISTERS), Withdrawal("WDL", "Withdrawal", EMPTY_SISTERS), Provisional("PRV", "Provisional",
                 EMPTY_SISTERS);
         private static final Map<String, MemberStatus> _codeValueMap = new HashMap<String, MemberStatus>();
@@ -183,7 +183,7 @@ public interface MockCDef extends Classification {
         }
 
         public ClassificationMeta meta() {
-            return MockCDef.DefMeta.MemberStatus;
+            return MockOldCDef.DefMeta.MemberStatus;
         }
 
         /**
@@ -304,40 +304,40 @@ public interface MockCDef extends Classification {
 
         public Classification codeOf(Object code) {
             if ("Flg".equals(name())) {
-                return MockCDef.Flg.codeOf(code);
+                return MockOldCDef.Flg.codeOf(code);
             }
             if ("MemberStatus".equals(name())) {
-                return MockCDef.MemberStatus.codeOf(code);
+                return MockOldCDef.MemberStatus.codeOf(code);
             }
             throw new IllegalStateException("Unknown definition: " + this); // basically unreachable
         }
 
         public Classification nameOf(String name) {
             if ("Flg".equals(name())) {
-                return MockCDef.Flg.valueOf(name);
+                return MockOldCDef.Flg.valueOf(name);
             }
             if ("MemberStatus".equals(name())) {
-                return MockCDef.MemberStatus.valueOf(name);
+                return MockOldCDef.MemberStatus.valueOf(name);
             }
             throw new IllegalStateException("Unknown definition: " + this); // basically unreachable
         }
 
         public List<Classification> listAll() {
             if ("Flg".equals(name())) {
-                return toClassificationList(MockCDef.Flg.listAll());
+                return toClassificationList(MockOldCDef.Flg.listAll());
             }
             if ("MemberStatus".equals(name())) {
-                return toClassificationList(MockCDef.MemberStatus.listAll());
+                return toClassificationList(MockOldCDef.MemberStatus.listAll());
             }
             throw new IllegalStateException("Unknown definition: " + this); // basically unreachable
         }
 
         public List<Classification> groupOf(String groupName) {
             if ("Flg".equals(name())) {
-                return toClassificationList(MockCDef.Flg.groupOf(groupName));
+                return toClassificationList(MockOldCDef.Flg.groupOf(groupName));
             }
             if ("MemberStatus".equals(name())) {
-                return toClassificationList(MockCDef.MemberStatus.groupOf(groupName));
+                return toClassificationList(MockOldCDef.MemberStatus.groupOf(groupName));
             }
             throw new IllegalStateException("Unknown definition: " + this); // basically unreachable
         }

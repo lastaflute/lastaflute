@@ -16,13 +16,16 @@
 package org.lastaflute.core.magic;
 
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.dbflute.helper.function.IndependentProcessor;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfCollectionUtil;
 import org.lastaflute.core.mail.PostedMailCounter;
+import org.lastaflute.core.remoteapi.CalledRemoteApiCounter;
 import org.lastaflute.db.jta.romanticist.SavedTransactionMemories;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.validation.VaErrorHook;
@@ -42,11 +45,17 @@ public class ThreadCacheContext {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    private static final Object MARK_OBJ = new Object();
+    protected static final Object MARK_OBJ = new Object();
 
     // -----------------------------------------------------
     //                                             Core Item
     //                                             ---------
+    public static final String FW_BEGIN_TIME = "fw:beginTime";
+    public static final String FW_PROCESS_HASH = "fw:processHash";
+
+    // -----------------------------------------------------
+    //                                            Basic Item
+    //                                            ----------
     public static final String FW_REQUEST_PATH = "fw:requestPath";
     public static final String FW_ENTRY_METHOD = "fw:entryMethod";
     public static final String FW_USER_BEAN = "fw:userBean";
@@ -67,6 +76,20 @@ public class ThreadCacheContext {
     //                                                 Mail
     //                                                ------
     public static final String FW_MAIL_COUNTER = "fw:mailCounter";
+
+    // -----------------------------------------------------
+    //                                             RemoteApi
+    //                                             ---------
+    public static final String FW_REMOTE_API_COUNTER = "fw:remoteApiCounter";
+    public static final String FW_REMOTE_API_COUNTER_INITIALIZER = "fw:remoteApiCounterInitializer";
+    protected static final RemoteApiCounterInitializer remoteApiCounterInitializer = new RemoteApiCounterInitializer();
+
+    protected static class RemoteApiCounterInitializer implements IndependentProcessor, ThreadCompleted {
+
+        public void process() {
+            registerRemoteApiCounter(new CalledRemoteApiCounter());
+        }
+    }
 
     // ===================================================================================
     //                                                                           Attribute
@@ -93,6 +116,9 @@ public class ThreadCacheContext {
     public static void initialize() {
         clear();
         threadLocal.set(new HashMap<String, Object>());
+
+        // for e.g. Lasta RemoteApi-0.3.7 (depends on LastaFlute-1.0.0), deleted at future
+        setObject(FW_REMOTE_API_COUNTER_INITIALIZER, remoteApiCounterInitializer);
     }
 
     // ===================================================================================
@@ -184,6 +210,25 @@ public class ThreadCacheContext {
     // -----------------------------------------------------
     //                                             Core Item
     //                                             ---------
+    public static String findBeginTime() {
+        return exists() ? (String) getObject(FW_BEGIN_TIME) : null;
+    }
+
+    public static void registerBeginTime(LocalDateTime beginTime) {
+        setObject(FW_BEGIN_TIME, beginTime);
+    }
+
+    public static String findProcessHash() {
+        return exists() ? (String) getObject(FW_PROCESS_HASH) : null;
+    }
+
+    public static void registerProcessHash(String processHash) {
+        setObject(FW_PROCESS_HASH, processHash);
+    }
+
+    // -----------------------------------------------------
+    //                                            Basic Item
+    //                                            ----------
     public static String findRequestPath() {
         return exists() ? (String) getObject(FW_REQUEST_PATH) : null;
     }
@@ -277,5 +322,16 @@ public class ThreadCacheContext {
 
     public static void registerMailCounter(PostedMailCounter memories) {
         setObject(FW_MAIL_COUNTER, memories);
+    }
+
+    // -----------------------------------------------------
+    //                                             RemoteApi
+    //                                             ---------
+    public static CalledRemoteApiCounter findRemoteApiCounter() {
+        return exists() ? getObject(FW_REMOTE_API_COUNTER) : null;
+    }
+
+    public static void registerRemoteApiCounter(CalledRemoteApiCounter memories) {
+        setObject(FW_REMOTE_API_COUNTER, memories);
     }
 }

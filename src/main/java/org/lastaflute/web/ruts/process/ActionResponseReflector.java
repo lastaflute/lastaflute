@@ -258,7 +258,7 @@ public class ActionResponseReflector {
             } else { // mainly here
                 json = requestManager.getJsonManager().toJson(response.getJsonResult());
             }
-            keepOriginalBodyForInOutLoggingIfNeeds(json);
+            keepOriginalBodyForInOutLoggingIfNeeds(json, "json");
             response.getCallback().ifPresent(callback -> {
                 final String script = callback + "(" + json + ")";
                 responseManager.writeAsJavaScript(script);
@@ -311,7 +311,7 @@ public class ActionResponseReflector {
                 return;
             }
             final String xmlStr = response.getXmlStr();
-            keepOriginalBodyForInOutLoggingIfNeeds(xmlStr);
+            keepOriginalBodyForInOutLoggingIfNeeds(xmlStr, "xml");
             responseManager.writeAsXml(xmlStr, response.getEncoding());
         });
     }
@@ -359,12 +359,12 @@ public class ActionResponseReflector {
         InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
             final String routingPath = response.getRoutingPath();
             final String body = "(" + (response.isRedirectTo() ? "...Redirecting to " : "...Forwarding to ") + routingPath + ")";
-            keeper.keepResponseBody(body);
+            keeper.keepResponseBody(body, "html");
         });
     }
 
-    protected void keepOriginalBodyForInOutLoggingIfNeeds(String responseBody) {
-        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepResponseBody(responseBody));
+    protected void keepOriginalBodyForInOutLoggingIfNeeds(String bodyContent, String bodyType) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepResponseBody(bodyContent, bodyType));
     }
 
     protected void keepStreamBodyForInOutLoggingIfNeeds(ResponseDownloadResource resource) {
@@ -372,7 +372,7 @@ public class ActionResponseReflector {
             final String fileName = resource.getFileName();
             final String contentType = resource.getContentType();
             final String body = "(...Downloading fileName=" + fileName + ", contentType=" + contentType + ")";
-            keeper.keepResponseBody(body);
+            keeper.keepResponseBody(body, "stream");
         });
     }
 

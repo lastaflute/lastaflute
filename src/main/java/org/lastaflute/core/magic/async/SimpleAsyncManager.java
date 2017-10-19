@@ -70,6 +70,7 @@ import org.lastaflute.core.magic.async.race.LaCountdownRaceRunner;
 import org.lastaflute.core.magic.async.race.exception.LaCountdownRaceExecutionException;
 import org.lastaflute.core.magic.destructive.BowgunDestructiveAdjuster;
 import org.lastaflute.core.mail.PostedMailCounter;
+import org.lastaflute.core.remoteapi.CalledRemoteApiCounter;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RomanticTraceableSqlResultHandler;
@@ -354,11 +355,16 @@ public class SimpleAsyncManager implements AsyncManager {
             sb.append("#flow #async ...Finishing asynchronous call as ").append(keyword).append(":");
             sb.append(LF).append("[Asynchronous Result]");
             sb.append(LF).append(" performanceView: ").append(toPerformanceView(before, after));
-            extractSqlCount().ifPresent(counter -> {
-                sb.append(LF).append(" sqlCount: ").append(counter.toLineDisp());
+            extractSqlCounter().ifPresent(counter -> { // present even if total is zero
+                if (counter.getTotalCountOfSql() > 0) { // not required in asynchronous process
+                    sb.append(LF).append(" sqlCount: ").append(counter.toLineDisp());
+                }
             });
-            extractMailCount().ifPresent(counter -> {
+            extractMailCounter().ifPresent(counter -> {
                 sb.append(LF).append(" mailCount: ").append(counter.toLineDisp());
+            });
+            extractRemoteApiCounter().ifPresent(counter -> {
+                sb.append(LF).append(" remoteApiCount: ").append(counter.toLineDisp());
             });
             if (cause != null) {
                 sb.append(LF).append(" cause: ").append(cause.getClass().getSimpleName()).append(" *Read the exception message!");
@@ -642,6 +648,7 @@ public class SimpleAsyncManager implements AsyncManager {
         setupExceptionMessageSqlCountIfExists(sb);
         setupExceptionMessageTransactionMemoriesIfExists(sb);
         setupExceptionMessageMailCountIfExists(sb);
+        setupExceptionMessageRemoteApiCountIfExists(sb);
         final long after = System.currentTimeMillis();
         final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
         sb.append(LF);
@@ -684,7 +691,7 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     protected void setupExceptionMessageSqlCountIfExists(StringBuilder sb) {
-        extractSqlCount().ifPresent(counter -> {
+        extractSqlCounter().ifPresent(counter -> {
             sb.append(LF).append(EX_IND).append("; sqlCount=").append(counter.toLineDisp());
         });
     }
@@ -718,8 +725,14 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     protected void setupExceptionMessageMailCountIfExists(StringBuilder sb) {
-        extractMailCount().ifPresent(counter -> {
+        extractMailCounter().ifPresent(counter -> {
             sb.append(LF).append(EX_IND).append("; mailCount=").append(counter.toLineDisp());
+        });
+    }
+
+    protected void setupExceptionMessageRemoteApiCountIfExists(StringBuilder sb) {
+        extractRemoteApiCounter().ifPresent(counter -> {
+            sb.append(LF).append(EX_IND).append("; remoteApiCount=").append(counter.toLineDisp());
         });
     }
 
@@ -745,9 +758,9 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     // ===================================================================================
-    //                                                                           SQL Count
-    //                                                                           =========
-    protected OptionalThing<ExecutedSqlCounter> extractSqlCount() {
+    //                                                                         SQL Counter
+    //                                                                         ===========
+    protected OptionalThing<ExecutedSqlCounter> extractSqlCounter() {
         final CallbackContext context = CallbackContext.getCallbackContextOnThread();
         if (context == null) {
             return OptionalThing.empty();
@@ -760,11 +773,20 @@ public class SimpleAsyncManager implements AsyncManager {
     }
 
     // ===================================================================================
-    //                                                                          Mail Count
-    //                                                                          ==========
-    protected OptionalThing<PostedMailCounter> extractMailCount() {
+    //                                                                        Mail Counter
+    //                                                                        ============
+    protected OptionalThing<PostedMailCounter> extractMailCounter() {
         return OptionalThing.ofNullable(ThreadCacheContext.findMailCounter(), () -> {
-            throw new IllegalStateException("Not found the mail count in the thread cache.");
+            throw new IllegalStateException("Not found the mail counter in the thread cache.");
+        });
+    }
+
+    // ===================================================================================
+    //                                                                   RemoteApi Counter
+    //                                                                   =================
+    protected OptionalThing<CalledRemoteApiCounter> extractRemoteApiCounter() {
+        return OptionalThing.ofNullable(ThreadCacheContext.findRemoteApiCounter(), () -> {
+            throw new IllegalStateException("Not found the remote-api counter in the thread cache.");
         });
     }
 

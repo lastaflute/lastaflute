@@ -100,9 +100,9 @@ public class Postbox {
     public void post(LaMailPostcard postcard) {
         assertPostOfficeWorks(postcard);
         reloadIfNeeds();
+        saveMemories(postcard);
         final Postcard nativePostcard = postcard.toNativePostcard();
         postOffice.deliver(nativePostcard);
-        saveMemories(postcard);
     }
 
     protected void assertPostOfficeWorks(LaMailPostcard postcard) {
@@ -112,6 +112,9 @@ public class Postbox {
         }
     }
 
+    // ===================================================================================
+    //                                                                            Memories
+    //                                                                            ========
     protected void saveMemories(LaMailPostcard postcard) {
         if (!ThreadCacheContext.exists()) {
             return;

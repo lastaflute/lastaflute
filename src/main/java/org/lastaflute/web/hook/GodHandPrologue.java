@@ -18,7 +18,6 @@ package org.lastaflute.web.hook;
 import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
-import org.dbflute.bhv.proposal.callback.ExecutedSqlCounter;
 import org.dbflute.bhv.proposal.callback.TraceableSqlAdditionalInfoProvider;
 import org.dbflute.hook.AccessContext;
 import org.dbflute.hook.CallbackContext;
@@ -35,7 +34,6 @@ import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RomanticTraceableSqlFireHook;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RomanticTraceableSqlResultHandler;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RomanticTraceableSqlStringFilter;
-import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.login.LoginHandlingResource;
 import org.lastaflute.web.login.LoginManager;
@@ -45,18 +43,11 @@ import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
  */
 public class GodHandPrologue {
-
-    // ===================================================================================
-    //                                                                          Definition
-    //                                                                          ==========
-    private static final Logger logger = LoggerFactory.getLogger(GodHandPrologue.class);
 
     // ===================================================================================
     //                                                                           Attribute
@@ -74,9 +65,8 @@ public class GodHandPrologue {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public GodHandPrologue(GodHandResource resource, EmbeddedMessageKeySupplier keySupplier,
-            AccessContextArranger accessContextArranger, Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier,
-            Supplier<String> appTypeSupplier) {
+    public GodHandPrologue(GodHandResource resource, EmbeddedMessageKeySupplier keySupplier, AccessContextArranger accessContextArranger,
+            Supplier<OptionalThing<? extends UserBean<?>>> userBeanSupplier, Supplier<String> appTypeSupplier) {
         this.messageManager = resource.getMessageManager();
         this.requestManager = resource.getRequestManager();
         this.sessionManager = resource.getSessionManager();
@@ -194,52 +184,6 @@ public class GodHandPrologue {
      */
     protected String buildSqlMarkingAdditionalInfo() {
         return "{" + appTypeSupplier.get() + "}"; // it doesn't contain user ID for SQL cache in DBMS
-    }
-
-    /**
-     * Handle count of SQL execution in the request.
-     * @param runtime The runtime meta of action execute. (NotNull)
-     */
-    protected void handleSqlCount(final ActionRuntime runtime) {
-        final CallbackContext context = CallbackContext.getCallbackContextOnThread();
-        if (context == null) {
-            return;
-        }
-        final SqlStringFilter filter = context.getSqlStringFilter();
-        if (filter == null || !(filter instanceof ExecutedSqlCounter)) {
-            return;
-        }
-        final ExecutedSqlCounter counter = ((ExecutedSqlCounter) filter);
-        final int limitCountOfSql = getLimitCountOfSql(runtime);
-        if (limitCountOfSql >= 0 && counter.getTotalCountOfSql() > limitCountOfSql) {
-            handleTooManySqlExecution(runtime, counter);
-        }
-        final String exp = counter.toLineDisp();
-        requestManager.setAttribute(LastaWebKey.DBFLUTE_SQL_COUNT_KEY, exp); // logged by logging filter
-    }
-
-    /**
-     * Handle too many SQL executions.
-     * @param runtime The runtime meta of action execute. (NotNull)
-     * @param sqlCounter The counter object for SQL executions. (NotNull)
-     */
-    protected void handleTooManySqlExecution(ActionRuntime runtime, ExecutedSqlCounter sqlCounter) {
-        final String actionDisp = buildActionDisp(runtime);
-        logger.warn("*Too many SQL executions: " + sqlCounter.getTotalCountOfSql() + " in " + actionDisp);
-    }
-
-    protected String buildActionDisp(ActionRuntime runtime) {
-        return runtime.getActionType().getSimpleName() + "@" + runtime.getExecuteMethod().getName() + "()";
-    }
-
-    /**
-     * Get the limit count of SQL execution. <br>
-     * You can override if you need.
-     * @param runtime The runtime meta of action execute. (NotNull)
-     * @return The max count allowed for SQL executions. (MinusAllowed: if minus, no check)
-     */
-    protected int getLimitCountOfSql(ActionRuntime runtime) {
-        return 30; // as default
     }
 
     protected SqlResultHandler createSqlResultHandler() {

@@ -15,8 +15,11 @@
  */
 package org.lastaflute.web.ruts.inoutlogging;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+
+import javax.servlet.ServletException;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTraceViewUtil;
@@ -24,6 +27,8 @@ import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.magic.async.ConcurrentAsyncCall;
 import org.lastaflute.core.mail.RequestedMailCount;
+import org.lastaflute.core.remoteapi.RequestedRemoteApiCount;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RequestedSqlCount;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.process.ActionRuntime;
@@ -42,7 +47,7 @@ public class InOutLogger {
     //                                                                          ==========
     public static final String LOGGER_NAME = "lastaflute.inout";
     protected static final Logger logger = LoggerFactory.getLogger(LOGGER_NAME);
-    protected static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    protected static final DateTimeFormatter beginTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     // ===================================================================================
     //                                                                             Logging
@@ -58,7 +63,7 @@ public class InOutLogger {
     // ===================================================================================
     //                                                                               Show
     //                                                                              ======
-    public void showInOutLog(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
+    public void show(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
         if (!isLoggerEnabled()) { // e.g. option is true but no logger settings
             return;
         }
@@ -79,53 +84,68 @@ public class InOutLogger {
         }
     }
 
+    // ===================================================================================
+    //                                                                         Build Whole
+    //                                                                         ===========
     protected String buildWhole(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
         final InOutLogOption option = keeper.getOption();
         final StringBuilder sb = new StringBuilder();
-        final String requestPath = requestManager.getRequestPath();
-        final String httpMethod = requestManager.getHttpMethod().orElse("unknown");
-        sb.append(httpMethod).append(" ").append(requestPath);
-        // not use HTTP status because of not fiexed yet here when e.g. exception
-        // (and in-out logging is not access log and you can derive it by exception type)
-        //requestManager.getResponseManager().getResponse().getStatus();
-        final String actionName = runtime.getActionType().getSimpleName();
-        final String methodName = runtime.getActionExecute().getExecuteMethod().getName();
-        sb.append(" ").append(actionName).append("@").append(methodName).append("()");
-        final String beginExp = keeper.getBeginDateTime().map(begin -> {
-            return dateTimeFormatter.format(begin);
-        }).orElse("no begun"); // basically no way, just in case
-        sb.append(" (").append(beginExp).append(")");
-        keeper.getBeginDateTime().ifPresent(begin -> {
-            final long before = DfTypeUtil.toDate(begin).getTime();
-            final long after = DfTypeUtil.toDate(requestManager.getTimeManager().currentDateTime()).getTime();
-            sb.append(" [").append(DfTraceViewUtil.convertToPerformanceView(after - before)).append("]");
-        });
-        requestManager.getHeaderUserAgent().ifPresent(userAgent -> {
-            sb.append(" {").append(Srl.cut(userAgent, 50, "...")).append("}");
-        });
-        final RuntimeException failureCause = runtime.getFailureCause();
-        if (failureCause != null) {
-            sb.append(" *").append(failureCause.getClass().getSimpleName());
-            sb.append(" #").append(Integer.toHexString(failureCause.hashCode()));
-        }
+        setupBasic(sb, requestManager, runtime, keeper);
+        setupBegin(sb, keeper);
+        setupPerformance(sb, requestManager, keeper);
+        setupProcess(sb, keeper);
+        setupCaller(sb, requestManager, keeper);
+        setupCause(sb, runtime, keeper);
+
+        // in-out data here
         boolean alreadyLineSep = false;
+
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Request: requestParameter, requestBody
+        // _/_/_/_/_/_/_/_/_/_/
         final String paramsExp = buildRequestParameterExp(keeper);
         if (paramsExp != null) {
             final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
-            alreadyLineSep = buildInOut(sb, "requestParameter", realExp, alreadyLineSep);
-        }
-        if (keeper.getRequestBody().isPresent()) {
-            final String body = keeper.getRequestBody().get();
-            final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-            alreadyLineSep = buildInOut(sb, "requestBody", realExp, alreadyLineSep);
-        }
-        if (keeper.getResponseBody().isPresent()) {
-            if (!keeper.getOption().isSuppressResponseBody()) {
-                final String body = keeper.getResponseBody().get();
-                final String realExp = option.getResponseBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-                alreadyLineSep = buildInOut(sb, "responseBody", realExp, alreadyLineSep);
+            String noSepDelim = " "; // as default (if same line show)
+            if (willBeLineSeparatedLater(keeper) && !realExp.contains("\n") && !alreadyLineSep) {
+                sb.append("\n"); // line-separate request beginning point for view
+                noSepDelim = "";
+            }
+            alreadyLineSep = buildInOut(sb, "requestParameter", realExp, alreadyLineSep, noSepDelim);
+            if (noSepDelim.isEmpty()) { // means already line-separate
+                alreadyLineSep = true;
             }
         }
+        if (keeper.getRequestBodyContent().isPresent()) {
+            final String body = keeper.getRequestBodyContent().get();
+            final String title = "requestBody(" + keeper.getRequestBodyType().orElse("unknown") + ")";
+            final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
+            String noSepDelim = " "; // as default (if same line show)
+            if (willBeLineSeparatedLater(keeper) && !realExp.contains("\n") && !alreadyLineSep) {
+                sb.append("\n"); // line-separate request beginning point for view
+                noSepDelim = "";
+            }
+            alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep, noSepDelim);
+            if (noSepDelim.isEmpty()) { // means already line-separate
+                alreadyLineSep = true;
+            }
+        }
+
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Response: responseBody
+        // _/_/_/_/_/_/_/_/_/_/
+        if (!keeper.getOption().isSuppressResponseBody()) {
+            if (keeper.getResponseBodyContent().isPresent()) {
+                final String body = keeper.getResponseBodyContent().get();
+                final String title = "responseBody(" + keeper.getResponseBodyType().orElse("unknown") + ")";
+                final String realExp = option.getResponseBodyFilter().map(filter -> filter.apply(body)).orElse(body);
+                alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep);
+            }
+        }
+
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // Various: sqlCount, mailCount, remoteApiCount
+        // _/_/_/_/_/_/_/_/_/_/
         final OptionalThing<RequestedSqlCount> optSql =
                 requestManager.getAttribute(LastaWebKey.DBFLUTE_SQL_COUNT_KEY, RequestedSqlCount.class);
         if (optSql.isPresent()) {
@@ -142,38 +162,97 @@ public class InOutLogger {
                 alreadyLineSep = buildInOut(sb, "mailCount", count.toString(), alreadyLineSep);
             }
         }
+        final OptionalThing<RequestedRemoteApiCount> optRemoteApi =
+                requestManager.getAttribute(LastaWebKey.REMOTEAPI_COUNT_KEY, RequestedRemoteApiCount.class);
+        if (optRemoteApi.isPresent()) {
+            final RequestedRemoteApiCount count = optRemoteApi.get();
+            if (!count.getFacadeCountMap().isEmpty()) {
+                alreadyLineSep = buildInOut(sb, "remoteApiCount", count.toString(), alreadyLineSep);
+            }
+        }
+
         return sb.toString();
     }
 
-    protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep) {
-        boolean nowLineSep = alreadyLineSep;
-        if (value != null && value.contains("\n")) {
-            sb.append("\n").append(title).append(":").append("\n");
-            nowLineSep = true;
-        } else {
-            sb.append(alreadyLineSep ? "\n" : " ").append(title).append(":");
-        }
-        sb.append(value == null || !value.isEmpty() ? value : "(empty)");
-        return nowLineSep;
+    protected void setupBasic(StringBuilder sb, RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
+        final String requestPath = requestManager.getRequestPath();
+        final String httpMethod = requestManager.getHttpMethod().orElse("unknown");
+        sb.append(httpMethod).append(" ").append(requestPath);
+        // not use HTTP status because of not fiexed yet here when e.g. exception
+        // (and in-out logging is not access log and you can derive it by exception type)
+        //requestManager.getResponseManager().getResponse().getStatus();
+        final String actionName = runtime.getActionType().getSimpleName();
+        final String methodName = runtime.getActionExecute().getExecuteMethod().getName();
+        sb.append(" ").append(actionName).append("@").append(methodName).append("()");
     }
 
-    protected void asyncShow(RequestManager requestManager, String whole) {
-        requestManager.getAsyncManager().async(new ConcurrentAsyncCall() {
-            @Override
-            public ConcurrentAsyncImportance importance() {
-                return ConcurrentAsyncImportance.TERTIARY; // as low priority
-            }
+    protected void setupBegin(StringBuilder sb, InOutLogKeeper keeper) {
+        final String beginExp = keeper.getBeginDateTime().map(begin -> {
+            return beginTimeFormatter.format(begin);
+        }).orElse("no begun"); // basically no way, just in case
+        sb.append(" (").append(beginExp).append(")");
+    }
 
-            @Override
-            public void callback() {
-                log(whole);
-            }
+    protected void setupPerformance(StringBuilder sb, RequestManager requestManager, InOutLogKeeper keeper) {
+        final String performanceCost = keeper.getBeginDateTime().map(begin -> {
+            final long before = DfTypeUtil.toDate(begin).getTime();
+            final long after = DfTypeUtil.toDate(flashDateTime(requestManager)).getTime();
+            return DfTraceViewUtil.convertToPerformanceView(after - before);
+        }).orElse("no ended");
+        sb.append(" [").append(performanceCost).append("]");
+    }
+
+    protected void setupProcess(StringBuilder sb, InOutLogKeeper keeper) {
+        keeper.getProcessHash().ifPresent(hash -> { // basically present
+            sb.append(" #").append(hash);
+        }); // no else because of sub item
+    }
+
+    protected void setupCaller(StringBuilder sb, RequestManager requestManager, InOutLogKeeper keeper) {
+        requestManager.getHeaderUserAgent().ifPresent(userAgent -> {
+            sb.append(" caller:{").append(Srl.cut(userAgent, 50, "...")).append("}"); // may be too big so cut
         });
     }
 
+    protected void setupCause(StringBuilder sb, ActionRuntime runtime, InOutLogKeeper keeper) {
+        final RuntimeException failureCause = runtime.getFailureCause();
+        if (failureCause != null) {
+            doSetupCause(sb, failureCause);
+        } else { // application does not have exception but framework may have...
+            keeper.getFrameworkCause().ifPresent(frameworkCause -> {
+                if (frameworkCause instanceof ServletException) {
+                    final Throwable rootCause = ((ServletException) frameworkCause).getRootCause();
+                    if (rootCause != null) { // the servlet exception is simple wrapper
+                        doSetupCause(sb, rootCause);
+                    } else { // the servlet exception is main exception
+                        doSetupCause(sb, frameworkCause);
+                    }
+                } else { // basically framework's runtime exception or IO exception
+                    doSetupCause(sb, frameworkCause);
+                }
+            });
+        }
+    }
+
+    protected void doSetupCause(StringBuilder sb, Throwable cause) {
+        sb.append(" *").append(cause.getClass().getSimpleName());
+        sb.append(" #").append(Integer.toHexString(cause.hashCode()));
+    }
+
+    protected boolean willBeLineSeparatedLater(InOutLogKeeper keeper) {
+        return keeper.getResponseBodyContent().filter(body -> { // response body may have line separator
+            return !keeper.getOption().isSuppressResponseBody() && body.contains("\n");
+        }).isPresent();
+    }
+
     // ===================================================================================
-    //                                                                   Request Parameter
-    //                                                                   =================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    protected LocalDateTime flashDateTime(RequestManager requestManager) { // flash not to depends on transaction
+        final TimeManager timeManager = requestManager.getTimeManager();
+        return DfTypeUtil.toLocalDateTime(timeManager.flashDate(), timeManager.getBusinessTimeZone());
+    }
+
     protected String buildRequestParameterExp(InOutLogKeeper keeper) {
         final Map<String, Object> parameterMap = keeper.getRequestParameterMap();
         if (parameterMap.isEmpty()) {
@@ -209,10 +288,36 @@ public class InOutLogger {
         return sb.toString();
     }
 
+    protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep) {
+        return buildInOut(sb, title, value, alreadyLineSep, " ");
+    }
+
+    protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep, String noSepDelim) {
+        boolean nowLineSep = alreadyLineSep;
+        if (value != null && value.contains("\n")) {
+            sb.append("\n").append(title).append(":").append("\n");
+            nowLineSep = true;
+        } else {
+            sb.append(alreadyLineSep ? "\n" : noSepDelim).append(title).append(":");
+        }
+        sb.append(value == null || !value.isEmpty() ? value : "(empty)");
+        return nowLineSep;
+    }
+
     // ===================================================================================
-    //                                                                        Assist Logic
+    //                                                                        Asynchronous
     //                                                                        ============
-    protected String getDelimiter(String exp) {
-        return exp.contains("\n") ? "\n" : " ";
+    protected void asyncShow(RequestManager requestManager, String whole) {
+        requestManager.getAsyncManager().async(new ConcurrentAsyncCall() {
+            @Override
+            public ConcurrentAsyncImportance importance() {
+                return ConcurrentAsyncImportance.TERTIARY; // as low priority
+            }
+
+            @Override
+            public void callback() {
+                log(whole);
+            }
+        });
     }
 }

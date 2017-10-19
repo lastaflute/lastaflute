@@ -21,6 +21,8 @@ import org.dbflute.hook.SqlStringFilter;
 import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.mail.PostedMailCounter;
 import org.lastaflute.core.mail.RequestedMailCount;
+import org.lastaflute.core.remoteapi.CalledRemoteApiCounter;
+import org.lastaflute.core.remoteapi.RequestedRemoteApiCount;
 import org.lastaflute.db.dbflute.accesscontext.PreparedAccessContext;
 import org.lastaflute.db.dbflute.callbackcontext.traceablesql.RequestedSqlCount;
 import org.lastaflute.web.LastaWebKey;
@@ -65,6 +67,7 @@ public class GodHandEpilogue {
         }
         handleSqlCount(runtime);
         handleMailCount(runtime);
+        handleRemoteApiCount(runtime);
         clearCallbackContext();
         clearPreparedAccessContext();
     }
@@ -158,6 +161,30 @@ public class GodHandEpilogue {
 
     protected RequestedMailCount createRequestedMailCount(PostedMailCounter counter) {
         return new RequestedMailCount(counter); // as snapshot
+    }
+
+    // ===================================================================================
+    //                                                                           RemoteApi
+    //                                                                           =========
+    /**
+     * Handle count of remoteApi calling in the request.
+     * @param runtime The runtime meta of action execute. (NotNull)
+     */
+    protected void handleRemoteApiCount(ActionRuntime runtime) {
+        if (ThreadCacheContext.exists()) {
+            final CalledRemoteApiCounter counter = ThreadCacheContext.findRemoteApiCounter();
+            if (counter != null) {
+                saveRequestedRemoteApiCount(counter);
+            }
+        }
+    }
+
+    protected void saveRequestedRemoteApiCount(CalledRemoteApiCounter counter) {
+        requestManager.setAttribute(LastaWebKey.REMOTEAPI_COUNT_KEY, createRequestRemoteApiCount(counter));
+    }
+
+    protected RequestedRemoteApiCount createRequestRemoteApiCount(CalledRemoteApiCounter counter) {
+        return new RequestedRemoteApiCount(counter); // as snapshot
     }
 
     // ===================================================================================

@@ -16,13 +16,16 @@
 package org.lastaflute.web.ruts;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 import javax.servlet.ServletException;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.NoneTransactionStage;
 import org.lastaflute.db.jta.stage.TransactionStage;
@@ -110,11 +113,14 @@ public class ActionRequestProcessor {
                 ThreadCacheContext.initialize();
             }
             final ActionRuntime runtime = createActionRuntime(execute, pathParam);
-            beginInOutLoggingIfNeeds();
+            beforeFire();
             try {
                 fire(runtime); // #to_action
+            } catch (RuntimeException | IOException | ServletException e) {
+                catchFire(e);
+                throw e;
             } finally {
-                showInOutLogIfNeeds(runtime);
+                finallyFire(runtime);
             }
         } finally {
             if (!exists) {
@@ -125,6 +131,38 @@ public class ActionRequestProcessor {
 
     protected ActionRuntime createActionRuntime(ActionExecute execute, RequestPathParam pathParam) {
         return new ActionRuntime(getRequestManager().getRequestPath(), execute, pathParam);
+    }
+
+    // -----------------------------------------------------
+    //                                        Before/Finally
+    //                                        --------------
+    protected void beforeFire() {
+        final LocalDateTime beginTime = askBeginTime();
+        final String processHash = askProcessHash(beginTime);
+        ThreadCacheContext.registerBeginTime(beginTime);
+        ThreadCacheContext.registerProcessHash(processHash);
+        beginInOutLoggingIfNeeds(beginTime, processHash);
+    }
+
+    protected LocalDateTime askBeginTime() { // not in transaction but flash just in case
+        final TimeManager timeManager = getRequestManager().getTimeManager();
+        return DfTypeUtil.toLocalDateTime(timeManager.flashDate(), timeManager.getBusinessTimeZone());
+    }
+
+    protected String askProcessHash(LocalDateTime beginTime) {
+        final String bestEffortUnique = beginTime.toString() + Thread.currentThread().getName();
+        return Integer.toHexString(bestEffortUnique.hashCode());
+    }
+
+    protected void catchFire(Throwable cause) {
+        // action exceptions are already translated to ServletException here
+        // then basically runtime has it as failure cause so no need to keep in this case
+        // but it can be framework cause even if application throws and catches as business handling
+        keepInOutLogFrameworkCauseIfNeeds(cause);
+    }
+
+    protected void finallyFire(ActionRuntime runtime) {
+        showInOutLogIfNeeds(runtime);
     }
 
     // ===================================================================================
@@ -180,7 +218,7 @@ public class ActionRequestProcessor {
         getRequestManager().setAttribute(execute.getFormMeta().get().getFormKey(), value);
     }
 
-    protected void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> form) throws IOException, ServletException {
+    protected void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> form) throws ServletException {
         actionFormMapper.populateParameter(runtime, form);
     }
 
@@ -206,7 +244,7 @@ public class ActionRequestProcessor {
     }
 
     protected NextJourney performAction(VirtualAction action, OptionalThing<VirtualForm> form, ActionRuntime runtime)
-            throws IOException, ServletException {
+            throws ServletException {
         try {
             return action.execute(form); // #to_action
         } catch (RuntimeException e) {
@@ -217,7 +255,7 @@ public class ActionRequestProcessor {
     }
 
     protected NextJourney handleActionFailureException(VirtualAction action, OptionalThing<VirtualForm> optForm, ActionRuntime runtime,
-            RuntimeException cause) throws IOException, ServletException {
+            RuntimeException cause) throws ServletException {
         throw new ServletException(cause);
     }
 
@@ -266,10 +304,16 @@ public class ActionRequestProcessor {
     // ===================================================================================
     //                                                                       InOut Logging
     //                                                                       =============
-    protected void beginInOutLoggingIfNeeds() {
-        final RequestManager requestManager = getRequestManager();
-        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
-            keeper.keepBeginDateTime(requestManager.getTimeManager().currentDateTime());
+    protected void beginInOutLoggingIfNeeds(LocalDateTime beginTime, String processHash) {
+        InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
+            keeper.keepBeginDateTime(beginTime);
+            keeper.keepProcessHash(processHash);
+        });
+    }
+
+    protected void keepInOutLogFrameworkCauseIfNeeds(Throwable frameworkCause) {
+        InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
+            keeper.keepFrameworkCause(frameworkCause);
         });
     }
 
@@ -277,7 +321,7 @@ public class ActionRequestProcessor {
         final RequestManager requestManager = getRequestManager();
         InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
             if (inOutLogger != null) { // double check just in case
-                inOutLogger.showInOutLog(requestManager, runtime, keeper);
+                inOutLogger.show(requestManager, runtime, keeper);
             }
         });
     }
