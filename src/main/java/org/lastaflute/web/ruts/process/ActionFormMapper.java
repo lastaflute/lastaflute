@@ -956,6 +956,7 @@ public class ActionFormMapper {
             //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
             //    filtered = DfTypeUtil.toDate(exp);
         } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
+            // #hope can specify date, date-time pattern by FormMappingOption by jflute (2017/10/30)
             converted = DfTypeUtil.toLocalDate(exp); // as flexible parsing
         } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
             converted = DfTypeUtil.toLocalDateTime(exp); // as flexible parsing

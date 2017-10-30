@@ -22,6 +22,16 @@ import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+// _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+// #hope support TYPE_USE? or include element type failure? by jflute (2017/10/30)
+//
+// e.g. TYPE_USE
+//  public List<@ValidateTypeFailure Integer> seaIdList;
+//
+// e.g. include
+//  @ValidateTypeFailure
+//  public List<Integer> seaIdList;
+// _/_/_/_/_/_/_/_/_/_/
 /**
  * @author jflute
  * @since 0.6.5 (2015/11/04 Wednesday)
