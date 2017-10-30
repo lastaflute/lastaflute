@@ -104,6 +104,7 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         setupFieldPolicy(builder);
         setupYourCollectionSettings(builder);
         setupYourScalarSettings(builder);
+        setupYourUltimateSettings(builder);
     }
 
     protected void registerStringAdapter(GsonBuilder builder) {
@@ -190,6 +191,12 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         boolean nullToEmptyWriting = option.isNullToEmptyWriting();
 
         return new LaYourScalarTypeAdapterFactory<Object>(yourType, reader, writer, readingFilter, emptyToNullReading, nullToEmptyWriting);
+    }
+
+    protected void setupYourUltimateSettings(GsonBuilder builder) {
+        option.getYourUltimateCustomizer().ifPresent(customizer -> {
+            customizer.accept(builder);
+        });
     }
 
     // -----------------------------------------------------

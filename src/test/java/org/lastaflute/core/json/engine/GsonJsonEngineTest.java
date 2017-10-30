@@ -31,6 +31,8 @@ import org.lastaflute.core.json.bind.JsonYourScalarResource;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
 import org.lastaflute.unit.mock.db.MockOldCDef;
 
+import com.google.gson.GsonBuilder;
+
 /**
  * @author jflute
  */
@@ -587,6 +589,30 @@ public class GsonJsonEngineTest extends PlainTestCase {
         // ## Assert ##
         log(json);
         assertContains(json, "\"stringList\":[\"over\",\"mystic\"]");
+    }
+
+    // ===================================================================================
+    //                                                                 Ultimate Customizer
+    //                                                                 ===================
+    public void test_ultimate_customizer() throws Exception {
+        // ## Arrange ##
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {
+            op.yourUltimateCustomizer(builder -> {
+                assertTrue(builder instanceof GsonBuilder);
+                log(builder);
+                markHere("called");
+            });
+        });
+        assertMarked("called");
+
+        String sourceJson = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
+
+        // ## Act ##
+        MockUser user = engine.fromJson(sourceJson, MockUser.class);
+        String json = engine.toJson(user);
+
+        // ## Assert ##
+        log(json);
     }
 
     // ===================================================================================
