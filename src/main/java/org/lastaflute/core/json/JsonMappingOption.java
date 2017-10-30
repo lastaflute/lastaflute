@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
+import org.lastaflute.core.json.bind.JsonYourScalarResource;
 import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 
 /**
@@ -52,6 +53,7 @@ public class JsonMappingOption {
     protected boolean listNullToEmptyWriting; // same
     protected OptionalThing<JsonFieldNaming> fieldNaming = OptionalThing.empty(); // not null;
     protected List<JsonYourCollectionResource> yourCollections = Collections.emptyList();
+    protected List<JsonYourScalarResource> yourScalars = Collections.emptyList();
 
     // ===================================================================================
     //                                                                    Supplement Class
@@ -85,6 +87,7 @@ public class JsonMappingOption {
         listNullToEmptyWriting = another.isListNullToEmptyWriting();
         fieldNaming = another.getFieldNaming();
         yourCollections = another.getYourCollections();
+        yourScalars = another.getYourScalars();
         return this;
     }
 
@@ -270,6 +273,23 @@ public class JsonMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                          Your Scalars
+    //                                          ------------
+    /**
+     * Set up the your scalars for JSON property. <br>
+     * You can use e.g. YearMonth (Java8) as JSON property type.
+     * @param yourScalars The list of your scalar resource. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonMappingOption yourScalars(List<JsonYourScalarResource> yourScalars) {
+        if (yourScalars == null) {
+            throw new IllegalArgumentException("The argument 'yourScalars' should not be null.");
+        }
+        this.yourScalars = yourScalars;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -299,6 +319,12 @@ public class JsonMappingOption {
         fieldNaming.ifPresent(ing -> sb.append(delimiter).append(ing));
         if (!yourCollections.isEmpty()) {
             final List<String> expList = yourCollections.stream().map(ons -> {
+                return ons.getYourType().getSimpleName();
+            }).collect(Collectors.toList());
+            sb.append(delimiter).append(expList);
+        }
+        if (!yourScalars.isEmpty()) {
+            final List<String> expList = yourScalars.stream().map(ons -> {
                 return ons.getYourType().getSimpleName();
             }).collect(Collectors.toList());
             sb.append(delimiter).append(expList);
@@ -375,5 +401,9 @@ public class JsonMappingOption {
 
     public List<JsonYourCollectionResource> getYourCollections() {
         return Collections.unmodifiableList(yourCollections);
+    }
+
+    public List<JsonYourScalarResource> getYourScalars() {
+        return Collections.unmodifiableList(yourScalars);
     }
 }
