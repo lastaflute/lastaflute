@@ -40,6 +40,8 @@ import java.util.stream.Stream;
 
 import javax.validation.Configuration;
 import javax.validation.ConstraintViolation;
+import javax.validation.ElementKind;
+import javax.validation.Path;
 import javax.validation.Valid;
 import javax.validation.Validation;
 import javax.validation.Validator;
@@ -571,6 +573,39 @@ public class ActionValidator<MESSAGES extends UserMessages> {
 
     protected String extractPropertyPath(ConstraintViolation<Object> vio) {
         return vio.getPropertyPath().toString();
+    }
+
+    // #hope use this instead of vio.getPropertyPath().toString() by jflute
+    protected String derivePropertyPathByNode(ConstraintViolation<Object> vio) {
+        final StringBuilder sb = new StringBuilder();
+        final Path path = vio.getPropertyPath();
+        int elementCount = 0;
+        for (Path.Node node : path) {
+            if (node.isInIterable()) { // building e.g. "[0]" of seaList[0]
+                Object nodeIndex = node.getIndex();
+                if (nodeIndex == null) {
+                    nodeIndex = node.getKey(); // null if e.g. iterable
+                }
+                sb.append("[").append(nodeIndex != null ? nodeIndex : "").append("]"); // e.g. [0] or []
+            }
+            final String nodeName = node.getName();
+            if (nodeName != null && node.getKind() == ElementKind.PROPERTY) {
+                // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+                // if e.g.
+                //  private List<@Required String> seaList;
+                // then path is "seaList[0].<list element>" since Hibernate Validator-6.x
+                // <list element> part is unneeded for property path of message so skip here
+                // _/_/_/_/_/_/_/_/_/_/
+                if (!nodeName.startsWith("<")) { // except e.g. <list element>
+                    if (elementCount > 0) {
+                        sb.append(".");
+                    }
+                    sb.append(nodeName);
+                    ++elementCount;
+                }
+            }
+        }
+        return sb.toString(); // e.g. sea, sea.hangar, seaList[0], seaList[0].hangar
     }
 
     protected String extractMessage(ConstraintViolation<Object> vio) {
