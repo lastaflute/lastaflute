@@ -579,10 +579,11 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     protected String extractPropertyPath(ConstraintViolation<Object> vio) {
-        return vio.getPropertyPath().toString();
+        // old logic, toString() provides e.g. "seaList[0].<list element>" so derive by myself
+        //return vio.getPropertyPath().toString();
+        return derivePropertyPathByNode(vio);
     }
 
-    // #hope use this instead of vio.getPropertyPath().toString() by jflute
     protected String derivePropertyPathByNode(ConstraintViolation<Object> vio) {
         final StringBuilder sb = new StringBuilder();
         final Path path = vio.getPropertyPath();
