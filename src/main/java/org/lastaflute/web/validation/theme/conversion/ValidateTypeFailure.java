@@ -32,6 +32,7 @@ import java.lang.annotation.Target;
 //  @ValidateTypeFailure
 //  public List<Integer> seaIdList;
 // _/_/_/_/_/_/_/_/_/_/
+// #hope support in JSON Body (now only for Form) by jflute (2017/10/31)
 /**
  * @author jflute
  * @since 0.6.5 (2015/11/04 Wednesday)
