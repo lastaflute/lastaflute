@@ -226,12 +226,6 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         return doValidate(form, moreValidationLambda, validationErrorLambda);
     }
 
-    protected void keepValidatorErrorHook(VaErrorHook validationErrorLambda) { // for e.g. remote-api
-        if (ThreadCacheContext.exists()) {
-            ThreadCacheContext.registerValidatorErrorHook(validationErrorLambda);
-        }
-    }
-
     public void throwValidationError(UserMessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
         assertArgumentNotNull("noArgInLambda", noArgInLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
@@ -244,6 +238,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     public ValidationSuccess validateApi(Object body, VaMore<MESSAGES> moreValidationLambda) {
         assertArgumentNotNull("body", body);
         assertArgumentNotNull("moreValidationLambda", moreValidationLambda);
+        keepValidatorErrorHook(apiFailureHook);
         return doValidate(body, moreValidationLambda, apiFailureHook);
     }
 
@@ -263,8 +258,8 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     // -----------------------------------------------------
-    //                                               Control
-    //                                               -------
+    //                                          Flow Control
+    //                                          ------------
     protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
         verifyFormType(form);
         return actuallyValidate(wrapAsValidIfNeeds(form), moreValidationLambda, validationErrorLambda);
@@ -308,17 +303,29 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         }
     }
 
+    protected ValidationSuccess createValidationSuccess(MESSAGES messages) {
+        return new ValidationSuccess(messages);
+    }
+
+    // -----------------------------------------------------
+    //                                       Validation Call
+    //                                       ---------------
     // unknown if thread cache does not exist, so 'not' method is prepared like this
     public static boolean certainlyValidatorNotCalled() { // called by e.g. red-cardable assist
         return ThreadCacheContext.exists() && !ThreadCacheContext.isValidatorCalled();
     }
 
-    protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
-        throw new ValidationErrorException(runtimeGroups, messages, validationErrorLambda);
+    // -----------------------------------------------------
+    //                                      Validation Error
+    //                                      ----------------
+    protected void keepValidatorErrorHook(VaErrorHook validationErrorLambda) { // for e.g. remote-api
+        if (ThreadCacheContext.exists()) {
+            ThreadCacheContext.registerValidatorErrorHook(validationErrorLambda);
+        }
     }
 
-    protected ValidationSuccess createValidationSuccess(MESSAGES messages) {
-        return new ValidationSuccess(messages);
+    protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
+        throw new ValidationErrorException(runtimeGroups, messages, validationErrorLambda);
     }
 
     // ===================================================================================
