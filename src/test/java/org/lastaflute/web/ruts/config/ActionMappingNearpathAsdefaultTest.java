@@ -17,8 +17,7 @@ public class ActionMappingNearpathAsdefaultTest extends UnitLastaFluteTestCase {
     //                                                                          Definition
     //                                                                          ==========
     private static final String index = "index";
-    // not use yet
-    //private static final String named = "named";
+    private static final String named = "named";
     private static final String nonno = "$notFound";
 
     // ===================================================================================
@@ -45,10 +44,10 @@ public class ActionMappingNearpathAsdefaultTest extends UnitLastaFluteTestCase {
 
     public void test_paramPath_asdefault11_optional_number_to_non() {
         ActionMapping mapping = prepareMapping(NearpathByword11Optnum2nonAction.class);
-        assertExecute(mapping, index, "sea"); // #hope nonno
+        assertExecute(mapping, nonno, "sea"); // index before
         assertExecute(mapping, nonno, "sea/named");
         assertExecute(mapping, nonno, "sea/land");
-        assertExecute(mapping, index, "named"); // #hope named
+        assertExecute(mapping, named, "named"); // index before
         assertExecute(mapping, nonno, "named/sea");
         assertExecute(mapping, index, "1");
         assertExecute(mapping, nonno, "1/named");
