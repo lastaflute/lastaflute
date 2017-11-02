@@ -140,9 +140,8 @@ public class ActionExecute implements Serializable {
     }
 
     protected ActionRoutingByPathParamDeterminer createRoutingByPathParamDeterminer() {
-        return new ActionRoutingByPathParamDeterminer(() -> {
-            return toSimpleMethodExp(); // for debug
-        }, mappingMethodName, restfulHttpMethod, indexMethod, pathParamArgs, preparedUrlPattern);
+        return new ActionRoutingByPathParamDeterminer(mappingMethodName, restfulHttpMethod, indexMethod, pathParamArgs, preparedUrlPattern,
+                () -> getRequestManager(), () -> toSimpleMethodExp());
     }
 
     protected ActionRoutingByRequestParamDeterminer createRoutingByRequestParamDeterminer() {
@@ -270,7 +269,7 @@ public class ActionExecute implements Serializable {
     //                                      by URL Parameter
     //                                      ----------------
     public boolean determineTargetByPathParameter(String paramPath) {
-        return routingByPathParamDeterminer.determine(getRequestManager(), paramPath);
+        return routingByPathParamDeterminer.determine(paramPath);
     }
 
     // -----------------------------------------------------

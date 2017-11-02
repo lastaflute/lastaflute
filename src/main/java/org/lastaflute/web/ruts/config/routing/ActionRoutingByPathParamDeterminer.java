@@ -37,32 +37,37 @@ public class ActionRoutingByPathParamDeterminer {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Supplier<String> callerExpCall; // for debug, not null
     protected final String mappingMethodName; // not null
     protected final OptionalThing<String> restfulHttpMethod; // not null, empty allowed
     protected final boolean indexMethod;
     protected final OptionalThing<PathParamArgs> pathParamArgs; // not null, empty allowed
     protected final PreparedUrlPattern preparedUrlPattern; // not null
+    protected final Supplier<RequestManager> requestManagerProvider; // not null
+    protected final Supplier<String> callerExpProvider; // for debug, not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionRoutingByPathParamDeterminer(Supplier<String> callerExpCall, String mappingMethodName,
-            OptionalThing<String> restfulHttpMethod, boolean indexMethod, OptionalThing<PathParamArgs> pathParamArgs,
-            PreparedUrlPattern preparedUrlPattern) {
-        this.callerExpCall = callerExpCall;
+    public ActionRoutingByPathParamDeterminer(String mappingMethodName, OptionalThing<String> restfulHttpMethod, boolean indexMethod,
+            OptionalThing<PathParamArgs> pathParamArgs, PreparedUrlPattern preparedUrlPattern,
+            Supplier<RequestManager> requestManagerProvider, Supplier<String> callerExpProvider) {
         this.mappingMethodName = mappingMethodName;
         this.restfulHttpMethod = restfulHttpMethod;
         this.indexMethod = indexMethod;
         this.pathParamArgs = pathParamArgs;
         this.preparedUrlPattern = preparedUrlPattern;
+        this.requestManagerProvider = requestManagerProvider;
+        this.callerExpProvider = callerExpProvider;
     }
 
     // ===================================================================================
     //                                                                           Determine
     //                                                                           =========
-    public boolean determine(RequestManager requestManager, String paramPath) {
-        if (restfulHttpMethod.filter(httpMethod -> !matchesWithRequestedHttpMethod(requestManager, httpMethod)).isPresent()) {
+    public boolean determine(String paramPath) {
+        if (restfulHttpMethod.filter(httpMethod -> {
+            final RequestManager requestManager = requestManagerProvider.get();
+            return !matchesWithRequestedHttpMethod(requestManager, httpMethod);
+        }).isPresent()) {
             return false;
         }
         if (!isParameterEmpty(paramPath)) { // e.g. sea, sea/dockside
@@ -77,7 +82,7 @@ public class ActionRoutingByPathParamDeterminer {
         } else { // no way
             // should not be called if param is empty, old code is like this:
             //return "index".equals(urlPattern);
-            String msg = "The paramPath should not be null or empty: [" + paramPath + "], " + callerExpCall.get();
+            String msg = "The paramPath should not be null or empty: [" + paramPath + "], " + callerExpProvider.get();
             throw new IllegalStateException(msg);
         }
     }
