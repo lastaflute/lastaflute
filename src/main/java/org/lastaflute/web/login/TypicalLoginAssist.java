@@ -668,7 +668,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         final boolean invalidating = !isSuppressLogoutInvalidate();
         logger.debug("...Doing logout {}", invalidating ? "invalidating session" : "keeping session");
 
-        sessionManager.removeAttribute(getUserBeanKey()); // explicitly just in case though invalidated later
+        sessionManager.removeAttribute(getUserBeanKey()); // always just in case though may be invalidated later
         getCookieRememberMeKey().ifPresent(cookieKey -> {
             cookieManager.removeCookie(cookieKey);
         });
