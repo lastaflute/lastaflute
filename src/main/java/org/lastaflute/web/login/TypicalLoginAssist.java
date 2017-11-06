@@ -665,10 +665,22 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     //                                                                              ======
     @Override
     public void logout() {
-        sessionManager.removeAttribute(getUserBeanKey());
+        final boolean invalidating = !isSuppressLogoutInvalidate();
+        logger.debug("...Doing logout {}", invalidating ? "invalidating session" : "keeping session");
+
+        sessionManager.removeAttribute(getUserBeanKey()); // explicitly just in case though invalidated later
         getCookieRememberMeKey().ifPresent(cookieKey -> {
             cookieManager.removeCookie(cookieKey);
         });
+
+        // all session attributes are deleted here for more security
+        if (invalidating) { // basically true
+            sessionManager.invalidate(); // since 1.0.2
+        }
+    }
+
+    protected boolean isSuppressLogoutInvalidate() { // you can override
+        return false;
     }
 
     // ===================================================================================
