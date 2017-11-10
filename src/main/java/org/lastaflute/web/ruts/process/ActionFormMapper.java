@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
@@ -160,9 +161,9 @@ public class ActionFormMapper {
         }
         final FormMappingOption option = adjustFormMapping(); // not null
         final Object realForm = virtualForm.getRealForm(); // not null
-        final Map<String, Object> allParameters = getAllParameters(multipartHandler);
+        final Map<String, Object> parameterMap = prepareRequestParameterMap(multipartHandler, option);
         try {
-            for (Entry<String, Object> entry : allParameters.entrySet()) {
+            for (Entry<String, Object> entry : parameterMap.entrySet()) {
                 final String name = entry.getKey();
                 final Object value = entry.getValue();
                 try {
@@ -172,7 +173,7 @@ public class ActionFormMapper {
                 }
             }
         } finally {
-            keepParameterForInOutLoggingIfNeeds(allParameters);
+            keepParameterForInOutLoggingIfNeeds(parameterMap);
         }
     }
 
@@ -198,7 +199,7 @@ public class ActionFormMapper {
         return handler;
     }
 
-    protected Map<String, Object> getAllParameters(MultipartRequestHandler multipartHandler) {
+    protected Map<String, Object> prepareRequestParameterMap(MultipartRequestHandler multipartHandler, FormMappingOption option) {
         final HttpServletRequest request = requestManager.getRequest();
         final Map<String, Object> paramMap = new LinkedHashMap<String, Object>();
         final Enumeration<String> em = request.getParameterNames();
@@ -209,7 +210,13 @@ public class ActionFormMapper {
         if (multipartHandler != null) {
             paramMap.putAll(multipartHandler.getAllElements());
         }
-        return paramMap;
+        final OptionalThing<Function<Map<String, Object>, Map<String, Object>>> optFilter = option.getRequestParameterMapFilter();
+        if (optFilter.isPresent()) { // no map() here, to keep normal route simple
+            final Map<String, Object> filteredMap = optFilter.get().apply(Collections.unmodifiableMap(paramMap));
+            return filteredMap != null ? filteredMap : paramMap;
+        } else { // normally here
+            return paramMap;
+        }
     }
 
     protected void handleIllegalPropertyPopulateException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause)
@@ -246,8 +253,8 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg, cause);
     }
 
-    protected void keepParameterForInOutLoggingIfNeeds(Map<String, Object> allParameters) {
-        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepRequestParameter(allParameters));
+    protected void keepParameterForInOutLoggingIfNeeds(Map<String, Object> parameterMap) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepRequestParameter(parameterMap));
     }
 
     // ===================================================================================
