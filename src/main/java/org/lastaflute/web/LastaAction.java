@@ -341,10 +341,10 @@ public abstract class LastaAction {
     protected HtmlResponse doRedirect(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsRediect(toActionUrl(actionType, chain));
+        return newHtmlResponseAsRedirect(toActionUrl(actionType, chain));
     }
 
-    protected HtmlResponse newHtmlResponseAsRediect(String redirectPath) {
+    protected HtmlResponse newHtmlResponseAsRedirect(String redirectPath) {
         return HtmlResponse.fromRedirectPath(redirectPath);
     }
 
