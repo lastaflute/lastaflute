@@ -172,7 +172,7 @@ public class FormMappingOption {
     // -----------------------------------------------------
     //                                       Your Collection
     //                                       ---------------
-    public List<FormYourCollectionResource> getYourCollectionResource() { // not null
+    public List<FormYourCollectionResource> getYourCollections() { // not null
         return yourCollectionResourceList != null ? yourCollectionResourceList : Collections.emptyList();
     }
 
