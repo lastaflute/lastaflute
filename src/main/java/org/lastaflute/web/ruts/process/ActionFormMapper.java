@@ -564,21 +564,21 @@ public class ActionFormMapper {
         final Object mappedValue;
         if (propertyType.isArray()) { // fixedly String #for_now e.g. public String[] strArray; so use List<>
             mappedValue = prepareStringArray(value, name, propertyType, option); // plain mapping to array, e.g. JSON not supported
-        } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
-            mappedValue = prepareObjectList(virtualForm, bean, name, value, pathSb, option, pd);
-        } else { // not array or list, e.g. Your Collection, String, Object
-            // if support MutableList, should be before List process but...
-            // propertyType.isAssignableFrom(yourCollection.getYourType()): List.isAssignableFrom(MutableList)
-            // so it needs more thinking time for correct logic by jflute (2017/12/13)
+        } else { // e.g. List, ImmutableList, MutableList, String, Integer, ...
+            // process of your collections should be first because MutableList is java.util.List
             final Object yourCollection = prepareYourCollection(virtualForm, bean, name, value, pathSb, option, pd);
             if (yourCollection != null) { // e.g. ImmutableList (Eclipse Collections)
                 mappedValue = yourCollection;
-            } else { // simple object types
-                final Object scalar = prepareObjectScalar(value);
-                if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter for Object
-                    mappedValue = parseJsonParameterAsObject(virtualForm, bean, name, adjustAsJsonString(scalar), pd);
-                } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
-                    mappedValue = prepareNativeValue(virtualForm, bean, name, scalar, pd, pathSb, option);
+            } else { // mainly here
+                if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
+                    mappedValue = prepareObjectList(virtualForm, bean, name, value, pathSb, option, pd);
+                } else { // simple object types
+                    final Object scalar = prepareObjectScalar(value);
+                    if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter for Object
+                        mappedValue = parseJsonParameterAsObject(virtualForm, bean, name, adjustAsJsonString(scalar), pd);
+                    } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
+                        mappedValue = prepareNativeValue(virtualForm, bean, name, scalar, pd, pathSb, option);
+                    }
                 }
             }
         }
@@ -656,7 +656,7 @@ public class ActionFormMapper {
         }
         final Class<?> propertyType = pd.getPropertyType();
         for (FormYourCollectionResource yourCollection : yourCollections) {
-            if (!propertyType.isAssignableFrom(yourCollection.getYourType())) {
+            if (!propertyType.equals(yourCollection.getYourType())) { // just type in form mapping (to avoid complexity)
                 continue;
             }
             final List<?> objectList = prepareObjectList(virtualForm, bean, name, value, pathSb, option, pd);
@@ -1378,7 +1378,7 @@ public class ActionFormMapper {
         final Class<?> propertyType = pd.getPropertyType();
         final List<FormYourCollectionResource> yourCollections = option.getYourCollections();
         return yourCollections.stream() // checking defined type and instance type
-                .filter(res -> propertyType.equals(res.getYourType()))
+                .filter(res -> propertyType.equals(res.getYourType())) // just type in form mapping (to avoid complexity)
                 .filter(res -> res.getYourCollectionCreator().apply(Collections.emptyList()) instanceof List)
                 .findFirst(); // basically only-one here (if no duplicate type specified)
     }
