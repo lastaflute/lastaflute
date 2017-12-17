@@ -63,9 +63,16 @@ public abstract class ManagedHotdeploy {
             if (isAnotherThreadHotdeploy()) { // e.g. job started
                 inheritAnotherThreadClassLoader(); // to use same loader
             } else { // normally here
-                if (!isThreadContextHotdeploy()) {
-                    HotdeployUtil.start();
-                }
+                // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+                // remove this if-statement to avoid context class-loader being null by jflute (2017/12/17) 
+                // if stop() without start(), context class-loader becomes null
+                // if hot-deploy process makes new thread, the thread inherits
+                // hot-deploy class-loader as context class-loader
+                // so this if-statement causes stop() without start()
+                // (though hot-deploy class-loader may wrap hot-deploy class-loader, but no problem?)
+                // _/_/_/_/_/_/_/_/_/_/
+                //if (!isThreadContextHotdeploy()) {
+                HotdeployUtil.start();
             }
             ++hotdeployCount;
             return originalLoader;
