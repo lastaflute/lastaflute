@@ -35,7 +35,7 @@ public interface JsonManager {
     <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
 
     /**
-     * Convert from the JSON string to the parameterized bean.
+     * Convert from the JSON string to the parameterized bean with typo.
      * You need to specify parameterized type like this:
      * <pre>
      * List&lt;SeaBean&gt; <span style="color: #553000">seaList</span> = fromJsonParameteried(<span style="color: #553000">json</span>, new ParameterizedRef<span style="color: #994747">&lt;List&lt;SeaBean&gt;&gt;</span>(){

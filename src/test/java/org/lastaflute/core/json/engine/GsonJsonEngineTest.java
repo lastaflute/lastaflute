@@ -18,6 +18,8 @@ package org.lastaflute.core.json.engine;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,8 +27,11 @@ import org.dbflute.utflute.core.PlainTestCase;
 import org.dbflute.utflute.core.cannonball.CannonballCar;
 import org.dbflute.utflute.core.cannonball.CannonballOption;
 import org.dbflute.utflute.core.cannonball.CannonballRun;
+import org.lastaflute.core.json.bind.JsonYourScalarResource;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
 import org.lastaflute.unit.mock.db.MockOldCDef;
+
+import com.google.gson.GsonBuilder;
 
 /**
  * @author jflute
@@ -36,25 +41,27 @@ public class GsonJsonEngineTest extends PlainTestCase {
     // ===================================================================================
     //                                                                          Java8 Time
     //                                                                          ==========
-    public void test_java8time_toJson_fromJson() throws Exception {
+    public void test_java8time_toJson_fromJson_basic() throws Exception {
         // ## Arrange ##
         GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {});
         LocalDate date = toLocalDate("2015/05/18");
         LocalDateTime dateTime = toLocalDateTime("2015/05/25 12:34:56.789");
         LocalTime time = toLocalTime("23:15:47.731");
+        YearMonth yearMonth = YearMonth.from(toLocalDate("2017/04/01"));
         MockUser mockUser = new MockUser();
         mockUser.id = 2;
         mockUser.name = "land";
         mockUser.birthdate = date;
         mockUser.formalizedDatetime = dateTime;
         mockUser.morningCallTime = time;
+        mockUser.schoolBeginningMonth = yearMonth;
 
         // ## Act ##
         String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
-        assertContainsAll(json, "2015-05-18", "2015-05-25T12:34:56.789", "23:15:47.731");
+        assertContainsAll(json, "2015-05-18", "2015-05-25T12:34:56.789", "23:15:47.731", "{\"year\":2017,\"month\":4}");
 
         // ## Act ##
         MockUser fromJson = engine.fromJson(json, MockUser.class);
@@ -65,6 +72,52 @@ public class GsonJsonEngineTest extends PlainTestCase {
         assertEquals(toString(fromJson.birthdate, "yyyy-MM-dd"), "2015-05-18");
         assertEquals(toString(fromJson.formalizedDatetime, "yyyy-MM-dd HH:mm:ss.SSS"), "2015-05-25 12:34:56.789");
         assertEquals(toString(fromJson.morningCallTime, "HH:mm:ss.SSS"), "23:15:47.731");
+        assertEquals(toString(fromJson.schoolBeginningMonth, "yyyy-MM"), "2017-04");
+    }
+
+    public void test_java8time_toJson_fromJson_yourScalar() throws Exception {
+        // ## Arrange ##
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {
+            op.yourScalars(Arrays.asList(prepareYearMonthResource()));
+        });
+        LocalDate date = toLocalDate("2015/05/18");
+        LocalDateTime dateTime = toLocalDateTime("2015/05/25 12:34:56.789");
+        LocalTime time = toLocalTime("23:15:47.731");
+        YearMonth yearMonth = YearMonth.from(toLocalDate("2017/04/01"));
+        MockUser mockUser = new MockUser();
+        mockUser.id = 2;
+        mockUser.name = "land";
+        mockUser.birthdate = date;
+        mockUser.formalizedDatetime = dateTime;
+        mockUser.morningCallTime = time;
+        mockUser.schoolBeginningMonth = yearMonth;
+
+        // ## Act ##
+        String json = engine.toJson(mockUser);
+
+        // ## Assert ##
+        log(json);
+        assertContainsAll(json, "2015-05-18", "2015-05-25T12:34:56.789", "23:15:47.731", "\"2017-04\"");
+
+        // ## Act ##
+        MockUser fromJson = engine.fromJson(json, MockUser.class);
+
+        // ## Assert ##
+        log(fromJson);
+        assertEquals("land", fromJson.name);
+        assertEquals(toString(fromJson.birthdate, "yyyy-MM-dd"), "2015-05-18");
+        assertEquals(toString(fromJson.formalizedDatetime, "yyyy-MM-dd HH:mm:ss.SSS"), "2015-05-25 12:34:56.789");
+        assertEquals(toString(fromJson.morningCallTime, "HH:mm:ss.SSS"), "23:15:47.731");
+        assertEquals(fromJson.schoolBeginningMonth.toString(), "2017-04");
+    }
+
+    protected JsonYourScalarResource prepareYearMonthResource() {
+        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
+        return new JsonYourScalarResource(YearMonth.class, exp -> {
+            return YearMonth.from(formatter.parse(exp));
+        }, value -> {
+            return formatter.format(value);
+        });
     }
 
     // ===================================================================================
@@ -539,6 +592,30 @@ public class GsonJsonEngineTest extends PlainTestCase {
     }
 
     // ===================================================================================
+    //                                                                 Ultimate Customizer
+    //                                                                 ===================
+    public void test_ultimate_customizer() throws Exception {
+        // ## Arrange ##
+        GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {
+            op.yourUltimateCustomizer(builder -> {
+                assertTrue(builder instanceof GsonBuilder);
+                log(builder);
+                markHere("called");
+            });
+        });
+        assertMarked("called");
+
+        String sourceJson = "{id:\"1\",stringList:[\"over\",\"mystic\"]}";
+
+        // ## Act ##
+        MockUser user = engine.fromJson(sourceJson, MockUser.class);
+        String json = engine.toJson(user);
+
+        // ## Assert ##
+        log(json);
+    }
+
+    // ===================================================================================
     //                                                                         Thread Safe
     //                                                                         ===========
     public void test_threadSafe() throws Exception {
@@ -577,6 +654,7 @@ public class GsonJsonEngineTest extends PlainTestCase {
         public LocalDate birthdate;
         public LocalDateTime formalizedDatetime;
         public LocalTime morningCallTime;
+        public YearMonth schoolBeginningMonth;
         public MockOldCDef.Flg validFlg;
         public boolean primitiveFlg;
         public Boolean wrapperFlg;
@@ -588,7 +666,7 @@ public class GsonJsonEngineTest extends PlainTestCase {
         @Override
         public String toString() {
             return "{" + id + ", " + name + ", " + status + ", " + birthdate + ", " + formalizedDatetime + ", " + morningCallTime + ", "
-                    + validFlg + ", " + primitiveFlg + ", " + wrapperFlg + ", " + stringList + "}";
+                    + schoolBeginningMonth + ", " + validFlg + ", " + primitiveFlg + ", " + wrapperFlg + ", " + stringList + "}";
         }
     }
 

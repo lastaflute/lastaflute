@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import javax.validation.ConstraintViolation;
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 import org.lastaflute.core.message.UserMessage;
@@ -40,6 +41,26 @@ import org.lastaflute.web.validation.theme.typed.TypeLong;
  */
 public class ActionValidatorTest extends UnitLastaFluteTestCase {
 
+    // cannot test because of no environment so test it at fortress project
+    //public void test_validate_basic() throws Exception {
+    //    // ## Arrange ##
+    //    ActionValidator<UserMessages> validator = createValidator();
+    //    MockForm form = new MockForm();
+    //    form.land = new MockBean();
+    //
+    //    assertException(ValidationErrorException.class, () -> {
+    //        // ## Act ##
+    //        validator.validate(form, messages -> {}, () -> {
+    //            return ActionResponse.undefined();
+    //        });
+    //    }).handle(cause -> {
+    //        // ## Assert ##
+    //        UserMessages messages = cause.getMessages();
+    //        assertTrue(messages.hasMessageOf("sea", "{org.lastaflute.validator.constraints.Required.message}"));
+    //        assertTrue(messages.hasMessageOf("land.oneman", "{org.lastaflute.validator.constraints.Required.message}"));
+    //    });
+    //}
+
     public void test_toUserMessages() throws Exception {
         // ## Arrange ##
         ActionValidator<UserMessages> validator = createValidator();
@@ -48,12 +69,12 @@ public class ActionValidatorTest extends UnitLastaFluteTestCase {
         vioSet.add(createViolation("sea"));
         vioSet.add(createViolation("land.oneman"));
         vioSet.add(createViolation("land.minio"));
-        vioSet.add(createViolation("iks"));
-        vioSet.add(createViolation("iks[0].dstore"));
-        vioSet.add(createViolation("iks[2].dstore"));
-        vioSet.add(createViolation("iks[2].square"));
-        vioSet.add(createViolation("iks[3].square"));
-        vioSet.add(createViolation("iks[5].dstore"));
+        vioSet.add(createViolation("piari"));
+        vioSet.add(createViolation("piari[0].dstore"));
+        vioSet.add(createViolation("piari[2].dstore"));
+        vioSet.add(createViolation("piari[2].plaza"));
+        vioSet.add(createViolation("piari[3].plaza"));
+        vioSet.add(createViolation("piari[5].dstore"));
 
         // ## Act ##
         UserMessages messages = validator.toUserMessages(form, vioSet);
@@ -101,20 +122,35 @@ public class ActionValidatorTest extends UnitLastaFluteTestCase {
     //                                                                         ===========
     protected static class MockForm {
 
+        @Required
         public String sea;
+
+        @Valid
         public MockBean land;
-        public List<MockElement> iks;
+
+        @Valid
+        public List<MockElement> piari;
+
+        @Valid
+        public List<@Required String> bonvo;
+
+        @Valid
+        public List<@Required Integer> dstore;
     }
 
     protected static class MockBean {
 
+        @Required
         public String oneman;
+
         public String minio;
     }
 
     protected static class MockElement {
 
-        public String dstore;
-        public String square;
+        @Required
+        public String plaza;
+
+        public String station;
     }
 }

@@ -187,16 +187,14 @@ public class SimpleResponseManager implements ResponseManager {
     public void writeAsJson(String json) {
         assertArgumentNotNull("json", json);
         final String contentType = "application/json";
-        showWritingResponse(json, contentType);
-        write(json, contentType);
+        doWrite(json, contentType);
     }
 
     @Override
     public void writeAsJavaScript(String script) {
         assertArgumentNotNull("script", script);
         final String contentType = "application/javascript";
-        showWritingResponse(script, contentType);
-        write(script, contentType);
+        doWrite(script, contentType);
     }
 
     @Override
@@ -204,41 +202,35 @@ public class SimpleResponseManager implements ResponseManager {
         assertArgumentNotNull("xmlStr", xmlStr);
         assertArgumentNotNull("encoding", encoding);
         final String contentType = "text/xml";
-        showWritingResponse(xmlStr, contentType);
-        write(xmlStr, contentType, encoding);
-    }
-
-    protected void showWritingResponse(String value, String contentType) {
-        if (logger.isDebugEnabled()) {
-            // to suppress noisy big data (no need all data for debug: also you can see it by response)
-            final String exp = buildApiResponseDebugDisplay(value);
-            logger.debug("#flow ...Writing response as {}: \n{}", contentType, exp);
-        }
-    }
-
-    protected String buildApiResponseDebugDisplay(String value) {
-        return Srl.cut(value, 500, "..."); // you can basically confirm it at front side so cut it here
+        doWrite(xmlStr, contentType, encoding);
     }
 
     // -----------------------------------------------------
     //                                        Actually Write
     //                                        --------------
     protected void doWrite(String text, String contentType) {
-        doWrite(text, contentType, null);
+        assertArgumentNotNull("text", text);
+        assertArgumentNotNull("contentType", contentType);
+        doWrite(text, contentType, deriveResponseEncoding());
+    }
+
+    protected String deriveResponseEncoding() {
+        final String encoding = LaRequestUtil.getRequest().getCharacterEncoding();
+        return encoding != null ? encoding : getResponseDefaultEncoding();
+    }
+
+    protected String getResponseDefaultEncoding() {
+        return "UTF-8";
     }
 
     protected void doWrite(String text, String contentType, String encoding) {
-        if (contentType == null) {
-            contentType = "text/plain";
-        }
-        if (encoding == null) {
-            encoding = LaRequestUtil.getRequest().getCharacterEncoding();
-            if (encoding == null) {
-                encoding = "UTF-8";
-            }
-        }
+        assertArgumentNotNull("text", text);
+        assertArgumentNotNull("contentType", contentType);
+        assertArgumentNotNull("encoding", encoding);
         final HttpServletResponse response = getResponse();
-        response.setContentType(contentType + "; charset=" + encoding);
+        final String contentTypeWithCharset = buildContentTypeWithCharset(contentType, encoding);
+        showWritingResponse(text, contentTypeWithCharset);
+        response.setContentType(contentTypeWithCharset);
         try {
             PrintWriter out = null;
             try {
@@ -253,6 +245,22 @@ public class SimpleResponseManager implements ResponseManager {
             String msg = "Failed to write the text: contentType=" + contentType + ", encoding=" + encoding + ", text=" + text;
             throw new IllegalStateException(msg, e);
         }
+    }
+
+    protected String buildContentTypeWithCharset(String contentType, String encoding) {
+        return contentType + "; charset=" + encoding;
+    }
+
+    protected void showWritingResponse(String value, String contentType) {
+        if (logger.isDebugEnabled()) {
+            // to suppress noisy big data (no need all data for debug: also you can see it by response)
+            final String exp = buildApiResponseDebugDisplay(value);
+            logger.debug("#flow ...Writing response as {}: \n{}", contentType, exp);
+        }
+    }
+
+    protected String buildApiResponseDebugDisplay(String value) {
+        return Srl.cut(value, 500, "..."); // you can basically confirm it at front side so cut it here
     }
 
     // ===================================================================================

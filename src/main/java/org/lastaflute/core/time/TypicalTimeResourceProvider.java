@@ -67,7 +67,7 @@ public abstract class TypicalTimeResourceProvider implements TimeResourceProvide
             return doProvideAdjustTimeMillis(exp);
         } catch (RuntimeException e) {
             String msg = "Illegal property for time.adjust.time.millis: " + exp;
-            throw new IllegalStateException(msg);
+            throw new IllegalStateException(msg, e);
         }
     }
 

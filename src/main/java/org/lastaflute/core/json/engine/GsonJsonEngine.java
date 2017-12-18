@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
@@ -34,6 +35,7 @@ import org.lastaflute.core.json.adapter.Java8TimeGsonAdaptable;
 import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
 import org.lastaflute.core.json.adapter.StringGsonAdaptable;
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
+import org.lastaflute.core.json.bind.JsonYourScalarResource;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.FieldNamingStrategy;
@@ -44,6 +46,7 @@ import com.google.gson.internal.Excluder;
 import com.google.gson.internal.bind.JsonAdapterAnnotationTypeAdapterFactory;
 import com.google.gson.internal.bind.LaReflectiveTypeAdapterFactory;
 import com.google.gson.internal.bind.LaYourCollectionTypeAdapterFactory;
+import com.google.gson.internal.bind.LaYourScalarTypeAdapterFactory;
 import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory;
 
 /**
@@ -100,6 +103,8 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         registerUtilDateFormat(builder);
         setupFieldPolicy(builder);
         setupYourCollectionSettings(builder);
+        setupYourScalarSettings(builder);
+        setupYourUltimateSettings(builder);
     }
 
     protected void registerStringAdapter(GsonBuilder builder) {
@@ -160,6 +165,38 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
 
     protected LaYourCollectionTypeAdapterFactory createYourCollectionTypeAdapterFactory(JsonYourCollectionResource resource) {
         return new LaYourCollectionTypeAdapterFactory(resource.getYourType(), resource.getYourCollectionCreator());
+    }
+
+    protected void setupYourScalarSettings(GsonBuilder builder) {
+        final List<JsonYourScalarResource> yourScalars = option.getYourScalars();
+        for (JsonYourScalarResource resource : yourScalars) {
+            builder.registerTypeAdapterFactory(createYourScalarTypeAdapterFactory(resource));
+        }
+    }
+
+    protected LaYourScalarTypeAdapterFactory<Object> createYourScalarTypeAdapterFactory(JsonYourScalarResource resource) {
+        // forcedly fitting, factory needs generic type
+        @SuppressWarnings("unchecked")
+        final Class<Object> yourType = (Class<Object>) resource.getYourType();
+        @SuppressWarnings("unchecked")
+        final Function<String, Object> reader = (Function<String, Object>) resource.getReader();
+        @SuppressWarnings("unchecked")
+        final Function<Object, String> writer = (Function<Object, String>) resource.getWriter();
+
+        // translate basic options
+        final Function<String, String> readingFilter = option.getSimpleTextReadingFilter().map(specifiedFilter -> {
+            return (Function<String, String>) value -> specifiedFilter.filter(value);
+        }).orElse(null);
+        boolean emptyToNullReading = option.isEmptyToNullReading();
+        boolean nullToEmptyWriting = option.isNullToEmptyWriting();
+
+        return new LaYourScalarTypeAdapterFactory<Object>(yourType, reader, writer, readingFilter, emptyToNullReading, nullToEmptyWriting);
+    }
+
+    protected void setupYourUltimateSettings(GsonBuilder builder) {
+        option.getYourUltimateCustomizer().ifPresent(customizer -> {
+            customizer.accept(builder);
+        });
     }
 
     // -----------------------------------------------------

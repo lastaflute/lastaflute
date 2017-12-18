@@ -40,6 +40,8 @@ import java.util.stream.Stream;
 
 import javax.validation.Configuration;
 import javax.validation.ConstraintViolation;
+import javax.validation.ElementKind;
+import javax.validation.Path;
 import javax.validation.Valid;
 import javax.validation.Validation;
 import javax.validation.Validator;
@@ -224,12 +226,6 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         return doValidate(form, moreValidationLambda, validationErrorLambda);
     }
 
-    protected void keepValidatorErrorHook(VaErrorHook validationErrorLambda) { // for e.g. remote-api
-        if (ThreadCacheContext.exists()) {
-            ThreadCacheContext.registerValidatorErrorHook(validationErrorLambda);
-        }
-    }
-
     public void throwValidationError(UserMessagesCreator<MESSAGES> noArgInLambda, VaErrorHook validationErrorLambda) {
         assertArgumentNotNull("noArgInLambda", noArgInLambda);
         assertArgumentNotNull("validationErrorLambda", validationErrorLambda);
@@ -242,6 +238,7 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     public ValidationSuccess validateApi(Object body, VaMore<MESSAGES> moreValidationLambda) {
         assertArgumentNotNull("body", body);
         assertArgumentNotNull("moreValidationLambda", moreValidationLambda);
+        keepValidatorErrorHook(apiFailureHook);
         return doValidate(body, moreValidationLambda, apiFailureHook);
     }
 
@@ -261,8 +258,8 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     // -----------------------------------------------------
-    //                                               Control
-    //                                               -------
+    //                                          Flow Control
+    //                                          ------------
     protected ValidationSuccess doValidate(Object form, VaMore<MESSAGES> moreValidationLambda, VaErrorHook validationErrorLambda) {
         verifyFormType(form);
         return actuallyValidate(wrapAsValidIfNeeds(form), moreValidationLambda, validationErrorLambda);
@@ -306,17 +303,29 @@ public class ActionValidator<MESSAGES extends UserMessages> {
         }
     }
 
+    protected ValidationSuccess createValidationSuccess(MESSAGES messages) {
+        return new ValidationSuccess(messages);
+    }
+
+    // -----------------------------------------------------
+    //                                       Validation Call
+    //                                       ---------------
     // unknown if thread cache does not exist, so 'not' method is prepared like this
     public static boolean certainlyValidatorNotCalled() { // called by e.g. red-cardable assist
         return ThreadCacheContext.exists() && !ThreadCacheContext.isValidatorCalled();
     }
 
-    protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
-        throw new ValidationErrorException(runtimeGroups, messages, validationErrorLambda);
+    // -----------------------------------------------------
+    //                                      Validation Error
+    //                                      ----------------
+    protected void keepValidatorErrorHook(VaErrorHook validationErrorLambda) { // for e.g. remote-api
+        if (ThreadCacheContext.exists()) {
+            ThreadCacheContext.registerValidatorErrorHook(validationErrorLambda);
+        }
     }
 
-    protected ValidationSuccess createValidationSuccess(MESSAGES messages) {
-        return new ValidationSuccess(messages);
+    protected void throwValidationErrorException(MESSAGES messages, VaErrorHook validationErrorLambda) {
+        throw new ValidationErrorException(runtimeGroups, messages, validationErrorLambda);
     }
 
     // ===================================================================================
@@ -570,7 +579,41 @@ public class ActionValidator<MESSAGES extends UserMessages> {
     }
 
     protected String extractPropertyPath(ConstraintViolation<Object> vio) {
-        return vio.getPropertyPath().toString();
+        // old logic, toString() provides e.g. "seaList[0].<list element>" so derive by myself
+        //return vio.getPropertyPath().toString();
+        return derivePropertyPathByNode(vio);
+    }
+
+    protected String derivePropertyPathByNode(ConstraintViolation<Object> vio) {
+        final StringBuilder sb = new StringBuilder();
+        final Path path = vio.getPropertyPath();
+        int elementCount = 0;
+        for (Path.Node node : path) {
+            if (node.isInIterable()) { // building e.g. "[0]" of seaList[0]
+                Object nodeIndex = node.getIndex();
+                if (nodeIndex == null) {
+                    nodeIndex = node.getKey(); // null if e.g. iterable
+                }
+                sb.append("[").append(nodeIndex != null ? nodeIndex : "").append("]"); // e.g. [0] or []
+            }
+            final String nodeName = node.getName();
+            if (nodeName != null && node.getKind() == ElementKind.PROPERTY) {
+                // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+                // if e.g.
+                //  private List<@Required String> seaList;
+                // then path is "seaList[0].<list element>" since Hibernate Validator-6.x
+                // <list element> part is unneeded for property path of message so skip here
+                // _/_/_/_/_/_/_/_/_/_/
+                if (!nodeName.startsWith("<")) { // except e.g. <list element>
+                    if (elementCount > 0) {
+                        sb.append(".");
+                    }
+                    sb.append(nodeName);
+                    ++elementCount;
+                }
+            }
+        }
+        return sb.toString(); // e.g. sea, sea.hangar, seaList[0], seaList[0].hangar
     }
 
     protected String extractMessage(ConstraintViolation<Object> vio) {

@@ -276,6 +276,21 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     }
 
     // ===================================================================================
+    //                                                                     Pushed Ulterior
+    //                                                                     ===============
+    /**
+     * Push element of ulterior parameter. <br>
+     * Basically unused in mailflute, this is for extension by application.
+     * @param key The key of the element. (NotNull)
+     * @param value The value of the element. (NotNull)
+     */
+    public void pushUlterior(String key, Object value) {
+        assertArgumentNotNull("key", key);
+        assertArgumentNotNull("value", value);
+        postcard.pushUlterior(key, value);
+    }
+
+    // ===================================================================================
     //                                                                              Option
     //                                                                              ======
     // -----------------------------------------------------

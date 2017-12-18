@@ -231,7 +231,7 @@ public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
     //                                                                            ========
     public void test_paramPath_basic25_optional_cls_to_string() {
         ActionMapping mapping = prepareMapping(Basic25Optcls2strAction.class);
-        assertExecute(mapping, index, "sea"); // #hope nonno
+        assertExecute(mapping, nonno, "sea"); // index before
         assertExecute(mapping, nonno, "sea/named");
         assertExecute(mapping, nonno, "sea/land");
         assertExecute(mapping, nonno, "sea/land/piari");
@@ -243,10 +243,10 @@ public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
         assertExecute(mapping, nonno, "named/sea/land");
         assertExecute(mapping, named, "named/1");
         assertExecute(mapping, nonno, "named/1/land");
-        assertExecute(mapping, index, "1"); // #hope nonno
+        assertExecute(mapping, nonno, "1"); // index before
         assertExecute(mapping, nonno, "1/named");
         assertExecute(mapping, nonno, "1/land");
-        assertExecute(mapping, index, "-1"); // #hope nonno
+        assertExecute(mapping, nonno, "-1"); // index before
         assertExecute(mapping, nonno, "-1/named");
         assertExecute(mapping, nonno, "-1/land");
     }
@@ -266,26 +266,26 @@ public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
 
     public void test_paramPath_basic35_optional_cls_more_to_string() {
         ActionMapping mapping = prepareMapping(Basic35Optclsmore2strAction.class);
-        assertExecute(mapping, index, "sea"); // #hope nonno
-        assertExecute(mapping, index, "sea/named"); // #hope nonno
-        assertExecute(mapping, index, "sea/land"); // #hope nonno
+        assertExecute(mapping, nonno, "sea"); // index before
+        assertExecute(mapping, nonno, "sea/named"); // index before
+        assertExecute(mapping, nonno, "sea/land"); // index before
         assertExecute(mapping, nonno, "sea/land/piari");
         assertExecute(mapping, index, "FML");
         assertExecute(mapping, index, "FML/0");
         assertExecute(mapping, index, "FML/1");
-        assertExecute(mapping, index, "FML/named"); // #hope nonno
-        assertExecute(mapping, index, "FML/land"); // #hope nonno
+        assertExecute(mapping, nonno, "FML/named"); // index before
+        assertExecute(mapping, nonno, "FML/land"); // index before
         assertExecute(mapping, nonno, "FML/land/piari");
-        assertExecute(mapping, index, "named/sea"); // #hope named
+        assertExecute(mapping, named, "named/sea"); // index before
         assertExecute(mapping, nonno, "named/sea/land");
-        assertExecute(mapping, index, "named/1"); // #hope named
+        assertExecute(mapping, named, "named/1"); // index before
         assertExecute(mapping, nonno, "named/1/land");
-        assertExecute(mapping, index, "1"); // #hope nonno
-        assertExecute(mapping, index, "1/named"); // #hope nonno
-        assertExecute(mapping, index, "1/land"); // #hope nonno
-        assertExecute(mapping, index, "-1"); // #hope nonno
-        assertExecute(mapping, index, "-1/named"); // #hope nonno
-        assertExecute(mapping, index, "-1/land"); // #hope nonno
+        assertExecute(mapping, nonno, "1"); // index before
+        assertExecute(mapping, nonno, "1/named"); // index before
+        assertExecute(mapping, nonno, "1/land"); // index before
+        assertExecute(mapping, nonno, "-1"); // index before
+        assertExecute(mapping, nonno, "-1/named"); // index before
+        assertExecute(mapping, nonno, "-1/land"); // index before
     }
 
     private static class Basic35Optclsmore2strAction extends LastaAction {

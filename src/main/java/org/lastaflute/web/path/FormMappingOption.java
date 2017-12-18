@@ -21,7 +21,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
@@ -45,6 +47,7 @@ public class FormMappingOption {
     protected Set<String> indefinableParameterSet; // null allowed
     protected List<FormYourCollectionResource> yourCollectionResourceList; // null allowed
     protected OptionalThing<DateTimeFormatter> zonedDateTimeFormatter = OptionalThing.empty();
+    protected OptionalThing<Function<Map<String, Object>, Map<String, Object>>> requestParameterMapFilter = OptionalThing.empty();
 
     // ===================================================================================
     //                                                                              Facade
@@ -116,6 +119,17 @@ public class FormMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                         Parameter Map
+    //                                         -------------
+    public FormMappingOption filterRequestParameterMap(Function<Map<String, Object>, Map<String, Object>> requestParameterMapFilter) {
+        if (requestParameterMapFilter == null) {
+            throw new IllegalArgumentException("The argument 'requestParameterMapFilter' should not be null.");
+        }
+        this.requestParameterMapFilter = OptionalThing.of(requestParameterMapFilter);
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -123,7 +137,8 @@ public class FormMappingOption {
     public String toString() {
         final String title = DfTypeUtil.toClassTitle(this);
         return title + ":{" + keepEmptyStringParameter + ", " + simpleTextParameterFilter + ", " + undefinedParameterError + ", "
-                + indefinableParameterSet + ", " + yourCollectionResourceList + ", " + zonedDateTimeFormatter + "}";
+                + indefinableParameterSet + ", " + yourCollectionResourceList + ", " + zonedDateTimeFormatter + ", "
+                + requestParameterMapFilter + "}";
     }
 
     // ===================================================================================
@@ -157,7 +172,7 @@ public class FormMappingOption {
     // -----------------------------------------------------
     //                                       Your Collection
     //                                       ---------------
-    public List<FormYourCollectionResource> getYourCollectionResource() { // not null
+    public List<FormYourCollectionResource> getYourCollections() { // not null
         return yourCollectionResourceList != null ? yourCollectionResourceList : Collections.emptyList();
     }
 
@@ -166,5 +181,12 @@ public class FormMappingOption {
     //                                         -------------
     public OptionalThing<DateTimeFormatter> getZonedDateTimeFormatter() {
         return zonedDateTimeFormatter;
+    }
+
+    // -----------------------------------------------------
+    //                                         Parameter Map
+    //                                         -------------
+    public OptionalThing<Function<Map<String, Object>, Map<String, Object>>> getRequestParameterMapFilter() {
+        return requestParameterMapFilter;
     }
 }

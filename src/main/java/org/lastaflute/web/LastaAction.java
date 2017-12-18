@@ -21,6 +21,7 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.message.MessageManager;
 import org.lastaflute.core.message.UserMessages;
+import org.lastaflute.core.message.supplier.UserMessagesCreator;
 import org.lastaflute.core.time.TimeManager;
 import org.lastaflute.db.jta.stage.TransactionStage;
 import org.lastaflute.web.api.ApiManager;
@@ -103,7 +104,7 @@ public abstract class LastaAction {
     protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> doCreateValidator(Class<?>... groups) { // for explicit groups
         // cannot cache here, not to keep (random) action instance
         // (it uses the instance method createMessage() for application type)
-        return new ActionValidator<MESSAGES>(requestManager // has message manager, user locacle
+        return newActionValidator(requestManager // has message manager, user locacle
                 , () -> (MESSAGES) createMessages() // for new user messages
                 , groups // validator runtime groups
         );
@@ -115,6 +116,13 @@ public abstract class LastaAction {
      */
     protected UserMessages createMessages() { // overridden as type-safe
         return new UserMessages();
+    }
+
+    protected <MESSAGES extends UserMessages> ActionValidator<MESSAGES> newActionValidator(RequestManager requestManager // has message manager, user locale
+            , UserMessagesCreator<MESSAGES> messagesCreator // for new user messages
+            , Class<?>... runtimeGroups // validator runtime groups
+    ) { // you can override 
+        return new ActionValidator<MESSAGES>(requestManager, messagesCreator, runtimeGroups);
     }
 
     // ===================================================================================
@@ -333,10 +341,10 @@ public abstract class LastaAction {
     protected HtmlResponse doRedirect(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        return newHtmlResponseAsRediect(toActionUrl(actionType, chain));
+        return newHtmlResponseAsRedirect(toActionUrl(actionType, chain));
     }
 
-    protected HtmlResponse newHtmlResponseAsRediect(String redirectPath) {
+    protected HtmlResponse newHtmlResponseAsRedirect(String redirectPath) {
         return HtmlResponse.fromRedirectPath(redirectPath);
     }
 

@@ -18,6 +18,7 @@ package org.lastaflute.core.json;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
+import org.lastaflute.core.json.bind.JsonYourScalarResource;
 import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 
 /**
@@ -50,8 +52,10 @@ public class JsonMappingOption {
     protected OptionalThing<JsonSimpleTextReadingFilter> simpleTextReadingFilter = OptionalThing.empty(); // not null
     protected boolean listNullToEmptyReading; // [] if null
     protected boolean listNullToEmptyWriting; // same
-    protected OptionalThing<JsonFieldNaming> fieldNaming = OptionalThing.empty(); // not null;
-    protected List<JsonYourCollectionResource> yourCollections = Collections.emptyList();
+    protected OptionalThing<JsonFieldNaming> fieldNaming = OptionalThing.empty(); // not null
+    protected List<JsonYourCollectionResource> yourCollections = Collections.emptyList(); // not null
+    protected List<JsonYourScalarResource> yourScalars = Collections.emptyList(); // not null;
+    protected OptionalThing<Consumer<Object>> yourUltimateCustomizer = OptionalThing.empty(); // not null
 
     // ===================================================================================
     //                                                                    Supplement Class
@@ -85,6 +89,8 @@ public class JsonMappingOption {
         listNullToEmptyWriting = another.isListNullToEmptyWriting();
         fieldNaming = another.getFieldNaming();
         yourCollections = another.getYourCollections();
+        yourScalars = another.getYourScalars();
+        yourUltimateCustomizer = another.getYourUltimateCustomizer();
         return this;
     }
 
@@ -270,6 +276,41 @@ public class JsonMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                          Your Scalars
+    //                                          ------------
+    /**
+     * Set up the your scalars for JSON property. <br>
+     * You can use e.g. YearMonth (Java8) as JSON property type.
+     * @param yourScalars The list of your scalar resource. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonMappingOption yourScalars(List<JsonYourScalarResource> yourScalars) {
+        if (yourScalars == null) {
+            throw new IllegalArgumentException("The argument 'yourScalars' should not be null.");
+        }
+        this.yourScalars = yourScalars;
+        return this;
+    }
+
+    // -----------------------------------------------------
+    //                                         Your Ultimate
+    //                                         -------------
+    /**
+     * Set up the your rule for JSON. <br>
+     * The provided object in lambda is JSON engine customizer e.g. GsonBuilder. <br>
+     * Use 'downcast' or 'instanceof' in your callback.
+     * @param yourUltimateCustomizer The callback for customizing JSON engine as your rule. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonMappingOption yourUltimateCustomizer(Consumer<Object> yourUltimateCustomizer) {
+        if (yourUltimateCustomizer == null) {
+            throw new IllegalArgumentException("The argument 'yourUltimateCustomizer' should not be null.");
+        }
+        this.yourUltimateCustomizer = OptionalThing.of(yourUltimateCustomizer);
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -303,6 +344,13 @@ public class JsonMappingOption {
             }).collect(Collectors.toList());
             sb.append(delimiter).append(expList);
         }
+        if (!yourScalars.isEmpty()) {
+            final List<String> expList = yourScalars.stream().map(ons -> {
+                return ons.getYourType().getSimpleName();
+            }).collect(Collectors.toList());
+            sb.append(delimiter).append(expList);
+        }
+        yourUltimateCustomizer.ifPresent(zer -> sb.append(delimiter).append(zer));
         return "{" + Srl.ltrim(sb.toString(), delimiter) + "}";
     }
 
@@ -375,5 +423,13 @@ public class JsonMappingOption {
 
     public List<JsonYourCollectionResource> getYourCollections() {
         return Collections.unmodifiableList(yourCollections);
+    }
+
+    public List<JsonYourScalarResource> getYourScalars() {
+        return Collections.unmodifiableList(yourScalars);
+    }
+
+    public OptionalThing<Consumer<Object>> getYourUltimateCustomizer() {
+        return yourUltimateCustomizer;
     }
 }

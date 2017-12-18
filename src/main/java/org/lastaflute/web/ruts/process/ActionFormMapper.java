@@ -34,6 +34,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
@@ -160,9 +162,9 @@ public class ActionFormMapper {
         }
         final FormMappingOption option = adjustFormMapping(); // not null
         final Object realForm = virtualForm.getRealForm(); // not null
-        final Map<String, Object> allParameters = getAllParameters(multipartHandler);
+        final Map<String, Object> parameterMap = prepareRequestParameterMap(multipartHandler, option);
         try {
-            for (Entry<String, Object> entry : allParameters.entrySet()) {
+            for (Entry<String, Object> entry : parameterMap.entrySet()) {
                 final String name = entry.getKey();
                 final Object value = entry.getValue();
                 try {
@@ -172,7 +174,7 @@ public class ActionFormMapper {
                 }
             }
         } finally {
-            keepParameterForInOutLoggingIfNeeds(allParameters);
+            keepParameterForInOutLoggingIfNeeds(parameterMap);
         }
     }
 
@@ -198,7 +200,7 @@ public class ActionFormMapper {
         return handler;
     }
 
-    protected Map<String, Object> getAllParameters(MultipartRequestHandler multipartHandler) {
+    protected Map<String, Object> prepareRequestParameterMap(MultipartRequestHandler multipartHandler, FormMappingOption option) {
         final HttpServletRequest request = requestManager.getRequest();
         final Map<String, Object> paramMap = new LinkedHashMap<String, Object>();
         final Enumeration<String> em = request.getParameterNames();
@@ -209,7 +211,13 @@ public class ActionFormMapper {
         if (multipartHandler != null) {
             paramMap.putAll(multipartHandler.getAllElements());
         }
-        return paramMap;
+        final OptionalThing<Function<Map<String, Object>, Map<String, Object>>> optFilter = option.getRequestParameterMapFilter();
+        if (optFilter.isPresent()) { // no map() here, to keep normal route simple
+            final Map<String, Object> filteredMap = optFilter.get().apply(Collections.unmodifiableMap(paramMap));
+            return filteredMap != null ? filteredMap : paramMap;
+        } else { // normally here
+            return paramMap;
+        }
     }
 
     protected void handleIllegalPropertyPopulateException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause)
@@ -246,8 +254,8 @@ public class ActionFormMapper {
         throw new ActionFormPopulateFailureException(msg, cause);
     }
 
-    protected void keepParameterForInOutLoggingIfNeeds(Map<String, Object> allParameters) {
-        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepRequestParameter(allParameters));
+    protected void keepParameterForInOutLoggingIfNeeds(Map<String, Object> parameterMap) {
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepRequestParameter(parameterMap));
     }
 
     // ===================================================================================
@@ -447,9 +455,9 @@ public class ActionFormMapper {
                 final String resultName = result.name;
                 final String front = name.substring(0, indexedIndex);
                 if (resultName == null || resultName.isEmpty()) { // e.g. sea[0]
-                    setIndexedProperty(bean, front, resultIndexes, value);
+                    setIndexedProperty(bean, front, resultIndexes, value, option);
                 } else { // e.g. sea[0][0], sea[0].mystic
-                    final Object indexedProperty = prepareIndexedProperty(bean, front, resultIndexes);
+                    final Object indexedProperty = prepareIndexedProperty(bean, front, resultIndexes, option);
                     setProperty(virtualForm, indexedProperty, resultName, value, pathSb, option, bean, front); // *recursive
                 }
             } else { // map e.g. sea(over)
@@ -556,18 +564,21 @@ public class ActionFormMapper {
         final Object mappedValue;
         if (propertyType.isArray()) { // fixedly String #for_now e.g. public String[] strArray; so use List<>
             mappedValue = prepareStringArray(value, name, propertyType, option); // plain mapping to array, e.g. JSON not supported
-        } else if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
-            mappedValue = prepareObjectList(virtualForm, bean, name, value, pathSb, option, pd);
-        } else { // not array or list, e.g. Your Collection, String, Object
+        } else { // e.g. List, ImmutableList, MutableList, String, Integer, ...
+            // process of your collections should be first because MutableList is java.util.List
             final Object yourCollection = prepareYourCollection(virtualForm, bean, name, value, pathSb, option, pd);
             if (yourCollection != null) { // e.g. ImmutableList (Eclipse Collections)
                 mappedValue = yourCollection;
-            } else { // simple object types
-                final Object scalar = prepareObjectScalar(value);
-                if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter for Object
-                    mappedValue = parseJsonParameterAsObject(virtualForm, bean, name, adjustAsJsonString(scalar), pd);
-                } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
-                    mappedValue = prepareNativeValue(virtualForm, bean, name, scalar, pd, pathSb, option);
+            } else { // mainly here
+                if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
+                    mappedValue = prepareObjectList(virtualForm, bean, name, value, pathSb, option, pd);
+                } else { // simple object types
+                    final Object scalar = prepareObjectScalar(value);
+                    if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter for Object
+                        mappedValue = parseJsonParameterAsObject(virtualForm, bean, name, adjustAsJsonString(scalar), pd);
+                    } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
+                        mappedValue = prepareNativeValue(virtualForm, bean, name, scalar, pd, pathSb, option);
+                    }
                 }
             }
         }
@@ -639,17 +650,17 @@ public class ActionFormMapper {
     //                                      ----------------
     protected Object prepareYourCollection(VirtualForm virtualForm, Object bean, String name, Object value, StringBuilder pathSb,
             FormMappingOption option, PropertyDesc pd) {
-        final List<FormYourCollectionResource> resourceList = option.getYourCollectionResource();
-        if (resourceList.isEmpty()) {
+        final List<FormYourCollectionResource> yourCollections = option.getYourCollections();
+        if (yourCollections.isEmpty()) {
             return null; // no settings of your collections
         }
         final Class<?> propertyType = pd.getPropertyType();
-        for (FormYourCollectionResource resource : resourceList) {
-            if (!propertyType.isAssignableFrom(resource.getYourType())) {
+        for (FormYourCollectionResource yourCollection : yourCollections) {
+            if (!propertyType.equals(yourCollection.getYourType())) { // just type in form mapping (to avoid complexity)
                 continue;
             }
             final List<?> objectList = prepareObjectList(virtualForm, bean, name, value, pathSb, option, pd);
-            final Iterable<? extends Object> applied = resource.getYourCollectionCreator().apply(objectList);
+            final Iterable<? extends Object> applied = yourCollection.getYourCollectionCreator().apply(objectList);
             final Object mappedValue;
             if (applied instanceof List<?>) {
                 mappedValue = applied;
@@ -956,6 +967,7 @@ public class ActionFormMapper {
             //} else if (java.util.Date.class.isAssignableFrom(propertyType)) {
             //    filtered = DfTypeUtil.toDate(exp);
         } else if (LocalDate.class.isAssignableFrom(propertyType)) { // #date_parade
+            // #hope can specify date, date-time pattern by FormMappingOption by jflute (2017/10/30)
             converted = DfTypeUtil.toLocalDate(exp); // as flexible parsing
         } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
             converted = DfTypeUtil.toLocalDateTime(exp); // as flexible parsing
@@ -1240,8 +1252,7 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                  Set Indexed Property
     //                                  --------------------
-    @SuppressWarnings("unchecked")
-    protected void setIndexedProperty(Object bean, String name, int[] indexes, Object value) {
+    protected void setIndexedProperty(Object bean, String name, int[] indexes, Object value, FormMappingOption option) { // e.g. sea[0]
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
         if (!beanDesc.hasPropertyDesc(name)) {
             return;
@@ -1265,37 +1276,29 @@ public class ActionFormMapper {
             array = expand(array, indexes, elementType);
             pd.setValue(bean, array);
             setArrayValue(array, indexes, value);
-        } else if (List.class.isAssignableFrom(propertyType)) {
-            List<Object> list = (List<Object>) pd.getValue(bean);
-            if (list == null) {
-                list = new ArrayList<Object>(Math.max(50, indexes[0]));
-                pd.setValue(bean, list);
+        } else { // e.g. List, ImmutableList, MutableList
+            // process of your collections should be first because MutableList is java.util.List 
+            final Optional<FormYourCollectionResource> yourCollection = findListableYourCollection(pd, option);
+            if (yourCollection.isPresent()) { // e.g. ImmutableList, MutableList
+                doSetIndexedPropertyListable(bean, name, indexes, value, beanDesc, pd, option, newList -> {
+                    @SuppressWarnings("unchecked")
+                    final List<Object> filtered = (List<Object>) yourCollection.get().getYourCollectionCreator().apply(newList);
+                    return filtered;
+                });
+            } else if (List.class.isAssignableFrom(propertyType)) {
+                doSetIndexedPropertyListable(bean, name, indexes, value, beanDesc, pd, option, Function.identity());
+            } else {
+                throwIndexedPropertyNotListArrayException(beanDesc, pd);
             }
-            ParameterizedClassDesc paramDesc = pd.getParameterizedClassDesc();
-            for (int i = 0; i < indexes.length; i++) {
-                if (paramDesc == null || !paramDesc.isParameterizedClass() || !List.class.isAssignableFrom(paramDesc.getRawClass())) {
-                    final StringBuilder sb = new StringBuilder();
-                    for (int j = 0; j <= i; j++) {
-                        sb.append("[").append(indexes[j]).append("]");
-                    }
-                    throwIndexedPropertyNonParameterizedListException(beanDesc, pd);
-                }
-                paramDesc = paramDesc.getArguments()[0];
-                for (int j = list.size(); j <= indexes[i]; j++) {
-                    if (i == indexes.length - 1) {
-                        list.add(LdiClassUtil.newInstance(convertClass(paramDesc.getRawClass())));
-                    } else {
-                        list.add(new ArrayList<Object>());
-                    }
-                }
-                if (i < indexes.length - 1) {
-                    list = (List<Object>) list.get(indexes[i]);
-                }
-            }
-            list.set(indexes[indexes.length - 1], value);
-        } else {
-            throwIndexedPropertyNotListArrayException(beanDesc, pd);
         }
+    }
+
+    protected void doSetIndexedPropertyListable(Object bean, String name, int[] indexes, Object value, BeanDesc beanDesc, PropertyDesc pd,
+            FormMappingOption option, Function<List<Object>, List<Object>> listInstanceFilter) {
+        handleIndexedPropertyListable(bean, name, indexes, beanDesc, pd, option, listInstanceFilter, list -> {
+            list.set(indexes[indexes.length - 1], value);
+            return null; // unused
+        });
     }
 
     protected void setArrayValue(Object array, int[] indexes, Object value) {
@@ -1308,8 +1311,7 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                              Prepare Indexed Property
     //                              ------------------------
-    @SuppressWarnings("unchecked")
-    protected Object prepareIndexedProperty(Object bean, String name, int[] indexes) {
+    protected Object prepareIndexedProperty(Object bean, String name, int[] indexes, FormMappingOption option) {
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
         if (!beanDesc.hasPropertyDesc(name)) {
             return null;
@@ -1318,9 +1320,10 @@ public class ActionFormMapper {
         if (!pd.isReadable()) {
             return null;
         }
-        if (pd.getPropertyType().isArray()) {
+        final Class<?> propertyType = pd.getPropertyType();
+        if (propertyType.isArray()) {
             Object array = pd.getValue(bean);
-            final Class<?> elementType = getArrayElementType(pd.getPropertyType(), indexes.length);
+            final Class<?> elementType = getArrayElementType(propertyType, indexes.length);
             if (array == null) {
                 int[] newIndexes = new int[indexes.length];
                 newIndexes[0] = indexes[0] + 1;
@@ -1329,37 +1332,18 @@ public class ActionFormMapper {
             array = expand(array, indexes, elementType);
             pd.setValue(bean, array);
             return getArrayValue(array, indexes, elementType);
-        } else {
-            if (List.class.isAssignableFrom(pd.getPropertyType())) {
-                List<Object> list = (List<Object>) pd.getValue(bean);
-                if (list == null) {
-                    list = new ArrayList<Object>(Math.max(50, indexes[0]));
-                    pd.setValue(bean, list);
-                }
-                ParameterizedClassDesc pcd = pd.getParameterizedClassDesc();
-                for (int i = 0; i < indexes.length; i++) {
-                    if (pcd == null || !pcd.isParameterizedClass() || !List.class.isAssignableFrom(pcd.getRawClass())) {
-                        StringBuilder sb = new StringBuilder();
-                        for (int j = 0; j <= i; j++) {
-                            sb.append("[").append(indexes[j]).append("]");
-                        }
-                        throwIndexedPropertyNonParameterizedListException(beanDesc, pd);
-                    }
-                    int size = list.size();
-                    pcd = pcd.getArguments()[0];
-                    for (int j = size; j <= indexes[i]; j++) {
-                        if (i == indexes.length - 1) {
-                            list.add(LdiClassUtil.newInstance(convertClass(pcd.getRawClass())));
-                        } else {
-                            list.add(new ArrayList<Integer>());
-                        }
-                    }
-                    if (i < indexes.length - 1) {
-                        list = (List<Object>) list.get(indexes[i]);
-                    }
-                }
-                return list.get(indexes[indexes.length - 1]);
-            } else {
+        } else { // e.g. List, ImmutableList, MutableList
+            // process of your collections should be first because MutableList is java.util.List 
+            final Optional<FormYourCollectionResource> yourCollection = findListableYourCollection(pd, option);
+            if (yourCollection.isPresent()) { // e.g. ImmutableList, MutableList
+                return doPrepareIndexedPropertyListable(bean, name, indexes, beanDesc, pd, option, newList -> {
+                    @SuppressWarnings("unchecked")
+                    final List<Object> filtered = (List<Object>) yourCollection.get().getYourCollectionCreator().apply(newList);
+                    return filtered;
+                });
+            } else if (List.class.isAssignableFrom(propertyType)) { // e.g. List (can be ArrayList)
+                return doPrepareIndexedPropertyListable(bean, name, indexes, beanDesc, pd, option, Function.identity());
+            } else { // cannot treat it
                 throwIndexedPropertyNotListArrayException(beanDesc, pd);
                 return null; // unreachable
             }
@@ -1380,13 +1364,95 @@ public class ActionFormMapper {
         return value;
     }
 
-    protected void throwIndexedPropertyNonParameterizedListException(final BeanDesc beanDesc, final PropertyDesc pd) {
+    protected Object doPrepareIndexedPropertyListable(Object bean, String name, int[] indexes, BeanDesc beanDesc, PropertyDesc pd,
+            FormMappingOption option, Function<List<Object>, List<Object>> listInstanceFilter) {
+        return handleIndexedPropertyListable(bean, name, indexes, beanDesc, pd, option, listInstanceFilter, list -> {
+            return list.get(indexes[indexes.length - 1]);
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                        Indexed Helper
+    //                                        --------------
+    protected Optional<FormYourCollectionResource> findListableYourCollection(PropertyDesc pd, FormMappingOption option) {
+        final Class<?> propertyType = pd.getPropertyType();
+        final List<FormYourCollectionResource> yourCollections = option.getYourCollections();
+        return yourCollections.stream() // checking defined type and instance type
+                .filter(res -> propertyType.equals(res.getYourType())) // just type in form mapping (to avoid complexity)
+                .filter(res -> res.getYourCollectionCreator().apply(Collections.emptyList()) instanceof List)
+                .findFirst(); // basically only-one here (if no duplicate type specified)
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <RESULT> RESULT handleIndexedPropertyListable(Object bean, String name, int[] indexes, BeanDesc beanDesc, PropertyDesc pd,
+            FormMappingOption option, Function<List<Object>, List<Object>> listInstanceFilter,
+            Function<List<Object>, RESULT> listProcessHandler) {
+        List<Object> list = (List<Object>) pd.getValue(bean);
+        if (list == null) {
+            list = listInstanceFilter.apply(new ArrayList<Object>(Math.max(50, indexes[0])));
+            pd.setValue(bean, list); // and initialize field value
+        }
+        final boolean certainlyCanAdd = list instanceof ArrayList<?>; // mainly true
+        ParameterizedClassDesc paramDesc = pd.getParameterizedClassDesc();
+
+        // cannot add() if e.g. ImmutableList, so prepare mutable working list here (and switch later)
+        List<Object> workingList = certainlyCanAdd ? list : DfCollectionUtil.newArrayList(list);
+
+        for (int i = 0; i < indexes.length; i++) {
+            // remove check of List because it may be ImmutableList
+            //if (paramDesc == null || !paramDesc.isParameterizedClass() || !List.class.isAssignableFrom(paramDesc.getRawClass())) {
+            if (paramDesc == null || !paramDesc.isParameterizedClass()) {
+                // what is this? obviously unneeded so comment it out by jflute (2017/12/13)
+                //final StringBuilder sb = new StringBuilder();
+                //for (int j = 0; j <= i; j++) {
+                //    sb.append("[").append(indexes[j]).append("]");
+                //}
+                throwIndexedPropertyNonParameterizedListException(beanDesc, pd);
+            }
+            final int size = workingList.size();
+            paramDesc = paramDesc.getArguments()[0];
+            for (int j = size; j <= indexes[i]; j++) {
+                if (i == indexes.length - 1) {
+                    workingList.add(LdiClassUtil.newInstance(convertClass(paramDesc.getRawClass())));
+                } else {
+                    workingList.add(new ArrayList<Object>());
+                }
+            }
+            if (i < indexes.length - 1) {
+                workingList = (List<Object>) workingList.get(indexes[i]);
+            }
+        }
+        final RESULT result = listProcessHandler.apply(workingList);
+        if (!certainlyCanAdd) {
+            pd.setValue(bean, listInstanceFilter.apply(workingList));
+        }
+        return result;
+    }
+
+    protected void throwIndexedPropertyNonParameterizedListException(BeanDesc beanDesc, PropertyDesc pd) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("The list of indexed property was not parameterized.");
         br.addItem("ActionForm");
         br.addElement(getRealClass(beanDesc.getBeanClass()));
         br.addItem("Property");
         br.addElement(pd);
+        br.addItem("Parameterized"); // parameterized info is important here
+        final ParameterizedClassDesc paramDesc = pd.getParameterizedClassDesc();
+        if (paramDesc != null) {
+            br.addElement("isParameterizedClass: " + paramDesc.isParameterizedClass());
+            br.addElement("parameterizedType: " + paramDesc.getParameterizedType());
+            br.addElement("rawClass: " + paramDesc.getRawClass());
+            final ParameterizedClassDesc[] arguments = paramDesc.getArguments();
+            if (arguments != null && arguments.length > 0) {
+                int index = 0;
+                for (ParameterizedClassDesc arg : arguments) {
+                    br.addElement("argument" + index + ": " + arg.getParameterizedType());
+                    ++index;
+                }
+            }
+        } else {
+            br.addElement("getParameterizedClassDesc() returns null");
+        }
         final String msg = br.buildExceptionMessage();
         throw new IndexedPropertyNonParameterizedListException(msg);
     }

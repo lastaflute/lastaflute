@@ -153,8 +153,8 @@ public abstract class ContainerUtil {
     }
 
     // ===================================================================================
-    //                                                                            Injector
-    //                                                                            ========
+    //                                                                      Various Helper
+    //                                                                      ==============
     /**
      * @param enhancedType The class type that may be enhanced by Lasta Di. (NotNull)
      * @return The real class if enhanced type specified, or specified type. (NotNull)

@@ -31,6 +31,7 @@ import javax.validation.Payload;
 
 import org.lastaflute.web.validation.LastaPresentsValidator;
 
+// #hope can specify date, date-time pattern by annotation attribute by jflute (2017/10/30)
 /**
  * The validator annotation as local date for string.
  * @author jflute
