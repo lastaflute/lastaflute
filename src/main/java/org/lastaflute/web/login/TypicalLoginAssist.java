@@ -21,7 +21,6 @@ import java.time.LocalDateTime;
 
 import javax.annotation.Resource;
 
-import org.dbflute.Entity;
 import org.dbflute.helper.HandyDate;
 import org.dbflute.optional.OptionalEntity;
 import org.dbflute.optional.OptionalThing;
@@ -254,7 +253,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
 
     @Override
     @SuppressWarnings("unchecked")
-    public void givenLogin(Entity givenEntity, LoginOpCall opLambda) throws LoginFailureException {
+    public void givenLogin(Object givenEntity, LoginOpCall opLambda) throws LoginFailureException {
         doLoginByGivenEntity((USER_ENTITY) givenEntity, createLoginOption(opLambda));
     }
 
