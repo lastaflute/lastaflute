@@ -15,7 +15,6 @@
  */
 package org.lastaflute.web.login;
 
-import org.dbflute.Entity;
 import org.dbflute.optional.OptionalEntity;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.login.credential.LoginCredential;
@@ -86,7 +85,7 @@ public interface LoginManager {
      * @param givenEntity The given entity for user. (NullAllowed: if null, find user by email and password)
      * @param opLambda The callback for option of login. e.g. useAutoLogin (NotNull)
      */
-    void givenLogin(Entity givenEntity, LoginOpCall opLambda);
+    void givenLogin(Object givenEntity, LoginOpCall opLambda);
 
     /**
      * Do login for the user by user ID (means identity login). (for remember-me or partner login)
