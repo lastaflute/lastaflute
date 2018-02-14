@@ -39,6 +39,13 @@ public interface LaValidatableApi<MESSAGES extends UserMessages> {
      *         <span style="color: #553000">messages</span>.addConstraint...
      *     }
      * });
+     * 
+     * <span style="color: #3F7E5E">// recycle data from validation process</span>
+     * ValidationSuccess <span style="color: #553000">success</span> = validateApi(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     Sea <span style="color: #553000">sea</span> = ... <span style="color: #3F7E5E">// something from validation process</span>
+     *     <span style="color: #553000">messages</span>.<span style="color: #CC4747">saveSuccessAttribute</span>(<span style="color: #0000C0">"sea"</span>, <span style="color: #553000">sea</span>);
+     * });
+     * Sea <span style="color: #553000">sea</span> = <span style="color: #553000">success</span>.<span style="color: #994747">getAttribute</span>(<span style="color: #0000C0">"sea"</span>, Sea.<span style="color: #70226C">class</span>);
      * </pre>
      * @param body The JSON body (or action form) that has request parameters. (NotNull)
      * @param moreValidationLambda The callback for more validation, e.g. correlation rule, very complex rule. (NotNull)

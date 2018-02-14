@@ -19,6 +19,13 @@ import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.validation.VaErrorHook;
 
 /**
+ * The exception for validator error. (basically for action) <br>
+ * 
+ * <p>Application should not throw this because it needs framework process.
+ * For example, an errorHook should be related to your ApiFailureHook if API action.</p> 
+ * 
+ * <p>Instead, you can use this.throwValidationError() (of ActionValidator) in your action.
+ * Or use messages.saveSuccessAttribute() in validate() callback in some situations.</p>
  * @author jflute
  */
 public class ValidationErrorException extends RuntimeException {
