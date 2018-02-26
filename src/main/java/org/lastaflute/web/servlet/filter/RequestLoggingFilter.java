@@ -999,17 +999,16 @@ public class RequestLoggingFilter implements Filter {
     protected void buildExceptionStackTrace(Throwable cause, StringBuilder sb) {
         sb.append(LF);
         final ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
+        final String encoding = "UTF-8"; // for on-memory closed-scope I/O
         PrintStream ps = null;
         try {
-            ps = new PrintStream(out);
+            final boolean autoFlush = false; // the output stream does not need flush
+            ps = new PrintStream(out, autoFlush, encoding);
             cause.printStackTrace(ps);
-            final String encoding = "UTF-8";
-            try {
-                sb.append(out.toString(encoding));
-            } catch (UnsupportedEncodingException continued) {
-                logger.warn("Unknown encoding: " + encoding, continued);
-                sb.append(out.toString()); // retry without encoding
-            }
+            sb.append(out.toString(encoding));
+        } catch (UnsupportedEncodingException continued) { // basically no way
+            logger.warn("Unknown encoding: " + encoding, continued);
+            sb.append(out.toString()); // retry without encoding
         } finally {
             if (ps != null) {
                 ps.close();
