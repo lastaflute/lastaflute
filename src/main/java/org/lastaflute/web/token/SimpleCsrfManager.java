@@ -41,6 +41,7 @@ public class SimpleCsrfManager implements CsrfManager {
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(SimpleCsrfManager.class);
     protected static final String DEFAULT_TOKEN_HEADER = "X-CSRF-TOKEN";
+    protected static final String DEFAULT_TOKEN_PARAMETER = "_csrf";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -61,6 +62,9 @@ public class SimpleCsrfManager implements CsrfManager {
     /** The header name of CSRF token on request and response. (NotNull, Changeable) */
     protected String tokenHeaderName = DEFAULT_TOKEN_HEADER;
 
+    /** The parameter name of CSRF token on request parameter. (NotNull, Changeable) */
+    protected String tokenParameterName = DEFAULT_TOKEN_PARAMETER;
+
     /** The generator of CSRF token. (NotNull: after initialization) */
     protected CsrfTokenGenerator tokenGenerator;
 
@@ -75,6 +79,10 @@ public class SimpleCsrfManager implements CsrfManager {
             final String providedHeaderName = resourceProvider.provideTokenHeaderName();
             if (providedHeaderName != null) {
                 tokenHeaderName = providedHeaderName;
+            }
+            final String providedParameterName = resourceProvider.provideTokenParameterName();
+            if (providedParameterName != null) {
+                tokenParameterName = providedParameterName;
             }
             final CsrfTokenGenerator providedGenerator = resourceProvider.provideTokenGenerator();
             if (providedGenerator != null) {
@@ -99,6 +107,7 @@ public class SimpleCsrfManager implements CsrfManager {
         if (logger.isInfoEnabled()) {
             logger.info("[Csrf Manager]");
             logger.info(" tokenHeaderName: " + tokenHeaderName);
+            logger.info(" tokenParameterName: " + tokenParameterName);
             logger.info(" tokenGenerator: " + tokenGenerator);
         }
     }
@@ -124,20 +133,24 @@ public class SimpleCsrfManager implements CsrfManager {
     @Override
     public void verifyToken() {
         requestManager.getHeader(getTokenHeaderName()).ifPresent(headerToken -> {
-            sessionManager.getAttribute(LastaWebKey.CSRF_TOKEN_KEY, String.class).ifPresent(savedToken -> {
-                if (!headerToken.equals(savedToken)) {
-                    throwCsrfHeaderSavedTokenNotMatchedException(headerToken, savedToken);
-                }
-            }).orElse(() -> {
-                throwCsrfHeaderSavedTokenNotMatchedException(headerToken, null);
-            });
+            doVerifyToken(headerToken);
         }).orElse(() -> {
-            throwCsrfHeaderNotFoundException();
+            requestManager.getParameter(getTokenParameterName()).ifPresent(parameterToken -> {
+                doVerifyToken(parameterToken);
+            }).orElse(() -> {
+                throwCsrfHeaderNotFoundException();
+            });
         });
     }
 
-    protected String getTokenHeaderName() {
-        return tokenHeaderName;
+    protected void doVerifyToken(String requestedToken) {
+        sessionManager.getAttribute(LastaWebKey.CSRF_TOKEN_KEY, String.class).ifPresent(savedToken -> {
+            if (!requestedToken.equals(savedToken)) {
+                throwCsrfHeaderSavedTokenNotMatchedException(requestedToken, savedToken);
+            }
+        }).orElse(() -> {
+            throwCsrfHeaderSavedTokenNotMatchedException(requestedToken, null);
+        });
     }
 
     protected void throwCsrfHeaderSavedTokenNotMatchedException(String headerToken, String savedToken) {
@@ -164,5 +177,16 @@ public class SimpleCsrfManager implements CsrfManager {
         br.addElement(requestManager.getRequestPathAndQuery());
         final String msg = br.buildExceptionMessage();
         throw new CrossSiteRequestForgeriesForbiddenException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                          Token Name
+    //                                                                          ==========
+    public String getTokenHeaderName() {
+        return tokenHeaderName;
+    }
+
+    public String getTokenParameterName() {
+        return tokenParameterName;
     }
 }

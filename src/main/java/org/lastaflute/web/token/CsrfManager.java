@@ -35,4 +35,14 @@ public interface CsrfManager {
      * @throws CrossSiteRequestForgeriesForbiddenException When the token is invalid or not found.
      */
     void verifyToken();
+
+    /**
+     * @return The header name of CSRF token on HTTP header. (NotNull)
+     */
+    String getTokenHeaderName();
+
+    /**
+     * @return The parameter name of CSRF token on request parameter. (NotNull)
+     */
+    String getTokenParameterName();
 }

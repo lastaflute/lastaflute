@@ -23,5 +23,7 @@ public interface CsrfResourceProvider {
 
     String provideTokenHeaderName();
 
+    String provideTokenParameterName();
+
     CsrfTokenGenerator provideTokenGenerator();
 }
