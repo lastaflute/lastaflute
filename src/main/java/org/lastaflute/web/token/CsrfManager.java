@@ -24,6 +24,9 @@ import org.lastaflute.web.exception.CrossSiteRequestForgeriesForbiddenException;
  */
 public interface CsrfManager {
 
+    // ===================================================================================
+    //                                                                        CSRF Process
+    //                                                                        ============
     /**
      * Begin token for CSRF. (e.g. saving the token to request header, session) <br>
      * You should call this when e.g. first access, login, ...
@@ -37,6 +40,9 @@ public interface CsrfManager {
      */
     void verifyToken();
 
+    // ===================================================================================
+    //                                                                      Token Handling
+    //                                                                      ==============
     /**
      * @return The header name of CSRF token on HTTP header. (NotNull)
      */
@@ -46,6 +52,16 @@ public interface CsrfManager {
      * @return The parameter name of CSRF token on request parameter. (NotNull)
      */
     String getTokenParameterName();
+
+    /**
+     * @return The token requested as request header. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getRequestHeaderToken();
+
+    /**
+     * @return The token requested as request parameter. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getRequestParameterToken();
 
     /**
      * @return The CSRF token saved in e.g. session. (NotNull, EmptyAllowed)

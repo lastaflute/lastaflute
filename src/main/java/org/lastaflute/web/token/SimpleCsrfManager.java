@@ -114,8 +114,8 @@ public class SimpleCsrfManager implements CsrfManager {
     }
 
     // ===================================================================================
-    //                                                                       Token Process
-    //                                                                       =============
+    //                                                                        CSRF Process
+    //                                                                        ============
     @Override
     public void beginToken() {
         final String token = generateToken();
@@ -133,10 +133,10 @@ public class SimpleCsrfManager implements CsrfManager {
 
     @Override
     public void verifyToken() {
-        requestManager.getHeader(getTokenHeaderName()).ifPresent(headerToken -> {
+        getRequestHeaderToken().ifPresent(headerToken -> {
             doVerifyToken(headerToken);
         }).orElse(() -> {
-            requestManager.getParameter(getTokenParameterName()).ifPresent(parameterToken -> {
+            getRequestParameterToken().ifPresent(parameterToken -> {
                 doVerifyToken(parameterToken);
             }).orElse(() -> {
                 throwCsrfHeaderNotFoundException();
@@ -191,6 +191,16 @@ public class SimpleCsrfManager implements CsrfManager {
     @Override
     public String getTokenParameterName() {
         return tokenParameterName;
+    }
+
+    @Override
+    public OptionalThing<String> getRequestHeaderToken() {
+        return requestManager.getHeader(getTokenHeaderName());
+    }
+
+    @Override
+    public OptionalThing<String> getRequestParameterToken() {
+        return requestManager.getParameter(getTokenParameterName());
     }
 
     @Override
