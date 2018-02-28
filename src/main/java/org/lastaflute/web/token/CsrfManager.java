@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.token;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.exception.CrossSiteRequestForgeriesForbiddenException;
 
 /**
@@ -45,4 +46,9 @@ public interface CsrfManager {
      * @return The parameter name of CSRF token on request parameter. (NotNull)
      */
     String getTokenParameterName();
+
+    /**
+     * @return The CSRF token saved in e.g. session. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getSavedToken();
 }

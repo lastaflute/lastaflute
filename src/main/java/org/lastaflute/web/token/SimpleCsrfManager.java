@@ -19,6 +19,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.di.util.UUID;
 import org.lastaflute.web.LastaWebKey;
@@ -113,13 +114,13 @@ public class SimpleCsrfManager implements CsrfManager {
     }
 
     // ===================================================================================
-    //                                                                      Token Handling
-    //                                                                      ==============
+    //                                                                       Token Process
+    //                                                                       =============
     @Override
     public void beginToken() {
         final String token = generateToken();
         responseManager.addHeader(getTokenHeaderName(), token);
-        sessionManager.setAttribute(LastaWebKey.CSRF_TOKEN_KEY, token);
+        saveToken(token);
     }
 
     protected String generateToken() {
@@ -144,7 +145,7 @@ public class SimpleCsrfManager implements CsrfManager {
     }
 
     protected void doVerifyToken(String requestedToken) {
-        sessionManager.getAttribute(LastaWebKey.CSRF_TOKEN_KEY, String.class).ifPresent(savedToken -> {
+        getSavedToken().ifPresent(savedToken -> {
             if (!requestedToken.equals(savedToken)) {
                 throwCsrfHeaderSavedTokenNotMatchedException(requestedToken, savedToken);
             }
@@ -180,13 +181,28 @@ public class SimpleCsrfManager implements CsrfManager {
     }
 
     // ===================================================================================
-    //                                                                          Token Name
-    //                                                                          ==========
+    //                                                                      Token Handling
+    //                                                                      ==============
+    @Override
     public String getTokenHeaderName() {
         return tokenHeaderName;
     }
 
+    @Override
     public String getTokenParameterName() {
         return tokenParameterName;
+    }
+
+    @Override
+    public OptionalThing<String> getSavedToken() {
+        return sessionManager.getAttribute(getTokenSavingKey(), String.class);
+    }
+
+    protected void saveToken(String token) {
+        sessionManager.setAttribute(getTokenSavingKey(), token);
+    }
+
+    protected String getTokenSavingKey() {
+        return LastaWebKey.CSRF_TOKEN_KEY;
     }
 }
