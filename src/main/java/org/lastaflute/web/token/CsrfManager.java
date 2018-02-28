@@ -34,7 +34,7 @@ public interface CsrfManager {
     void beginToken();
 
     /**
-     * Verify token for CSRF. (e.g. checking the token in request header) <br>
+     * Verify token for CSRF. (e.g. checking the token in request header and parameter) <br>
      * You can call this in e.g. action hook.
      * @throws CrossSiteRequestForgeriesForbiddenException When the token is invalid or not found.
      */
