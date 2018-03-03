@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,6 +78,8 @@ public interface LaActionDocs {
      * <span style="font-size: 130%; color: #553000">[Validation]</span>
      * o validate(form, moreValidationLambda, validationErrorLambda) <span style="color: #3F7E5E">// validation by annotation and program</span>
      * o validateApi(form, moreValidationLambda) <span style="color: #3F7E5E">// for API</span>
+     * o throwValidationError(validationMessagesLambda, validationErrorLambda) <span style="color: #3F7E5E">// by original validation</span>
+     * o throwValidationErrorApi(validationMessagesLambda) <span style="color: #3F7E5E">// for API</span>
      * 
      * <span style="font-size: 130%; color: #553000">[Response]</span>
      * o asHtml(HTML template) <span style="color: #3F7E5E">// return response as HTML by template e.g. JSP</span>

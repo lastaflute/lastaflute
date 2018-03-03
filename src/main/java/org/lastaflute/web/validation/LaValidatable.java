@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ public interface LaValidatable<MESSAGES extends UserMessages> {
      * <pre>
      * <span style="color: #3F7E5E">// by-annotation only</span>
      * <span style="color: #CC4747">validate</span>(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {}, () <span style="font-size: 120%">-</span>&gt;</span> {
-     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaListJsp</span>);
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaListHtml</span>);
      * });
      * 
      * <span style="color: #3F7E5E">// by-annotation and by-program</span>
@@ -40,8 +40,17 @@ public interface LaValidatable<MESSAGES extends UserMessages> {
      *         <span style="color: #553000">messages</span>.addConstraint...
      *     }
      * }, () <span style="font-size: 120%">-</span>&gt;</span> {
-     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaListJsp</span>);
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaListHtml</span>);
      * });
+     * 
+     * <span style="color: #3F7E5E">// recycle data from validation process</span>
+     * ValidationSuccess <span style="color: #553000">success</span> = validate(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     Sea <span style="color: #553000">sea</span> = ... <span style="color: #3F7E5E">// something from validation process</span>
+     *     <span style="color: #553000">messages</span>.<span style="color: #CC4747">saveSuccessAttribute</span>(<span style="color: #0000C0">"sea"</span>, <span style="color: #553000">sea</span>);
+     * }, () <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">return</span> asHtml(<span style="color: #0000C0">path_Sea_SeaListHtml</span>);
+     * });
+     * Sea <span style="color: #553000">sea</span> = <span style="color: #553000">success</span>.<span style="color: #994747">getAttribute</span>(<span style="color: #0000C0">"sea"</span>, Sea.<span style="color: #70226C">class</span>);
      * </pre>
      * @param form The form that has request parameters. (NotNull)
      * @param moreValidationLambda The callback for more validation, e.g. correlation rule. (NotNull)
@@ -65,6 +74,13 @@ public interface LaValidatable<MESSAGES extends UserMessages> {
      *         <span style="color: #553000">messages</span>.addConstraint...
      *     }
      * });
+     * 
+     * <span style="color: #3F7E5E">// recycle data from validation process</span>
+     * ValidationSuccess <span style="color: #553000">success</span> = validateApi(<span style="color: #553000">form</span>, <span style="color: #553000">messages</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     Sea <span style="color: #553000">sea</span> = ... <span style="color: #3F7E5E">// something from validation process</span>
+     *     <span style="color: #553000">messages</span>.<span style="color: #CC4747">saveSuccessAttribute</span>(<span style="color: #0000C0">"sea"</span>, <span style="color: #553000">sea</span>);
+     * });
+     * Sea <span style="color: #553000">sea</span> = <span style="color: #553000">success</span>.<span style="color: #994747">getAttribute</span>(<span style="color: #0000C0">"sea"</span>, Sea.<span style="color: #70226C">class</span>);
      * </pre>
      * @param body The form or body that has request parameters. (NotNull)
      * @param moreValidationLambda The callback for more validation, e.g. correlation rule, very complex rule. (NotNull)

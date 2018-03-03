@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,17 +59,21 @@ public class ApplicationExceptionHandler {
      *     });
      * }
      * </pre>
+     * @param <CAUSE> The type of application exception.
      * @param appExType The type of application exception. (NotNull)
      * @param messages The user messages for the application exception. (NotNull)
      * @param causeLambda The callback to provide action response for the application exception. (NotNull)
      */
-    public void handle(Class<?> appExType, UserMessages messages, HandledAppExResponseCall causeLambda) {
+    public <CAUSE extends RuntimeException> void handle(Class<CAUSE> appExType, UserMessages messages,
+            HandledAppExResponseCall<CAUSE> causeLambda) {
         assertArgumentNotNull("appExType", appExType);
         assertArgumentNotNull("messages", messages);
         assertArgumentNotNull("causeLambda", causeLambda);
         if (appExType.isAssignableFrom(cause.getClass())) {
             messagesSaver.save(messages);
-            response = causeLambda.callback(cause);
+            @SuppressWarnings("unchecked")
+            final CAUSE castCause = (CAUSE) cause; // safety because of in if-isAssignableFrom()
+            response = causeLambda.callback(castCause); // not null, undefined allowed
             if (response == null) {
                 throw new IllegalStateException("Cannot return null response from application handling.", cause);
             }
@@ -77,13 +81,13 @@ public class ApplicationExceptionHandler {
     }
 
     @FunctionalInterface
-    public static interface HandledAppExResponseCall {
+    public static interface HandledAppExResponseCall<CAUSE extends RuntimeException> {
 
         /**
          * @param cause The thrown application exception. (NotNull)
          * @return The action response for the application exception. (NotNull, UndefinedAllowed: then no handling)
          */
-        ActionResponse callback(RuntimeException cause);
+        ActionResponse callback(CAUSE cause);
     }
 
     // ===================================================================================

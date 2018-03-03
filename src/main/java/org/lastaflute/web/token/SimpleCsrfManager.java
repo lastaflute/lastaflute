@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2015-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.di.util.UUID;
 import org.lastaflute.web.LastaWebKey;
@@ -41,6 +42,7 @@ public class SimpleCsrfManager implements CsrfManager {
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(SimpleCsrfManager.class);
     protected static final String DEFAULT_TOKEN_HEADER = "X-CSRF-TOKEN";
+    protected static final String DEFAULT_TOKEN_PARAMETER = "_csrf";
 
     // ===================================================================================
     //                                                                           Attribute
@@ -61,6 +63,9 @@ public class SimpleCsrfManager implements CsrfManager {
     /** The header name of CSRF token on request and response. (NotNull, Changeable) */
     protected String tokenHeaderName = DEFAULT_TOKEN_HEADER;
 
+    /** The parameter name of CSRF token on request parameter. (NotNull, Changeable) */
+    protected String tokenParameterName = DEFAULT_TOKEN_PARAMETER;
+
     /** The generator of CSRF token. (NotNull: after initialization) */
     protected CsrfTokenGenerator tokenGenerator;
 
@@ -75,6 +80,10 @@ public class SimpleCsrfManager implements CsrfManager {
             final String providedHeaderName = resourceProvider.provideTokenHeaderName();
             if (providedHeaderName != null) {
                 tokenHeaderName = providedHeaderName;
+            }
+            final String providedParameterName = resourceProvider.provideTokenParameterName();
+            if (providedParameterName != null) {
+                tokenParameterName = providedParameterName;
             }
             final CsrfTokenGenerator providedGenerator = resourceProvider.provideTokenGenerator();
             if (providedGenerator != null) {
@@ -99,18 +108,19 @@ public class SimpleCsrfManager implements CsrfManager {
         if (logger.isInfoEnabled()) {
             logger.info("[Csrf Manager]");
             logger.info(" tokenHeaderName: " + tokenHeaderName);
+            logger.info(" tokenParameterName: " + tokenParameterName);
             logger.info(" tokenGenerator: " + tokenGenerator);
         }
     }
 
     // ===================================================================================
-    //                                                                      Token Handling
-    //                                                                      ==============
+    //                                                                        CSRF Process
+    //                                                                        ============
     @Override
     public void beginToken() {
         final String token = generateToken();
         responseManager.addHeader(getTokenHeaderName(), token);
-        sessionManager.setAttribute(LastaWebKey.CSRF_TOKEN_KEY, token);
+        saveToken(token);
     }
 
     protected String generateToken() {
@@ -123,21 +133,25 @@ public class SimpleCsrfManager implements CsrfManager {
 
     @Override
     public void verifyToken() {
-        requestManager.getHeader(getTokenHeaderName()).ifPresent(headerToken -> {
-            sessionManager.getAttribute(LastaWebKey.CSRF_TOKEN_KEY, String.class).ifPresent(savedToken -> {
-                if (!headerToken.equals(savedToken)) {
-                    throwCsrfHeaderSavedTokenNotMatchedException(headerToken, savedToken);
-                }
-            }).orElse(() -> {
-                throwCsrfHeaderSavedTokenNotMatchedException(headerToken, null);
-            });
+        getRequestHeaderToken().ifPresent(headerToken -> {
+            doVerifyToken(headerToken);
         }).orElse(() -> {
-            throwCsrfHeaderNotFoundException();
+            getRequestParameterToken().ifPresent(parameterToken -> {
+                doVerifyToken(parameterToken);
+            }).orElse(() -> {
+                throwCsrfHeaderNotFoundException();
+            });
         });
     }
 
-    protected String getTokenHeaderName() {
-        return tokenHeaderName;
+    protected void doVerifyToken(String requestedToken) {
+        getSavedToken().ifPresent(savedToken -> {
+            if (!requestedToken.equals(savedToken)) {
+                throwCsrfHeaderSavedTokenNotMatchedException(requestedToken, savedToken);
+            }
+        }).orElse(() -> {
+            throwCsrfHeaderSavedTokenNotMatchedException(requestedToken, null);
+        });
     }
 
     protected void throwCsrfHeaderSavedTokenNotMatchedException(String headerToken, String savedToken) {
@@ -164,5 +178,41 @@ public class SimpleCsrfManager implements CsrfManager {
         br.addElement(requestManager.getRequestPathAndQuery());
         final String msg = br.buildExceptionMessage();
         throw new CrossSiteRequestForgeriesForbiddenException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                      Token Handling
+    //                                                                      ==============
+    @Override
+    public String getTokenHeaderName() {
+        return tokenHeaderName;
+    }
+
+    @Override
+    public String getTokenParameterName() {
+        return tokenParameterName;
+    }
+
+    @Override
+    public OptionalThing<String> getRequestHeaderToken() {
+        return requestManager.getHeader(getTokenHeaderName());
+    }
+
+    @Override
+    public OptionalThing<String> getRequestParameterToken() {
+        return requestManager.getParameter(getTokenParameterName());
+    }
+
+    @Override
+    public OptionalThing<String> getSavedToken() {
+        return sessionManager.getAttribute(getTokenSavingKey(), String.class);
+    }
+
+    protected void saveToken(String token) {
+        sessionManager.setAttribute(getTokenSavingKey(), token);
+    }
+
+    protected String getTokenSavingKey() {
+        return LastaWebKey.CSRF_TOKEN_KEY;
     }
 }
