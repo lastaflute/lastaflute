@@ -207,4 +207,16 @@ public interface ActionAdjustmentProvider {
     default InOutLogOption adjustInOutLogging() {
         return null;
     }
+
+    // ===================================================================================
+    //                                                                       Error Logging
+    //                                                                       =============
+    /**
+     * Does the exception suppress server error logging?
+     * @param cause The exception as server error. (NotNull)
+     * @return The determination, true or false. If false, error logging.
+     */
+    default boolean isSuppressServerErrorLogging(Throwable cause) {
+        return false;
+    }
 }
