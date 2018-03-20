@@ -16,8 +16,10 @@
 package org.lastaflute.web.ruts.inoutlogging;
 
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 
 /**
  * @author jflute
@@ -33,6 +35,7 @@ public class InOutLogOption {
     protected Function<String, String> requestParameterFilter;
     protected Function<String, String> requestBodyFilter;
     protected Function<String, String> responseBodyFilter;
+    protected Predicate<ActionRuntime> loggingExceptDeterminer;
 
     // ===================================================================================
     //                                                                         Easy-to-Use
@@ -95,6 +98,18 @@ public class InOutLogOption {
         return this;
     }
 
+    /**
+     * @param loggingExceptDeterminer The determiner to except logging. (NotNull)
+     * @return this. (NotNull)
+     */
+    public InOutLogOption exceptLogging(Predicate<ActionRuntime> loggingExceptDeterminer) {
+        if (loggingExceptDeterminer == null) {
+            throw new IllegalArgumentException("The argument 'loggingExceptDeterminer' should not be null.");
+        }
+        this.loggingExceptDeterminer = loggingExceptDeterminer;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
@@ -120,6 +135,12 @@ public class InOutLogOption {
 
     public OptionalThing<Function<String, String>> getResponseBodyFilter() {
         return OptionalThing.ofNullable(responseBodyFilter, () -> {
+            throw new IllegalStateException("Not found the responseBodyFilter.");
+        });
+    }
+
+    public OptionalThing<Predicate<ActionRuntime>> getLoggingExceptDeterminer() {
+        return OptionalThing.ofNullable(loggingExceptDeterminer, () -> {
             throw new IllegalStateException("Not found the responseBodyFilter.");
         });
     }
