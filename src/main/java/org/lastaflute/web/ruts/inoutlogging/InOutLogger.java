@@ -79,7 +79,7 @@ public class InOutLogger {
     }
 
     protected boolean isExceptAction(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
-        return keeper.getOption().getLoggingExceptDeterminer().map(determiner -> determiner.test(runtime)).isPresent();
+        return keeper.getOption().getLoggingExceptDeterminer().map(determiner -> determiner.test(runtime)).orElse(false);
     }
 
     protected void doShowInOutLog(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
