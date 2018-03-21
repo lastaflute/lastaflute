@@ -67,7 +67,7 @@ public class InOutLogger {
         if (!isLoggerEnabled()) { // e.g. option is true but no logger settings
             return;
         }
-        if (isExceptAction(requestManager, runtime, keeper)) { // e.g. HealthcheckAction
+        if (isExceptLogging(requestManager, runtime, keeper)) { // e.g. HealthcheckAction
             return;
         }
         // no async for now, because this process is after response committed by jflute (2017/08/11)
@@ -78,7 +78,7 @@ public class InOutLogger {
         }
     }
 
-    protected boolean isExceptAction(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
+    protected boolean isExceptLogging(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
         return keeper.getOption().getLoggingExceptDeterminer().map(determiner -> determiner.test(runtime)).orElse(false);
     }
 
