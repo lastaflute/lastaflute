@@ -52,7 +52,7 @@ public class ScopedMessageHandler {
      */
     public void save(String property, String messageKey, Object... args) {
         assertObjectNotNull("messageKey", messageKey);
-        doSaveInfo(prepareUserMessages(globalPropertyKey, messageKey, args));
+        doSaveInfo(prepareUserMessages(property, messageKey, args));
     }
 
     /**

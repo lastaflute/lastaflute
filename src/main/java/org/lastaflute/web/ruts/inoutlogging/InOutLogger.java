@@ -67,12 +67,19 @@ public class InOutLogger {
         if (!isLoggerEnabled()) { // e.g. option is true but no logger settings
             return;
         }
+        if (isExceptLogging(requestManager, runtime, keeper)) { // e.g. HealthcheckAction
+            return;
+        }
         // no async for now, because this process is after response committed by jflute (2017/08/11)
         try {
             doShowInOutLog(requestManager, runtime, keeper);
         } catch (RuntimeException continued) { // not main process
             logger.info("*Failed to show in-out log: " + runtime.getRequestPath(), continued);
         }
+    }
+
+    protected boolean isExceptLogging(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {
+        return keeper.getOption().getLoggingExceptDeterminer().map(determiner -> determiner.test(runtime)).orElse(false);
     }
 
     protected void doShowInOutLog(RequestManager requestManager, ActionRuntime runtime, InOutLogKeeper keeper) {

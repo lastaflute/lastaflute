@@ -5,10 +5,10 @@
 .DS_Store
 
 # IntelliJ IDEA
-/.idea/*
-!/.idea/inspectionProfiles
-!/.idea/codeStyleSettings.xml
-!/.idea/misc.xml
-!/.idea/saveactions_settings.xml
-/*.iml
+**/.idea/*
+!**/.idea/inspectionProfiles
+!**/.idea/codeStyleSettings.xml
+!**/.idea/misc.xml
+!**/.idea/saveactions_settings.xml
+**/*.iml
 /out

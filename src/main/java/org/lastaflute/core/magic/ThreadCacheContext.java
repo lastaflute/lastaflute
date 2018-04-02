@@ -152,14 +152,16 @@ public class ThreadCacheContext {
 
     /**
      * Remove the value of the object from the cache.
+     * @param <OBJ> The type of cached object.
      * @param key The key of the object. (NotNull)
      * @return The removed value. (NullAllowed)
      */
-    public static Object removeObject(String key) {
+    @SuppressWarnings("unchecked")
+    public static <OBJ> OBJ removeObject(String key) {
         if (!exists()) {
             throwThreadCacheNotInitializedException(key);
         }
-        return threadLocal.get().remove(key);
+        return (OBJ) threadLocal.get().remove(key);
     }
 
     /**

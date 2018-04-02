@@ -75,20 +75,26 @@ public class LastaShowbaseFilter implements Filter {
         final FwWebDirection webDirection = getAssistantDirector().assistWebDirection();
         final ActionAdjustmentProvider adjustmentProvider = webDirection.assistActionAdjustmentProvider();
         final RequestManager requestManager = getRequestManager();
-        return new RequestLoggingFilter() {
-            @Override
-            protected boolean isTargetPath(HttpServletRequest request) {
-                // forced routings also should be logging control target
-                final String requestPath = requestManager.getRequestPath();
-                if (adjustmentProvider.isForcedRoutingExcept(request, requestPath)) {
-                    return false;
-                }
-                if (adjustmentProvider.isForcedRoutingTarget(request, requestPath)) {
-                    return true;
-                }
-                return super.isTargetPath(request);
+        final RequestLoggingFilter filter = newRequestLoggingFilter();
+        filter.determineRoutingTarget((request, embeddedDeterminer) -> {
+            // forced routings also should be logging control target
+            final String requestPath = requestManager.getRequestPath();
+            if (adjustmentProvider.isForcedRoutingExcept(request, requestPath)) {
+                return false;
             }
-        };
+            if (adjustmentProvider.isForcedRoutingTarget(request, requestPath)) {
+                return true;
+            }
+            return embeddedDeterminer.determineEmbedded(request);
+        });
+        filter.suppressServerErrorLogging(cause -> {
+            return adjustmentProvider.isSuppressServerErrorLogging(cause);
+        });
+        return filter;
+    }
+
+    protected RequestLoggingFilter newRequestLoggingFilter() {
+        return new RequestLoggingFilter();
     }
 
     // -----------------------------------------------------
