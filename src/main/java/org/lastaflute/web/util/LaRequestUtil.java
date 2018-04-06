@@ -19,6 +19,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.di.core.ExternalContext;
 
 /**
  * @author modified by jflute (originated in Seasar)
@@ -30,7 +31,7 @@ public final class LaRequestUtil {
 
     /**
      * @return The request of servlet. (NotNull)
-     * @throws IllegalStateException When the request is not found.
+     * @throws IllegalStateException When the request (or external context) is not found.
      */
     public static HttpServletRequest getRequest() {
         return getOptionalRequest().get();
@@ -38,10 +39,19 @@ public final class LaRequestUtil {
 
     /**
      * @return The optional request of servlet. (NotNull, EmptyAllowed: when out of scope for external context)
-     * @throws IllegalStateException When the request is not found.
      */
     public static OptionalThing<HttpServletRequest> getOptionalRequest() {
-        final HttpServletRequest request = (HttpServletRequest) ContainerUtil.retrieveExternalContext().getRequest();
+        final HttpServletRequest request;
+        if (ContainerUtil.hasExternalContext()) {
+            final ExternalContext externalContext = ContainerUtil.retrieveExternalContext(); // not null
+            request = (HttpServletRequest) externalContext.getRequest(); // null allowed, request not found
+        } else {
+            request = null; // external context not found
+        }
+        return toRequestOptional(request);
+    }
+
+    private static OptionalThing<HttpServletRequest> toRequestOptional(HttpServletRequest request) {
         return OptionalThing.ofNullable(request, () -> {
             throw new IllegalStateException("Not found the servlet request, not web scope now?");
         });

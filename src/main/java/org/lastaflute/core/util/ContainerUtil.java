@@ -106,7 +106,16 @@ public abstract class ContainerUtil {
     //                                                                    External Context
     //                                                                    ================
     /**
+     * Does the Lasta Di have external context instance?
+     * @return The determination, true or false.
+     */
+    public static boolean hasExternalContext() {
+        return SingletonLaContainerFactory.getExternalContext() != null;
+    }
+
+    /**
      * @return The external context of Lasta Di. (NotNull)
+     * @throws IllegalStateException When the external context is not found.
      */
     public static ExternalContext retrieveExternalContext() {
         final ExternalContext context = SingletonLaContainerFactory.getExternalContext();
@@ -118,6 +127,7 @@ public abstract class ContainerUtil {
 
     /**
      * @param request The request for external context of Lasta Di. (NotNull)
+     * @throws IllegalStateException When the external context or existing request is not found.
      */
     public static void overrideExternalRequest(HttpServletRequest request) {
         if (request == null) {
