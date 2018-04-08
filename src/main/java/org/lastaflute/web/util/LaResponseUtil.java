@@ -17,7 +17,9 @@ package org.lastaflute.web.util;
 
 import javax.servlet.http.HttpServletResponse;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.util.ContainerUtil;
+import org.lastaflute.di.core.ExternalContext;
 
 /**
  * @author modified by jflute (originated in Seasar)
@@ -29,13 +31,29 @@ public final class LaResponseUtil {
 
     /**
      * @return The response of servlet. (NotNull)
-     * @throws IllegalStateException When the response is not found.
+     * @throws IllegalStateException When the response (or external context) is not found.
      */
     public static HttpServletResponse getResponse() {
-        final HttpServletResponse response = (HttpServletResponse) ContainerUtil.retrieveExternalContext().getResponse();
-        if (response == null) {
-            throw new IllegalStateException("Not found the servlet response, not web scope now?");
+        return getOptionalResponse().get();
+    }
+
+    /**
+     * @return The optional response of servlet. (NotNull, EmptyAllowed: when out of scope for external context)
+     */
+    public static OptionalThing<HttpServletResponse> getOptionalResponse() {
+        final HttpServletResponse response;
+        if (ContainerUtil.hasExternalContext()) {
+            final ExternalContext externalContext = ContainerUtil.retrieveExternalContext(); // not null
+            response = (HttpServletResponse) externalContext.getResponse(); // null allowed, request not found
+        } else {
+            response = null; // external context not found
         }
-        return response;
+        return toRequestOptional(response);
+    }
+
+    private static OptionalThing<HttpServletResponse> toRequestOptional(HttpServletResponse response) {
+        return OptionalThing.ofNullable(response, () -> {
+            throw new IllegalStateException("Not found the servlet resopnse, not web scope now?");
+        });
     }
 }
