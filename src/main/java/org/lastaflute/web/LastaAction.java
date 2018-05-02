@@ -199,7 +199,13 @@ public abstract class LastaAction {
      *     }
      * });
      * </pre>
-     * @param fileName The file name as data of the stream, used in header Content-disposition. (NotNull)
+     * 
+     * <p>The file name is not encoded in response header 'Content-Disposition'
+     * so call encodeFileName() if the file name needs encoding (e.g. contains Japanese characters).</p>
+     * <pre>
+     * <span style="color: #70226C">return</span> asStream("\u6d77.txt").encodeFileName().<span style="color: #CC4747">stream</span>(...);
+     * </pre>
+     * @param fileName The file name as data of the stream, used in header Content-disposition, not encoded. (NotNull)
      * @return The new-created response for stream. (NotNull)
      */
     protected StreamResponse asStream(String fileName) {
@@ -210,7 +216,7 @@ public abstract class LastaAction {
     /**
      * New-create stream response object.
      * @param fileName The file name as data of the stream. (NotNull)
-     * @return The new-created bean for XML response. (NotNull)
+     * @return The new-created bean for stream response. (NotNull)
      */
     protected StreamResponse newStreamResponse(String fileName) {
         return new StreamResponse(fileName);
