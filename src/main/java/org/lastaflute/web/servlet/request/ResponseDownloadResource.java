@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.servlet.request;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Map;
 
 import org.dbflute.helper.StringKeyMap;
@@ -30,6 +32,7 @@ public class ResponseDownloadResource {
     //                                                                           Attribute
     //                                                                           =========
     protected final String fileName;
+    protected String headerFileNameEncoding;
     protected String contentType;
     protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
     protected byte[] byteData;
@@ -50,6 +53,11 @@ public class ResponseDownloadResource {
             throw new IllegalArgumentException("The argument 'fileName' should not be null.");
         }
         this.fileName = fileName;
+    }
+
+    public ResponseDownloadResource encodeFileName(String encoding) {
+        headerFileNameEncoding = encoding;
+        return this;
     }
 
     // ===================================================================================
@@ -85,14 +93,41 @@ public class ResponseDownloadResource {
     }
 
     public void headerContentDispositionAttachment() { // used as default
-        headerContentDisposition("attachment; filename=\"" + fileName + "\"");
+        doHeaderContentDisposition("attachment");
     }
 
     public void headerContentDispositionInline() {
-        headerContentDisposition("inline; filename=\"" + fileName + "\"");
+        doHeaderContentDisposition("inline");
     }
 
-    protected void headerContentDisposition(String disposition) {
+    protected void doHeaderContentDisposition(String theme) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append(theme);
+        sb.append("; filename=\"").append(fileName).append("\""); // plain name (not encoded)
+        if (headerFileNameEncoding != null) { // e.g. filename*=UTF-8''%E6%B5%B7-in-%E8%88%9E%E6%B5%9C.txt
+            sb.append("; filename*=").append(headerFileNameEncoding); // RFC6266 (non-quoted)
+            sb.append("''").append(prepareEncodedFileName());
+        }
+        registerHeaderContentDisposition(sb.toString());
+    }
+
+    protected String prepareEncodedFileName() {
+        return filterEncodedHeaderFileName(urlencodeHeaderFileName());
+    }
+
+    protected String urlencodeHeaderFileName() {
+        try {
+            return URLEncoder.encode(fileName, headerFileNameEncoding);
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("Not found the encoding: " + headerFileNameEncoding, e);
+        }
+    }
+
+    protected String filterEncodedHeaderFileName(String encodedName) {
+        return encodedName.replace("+", "%20"); // because URLEncoder changes ' ' to '+'
+    }
+
+    protected void registerHeaderContentDisposition(String disposition) {
         headerMap.put(ResponseManager.HEADER_CONTENT_DISPOSITION, new String[] { disposition });
     }
 

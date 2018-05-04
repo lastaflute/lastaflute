@@ -24,7 +24,6 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.web.servlet.request.ResponseDownloadResource;
-import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
 
@@ -45,8 +44,11 @@ public class StreamResponse implements ActionResponse {
     //                                                                           Attribute
     //                                                                           =========
     protected final String fileName;
+    protected boolean needsFileNameEncoding;
     protected String contentType;
     protected final Map<String, String[]> headerMap = createHeaderMap(); // no lazy because of frequently used
+    protected boolean reservedHeaderContentDispositionAttachment;
+    protected boolean reservedHeaderContentDispositionInline;
     protected Integer httpStatus;
     protected byte[] byteData;
     protected WrittenStreamCall streamCall;
@@ -63,9 +65,18 @@ public class StreamResponse implements ActionResponse {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
+    /**
+     * @param fileName The file name as data of the stream, used in header Content-disposition, not encoded. (NotNull)
+     */
     public StreamResponse(String fileName) {
         assertArgumentNotNull("fileName", fileName);
         this.fileName = fileName;
+    }
+
+    // #hope wants to be encoded as default in the future...but how to avoid duplicate encoding? by jflute (2018/05/02)
+    public StreamResponse encodeFileName() {
+        needsFileNameEncoding = true;
+        return this;
     }
 
     // ===================================================================================
@@ -122,17 +133,13 @@ public class StreamResponse implements ActionResponse {
     }
 
     public StreamResponse headerContentDispositionAttachment() { // used as default
-        headerContentDisposition("attachment; filename=\"" + fileName + "\"");
+        reservedHeaderContentDispositionAttachment = true;
         return this;
     }
 
     public StreamResponse headerContentDispositionInline() {
-        headerContentDisposition("inline; filename=\"" + fileName + "\"");
+        reservedHeaderContentDispositionInline = true;
         return this;
-    }
-
-    protected void headerContentDisposition(String disposition) {
-        headerMap.put(ResponseManager.HEADER_CONTENT_DISPOSITION, new String[] { disposition });
     }
 
     // ===================================================================================
@@ -311,6 +318,15 @@ public class StreamResponse implements ActionResponse {
         for (Entry<String, String[]> entry : headerMap.entrySet()) {
             resource.header(entry.getKey(), entry.getValue());
         }
+        if (needsFileNameEncoding) {
+            resource.encodeFileName(getHeaderFileNameEncoding()); // should be before content-disposition process
+        }
+        if (reservedHeaderContentDispositionAttachment) {
+            resource.headerContentDispositionAttachment();
+        }
+        if (reservedHeaderContentDispositionInline) {
+            resource.headerContentDispositionInline();
+        }
         if (!returnAsEmptyBody && byteData == null && streamCall == null && zipStreamCall == null) {
             throwStreamByteDataInputStreamNotFoundException();
         }
@@ -335,6 +351,10 @@ public class StreamResponse implements ActionResponse {
 
     protected ResponseDownloadResource createResponseDownloadResource() {
         return new ResponseDownloadResource(fileName);
+    }
+
+    protected String getHeaderFileNameEncoding() {
+        return "UTF-8"; // fixedly
     }
 
     protected void throwStreamByteDataInputStreamNotFoundException() {
