@@ -20,6 +20,13 @@ import java.util.function.Consumer;
 import org.lastaflute.db.dbflute.callbackcontext.lazytx.LazyTxBehaviorCommandHook;
 
 /**
+ * The arranger of lazy-transaction.
+ * <pre>
+ * lazy-transaction process:
+ * 1. ready lazy: you can use lazy-transaction (in ActionHook)
+ * 2. begin lazy: logical beginning of transaction (in UserTransaction)
+ * 3. begin real: physical beginning of transaction (in BehaviorCommandHook)
+ * </pre>
  * @author jflute
  * @since 0.8.4 (2016/09/03 Saturday)
  */
