@@ -16,6 +16,7 @@
 package org.lastaflute.web.servlet.request;
 
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * The provider of response handling.
@@ -24,7 +25,23 @@ import java.util.Map;
 public interface ResponseHandlingProvider {
 
     /**
+     * @return The creator of performer for writing response e.g. JSON response. (NullAllowed)
+     */
+    default Supplier<ResponseWritePerformer> provideResponseWritePerformerCreator() {
+        return null; // as default
+    }
+
+    /**
+     * @return The creator of performer for downloading response e.g. stream response. (NullAllowed)
+     */
+    default Supplier<ResponseDownloadPerformer> provideResponseDownloadPerformerCreator() {
+        return null; // as default
+    }
+
+    /**
      * @return The map of content type for extensions. (NullAllowed)
      */
-    Map<String, String> provideDownloadExtensionContentTypeMap();
+    default Map<String, String> provideDownloadExtensionContentTypeMap() {
+        return null; // as default
+    }
 }

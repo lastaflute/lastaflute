@@ -16,9 +16,8 @@
 package org.lastaflute.web.servlet.request;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -64,6 +63,12 @@ public class SimpleResponseManager implements ResponseManager {
     @Resource
     private ActionPathResolver actionPathResolver;
 
+    /** The creator of performer for writing response e.g. JSON response. (NullAllowed) */
+    protected Supplier<ResponseWritePerformer> responseWritePerformerCreator;
+
+    /** The creator of performer for downloading response, stream response. (NullAllowed) */
+    protected Supplier<ResponseDownloadPerformer> responseDownloadPerformerCreator;
+
     /** The map of content type for extensions. (NullAllowed) */
     protected Map<String, String> downloadExtensionContentTypeMap;
 
@@ -79,6 +84,8 @@ public class SimpleResponseManager implements ResponseManager {
         final FwWebDirection direction = assistWebDirection();
         final ResponseHandlingProvider provider = direction.assistResponseHandlingProvider();
         if (provider != null) {
+            responseWritePerformerCreator = provider.provideResponseWritePerformerCreator();
+            responseDownloadPerformerCreator = provider.provideResponseDownloadPerformerCreator();
             downloadExtensionContentTypeMap = provider.provideDownloadExtensionContentTypeMap();
         }
         showBootLogging();
@@ -91,6 +98,8 @@ public class SimpleResponseManager implements ResponseManager {
     protected void showBootLogging() {
         if (logger.isInfoEnabled()) {
             logger.info("[Response Manager]");
+            logger.info(" responseWritePerformerCreator: " + responseWritePerformerCreator);
+            logger.info(" responseDownloadPerformerCreator: " + responseDownloadPerformerCreator);
             logger.info(" downloadExtensionContentTypeMap: " + downloadExtensionContentTypeMap);
         }
     }
@@ -227,40 +236,21 @@ public class SimpleResponseManager implements ResponseManager {
         assertArgumentNotNull("text", text);
         assertArgumentNotNull("contentType", contentType);
         assertArgumentNotNull("encoding", encoding);
-        final HttpServletResponse response = getResponse();
-        final String contentTypeWithCharset = buildContentTypeWithCharset(contentType, encoding);
-        showWritingResponse(text, contentTypeWithCharset);
-        response.setContentType(contentTypeWithCharset);
-        try {
-            PrintWriter out = null;
-            try {
-                out = new PrintWriter(new OutputStreamWriter(response.getOutputStream(), encoding));
-                out.print(text);
-            } finally {
-                if (out != null) {
-                    out.close();
-                }
+        createResponseWritePerformer().write(getResponse(), text, contentType, encoding);
+    }
+
+    protected ResponseWritePerformer createResponseWritePerformer() {
+        if (responseWritePerformerCreator != null) {
+            final ResponseWritePerformer provided = responseWritePerformerCreator.get();
+            if (provided != null) {
+                return provided;
             }
-        } catch (IOException e) {
-            String msg = "Failed to write the text: contentType=" + contentType + ", encoding=" + encoding + ", text=" + text;
-            throw new IllegalStateException(msg, e);
         }
+        return newResponseWritePerformer();
     }
 
-    protected String buildContentTypeWithCharset(String contentType, String encoding) {
-        return contentType + "; charset=" + encoding;
-    }
-
-    protected void showWritingResponse(String value, String contentType) {
-        if (logger.isDebugEnabled()) {
-            // to suppress noisy big data (no need all data for debug: also you can see it by response)
-            final String exp = buildApiResponseDebugDisplay(value);
-            logger.debug("#flow ...Writing response as {}: \n{}", contentType, exp);
-        }
-    }
-
-    protected String buildApiResponseDebugDisplay(String value) {
-        return Srl.cut(value, 500, "..."); // you can basically confirm it at front side so cut it here
+    protected ResponseWritePerformer newResponseWritePerformer() {
+        return new ResponseWritePerformer();
     }
 
     // ===================================================================================
@@ -363,6 +353,16 @@ public class SimpleResponseManager implements ResponseManager {
     }
 
     protected ResponseDownloadPerformer createResponseDownloadPerformer() {
+        return newResponseDownloadPerformer();
+    }
+
+    protected ResponseDownloadPerformer newResponseDownloadPerformer() {
+        if (responseDownloadPerformerCreator != null) {
+            final ResponseDownloadPerformer provided = responseDownloadPerformerCreator.get();
+            if (provided != null) {
+                return provided;
+            }
+        }
         return new ResponseDownloadPerformer();
     }
 
