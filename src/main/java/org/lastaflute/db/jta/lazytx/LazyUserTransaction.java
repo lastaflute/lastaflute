@@ -16,6 +16,7 @@
 package org.lastaflute.db.jta.lazytx;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.transaction.HeuristicMixedException;
@@ -23,12 +24,15 @@ import javax.transaction.HeuristicRollbackException;
 import javax.transaction.InvalidTransactionException;
 import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
+import javax.transaction.Status;
 import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 
 import org.dbflute.helper.function.IndependentProcessor;
+import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.magic.ThreadCacheContext;
+import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.HookedUserTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,12 +84,12 @@ public class LazyUserTransaction extends HookedUserTransaction {
 
     protected void toBeLazyTransaction() {
         if (logger.isDebugEnabled()) {
-            logger.debug("#lazyTx ...Being lazyBegun");
+            logger.debug("#lazyTx ...Being lazyBegun: {}", buildLazyTxExp());
         }
         markLazyTransactionLazyBegun();
         arrangeLazyProcessIfAllowed(() -> {
             if (logger.isDebugEnabled()) {
-                logger.debug("#lazyTx ...Being realBegun");
+                logger.debug("#lazyTx ...Being realBegun: {}", buildLazyTxExp());
             }
             superDoBegin();
         });
@@ -110,15 +114,21 @@ public class LazyUserTransaction extends HookedUserTransaction {
     protected void doCommit() throws HeuristicMixedException, HeuristicRollbackException, IllegalStateException, RollbackException,
             SecurityException, SystemException {
         if (canTerminateTransactionReally()) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("#lazyTx ...Committing the transaction: {}", buildLazyTxExp());
+            }
             superDoCommit();
         } else {
             if (logger.isDebugEnabled()) {
-                logger.debug("#lazyTx *No commit because of non-begun transaction");
+                logger.debug("#lazyTx *No commit because of non-begun transaction: {}", buildLazyTxExp());
             }
         }
         if (canLazyTransaction()) {
             decrementHierarchyLevel();
             resumeForcedlyBegunLazyTransactionIfNeeds(); // when nested transaction
+        }
+        if (isLazyTransactionReadyLazy() && isHerarchyLevelZero()) { // lazy transaction is supported only for root
+            returnToReadyLazy();
         }
     }
 
@@ -154,12 +164,15 @@ public class LazyUserTransaction extends HookedUserTransaction {
             superDoRollback();
         } else {
             if (logger.isDebugEnabled()) {
-                logger.debug("#lazyTx *No rollback because of non-begun transaction");
+                logger.debug("#lazyTx *No rollback because of non-begun transaction: {}", buildLazyTxExp());
             }
         }
         if (canLazyTransaction()) {
             decrementHierarchyLevel();
             resumeForcedlyBegunLazyTransactionIfNeeds(); // when nested transaction
+        }
+        if (isLazyTransactionReadyLazy() && isHerarchyLevelZero()) { // lazy transaction is supported only for root
+            returnToReadyLazy();
         }
     }
 
@@ -194,12 +207,13 @@ public class LazyUserTransaction extends HookedUserTransaction {
         }
     }
 
-    public Integer getCurrentHierarchyLevel() {
-        return ThreadCacheContext.getObject(generateHierarchyLevelKey());
+    protected boolean isHerarchyLevelZero() {
+        final Integer currentLevel = getCurrentHierarchyLevel();
+        return currentLevel == null || currentLevel.equals(0); // basically null, but just in case
     }
 
     protected boolean isHerarchyLevelFirst() {
-        final Integer currentLevel = ThreadCacheContext.getObject(generateHierarchyLevelKey());
+        final Integer currentLevel = getCurrentHierarchyLevel();
         return currentLevel != null && currentLevel.equals(getFirstHierarchyLevel());
     }
 
@@ -207,17 +221,19 @@ public class LazyUserTransaction extends HookedUserTransaction {
         return 1;
     }
 
-    protected String generateHierarchyLevelKey() {
-        return "lazyTx:hierarchyLevel";
-    }
-
     // ===================================================================================
     //                                                                      Suspend/Resume
     //                                                                      ==============
     protected void suspendForcedlyBegunLazyTransactionIfNeeds() throws SystemException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("#lazyTx ...Suspending the outer forcedly-begun lazy transaction: {}", buildLazyTxExp());
+        }
         final Transaction suspended = transactionManager.suspend();
         arrangeForcedlyBegunResumer(() -> {
             if (isHerarchyLevelFirst()) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("#lazyTx ...Resuming the outer forcedly-begun lazy transaction: {}", buildLazyTxExp());
+                }
                 doResumeForcedlyBegunLazyTransaction(suspended);
                 return true;
             } else {
@@ -243,12 +259,11 @@ public class LazyUserTransaction extends HookedUserTransaction {
     }
 
     protected void resumeForcedlyBegunLazyTransactionIfNeeds() {
-        final String resumeKey = generateResumeKey();
-        final ForcedlyBegunResumer resumer = ThreadCacheContext.getObject(resumeKey);
+        final ForcedlyBegunResumer resumer = getForcedlyBegunResumer();
         if (resumer != null) {
             final boolean resumed = resumer.resume();
             if (resumed) {
-                ThreadCacheContext.removeObject(resumeKey);
+                ThreadCacheContext.removeObject(generateResumeKey());
             }
         }
     }
@@ -256,10 +271,6 @@ public class LazyUserTransaction extends HookedUserTransaction {
     @FunctionalInterface
     protected static interface ForcedlyBegunResumer {
         boolean resume();
-    }
-
-    protected static String generateResumeKey() {
-        return "lazyTx:resumer";
     }
 
     // ===================================================================================
@@ -270,7 +281,7 @@ public class LazyUserTransaction extends HookedUserTransaction {
         if (isJustLazyNow()) {
             arrangeLazyProcessIfAllowed(() -> {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("#lazyTx ...Setting transaction roll-back only");
+                    logger.debug("#lazyTx ...Setting transaction roll-back only: {}", buildLazyTxExp());
                 }
                 doSuperSetRollbackOnly();
             });
@@ -283,7 +294,7 @@ public class LazyUserTransaction extends HookedUserTransaction {
         try {
             super.setRollbackOnly();
         } catch (SystemException e) {
-            String msg = "Failed to set roll-back only";
+            String msg = "Failed to set roll-back only.";
             throw new IllegalStateException(msg, e);
         }
     }
@@ -296,7 +307,7 @@ public class LazyUserTransaction extends HookedUserTransaction {
         if (isJustLazyNow()) {
             arrangeLazyProcessIfAllowed(() -> {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("#lazyTx ...Setting transaction timeout: {}", timeout);
+                    logger.debug("#lazyTx ...Setting transaction timeout {}: {}", timeout, buildLazyTxExp());
                 }
                 doSuperSetTransactionTimeout(timeout);
             });
@@ -354,26 +365,35 @@ public class LazyUserTransaction extends HookedUserTransaction {
     //                                            ----------
     public static void readyLazyTransaction() {
         if (logger.isDebugEnabled()) {
-            logger.debug("#lazyTx ...Being readyLazy");
+            logger.debug("#lazyTx ...Being readyLazy: {}", buildLazyTxExp());
         }
         markLazyTransactionReadyLazy();
     }
 
     public static void beginRealTransactionLazily() {
-        final String lazyKey = generateLazyProcessListKey();
-        final List<IndependentProcessor> lazyList = ThreadCacheContext.getObject(lazyKey);
-        if (lazyList != null) {
+        final List<IndependentProcessor> lazyList = getLazyProcessList();
+        if (!lazyList.isEmpty()) {
             markLazyRealBegun();
             for (IndependentProcessor processor : lazyList) {
                 processor.process(); // with logging
             }
-            ThreadCacheContext.removeObject(lazyKey);
+            ThreadCacheContext.removeObject(generateLazyProcessListKey());
         }
+    }
+
+    protected static void returnToReadyLazy() {
+        if (logger.isDebugEnabled()) {
+            logger.debug("#lazyTx ...Returning to readyLazy: {}", buildLazyTxExp());
+        }
+        ThreadCacheContext.removeObject(generateLazyBegunKey());
+        ThreadCacheContext.removeObject(generateRealBegunKey());
+        ThreadCacheContext.removeObject(generateLazyProcessListKey());
+        ThreadCacheContext.removeObject(generateResumeKey()); // just in case
     }
 
     public static void closeLazyTransaction() {
         if (logger.isDebugEnabled()) {
-            logger.debug("#lazyTx ...Being over");
+            logger.debug("#lazyTx ...Being over: {}", buildLazyTxExp());
         }
         ThreadCacheContext.removeObject(generateReadyLazyKey());
         ThreadCacheContext.removeObject(generateLazyBegunKey());
@@ -389,7 +409,7 @@ public class LazyUserTransaction extends HookedUserTransaction {
         ThreadCacheContext.setObject(generateReadyLazyKey(), true);
     }
 
-    protected static boolean isLazyTransactionReadyLazy() {
+    public static boolean isLazyTransactionReadyLazy() {
         return ThreadCacheContext.determineObject(generateReadyLazyKey());
     }
 
@@ -404,7 +424,7 @@ public class LazyUserTransaction extends HookedUserTransaction {
         ThreadCacheContext.setObject(generateLazyBegunKey(), true);
     }
 
-    protected static boolean isLazyTransactionLazyBegun() {
+    public static boolean isLazyTransactionLazyBegun() {
         return ThreadCacheContext.determineObject(generateLazyBegunKey());
     }
 
@@ -415,12 +435,12 @@ public class LazyUserTransaction extends HookedUserTransaction {
     // -----------------------------------------------------
     //                                            Real Begun
     //                                            ----------
-    protected static boolean isLazyTransactionRealBegun() {
-        return ThreadCacheContext.determineObject(generateRealBegunKey());
-    }
-
     protected static void markLazyRealBegun() {
         ThreadCacheContext.setObject(generateRealBegunKey(), true);
+    }
+
+    public static boolean isLazyTransactionRealBegun() {
+        return ThreadCacheContext.determineObject(generateRealBegunKey());
     }
 
     public static String generateRealBegunKey() {
@@ -428,9 +448,105 @@ public class LazyUserTransaction extends HookedUserTransaction {
     }
 
     // -----------------------------------------------------
+    //                                       Hierarchy Level
+    //                                       ---------------
+    public static Integer getCurrentHierarchyLevel() { // null allowed
+        return ThreadCacheContext.getObject(generateHierarchyLevelKey());
+    }
+
+    protected static String generateHierarchyLevelKey() {
+        return "lazyTx:hierarchyLevel";
+    }
+
+    // -----------------------------------------------------
     //                                          Lazy Process
     //                                          ------------
+    public static List<IndependentProcessor> getLazyProcessList() { // not null, empty allowed
+        final String lazyKey = generateLazyProcessListKey();
+        final List<IndependentProcessor> lazyList = ThreadCacheContext.getObject(lazyKey);
+        return lazyList != null ? lazyList : Collections.emptyList();
+    }
+
     public static String generateLazyProcessListKey() {
         return "lazyTx:lazyProcessList";
+    }
+
+    // -----------------------------------------------------
+    //                                               Resumer
+    //                                               -------
+    protected static ForcedlyBegunResumer getForcedlyBegunResumer() { // null allowed
+        return ThreadCacheContext.getObject(generateResumeKey());
+    }
+
+    protected static String generateResumeKey() {
+        return "lazyTx:resumer";
+    }
+
+    // ===================================================================================
+    //                                                                    Debug Expression
+    //                                                                    ================
+    protected static String buildLazyTxExp() {
+        final int status;
+        try {
+            final TransactionManager manager = ContainerUtil.getComponent(TransactionManager.class); // for static use
+            status = manager.getStatus();
+        } catch (SystemException e) {
+            throw new IllegalStateException("Failed to get status from transaction manager.", e);
+        }
+        final String statusExp;
+        if (status == Status.STATUS_ACTIVE) {
+            statusExp = "Active";
+        } else if (status == Status.STATUS_MARKED_ROLLBACK) {
+            statusExp = "MarkedRollback";
+        } else if (status == Status.STATUS_PREPARED) {
+            statusExp = "Prepared";
+        } else if (status == Status.STATUS_COMMITTED) {
+            statusExp = "Committed";
+        } else if (status == Status.STATUS_ROLLEDBACK) {
+            statusExp = "RolledBack";
+        } else if (status == Status.STATUS_UNKNOWN) {
+            statusExp = "Unknown";
+        } else if (status == Status.STATUS_NO_TRANSACTION) {
+            statusExp = "NoTransaction";
+        } else if (status == Status.STATUS_PREPARING) {
+            statusExp = "Preparing";
+        } else if (status == Status.STATUS_COMMITTING) {
+            statusExp = "Committing";
+        } else if (status == Status.STATUS_ROLLING_BACK) {
+            statusExp = "RollingBack";
+        } else {
+            statusExp = String.valueOf(status);
+        }
+        final StringBuilder sb = new StringBuilder();
+        sb.append("[").append(statusExp).append("]");
+        boolean secondOrMore = false;
+        if (isLazyTransactionReadyLazy()) {
+            sb.append(secondOrMore ? ", " : "").append("readyLazy");
+            secondOrMore = true;
+        }
+        if (isLazyTransactionLazyBegun()) {
+            sb.append(secondOrMore ? ", " : "").append("lazyBegun");
+            secondOrMore = true;
+        }
+        if (isLazyTransactionRealBegun()) {
+            sb.append(secondOrMore ? ", " : "").append("realBegun");
+            secondOrMore = true;
+        }
+        final Integer hierarchyLevel = getCurrentHierarchyLevel();
+        if (hierarchyLevel != null) {
+            sb.append(secondOrMore ? ", " : "").append("hierarchy=").append(hierarchyLevel);
+            secondOrMore = true;
+        }
+        final List<IndependentProcessor> lazyProcessList = getLazyProcessList();
+        if (!lazyProcessList.isEmpty()) {
+            sb.append(secondOrMore ? ", " : "").append("lazyProcesses=").append(lazyProcessList.size());
+            secondOrMore = true;
+        }
+        final ForcedlyBegunResumer resumer = getForcedlyBegunResumer();
+        if (resumer != null) {
+            sb.append(secondOrMore ? ", " : "").append("resumer=").append(DfTypeUtil.toClassTitle(resumer));
+            secondOrMore = true;
+        }
+        return sb.toString();
     }
 }

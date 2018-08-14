@@ -249,14 +249,19 @@ public class ActionResponseReflector {
             final ResponseManager responseManager = requestManager.getResponseManager();
             setupActionResponseHeader(responseManager, response);
             setupActionResponseHttpStatus(responseManager, response);
-            if (response.isReturnAsEmptyBody()) {
-                return;
-            }
             final String json;
-            if (response.isReturnAsJsonDirectly()) {
-                json = response.getDirectJson().get();
-            } else { // mainly here
-                json = requestManager.getJsonManager().toJson(response.getJsonResult());
+            if (response.isReturnAsEmptyBody()) {
+                if (adjustResponseReflecting().isJsonEmptyBodyTreatedAsEmptyObject()) { // for e.g. client fitting
+                    json = "{}"; // is empty object
+                } else { // basically here if empty body
+                    return; // no write
+                }
+            } else { // normal body
+                if (response.isReturnAsJsonDirectly()) {
+                    json = response.getDirectJson().get();
+                } else { // mainly here
+                    json = requestManager.getJsonManager().toJson(response.getJsonResult());
+                }
             }
             keepOriginalBodyForInOutLoggingIfNeeds(json, "json");
             response.getCallback().ifPresent(callback -> {

@@ -53,7 +53,7 @@ public class LazyTransactionManagerAdapter extends HookedTransactionManagerAdapt
     public Object required(TransactionCallback callback) throws Throwable {
         if (isJustLazyNow()) {
             if (logger.isDebugEnabled()) {
-                logger.debug("#lazyTx ...Taking over the lazy transaction for 'required' scope");
+                logger.debug("#lazyTx ...Taking over the lazy transaction for 'required' scope: {}", LazyUserTransaction.buildLazyTxExp());
             }
             return callback.execute(this); // no transaction handling means taking over lazy transaction
         } else {

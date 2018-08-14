@@ -28,14 +28,25 @@ public class ResponseReflectingOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                                 HTML
+    //                                                ------
     protected boolean htmlBeanValidationErrorWarned;
     protected boolean htmlBeanValidatorSuppressed;
+
+    // -----------------------------------------------------
+    //                                                 JSON
+    //                                                ------
     protected boolean jsonBeanValidationErrorWarned;
     protected boolean jsonBeanValidatorSuppressed;
+    protected boolean jsonEmptyBodyTreatedAsEmptyObject; // for e.g. client fitting
 
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
+    // -----------------------------------------------------
+    //                                                 HTML
+    //                                                ------
     public ResponseReflectingOption warnHtmlBeanValidationError() {
         htmlBeanValidationErrorWarned = true;
         return this;
@@ -46,6 +57,9 @@ public class ResponseReflectingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                                 JSON
+    //                                                ------
     public ResponseReflectingOption warnJsonBeanValidationError() {
         jsonBeanValidationErrorWarned = true;
         return this;
@@ -56,20 +70,38 @@ public class ResponseReflectingOption {
         return this;
     }
 
+    public ResponseReflectingOption treatJsonEmptyBodyAsEmptyObject() {
+        jsonEmptyBodyTreatedAsEmptyObject = true;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
     @Override
     public String toString() {
-        final String title = DfTypeUtil.toClassTitle(this);
-        return title + ":{" + htmlBeanValidationErrorWarned + ", " + htmlBeanValidatorSuppressed // html
-                + ", " + jsonBeanValidationErrorWarned + ", " + jsonBeanValidatorSuppressed // json
-                + "}";
+        final StringBuilder sb = new StringBuilder();
+        sb.append(DfTypeUtil.toClassTitle(this));
+        sb.append(":{");
+        sb.append("html:{");
+        sb.append(htmlBeanValidationErrorWarned);
+        sb.append(", ").append(htmlBeanValidatorSuppressed);
+        sb.append("}");
+        sb.append(", json:{");
+        sb.append(jsonBeanValidationErrorWarned);
+        sb.append(", ").append(jsonBeanValidatorSuppressed);
+        sb.append(", ").append(jsonEmptyBodyTreatedAsEmptyObject);
+        sb.append("}");
+        sb.append("}");
+        return sb.toString();
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                                 HTML
+    //                                                ------
     public boolean isHtmlBeanValidationErrorWarned() {
         return htmlBeanValidationErrorWarned;
     }
@@ -78,11 +110,18 @@ public class ResponseReflectingOption {
         return htmlBeanValidatorSuppressed;
     }
 
+    // -----------------------------------------------------
+    //                                                 JSON
+    //                                                ------
     public boolean isJsonBeanValidationErrorWarned() {
         return jsonBeanValidationErrorWarned;
     }
 
     public boolean isJsonBeanValidatorSuppressed() {
         return jsonBeanValidatorSuppressed;
+    }
+
+    public boolean isJsonEmptyBodyTreatedAsEmptyObject() {
+        return jsonEmptyBodyTreatedAsEmptyObject;
     }
 }
