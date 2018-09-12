@@ -195,7 +195,9 @@ public class SimpleSessionManager implements SessionManager {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
         saveAttributeToSharedStorage(key, value);
-        getSessionOrCreated().setAttribute(key, value);
+        if (!isSuppressHttpSession()) {
+            getSessionOrCreated().setAttribute(key, value);
+        }
     }
 
     protected void saveAttributeToSharedStorage(String key, Object value) {
@@ -291,6 +293,10 @@ public class SimpleSessionManager implements SessionManager {
     @Override
     public String getSessionId() {
         return sessionSharedStorage.flatMap(storage -> storage.getSessionId()).orElseGet(() -> {
+            if (isSuppressHttpSession()) {
+                String msg = "Not found the session ID of shared storage. (required if no http session)";
+                throw new IllegalStateException(msg);
+            }
             return getSessionOrCreated().getId(); // normally here
         });
     }
@@ -363,17 +369,27 @@ public class SimpleSessionManager implements SessionManager {
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
-    protected HttpServletRequest getRequest() {
+    protected HttpServletRequest getRequest() { // basically not null (but null allowed when asynchronous process)
         return LaRequestUtil.getRequest();
     }
 
-    protected HttpSession getSessionOrCreated() {
-        return readyHttpSession(getRequest(), true);
+    protected HttpSession getSessionOrCreated() { // not null
+        //if (isSuppressHttpSession()) {
+        //    return ...; // #hope use empty session, but caller check for now by jflute
+        //}
+        return readyHttpSession(getRequest(), true); // #thinking needs to check for asynchronous process? by jflute
     }
 
-    protected HttpSession getSessionExisting() {
+    protected HttpSession getSessionExisting() { // null allowed
+        if (isSuppressHttpSession()) {
+            return null;
+        }
         final HttpServletRequest request = getRequest(); // null allowed when e.g. asynchronous process
         return request != null ? readyHttpSession(request, false) : null;
+    }
+
+    protected boolean isSuppressHttpSession() {
+        return sessionSharedStorage.map(storage -> storage.suppressesHttpSession()).orElse(false);
     }
 
     protected HttpSession readyHttpSession(HttpServletRequest request, boolean create) {

@@ -36,4 +36,13 @@ public interface SessionSharedStorage extends ScopedAttributeHolder {
     default OptionalThing<String> getSessionId() {
         return OptionalThing.empty();
     }
+
+    /**
+     * Does it suppress HTTP session? (means that you use shared storage only) <br>
+     * The getSessionId() implementation is required if true.
+     * @return The determination, true or false.
+     */
+    default boolean suppressesHttpSession() {
+        return false;
+    }
 }
