@@ -290,7 +290,9 @@ public class SimpleSessionManager implements SessionManager {
     //                                                                    ================
     @Override
     public String getSessionId() {
-        return getSessionOrCreated().getId();
+        return sessionSharedStorage.flatMap(storage -> storage.getSessionId()).orElseGet(() -> {
+            return getSessionOrCreated().getId(); // normally here
+        });
     }
 
     @Override

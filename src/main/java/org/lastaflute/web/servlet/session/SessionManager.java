@@ -27,6 +27,10 @@ public interface SessionManager extends ScopedAttributeHolder {
     // ===================================================================================
     //                                                                    Session Handling
     //                                                                    ================
+    /**
+     * Get session ID of the current session.
+     * @return The string of session ID. (NotNull)
+     */
     String getSessionId();
 
     /**

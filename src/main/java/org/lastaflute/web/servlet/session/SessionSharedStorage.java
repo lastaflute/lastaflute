@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.servlet.session;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.servlet.request.scoped.ScopedAttributeHolder;
 
 /**
@@ -23,5 +24,16 @@ import org.lastaflute.web.servlet.request.scoped.ScopedAttributeHolder;
  */
 public interface SessionSharedStorage extends ScopedAttributeHolder {
 
+    /**
+     * Invalidate session of shared storage.
+     */
     void invalidate();
+
+    /**
+     * Get session ID as alternative to native session ID.
+     * @return The optional session ID. (NotNull, EmptyAllowed: if empty, use native session ID)
+     */
+    default OptionalThing<String> getSessionId() {
+        return OptionalThing.empty();
+    }
 }
