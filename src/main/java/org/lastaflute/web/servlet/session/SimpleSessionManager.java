@@ -309,10 +309,10 @@ public class SimpleSessionManager implements SessionManager {
         if (session == null) {
             return;
         }
-        final Map<String, Object> savedSessionMap = extractHttpSessionMap(session);
-        session.invalidate(); // regenerate ID, native only here
+        final Map<String, Object> savedSessionMap = extractHttpSessionMap(session); // native only
+        session.invalidate(); // regenerate ID, native only
         for (Entry<String, Object> entry : savedSessionMap.entrySet()) {
-            setAttribute(entry.getKey(), entry.getValue()); // inherit existing attributes
+            session.setAttribute(entry.getKey(), entry.getValue()); // inherit existing attributes, native only
         }
     }
 
@@ -320,14 +320,15 @@ public class SimpleSessionManager implements SessionManager {
         sessionSharedStorage.ifPresent(storage -> storage.regenerateSessionId());
     }
 
-    protected Map<String, Object> extractHttpSessionMap(HttpSession session) { // native only
-        final Enumeration<String> attributeNames = session.getAttributeNames();
+    protected Map<String, Object> extractHttpSessionMap(HttpSession session) {
+        final Enumeration<String> attributeNames = session.getAttributeNames(); // native only
         final Map<String, Object> savedSessionMap = new LinkedHashMap<String, Object>();
         while (attributeNames.hasMoreElements()) { // save existing attributes temporarily
             final String key = attributeNames.nextElement();
-            getAttribute(key, Object.class).ifPresent(attribute -> {
+            final Object attribute = session.getAttribute(key); // native only
+            if (attribute != null) { // almost be present, but rare case handling just in case
                 savedSessionMap.put(key, attribute);
-            }); // almost be present, but rare case handling just in case
+            }
         }
         return savedSessionMap;
     }
