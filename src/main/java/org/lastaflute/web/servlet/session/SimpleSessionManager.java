@@ -224,18 +224,6 @@ public class SimpleSessionManager implements SessionManager {
         });
     }
 
-    protected Map<String, Object> extractSavedSessionMap(HttpSession session) {
-        final Enumeration<String> attributeNames = session.getAttributeNames();
-        final Map<String, Object> savedSessionMap = new LinkedHashMap<String, Object>();
-        while (attributeNames.hasMoreElements()) { // save existing attributes temporarily
-            final String key = attributeNames.nextElement();
-            getAttribute(key, Object.class).ifPresent(attribute -> {
-                savedSessionMap.put(key, attribute);
-            }); // almost be present, but rare case handling just in case
-        }
-        return savedSessionMap;
-    }
-
     // see interface ScopedAttributeHolder for the detail
     //@Override
     //@SuppressWarnings("unchecked")
@@ -316,15 +304,32 @@ public class SimpleSessionManager implements SessionManager {
 
     @Override
     public void regenerateSessionId() {
+        regenerateSessionIdOfSharedStorage();
         final HttpSession session = getSessionExisting();
         if (session == null) {
             return;
         }
-        final Map<String, Object> savedSessionMap = extractSavedSessionMap(session);
-        invalidate(); // regenerate ID
+        final Map<String, Object> savedSessionMap = extractHttpSessionMap(session);
+        session.invalidate(); // regenerate ID, native only here
         for (Entry<String, Object> entry : savedSessionMap.entrySet()) {
             setAttribute(entry.getKey(), entry.getValue()); // inherit existing attributes
         }
+    }
+
+    protected void regenerateSessionIdOfSharedStorage() {
+        sessionSharedStorage.ifPresent(storage -> storage.regenerateSessionId());
+    }
+
+    protected Map<String, Object> extractHttpSessionMap(HttpSession session) { // native only
+        final Enumeration<String> attributeNames = session.getAttributeNames();
+        final Map<String, Object> savedSessionMap = new LinkedHashMap<String, Object>();
+        while (attributeNames.hasMoreElements()) { // save existing attributes temporarily
+            final String key = attributeNames.nextElement();
+            getAttribute(key, Object.class).ifPresent(attribute -> {
+                savedSessionMap.put(key, attribute);
+            }); // almost be present, but rare case handling just in case
+        }
+        return savedSessionMap;
     }
 
     // ===================================================================================

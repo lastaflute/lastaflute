@@ -38,6 +38,13 @@ public interface SessionSharedStorage extends ScopedAttributeHolder {
     }
 
     /**
+     * Regenerate session ID of shared storage. <br>
+     * You should implement when you have original session ID for shared storage.
+     */
+    default void regenerateSessionId() {
+    }
+
+    /**
      * Does it suppress HTTP session? (means that you use shared storage only) <br>
      * The getSessionId() implementation is required if true.
      * @return The determination, true or false.
