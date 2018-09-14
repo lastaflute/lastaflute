@@ -122,11 +122,27 @@ public class SimpleSessionManager implements SessionManager {
         if (foundShared.isPresent()) {
             return foundShared;
         }
+        final boolean withShared = true; // automatically synchronize with shared storage
+        return findHttpAttribute(key, attributeType, withShared);
+    }
+
+    protected <ATTRIBUTE> OptionalThing<ATTRIBUTE> findAttributeInShareStorage(String key, Class<ATTRIBUTE> attributeType) {
+        final OptionalThing<ATTRIBUTE> found = sessionSharedStorage.flatMap(storage -> storage.getAttribute(key, attributeType));
+        if (logger.isDebugEnabled() && found.isPresent()) {
+            logger.debug("Found the session attribute in shared storage: {}={}", key, found.get());
+        }
+        return found;
+    }
+
+    protected <ATTRIBUTE> OptionalThing<ATTRIBUTE> findHttpAttribute(String key, Class<ATTRIBUTE> attributeType, boolean withShared) {
         final HttpSession session = getSessionExisting();
         final Object original = session != null ? session.getAttribute(key) : null;
         if (original instanceof HotdeployHttpSession.SerializedObjectHolder) { // e.g. hot to cool in Tomcat
             logger.debug("...Removing relic session of hot deploy: {}", original);
-            removeAttribute(key); // treated as no-existing
+            deleteHttpAttribute(key); // treated as no-existing
+            if (withShared) {
+                deleteAttributeFromSharedStorage(key); // also from shared by option
+            }
             return OptionalThing.empty();
         }
         final ATTRIBUTE attribute;
@@ -147,27 +163,21 @@ public class SimpleSessionManager implements SessionManager {
                 br.addElement("loader: " + originType.getClassLoader());
                 br.addElement("toString(): " + original.toString());
                 br.addItem("Attribute List");
-                br.addElement(getAttributeNameList());
+                br.addElement(extractHttpAttributeNameList());
                 final String msg = br.buildExceptionMessage();
                 throw new SessionAttributeCannotCastException(msg, e);
             }
-            reflectAttributeToSharedStorage(key, attribute);
+            if (withShared) {
+                reflectAttributeToSharedStorage(key, attribute);
+            }
         } else {
             attribute = null;
         }
         return OptionalThing.ofNullable(attribute, () -> {
-            final List<String> nameList = getAttributeNameList();
+            final List<String> nameList = extractHttpAttributeNameList();
             final String msg = "Not found the session attribute by the string key: " + key + " existing=" + nameList;
             throw new SessionAttributeNotFoundException(msg);
         });
-    }
-
-    protected <ATTRIBUTE> OptionalThing<ATTRIBUTE> findAttributeInShareStorage(String key, Class<ATTRIBUTE> attributeType) {
-        final OptionalThing<ATTRIBUTE> found = sessionSharedStorage.flatMap(storage -> storage.getAttribute(key, attributeType));
-        if (logger.isDebugEnabled() && found.isPresent()) {
-            logger.debug("Found the session attribute in shared storage: {}={}", key, found.get());
-        }
-        return found;
     }
 
     protected void reflectAttributeToSharedStorage(String key, Object value) {
@@ -177,26 +187,13 @@ public class SimpleSessionManager implements SessionManager {
         });
     }
 
-    protected List<String> getAttributeNameList() {
-        final HttpSession session = getSessionExisting();
-        if (session == null) {
-            return Collections.emptyList();
-        }
-        final Enumeration<String> attributeNames = session.getAttributeNames();
-        final List<String> nameList = new ArrayList<String>();
-        while (attributeNames.hasMoreElements()) {
-            nameList.add((String) attributeNames.nextElement());
-        }
-        return Collections.unmodifiableList(nameList);
-    }
-
     @Override
     public void setAttribute(String key, Object value) {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
         saveAttributeToSharedStorage(key, value);
         if (!isSuppressHttpSession()) {
-            getSessionOrCreated().setAttribute(key, value);
+            saveHttpAttribute(key, value);
         }
     }
 
@@ -207,21 +204,29 @@ public class SimpleSessionManager implements SessionManager {
         });
     }
 
+    protected void saveHttpAttribute(String key, Object value) {
+        getSessionOrCreated().setAttribute(key, value);
+    }
+
     @Override
     public void removeAttribute(String key) {
         assertArgumentNotNull("key", key);
-        removeAttributeFromSharedStorage(key);
-        final HttpSession session = getSessionExisting();
-        if (session != null) {
-            session.removeAttribute(key);
-        }
+        deleteAttributeFromSharedStorage(key);
+        deleteHttpAttribute(key);
     }
 
-    protected void removeAttributeFromSharedStorage(String key) {
+    protected void deleteAttributeFromSharedStorage(String key) {
         sessionSharedStorage.ifPresent(storage -> {
             logger.debug("...Removing the session attribute to shared storage: {}", key);
             storage.removeAttribute(key);
         });
+    }
+
+    protected void deleteHttpAttribute(String key) {
+        final HttpSession session = getSessionExisting();
+        if (session != null) {
+            session.removeAttribute(key);
+        }
     }
 
     // see interface ScopedAttributeHolder for the detail
@@ -291,46 +296,55 @@ public class SimpleSessionManager implements SessionManager {
 
     @Override
     public void invalidate() {
-        invalidateSharedStorage();
+        destroySharedStorage();
+        destroyHttpSession();
+    }
+
+    protected void destroySharedStorage() {
+        sessionSharedStorage.ifPresent(storage -> storage.invalidate());
+    }
+
+    protected void destroyHttpSession() {
         final HttpSession session = getSessionExisting();
         if (session != null) {
             session.invalidate();
         }
     }
 
-    protected void invalidateSharedStorage() {
-        sessionSharedStorage.ifPresent(storage -> storage.invalidate());
-    }
-
     @Override
     public void regenerateSessionId() {
-        regenerateSessionIdOfSharedStorage();
-        final HttpSession session = getSessionExisting();
-        if (session == null) {
-            return;
-        }
-        final Map<String, Object> savedSessionMap = extractHttpSessionMap(session); // native only
-        session.invalidate(); // regenerate ID, native only
-        for (Entry<String, Object> entry : savedSessionMap.entrySet()) {
-            session.setAttribute(entry.getKey(), entry.getValue()); // inherit existing attributes, native only
-        }
+        switchSessionIdOfSharedStorage();
+        switchHttpSessionId();
     }
 
-    protected void regenerateSessionIdOfSharedStorage() {
+    protected void switchSessionIdOfSharedStorage() {
         sessionSharedStorage.ifPresent(storage -> storage.regenerateSessionId());
     }
 
-    protected Map<String, Object> extractHttpSessionMap(HttpSession session) {
-        final Enumeration<String> attributeNames = session.getAttributeNames(); // native only
-        final Map<String, Object> savedSessionMap = new LinkedHashMap<String, Object>();
-        while (attributeNames.hasMoreElements()) { // save existing attributes temporarily
-            final String key = attributeNames.nextElement();
-            final Object attribute = session.getAttribute(key); // native only
-            if (attribute != null) { // almost be present, but rare case handling just in case
-                savedSessionMap.put(key, attribute);
-            }
+    protected void switchHttpSessionId() {
+        if (getSessionExisting() == null) { // this check is not required but be simple
+            return; // unnecessary to regenerate
         }
-        return savedSessionMap;
+        final Map<String, Object> httpSessionMap = extractHttpSessionMap();
+        destroyHttpSession(); // regenerate ID
+        for (Entry<String, Object> entry : httpSessionMap.entrySet()) {
+            saveHttpAttribute(entry.getKey(), entry.getValue()); // inherit existing attributes
+        }
+    }
+
+    protected Map<String, Object> extractHttpSessionMap() { // native only
+        final List<String> keyList = extractHttpAttributeNameList();
+        if (keyList.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        final Map<String, Object> httpSessionMap = new LinkedHashMap<String, Object>();
+        final boolean withShared = false; // because of native only
+        for (String key : keyList) { // already checked so at least one loop
+            findHttpAttribute(key, Object.class, withShared).ifPresent(value -> { // almost be present, but just in case
+                httpSessionMap.put(key, value);
+            });
+        }
+        return httpSessionMap;
     }
 
     // ===================================================================================
@@ -408,6 +422,19 @@ public class SimpleSessionManager implements SessionManager {
         //return httpSessionArranger.map(ger -> ger.create(request, create)).orElseGet(() -> {
         //    return request.getSession(create); // as default
         //});
+    }
+
+    protected List<String> extractHttpAttributeNameList() { // native only
+        final HttpSession session = getSessionExisting();
+        if (session == null) {
+            return Collections.emptyList();
+        }
+        final Enumeration<String> attributeNames = session.getAttributeNames();
+        final List<String> nameList = new ArrayList<String>();
+        while (attributeNames.hasMoreElements()) {
+            nameList.add((String) attributeNames.nextElement());
+        }
+        return Collections.unmodifiableList(nameList);
     }
 
     // ===================================================================================
