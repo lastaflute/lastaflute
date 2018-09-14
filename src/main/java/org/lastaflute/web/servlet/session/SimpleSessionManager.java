@@ -122,6 +122,12 @@ public class SimpleSessionManager implements SessionManager {
         if (foundShared.isPresent()) {
             return foundShared;
         }
+        if (isSuppressHttpSession()) { // needs to check because it cannot use attribute name list in message
+            return OptionalThing.ofNullable(null, () -> {
+                final String msg = "Not found the session attribute in shared storage by the string key: " + key;
+                throw new SessionAttributeNotFoundException(msg);
+            });
+        }
         final boolean withShared = true; // automatically synchronize with shared storage
         return findHttpAttribute(key, attributeType, withShared);
     }
@@ -192,9 +198,7 @@ public class SimpleSessionManager implements SessionManager {
         assertArgumentNotNull("key", key);
         assertArgumentNotNull("value", value);
         saveAttributeToSharedStorage(key, value);
-        if (!isSuppressHttpSession()) {
-            saveHttpAttribute(key, value);
-        }
+        saveHttpAttribute(key, value);
     }
 
     protected void saveAttributeToSharedStorage(String key, Object value) {
@@ -205,6 +209,9 @@ public class SimpleSessionManager implements SessionManager {
     }
 
     protected void saveHttpAttribute(String key, Object value) {
+        if (isSuppressHttpSession()) { // needs to check because of or-created
+            return;
+        }
         getSessionOrCreated().setAttribute(key, value);
     }
 
@@ -286,7 +293,7 @@ public class SimpleSessionManager implements SessionManager {
     @Override
     public String getSessionId() {
         return sessionSharedStorage.flatMap(storage -> storage.getSessionId()).orElseGet(() -> {
-            if (isSuppressHttpSession()) {
+            if (isSuppressHttpSession()) { // needs to check because of or-created
                 String msg = "Not found the session ID of shared storage. (required if no http session)";
                 throw new IllegalStateException(msg);
             }
@@ -337,7 +344,7 @@ public class SimpleSessionManager implements SessionManager {
         if (keyList.isEmpty()) {
             return Collections.emptyMap();
         }
-        final Map<String, Object> httpSessionMap = new LinkedHashMap<String, Object>();
+        final Map<String, Object> httpSessionMap = new LinkedHashMap<String, Object>(keyList.size());
         final boolean withShared = false; // because of native only
         for (String key : keyList) { // already checked so at least one loop
             findHttpAttribute(key, Object.class, withShared).ifPresent(value -> { // almost be present, but just in case
