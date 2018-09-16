@@ -107,14 +107,19 @@ public class ActionPathResolver {
     public boolean handleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
         assertArgumentNotNull("requestPath", requestPath);
         assertArgumentNotNull("handler", handler);
+        final String realPath = customizeActionMappingRequestPath(requestPath);
+        return doHandleActionPath(realPath, handler);
+    }
+
+    protected String customizeActionMappingRequestPath(String requestPath) {
         final String customized = actionAdjustmentProvider.customizeActionMappingRequestPath(requestPath);
-        return doHandleActionPath(customized != null ? customized : requestPath, handler);
+        return customized != null ? customized : requestPath;
     }
 
     protected boolean doHandleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
         final String[] names = LdiStringUtil.split(requestPath, "/"); // e.g. [sea, land] if /sea/land/
         final LaContainer root = container.getRoot(); // because actions are in root
-        final String rootAction = "rootAction";
+        final String rootAction = buildActionName(null, "root");
         if (names.length == 0) { // root action, / => rootAction
             if (hasActionDef(root, rootAction)) {
                 if (actuallyHandleActionPath(requestPath, handler, rootAction, null)) {
@@ -242,6 +247,9 @@ public class ActionPathResolver {
         return Srl.isUpperCaseAny(currentName);
     }
 
+    // -----------------------------------------------------
+    //                                   Build Name and Path
+    //                                   -------------------
     protected String buildActionName(String pkg, String classPrefix) {
         return (pkg != null ? pkg : "") + classPrefix + namingConvention.getActionSuffix();
     }
@@ -261,6 +269,9 @@ public class ActionPathResolver {
         return sb.toString(); // e.g. 3 when /member/list/3/
     }
 
+    // -----------------------------------------------------
+    //                                     Handle ActionPath
+    //                                     -----------------
     protected boolean actuallyHandleActionPath(String requestPath, ActionFoundPathHandler handler, String actionName, String paramPath)
             throws Exception {
         final boolean emptyParam = paramPath == null || paramPath.isEmpty();
