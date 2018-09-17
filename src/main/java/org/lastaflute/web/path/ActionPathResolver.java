@@ -468,8 +468,7 @@ public class ActionPathResolver {
         sb.append("\n");
         sb.append("/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = *No routing action:\n");
         sb.append("e.g. expected actions for ").append(requestPath).append("\n");
-        final String customizedPath = actionAdjustmentProvider.customizeActionMappingRequestPath(requestPath);
-        final List<String> nameList = buildExpectedRoutingActionList(customizedPath != null ? customizedPath : requestPath);
+        final List<String> nameList = buildExpectedRoutingActionList(customizeActionMappingRequestPath(requestPath));
         boolean exists = false;
         for (String name : nameList) {
             if (name.endsWith("@index()") && containsNotAllowedCharacterAsActionPath(requestPath)) { // e.g. /product/List/
