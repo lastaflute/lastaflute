@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.ruts.config.checker;
 
+import java.io.File;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -43,6 +44,7 @@ import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
+import org.lastaflute.web.exception.ExecuteMethodFieldNestedBeanDescFailureException;
 import org.lastaflute.web.exception.ExecuteMethodLonelyValidatorAnnotationException;
 import org.lastaflute.web.exception.ExecuteMethodValidatorAnnotationMismatchedException;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -121,7 +123,7 @@ public class ExecuteMethodValidatorChecker implements Serializable {
         if (Collection.class.isAssignableFrom(fieldType)) { // only collection, except array and map, simply
             doCheckGenericBeanValidationMismatch(field);
         } else if (mayBeNestedBeanType(fieldType)) {
-            doCheckNestedValidationMismatch(fieldType);
+            doCheckNestedValidationMismatch(field, fieldType);
             doCheckGenericBeanValidationMismatch(field);
         }
         pathDeque.pop();
@@ -138,7 +140,7 @@ public class ExecuteMethodValidatorChecker implements Serializable {
         }
         if (mayBeNestedBeanType(genericType)) { // e.g. LandBean<PiariBean>
             pathDeque.push("@generic");
-            doCheckNestedValidationMismatch(genericType);
+            doCheckNestedValidationMismatch(field, genericType);
             pathDeque.pop();
         } else if (Collection.class.isAssignableFrom(genericType)) {
             final Type fieldGenericType = field.getGenericType();
@@ -149,7 +151,7 @@ public class ExecuteMethodValidatorChecker implements Serializable {
                     if (elementType != null && mayBeNestedBeanType(elementType)) {
                         // e.g. public LandBean<List<PiariBean>> landBean;
                         pathDeque.push("@generic");
-                        doCheckNestedValidationMismatch(elementType);
+                        doCheckNestedValidationMismatch(field, elementType);
                         pathDeque.pop();
                     }
                 }
@@ -157,12 +159,12 @@ public class ExecuteMethodValidatorChecker implements Serializable {
         }
     }
 
-    protected void doCheckNestedValidationMismatch(Class<?> beanType) {
+    protected void doCheckNestedValidationMismatch(Field field, Class<?> beanType) {
         if (checkedTypeSet.contains(beanType)) {
             return; // cannot check #for_now: SeaBean recursiveBean; in SeaBean
         }
         checkedTypeSet.add(beanType);
-        final BeanDesc nestedDesc = BeanDescFactory.getBeanDesc(beanType);
+        final BeanDesc nestedDesc = getNestedBeanDesc(field, beanType);
         final int nestedPdSize = nestedDesc.getPropertyDescSize();
         for (int i = 0; i < nestedPdSize; i++) {
             final PropertyDesc pd = nestedDesc.getPropertyDesc(i);
@@ -313,7 +315,7 @@ public class ExecuteMethodValidatorChecker implements Serializable {
                 }
                 checkedTypeSet.add(fieldType);
                 pathDeque.push("@generic");
-                detectLonelyAnnotatedField(field, genericType, Collections.emptyMap(), pathDeque, checkedTypeSet);
+                detectLonelyAnnotatedField(field, genericType, Collections.emptyMap());
                 pathDeque.pop();
             }
         } else if (mayBeNestedBeanType(fieldType)) { // single bean
@@ -330,15 +332,14 @@ public class ExecuteMethodValidatorChecker implements Serializable {
             } else {
                 genericMap = Collections.emptyMap();
             }
-            detectLonelyAnnotatedField(field, fieldType, genericMap, pathDeque, checkedTypeSet);
+            detectLonelyAnnotatedField(field, fieldType, genericMap);
         }
         pathDeque.pop();
     }
 
-    protected void detectLonelyAnnotatedField(Field field, Class<?> beanType, Map<String, Class<?>> genericMap, Deque<String> pathDeque,
-            Set<Class<?>> checkedTypeSet) {
+    protected void detectLonelyAnnotatedField(Field field, Class<?> beanType, Map<String, Class<?>> genericMap) {
         final boolean hasNestedBeanAnnotation = hasNestedBeanAnnotation(field);
-        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(beanType);
+        final BeanDesc beanDesc = getNestedBeanDesc(field, beanType);
         for (int i = 0; i < beanDesc.getFieldSize(); i++) {
             final Field nestedField = beanDesc.getField(i);
             if (!hasNestedBeanAnnotation) {
@@ -405,6 +406,9 @@ public class ExecuteMethodValidatorChecker implements Serializable {
     // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
+    // -----------------------------------------------------
+    //                                           Nested Bean
+    //                                           -----------
     protected boolean mayBeNestedBeanType(Class<?> fieldType) {
         return !fieldType.isPrimitive() // not primitive types
                 && !fieldType.isArray() // not array type, array's nested bean is unsupported for the check, simply
@@ -415,6 +419,7 @@ public class ExecuteMethodValidatorChecker implements Serializable {
                 && !java.util.Date.class.isAssignableFrom(fieldType) // not old date
                 && !Boolean.class.isAssignableFrom(fieldType) // not boolean
                 && !Classification.class.isAssignableFrom(fieldType) // not CDef
+                && !File.class.isAssignableFrom(fieldType) // not File
                 && !isCollectionFamilyType(fieldType); // not Collection family
     }
 
@@ -424,24 +429,39 @@ public class ExecuteMethodValidatorChecker implements Serializable {
                 || Object[].class.isAssignableFrom(fieldType); // also all arrays
     }
 
-    protected Class<?> deriveFieldType(Field field, Map<String, Class<?>> genericMap) {
-        final Class<?> fieldType;
-        final Type genericType = field.getGenericType();
-        if (genericType != null && !genericMap.isEmpty()) { // e.g. public HAUNTED haunted;
-            final Class<?> translatedType = genericMap.get(genericType.getTypeName()); // e.g. PiariBean by HAUNTED
-            fieldType = translatedType != null ? translatedType : field.getType();
-        } else {
-            fieldType = field.getType();
+    // -----------------------------------------------------
+    //                                             Bean Desc
+    //                                             ---------
+    protected BeanDesc getNestedBeanDesc(Field field, Class<?> beanType) {
+        try {
+            return BeanDescFactory.getBeanDesc(beanType);
+        } catch (RuntimeException e) { // may be setAccessible(true) failure
+            throwExecuteMethodFieldNestedBeanDescFailureException(field, beanType, e);
+            return null; // unreachable
         }
-        return fieldType;
     }
 
-    protected String buildPushedOrderPathExp(Deque<String> pathDeque) {
-        final List<String> pathList = pathDeque.stream().collect(Collectors.toList());
-        Collections.reverse(pathList);
-        return pathList.stream().collect(Collectors.joining("."));
+    protected void throwExecuteMethodFieldNestedBeanDescFailureException(Field field, Class<?> beanType, RuntimeException e) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Failed to get bean description of the nested bean.");
+        br.addItem("Execute Method");
+        br.addElement(executeMethod);
+        br.addItem("pathDeque"); // class of root field is unknown but may be no problem
+        br.addElement(buildPushedOrderPathExp(pathDeque));
+        br.addItem("Current Field");
+        br.addElement(buildFieldExp(field));
+        br.addItem("Nested Bean");
+        br.addElement(beanType);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodFieldNestedBeanDescFailureException(msg, e);
     }
 
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    // -----------------------------------------------------
+    //                                                 Field
+    //                                                 -----
     protected String buildFieldExp(Field field) {
         final StringBuilder sb = new StringBuilder();
         sb.append(field.getDeclaringClass().getSimpleName());
@@ -456,5 +476,26 @@ public class ExecuteMethodValidatorChecker implements Serializable {
     protected Class<?> getFieldGenericType(Field field) {
         final Type genericType = field.getGenericType();
         return genericType != null ? DfReflectionUtil.getGenericFirstClass(genericType) : null;
+    }
+
+    protected Class<?> deriveFieldType(Field field, Map<String, Class<?>> genericMap) {
+        final Class<?> fieldType;
+        final Type genericType = field.getGenericType();
+        if (genericType != null && !genericMap.isEmpty()) { // e.g. public HAUNTED haunted;
+            final Class<?> translatedType = genericMap.get(genericType.getTypeName()); // e.g. PiariBean by HAUNTED
+            fieldType = translatedType != null ? translatedType : field.getType();
+        } else {
+            fieldType = field.getType();
+        }
+        return fieldType;
+    }
+
+    // -----------------------------------------------------
+    //                                                 Deque
+    //                                                 -----
+    protected String buildPushedOrderPathExp(Deque<String> pathDeque) {
+        final List<String> pathList = pathDeque.stream().collect(Collectors.toList());
+        Collections.reverse(pathList);
+        return pathList.stream().collect(Collectors.joining("."));
     }
 }

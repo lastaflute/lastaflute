@@ -318,7 +318,13 @@ public class ExecuteMethodChecker implements Serializable {
         final Deque<String> pathDeque = new LinkedList<String>(); // recycled
         final Set<Class<?>> mismatchedCheckedTypeSet = DfCollectionUtil.newHashSet(jsonBeanType);
         final Set<Class<?>> lonelyCheckedTypeSet = DfCollectionUtil.newHashSet(jsonBeanType);
-        final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(jsonBeanType);
+        final BeanDesc beanDesc;
+        try {
+            beanDesc = BeanDescFactory.getBeanDesc(jsonBeanType);
+        } catch (RuntimeException e) { // may be setAccessible(true) failure
+            throwExecuteMethodJsonBeanDescFailureException(jsonBeanType, genericMap, e);
+            return; // unreachable
+        }
         final int pdSide = beanDesc.getPropertyDescSize();
         for (int i = 0; i < pdSide; i++) {
             final PropertyDesc pd = beanDesc.getPropertyDesc(i);
@@ -330,6 +336,24 @@ public class ExecuteMethodChecker implements Serializable {
                 checkJsonBeanLonelyValidatorAnnotation(jsonBeanType, pd, field, pathDeque, lonelyCheckedTypeSet, genericMap);
             }
         }
+    }
+
+    protected void throwExecuteMethodJsonBeanDescFailureException(Class<?> jsonBeanType, Map<String, Class<?>> genericMap,
+            RuntimeException e) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Failed to get bean description of the JSON bean.");
+        br.addItem("Execute Method");
+        br.addElement(executeMethod);
+        br.addItem("JSON Bean");
+        br.addElement(jsonBeanType);
+        if (!genericMap.isEmpty()) {
+            br.addItem("Generic Map");
+            genericMap.forEach((key, value) -> {
+                br.addElement(key + " = " + value);
+            });
+        }
+        final String msg = br.buildExceptionMessage();
+        throw new IllegalStateException(msg, e);
     }
 
     protected void checkJsonBeanMismatchedValidatorAnnotation(Class<?> jsonBeanType, PropertyDesc pd, Field field, Deque<String> pathDeque,
