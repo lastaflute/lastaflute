@@ -17,6 +17,7 @@ package org.lastaflute.web.response;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,6 +25,7 @@ import org.dbflute.helper.StringKeyMap;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.web.aspect.RomanticActionCustomizer;
 
 /**
@@ -42,7 +44,8 @@ public class JsonResponse<RESULT> implements ApiResponse {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final RESULT jsonResult;
+    protected final RESULT jsonResult; // not null
+
     protected String callback;
     protected Map<String, String[]> headerMap; // lazy loaded (for when no use)
     protected Integer httpStatus;
@@ -54,6 +57,7 @@ public class JsonResponse<RESULT> implements ApiResponse {
     protected ResponseHook afterTxCommitHook;
     protected Class<?>[] validatorGroups;
     protected boolean validatorSuppressed;
+    protected Consumer<JsonMappingOption> mappingOptionSwitcher; // for e.g. SwaggerAction
 
     // ===================================================================================
     //                                                                         Constructor
@@ -225,6 +229,21 @@ public class JsonResponse<RESULT> implements ApiResponse {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                        Mapping Option
+    //                                        --------------
+    /**
+     * Switch application's option to your mapping option. <br>
+     * For example, SwaggerAction's json() should use this because it's not related to application rule.
+     * @param opLambda The callback for option settings of JSON mapping for another engine. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonResponse<RESULT> switchMappingOption(Consumer<JsonMappingOption> opLambda) {
+        assertArgumentNotNull("opLambda", opLambda);
+        mappingOptionSwitcher = opLambda;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
@@ -332,5 +351,15 @@ public class JsonResponse<RESULT> implements ApiResponse {
 
     public boolean isValidatorSuppressed() {
         return validatorSuppressed;
+    }
+
+    // -----------------------------------------------------
+    //                                        Mapping Option
+    //                                        --------------
+    public OptionalThing<Consumer<JsonMappingOption>> getMappingOptionSwitcher() {
+        return OptionalThing.ofNullable(mappingOptionSwitcher, () -> {
+            String msg = "Not found the switcher of mapping option: " + JsonResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 }
