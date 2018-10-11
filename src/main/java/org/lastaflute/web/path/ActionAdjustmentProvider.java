@@ -36,6 +36,9 @@ public interface ActionAdjustmentProvider {
     // ===================================================================================
     //                                                                             Routing
     //                                                                             =======
+    // -----------------------------------------------------
+    //                                 Typical Determination
+    //                                 ---------------------
     /**
      * Is the request routing treated as 404 not found forcedly?
      * @param request The request object provided from filter. (NotNull)
@@ -66,16 +69,48 @@ public interface ActionAdjustmentProvider {
         return false;
     }
 
+    // -----------------------------------------------------
+    //                                           URL Mapping
+    //                                           -----------
     /**
+     * <p>This is an old style method, you can use deeplyCustomizeActionMapping() instead of this.</p>
      * Customize the request path for action mapping. <br>
-     * This method is called many times so you should care the performance.
+     * This method is called many times so you should care the performance. <br>
+     * And you should also override customizeActionUrlDeriving() for LastaDoc, Swagger as reserve logic. <br>
      * @param requestPath The path of request to search action, e.g. '/product/list/'. (NotNull)
      * @return The customized request path. (NullAllowed: if null, search by the plain request path)
      */
-    default String customizeActionMappingRequestPath(String requestPath) {
+    default String customizeActionMappingRequestPath(String requestPath) { // old style, use customizeActionUrlMapping()
         return null;
     }
 
+    /**
+     * Customize the action URL mapping. <br>
+     * This method is called many times so you should care the performance. <br>
+     * And you should also override customizeActionUrlReverse() for LastaDoc, Swagger as reserve logic.
+     * @param resource The resource for customization of URL mapping, the requestPath is e.g. '/product/list/'. (NotNull)
+     * @return The option of action URL mapping. (NullAllowed: if null, search by the plain request path)
+     */
+    default UrlMappingOption customizeActionUrlMapping(UrlMappingResource resource) {
+        return null;
+    }
+
+    // -----------------------------------------------------
+    //                                           URL Reverse
+    //                                           -----------
+    /**
+     * Customize the action URL reverse, e.g. toActionUrl(). <br>
+     * This method is called many times so you should care the performance.
+     * @param resource The resource of action URL reverse. (NotNull)
+     * @return The option of action URL reverse. (NullAllowed: if null, reverse plainly)
+     */
+    default UrlReverseOption customizeActionUrlReverse(UrlReverseResource resource) {
+        return null;
+    }
+
+    // -----------------------------------------------------
+    //                                        Trailing Slash
+    //                                        --------------
     /**
      * Does it suppress 'trailing slash redirect' for SEO?
      * @param request The request object provided from filter. (NotNull)
@@ -87,6 +122,9 @@ public interface ActionAdjustmentProvider {
         return false;
     }
 
+    // -----------------------------------------------------
+    //                                         404 Not Found
+    //                                         -------------
     /**
      * Is the no-routing request treated as 404 not found?
      * @param request The request object provided from filter. (NotNull)

@@ -19,6 +19,8 @@ import java.lang.reflect.Parameter;
 import java.util.function.Consumer;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.json.JsonManager;
+import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ResponseReflectingOption;
@@ -250,17 +252,24 @@ public class ActionResponseReflector {
             setupActionResponseHeader(responseManager, response);
             setupActionResponseHttpStatus(responseManager, response);
             final String json;
-            if (response.isReturnAsEmptyBody()) {
+            if (response.isReturnAsEmptyBody()) { // asEmptyBody()
                 if (adjustResponseReflecting().isJsonEmptyBodyTreatedAsEmptyObject()) { // for e.g. client fitting
                     json = "{}"; // is empty object
                 } else { // basically here if empty body
                     return; // no write
                 }
-            } else { // normal body
-                if (response.isReturnAsJsonDirectly()) {
+            } else { // mainly here, normal body
+                if (response.isReturnAsJsonDirectly()) { // asJsonDirectly()
                     json = response.getDirectJson().get();
                 } else { // mainly here
-                    json = requestManager.getJsonManager().toJson(response.getJsonResult());
+                    final JsonManager jsonManager = requestManager.getJsonManager();
+                    final Object jsonResult = response.getJsonResult();
+                    final OptionalThing<Consumer<JsonMappingOption>> switcher = response.getMappingOptionSwitcher();
+                    if (switcher.isPresent()) { // switchMappingOption(), e.g. SwaggerAction@json()
+                        json = toJsonBySwitchedMppingOption(jsonManager, jsonResult, switcher.get());
+                    } else { // mainly here
+                        json = jsonManager.toJson(jsonResult);
+                    }
                 }
             }
             keepOriginalBodyForInOutLoggingIfNeeds(json, "json");
@@ -276,6 +285,12 @@ public class ActionResponseReflector {
                 }
             });
         });
+    }
+
+    protected String toJsonBySwitchedMppingOption(JsonManager jsonManager, Object jsonResult, Consumer<JsonMappingOption> switcher) {
+        final JsonMappingOption option = new JsonMappingOption();
+        switcher.accept(option);
+        return jsonManager.newAnotherEngine(OptionalThing.of(option)).toJson(jsonResult);
     }
 
     // -----------------------------------------------------

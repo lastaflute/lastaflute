@@ -49,7 +49,9 @@ public class ActionPathResolver {
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(ActionPathResolver.class);
 
-    private static final UrlChain EMPTY_URL_CHAIN = new UrlChain(null);
+    protected static final String URL_DELIMITER = "/";
+    protected static final UrlChain EMPTY_URL_CHAIN = new UrlChain(null);
+    protected static final UrlReverseOption EMPTY_URL_REVERSE_OPTION = new UrlReverseOption();
 
     // ===================================================================================
     //                                                                           Attribute
@@ -95,8 +97,8 @@ public class ActionPathResolver {
     }
 
     // ===================================================================================
-    //                                                                 ActionPath Handling
-    //                                                                 ===================
+    //                                                                  Action URL Mapping
+    //                                                                  ==================
     /**
      * Handle the action path from the specified request path.
      * @param requestPath The request path to be analyzed. (NotNull)
@@ -107,17 +109,79 @@ public class ActionPathResolver {
     public boolean handleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
         assertArgumentNotNull("requestPath", requestPath);
         assertArgumentNotNull("handler", handler);
-        final String customized = actionAdjustmentProvider.customizeActionMappingRequestPath(requestPath);
-        return doHandleActionPath(customized != null ? customized : requestPath, handler);
+        final MappingPathResource pathResource = customizeActionMapping(requestPath);
+        return mappingActionPath(pathResource, handler);
     }
 
-    protected boolean doHandleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
-        final String[] names = LdiStringUtil.split(requestPath, "/"); // e.g. [sea, land] if /sea/land/
+    protected static class MappingPathResource {
+
+        protected final String requestPath; // not null, means plain path
+        protected final String mappingPath; // not null, same value as requestPath if no customization
+        protected final OptionalThing<String> actionNameSuffix; // not null, empty allowed
+
+        public MappingPathResource(String requestPath, String mappingPath, String actionNameSuffix) {
+            this.requestPath = requestPath;
+            this.mappingPath = mappingPath;
+            this.actionNameSuffix = OptionalThing.ofNullable(actionNameSuffix, () -> { // avoid several instances by getter
+                throw new IllegalStateException("Not found the actionNameSuffix.");
+            });
+        }
+
+        public String getRequestPath() {
+            return requestPath;
+        }
+
+        public String getMappingPath() {
+            return mappingPath;
+        }
+
+        public OptionalThing<String> getActionNameSuffix() {
+            return actionNameSuffix;
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                 Customization Process
+    //                                 ---------------------
+    protected MappingPathResource customizeActionMapping(String requestPath) {
+        final String simplyFiltered = simplyCustomizeActionMappingRequestPath(requestPath);
+        return deeplyCustomizeUrlMapping(requestPath, simplyFiltered);
+    }
+
+    protected String simplyCustomizeActionMappingRequestPath(String requestPath) {
+        final String customized = actionAdjustmentProvider.customizeActionMappingRequestPath(requestPath);
+        return customized != null ? customized : requestPath;
+    }
+
+    protected MappingPathResource deeplyCustomizeUrlMapping(String requestPath, String simplyFiltered) {
+        final UrlMappingOption option = actionAdjustmentProvider.customizeActionUrlMapping(createUrlMappingResource(requestPath));
+        final String mappingPath;
+        final String actionNameSuffix;
+        if (option != null) {
+            mappingPath = option.getRequestPathFilter().map(filter -> filter.apply(simplyFiltered)).orElse(simplyFiltered);
+            actionNameSuffix = option.getActionNameSuffix().orElse(null);
+        } else {
+            mappingPath = simplyFiltered;
+            actionNameSuffix = null;
+        }
+        return new MappingPathResource(requestPath, mappingPath, actionNameSuffix);
+    }
+
+    protected UrlMappingResource createUrlMappingResource(String requestPath) {
+        return new UrlMappingResource(requestPath);
+    }
+
+    // -----------------------------------------------------
+    //                                 ActionMapping Process
+    //                                 ---------------------
+    protected boolean mappingActionPath(MappingPathResource pathResource, ActionFoundPathHandler handler) throws Exception {
+        final String mappingPath = pathResource.getMappingPath();
+        final String[] names = LdiStringUtil.split(mappingPath, URL_DELIMITER); // e.g. [sea, land] if /sea/land/
         final LaContainer root = container.getRoot(); // because actions are in root
-        final String rootAction = "rootAction";
+        final String rootAction = buildActionName(pathResource, null, "root");
         if (names.length == 0) { // root action, / => rootAction
             if (hasActionDef(root, rootAction)) {
-                if (actuallyHandleActionPath(requestPath, handler, rootAction, null)) {
+                if (executeHandlerIfFound(pathResource, handler, rootAction, null)) {
                     return true;
                 }
             }
@@ -132,16 +196,16 @@ public class ActionPathResolver {
             final int nextIndex = index + 1;
             if (index == 0) { // first loop
                 // /sea/ => seaAction
-                final String directAction = buildActionName(null, currentName);
+                final String directAction = buildActionName(pathResource, null, currentName);
                 if (hasActionDef(root, directAction)) {
-                    if (actuallyHandleActionPath(requestPath, handler, directAction, buildParamPath(names, nextIndex))) {
+                    if (executeHandlerIfFound(pathResource, handler, directAction, buildParamPath(names, nextIndex))) {
                         return true;
                     }
                 }
                 // /sea/ => sea_seaAction
-                final String wholePkgAction = buildActionName(currentName + "_", currentName);
+                final String wholePkgAction = buildActionName(pathResource, currentName + "_", currentName);
                 if (hasActionDef(root, wholePkgAction)) {
-                    if (actuallyHandleActionPath(requestPath, handler, wholePkgAction, buildParamPath(names, nextIndex))) {
+                    if (executeHandlerIfFound(pathResource, handler, wholePkgAction, buildParamPath(names, nextIndex))) {
                         return true;
                     }
                 }
@@ -154,46 +218,46 @@ public class ActionPathResolver {
                 //   more   : sea_seaLandAction
                 //   whole  : sea_land_seaLandAction
                 // 
-                // third : /sea/land/iks/
-                //   first  : seaLandIksAction
-                //   second : sea_seaLandIksAction
-                //   more   : sea_land_seaLandIksAction
-                //   whole  : sea_land_iks_seaLandIksAction
+                // third : /sea/land/piari/
+                //   first  : seaLandPiariAction
+                //   second : sea_seaLandPiariAction
+                //   more   : sea_land_seaLandPiariAction
+                //   whole  : sea_land_piari_seaLandPiariAction
                 // 
-                // fourth : /sea/land/iks/amba
-                //   first  : seaLandIksAmbaAction
-                //   second : sea_seaLandIksAmbaAction
-                //   third  : sea_land_seaLandIksAmbaAction
-                //   more   : sea_land_iks_seaLandIksAmbaAction
-                //   whole  : sea_land_iks_amba_seaLandIksAmbaAction
+                // fourth : /sea/land/piari/bonvo
+                //   first  : seaLandPiariBonvoAction
+                //   second : sea_seaLandPiariBonvoAction
+                //   third  : sea_land_seaLandPiariBonvoAction
+                //   more   : sea_land_piari_seaLandPiariBonvoAction
+                //   whole  : sea_land_piari_bonvo_seaLandPiariBonvoAction
                 // _/_/_/_/_/_/_/_/_/_/
-                final String classPrefix = prefixSb.toString() + initCap(currentName); // seaLand, seaLandIks
+                final String classPrefix = prefixSb.toString() + initCap(currentName); // seaLand, seaLandPiari
                 StringBuilder pkgSb = null; // lazy loaded
                 for (String previous : previousList) { // always one or more loop
-                    final String actionName = buildActionName(pkgSb != null ? pkgSb.toString() : null, classPrefix);
+                    final String actionName = buildActionName(pathResource, pkgSb != null ? pkgSb.toString() : null, classPrefix);
                     if (hasActionDef(root, actionName)) {
-                        if (actuallyHandleActionPath(requestPath, handler, actionName, buildParamPath(names, nextIndex))) {
+                        if (executeHandlerIfFound(pathResource, handler, actionName, buildParamPath(names, nextIndex))) {
                             return true;
                         }
                     }
-                    pkgSb = pkgSb != null ? pkgSb : new StringBuilder(requestPath.length());
+                    pkgSb = pkgSb != null ? pkgSb : new StringBuilder(mappingPath.length());
                     pkgSb.append(previous).append("_");
                 }
-                final String morePkgActionName = buildActionName(pkgSb.toString(), classPrefix);
+                final String morePkgActionName = buildActionName(pathResource, pkgSb.toString(), classPrefix);
                 if (hasActionDef(root, morePkgActionName)) {
-                    if (actuallyHandleActionPath(requestPath, handler, morePkgActionName, buildParamPath(names, nextIndex))) {
+                    if (executeHandlerIfFound(pathResource, handler, morePkgActionName, buildParamPath(names, nextIndex))) {
                         return true;
                     }
                 }
-                pkgSb.append(currentName).append("_"); // sea_land_, sea_land_iks_, ...
-                final String wholePkgActionName = buildActionName(pkgSb.toString(), classPrefix);
+                pkgSb.append(currentName).append("_"); // sea_land_, sea_land_piari_, ...
+                final String wholePkgActionName = buildActionName(pathResource, pkgSb.toString(), classPrefix);
                 if (hasActionDef(root, wholePkgActionName)) {
-                    if (actuallyHandleActionPath(requestPath, handler, wholePkgActionName, buildParamPath(names, nextIndex))) {
+                    if (executeHandlerIfFound(pathResource, handler, wholePkgActionName, buildParamPath(names, nextIndex))) {
                         return true;
                     }
                 }
             }
-            prefixSb = prefixSb != null ? prefixSb : new StringBuilder(requestPath.length());
+            prefixSb = prefixSb != null ? prefixSb : new StringBuilder(mappingPath.length());
             prefixSb.append(index == 0 ? currentName : initCap(currentName));
             previousList = previousList != null ? previousList : new ArrayList<String>(4);
             previousList.add(currentName);
@@ -201,7 +265,7 @@ public class ActionPathResolver {
         if (names.length > 0) { // e.g. /sea/land but not found except root action
             // only root action's named methods are low priority (to avoid searching cost)
             if (hasActionDef(root, rootAction)) {
-                if (actuallyHandleActionPath(requestPath, handler, rootAction, buildParamPath(names, 0))) {
+                if (executeHandlerIfFound(pathResource, handler, rootAction, buildParamPath(names, 0))) {
                     return true;
                 }
             }
@@ -242,8 +306,13 @@ public class ActionPathResolver {
         return Srl.isUpperCaseAny(currentName);
     }
 
-    protected String buildActionName(String pkg, String classPrefix) {
-        return (pkg != null ? pkg : "") + classPrefix + namingConvention.getActionSuffix();
+    // -----------------------------------------------------
+    //                                   Build Name and Path
+    //                                   -------------------
+    protected String buildActionName(MappingPathResource mappingResource, String pkg, String classPrefix) {
+        final String actionNameSuffix = mappingResource.getActionNameSuffix().orElse(""); // option so basically empty
+        final String actionSuffix = namingConvention.getActionSuffix(); // e.g. 'Action'
+        return (pkg != null ? pkg : "") + classPrefix + actionNameSuffix + actionSuffix; // e.g. sea_seaLandAction, sea_seaLandSpAction
     }
 
     protected String buildParamPath(String[] names, int index) {
@@ -261,11 +330,15 @@ public class ActionPathResolver {
         return sb.toString(); // e.g. 3 when /member/list/3/
     }
 
-    protected boolean actuallyHandleActionPath(String requestPath, ActionFoundPathHandler handler, String actionName, String paramPath)
-            throws Exception {
+    // -----------------------------------------------------
+    //                                       Execute Handler
+    //                                       ---------------
+    protected boolean executeHandlerIfFound(MappingPathResource pathResource, ActionFoundPathHandler handler, String actionName,
+            String paramPath) throws Exception {
         final boolean emptyParam = paramPath == null || paramPath.isEmpty();
         final ActionExecute execByParam = !emptyParam ? findExecuteConfig(actionName, paramPath).orElse(null) : null;
         if (emptyParam || execByParam != null) { // certainly hit
+            final String requestPath = pathResource.getRequestPath(); // no mapping, plain path here (for e.g. redirect)
             return handler.handleActionPath(requestPath, actionName, paramPath, execByParam);
         }
         return false;
@@ -276,7 +349,7 @@ public class ActionPathResolver {
     }
 
     // ===================================================================================
-    //                                                                  ActionPath Convert
+    //                                                                  Action URL Reverse
     //                                                                  ==================
     /**
      * Convert to URL string to move the action. <br>
@@ -301,81 +374,40 @@ public class ActionPathResolver {
     public String toActionUrl(Class<?> actionType, UrlChain chain) {
         assertArgumentNotNull("actionType", actionType);
         assertArgumentNotNull("chain", chain);
-        final String actionPath = resolveActionPath(actionType);
-        final List<Object> getParamList = extractGetParamList(chain);
+        final UrlReverseOption option = customizeActionUrlReverse(actionType, chain); // not null, empty allowed
         final StringBuilder sb = new StringBuilder();
-        sb.append(actionPath);
+        buildActionPath(sb, actionType, option);
         buildUrlParts(sb, chain);
-        buildGetParam(sb, actionPath, getParamList);
+        buildGetParam(sb, chain);
         buildHashOnUrl(sb, chain);
         return sb.toString();
     }
 
-    protected List<Object> extractGetParamList(UrlChain chain) {
-        final Object[] paramsOnGet = chain != null ? chain.getParamsOnGet() : null;
-        final List<Object> getParamList;
-        if (paramsOnGet != null) {
-            getParamList = DfCollectionUtil.newArrayList(paramsOnGet);
-        } else {
-            getParamList = DfCollectionUtil.emptyList();
-        }
-        return getParamList;
+    protected UrlReverseOption customizeActionUrlReverse(Class<?> actionType, UrlChain chain) {
+        final UrlReverseOption option = actionAdjustmentProvider.customizeActionUrlReverse(createUrlReverseResource(actionType, chain));
+        return option != null ? option : EMPTY_URL_REVERSE_OPTION;
     }
 
-    protected void buildUrlParts(StringBuilder sb, UrlChain chain) {
-        final Object[] urlParts = chain != null ? chain.getUrlParts() : null;
-        boolean existsParts = false;
-        if (urlParts != null) {
-            for (Object param : urlParts) {
-                if (param != null) {
-                    sb.append(param).append("/");
-                    existsParts = true;
-                }
-            }
-        }
-        if (existsParts) {
-            sb.delete(sb.length() - 1, sb.length()); // e.g. member/edit/3/ to member/edit/3
-        }
-    }
-
-    protected void buildGetParam(StringBuilder sb, String actionPath, List<Object> getParamList) {
-        int index = 0;
-        for (Object param : getParamList) {
-            if (index == 0) { // first loop
-                sb.append("?");
-            } else {
-                if (index % 2 == 0) {
-                    sb.append("&");
-                } else if (index % 2 == 1) {
-                    sb.append("=");
-                } else { // no way
-                    String msg = "no way: url=" + actionPath + " get-params=" + getParamList;
-                    throw new IllegalStateException(msg);
-                }
-            }
-            sb.append(param != null ? param : "");
-            ++index;
-        }
-    }
-
-    protected void buildHashOnUrl(StringBuilder sb, UrlChain chain) {
-        final Object hash = chain != null ? chain.getHashOnUrl() : null;
-        if (hash != null) {
-            sb.append("#").append(hash);
-        }
+    protected UrlReverseResource createUrlReverseResource(Class<?> actionType, UrlChain chain) {
+        return new UrlReverseResource(actionType, chain);
     }
 
     // -----------------------------------------------------
     //                                    Resolve ActionPath
     //                                    ------------------
-    public String resolveActionPath(Class<?> actionType) {
-        final String delimiter = "/";
-        return delimiter + decamelize(toSimpleActionName(actionType), delimiter) + delimiter;
+    protected void buildActionPath(StringBuilder sb, Class<?> actionType, UrlReverseOption option) {
+        sb.append(resolveActionPath(actionType, option));
     }
 
-    protected String toSimpleActionName(Class<?> actionType) {
-        final String componentName = namingConvention.fromClassNameToComponentName(actionType.getName());
-        return removeRearActionSuffixIfNeeds(Srl.substringLastRear(componentName, "_"));
+    public String resolveActionPath(Class<?> actionType, UrlReverseOption option) {
+        final String simpleActionName = toSimpleActionName(actionType, option); // productList (from ProductListAction.class)
+        return URL_DELIMITER + decamelize(simpleActionName, URL_DELIMITER) + URL_DELIMITER; // e.g. '/product/list/'
+    }
+
+    protected String toSimpleActionName(Class<?> actionType, UrlReverseOption option) {
+        final String componentName = namingConvention.fromClassNameToComponentName(actionType.getName()); // e.g. product_productListAction
+        final String actionName = removeRearActionSuffixIfNeeds(Srl.substringLastRear(componentName, "_")); // e.g. productList
+        return option.getActionNameFilter().map(filter -> filter.apply(actionName)).orElse(actionName); // basically orElse()
     }
 
     protected String removeRearActionSuffixIfNeeds(String path) {
@@ -387,18 +419,76 @@ public class ActionPathResolver {
         return Srl.decamelize(simpleName, delimiter).toLowerCase(); // seaLand => SEA/LAND => sea/land
     }
 
+    // -----------------------------------------------------
+    //                                             URL Parts
+    //                                             ---------
+    protected void buildUrlParts(StringBuilder sb, UrlChain chain) { // also contains path variables
+        final Object[] urlParts = chain != null ? chain.getUrlParts() : null;
+        boolean existsParts = false;
+        if (urlParts != null) {
+            for (Object param : urlParts) {
+                if (param != null) {
+                    sb.append(param).append(URL_DELIMITER);
+                    existsParts = true;
+                }
+            }
+        }
+        if (existsParts) {
+            sb.delete(sb.length() - 1, sb.length()); // e.g. member/edit/3/ to member/edit/3
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                         GET parameter
+    //                                         -------------
+    protected void buildGetParam(StringBuilder sb, UrlChain chain) {
+        List<Object> getParamList = extractGetParamList(chain);
+        int index = 0;
+        for (Object param : getParamList) {
+            if (index == 0) { // first loop
+                sb.append("?");
+            } else {
+                if (index % 2 == 0) {
+                    sb.append("&");
+                } else if (index % 2 == 1) {
+                    sb.append("=");
+                } else { // no way
+                    String msg = "no way: currentSb=" + sb + " get-params=" + getParamList;
+                    throw new IllegalStateException(msg);
+                }
+            }
+            sb.append(param != null ? param : "");
+            ++index;
+        }
+    }
+
+    protected List<Object> extractGetParamList(UrlChain chain) {
+        final Object[] paramsOnGet = chain != null ? chain.getParamsOnGet() : null;
+        return paramsOnGet != null ? DfCollectionUtil.newArrayList(paramsOnGet) : DfCollectionUtil.emptyList();
+    }
+
+    // -----------------------------------------------------
+    //                                           Hash on URL
+    //                                           -----------
+    protected void buildHashOnUrl(StringBuilder sb, UrlChain chain) {
+        final Object hash = chain != null ? chain.getHashOnUrl() : null;
+        if (hash != null) {
+            sb.append("#").append(hash);
+        }
+    }
+
     // ===================================================================================
     //                                                              ActionPath Calculation
     //                                                              ======================
-    public String calculateActionPathByJspPath(String requestPath) {
-        final String lastPathElement = substringLastRear(requestPath, "/");
+    public String calculateActionPathByJspPath(String requestPath) { // only for JSP
+        final String lastPathElement = substringLastRear(requestPath, URL_DELIMITER);
         if (!lastPathElement.contains(".")) { // no JSP
             return requestPath;
         }
         // basically JSP here
-        final String frontPathElement = substringLastFront(requestPath, "/");
+        final String frontPathElement = substringLastFront(requestPath, URL_DELIMITER);
         final String fileNameNoExt = substringLastFront(lastPathElement, ".");
-        final String pathBase = frontPathElement + "/";
+        final String pathBase = frontPathElement + URL_DELIMITER;
         if (!fileNameNoExt.contains("_")) { // e.g. list.jsp
             return pathBase; // e.g. /member/ (submit name is needed in this case)
         }
@@ -427,7 +517,7 @@ public class ActionPathResolver {
         String previousSuffix = "";
         for (int i = 0; i < wordList.size(); i++) {
             // e.g. 1st: '' + '/' + member, 2nd: /member + '/' + purchase
-            final String pathSuffix = previousSuffix + "/" + wordList.get(i);
+            final String pathSuffix = previousSuffix + URL_DELIMITER + wordList.get(i);
             final boolean nextLoopLast = wordList.size() == i + 2;
             if (nextLoopLast && frontPathElement.endsWith(pathSuffix)) {
                 // e.g. 1st: /member/list/, 2nd: /member/purchase/list/
@@ -436,7 +526,7 @@ public class ActionPathResolver {
                 if (lastElement.equals("index")) { // e.g. /member/list/member_list_index.jsp
                     resolvedPath = pathBase;
                 } else {
-                    resolvedPath = pathBase + lastElement + "/";
+                    resolvedPath = pathBase + lastElement + URL_DELIMITER;
                 }
                 return resolvedPath;
             }
@@ -457,8 +547,8 @@ public class ActionPathResolver {
         sb.append("\n");
         sb.append("/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = *No routing action:\n");
         sb.append("e.g. expected actions for ").append(requestPath).append("\n");
-        final String customizedPath = actionAdjustmentProvider.customizeActionMappingRequestPath(requestPath);
-        final List<String> nameList = buildExpectedRoutingActionList(customizedPath != null ? customizedPath : requestPath);
+        final MappingPathResource pathResource = customizeActionMapping(requestPath);
+        final List<String> nameList = buildExpectedRoutingActionList(pathResource.getMappingPath());
         boolean exists = false;
         for (String name : nameList) {
             if (name.endsWith("@index()") && containsNotAllowedCharacterAsActionPath(requestPath)) { // e.g. /product/List/
@@ -482,8 +572,8 @@ public class ActionPathResolver {
     protected List<String> buildExpectedRoutingActionList(String requestPath) {
         final List<String> tokenList;
         {
-            final String trimmedPath = trim(requestPath, "/"); // /member/list/ -> member/list
-            final List<String> splitList = splitList(trimmedPath, "/"); // [member, list]
+            final String trimmedPath = trim(requestPath, URL_DELIMITER); // /member/list/ -> member/list
+            final List<String> splitList = splitList(trimmedPath, URL_DELIMITER); // [member, list]
             tokenList = new ArrayList<String>(splitList.size()); // removed empty elements
             for (String element : splitList) {
                 if (element.trim().length() == 0) {
