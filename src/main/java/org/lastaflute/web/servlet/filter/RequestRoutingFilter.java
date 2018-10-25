@@ -110,7 +110,7 @@ public class RequestRoutingFilter implements Filter {
             chain.doFilter(httpReq, httpRes);
             return;
         }
-        // no extension here (may be SAStruts URL)
+        // no extension here (may be LastaFlute URL)
         final ActionPathResolver resolver = getRequestManager().getActionPathResolver();
         try {
             final String contextPath = extractContextPath(httpReq);
