@@ -15,6 +15,7 @@ import org.lastaflute.web.response.HtmlResponse;
 
 /**
  * @author jflute
+ * @author pull request #55
  * @since 1.0.1 (2017/10/16 Monday at bay maihama)
  */
 public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
@@ -351,6 +352,7 @@ public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
     }
 
     private static class Basic37Int2formForm {
+        @SuppressWarnings("unused")
         public String name;
     }
 
