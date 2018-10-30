@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
@@ -389,6 +390,10 @@ public class UrlPatternAnalyzer {
         }
         final Class<?> parameterType = pathParamTypeList.get(parameterIndex);
         if (Number.class.isAssignableFrom(parameterType)) {
+            return true;
+        }
+        if (parameterType.isPrimitive() && Stream.of(long.class, int.class, short.class, byte.class, double.class, float.class)
+                .anyMatch(c -> c.isAssignableFrom(parameterType))) {
             return true;
         }
         final Class<?> genericType = optionalGenericTypeMap.get(parameterIndex);
