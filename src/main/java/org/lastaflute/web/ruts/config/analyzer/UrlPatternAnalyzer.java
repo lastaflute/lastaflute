@@ -383,6 +383,7 @@ public class UrlPatternAnalyzer {
         }
     }
 
+    // #hope jflute similer to PathParamArgs's one so want to refactor (2018/10/30)
     protected boolean needsNumberTypePattern(List<Class<?>> pathParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap,
             int parameterIndex) {
         if (pathParamTypeList.size() <= parameterIndex) {
@@ -393,7 +394,7 @@ public class UrlPatternAnalyzer {
             return true;
         }
         if (parameterType.isPrimitive() && Stream.of(long.class, int.class, short.class, byte.class, double.class, float.class)
-                .anyMatch(c -> c.isAssignableFrom(parameterType))) {
+                .anyMatch(numType -> numType.isAssignableFrom(parameterType))) { // from pull request #55 (thanks!)
             return true;
         }
         final Class<?> genericType = optionalGenericTypeMap.get(parameterIndex);

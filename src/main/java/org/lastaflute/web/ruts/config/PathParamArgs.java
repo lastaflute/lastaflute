@@ -52,6 +52,7 @@ public class PathParamArgs implements Serializable {
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
+    // #hope jflute similer to UrlPatternAnalyzer's one so want to refactor (2018/10/30)
     public boolean isNumberTypeParameter(int index) { // contains optional generic type
         if (pathParamTypeList.size() <= index) { // avoid out of bounds
             return false;
@@ -61,7 +62,7 @@ public class PathParamArgs implements Serializable {
             return true;
         }
         if (parameterType.isPrimitive() && Stream.of(long.class, int.class, short.class, byte.class, double.class, float.class)
-                .anyMatch(c -> c.isAssignableFrom(parameterType))) {
+                .anyMatch(numType -> numType.isAssignableFrom(parameterType))) { // from pull request #55 (thanks!)
             return true;
         }
         final Class<?> genericType = optionalGenericTypeMap.get(index);
