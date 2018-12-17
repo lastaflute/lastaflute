@@ -32,17 +32,29 @@ import org.lastaflute.web.util.LaParamWrapperUtil;
  */
 public class BeanWrapper implements Map<String, Object> {
 
-    private static final char INDEXED_DELIM = '[';
-    private static final char INDEXED_DELIM2 = ']';
+    // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    protected static final char INDEXED_DELIM = '[';
+    protected static final char INDEXED_DELIM2 = ']';
 
-    protected final Object bean;
-    protected final BeanDesc beanDesc;
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final Object bean; // not null
+    protected final BeanDesc beanDesc; // not null
 
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
     public BeanWrapper(Object bean) {
         this.bean = bean;
         beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
     }
 
+    // ===================================================================================
+    //                                                                  Map Implementation
+    //                                                                  ==================
     public Object get(Object objKey) {
         if (objKey == null) {
             throw new IllegalArgumentException("The key parameter must not be null.");
@@ -148,11 +160,6 @@ public class BeanWrapper implements Map<String, Object> {
         throw new UnsupportedOperationException("values");
     }
 
-    @Override
-    public String toString() {
-        return bean.toString();
-    }
-
     protected static class BeanEntry implements Entry<String, Object> {
 
         protected PropertyDesc propDesc;
@@ -178,5 +185,20 @@ public class BeanWrapper implements Map<String, Object> {
             propDesc.setValue(bean, value);
             return null;
         }
+    }
+
+    // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        return bean.toString();
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public Object getBean() { // for e.g. Lasta Thymeleaf (application extension)
+        return bean;
     }
 }
