@@ -23,21 +23,36 @@ import org.dbflute.optional.OptionalThing;
  */
 public class JsonControlMeta { // read-only
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
     /** The control meta of JSON mapping. (NotNull, EmptyAllowed: if empty, use default) */
     protected final OptionalThing<JsonMappingControlMeta> mappingControlMeta;
 
     /** The print meta of JSON mapping. (NotNull, EmptyAllowed: if empty, use default) */
     protected final OptionalThing<JsonPrintControlMeta> printControlMeta;
 
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
     public JsonControlMeta(OptionalThing<JsonMappingControlMeta> mappingControlMeta, OptionalThing<JsonPrintControlMeta> printControlMeta) {
         this.mappingControlMeta = mappingControlMeta;
         this.printControlMeta = printControlMeta;
     }
 
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    /**
+     * @return The optional control meta of JSON mapping. (NotNull)
+     */
     public OptionalThing<JsonMappingControlMeta> getMappingControlMeta() {
         return mappingControlMeta;
     }
 
+    /**
+     * @return The optional control meta of JSON print. (NotNull)
+     */
     public OptionalThing<JsonPrintControlMeta> getPrintControlMeta() {
         return printControlMeta;
     }

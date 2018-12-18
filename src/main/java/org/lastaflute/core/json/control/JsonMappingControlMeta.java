@@ -65,9 +65,9 @@ public interface JsonMappingControlMeta {
 
     OptionalThing<JsonFieldNaming> getFieldNaming();
 
-    List<JsonYourCollectionResource> getYourCollections();
+    List<JsonYourCollectionResource> getYourCollections(); // not null, read-only
 
-    List<JsonYourScalarResource> getYourScalars();
+    List<JsonYourScalarResource> getYourScalars(); // not null, read-only
 
     OptionalThing<Consumer<Object>> getYourUltimateCustomizer();
 }

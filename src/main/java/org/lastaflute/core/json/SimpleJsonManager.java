@@ -23,7 +23,6 @@ import javax.annotation.Resource;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
-import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.json.control.JsonControlMeta;
@@ -60,10 +59,10 @@ public class SimpleJsonManager implements JsonManager {
     protected boolean developmentHere;
 
     /** The option of JSON mapping. (NotNull, EmptyAllowed: if empty, use default) */
-    protected OptionalThing<JsonMappingOption> jsonMappingOption = OptionalThing.empty();
+    protected OptionalThing<JsonMappingOption> mappingOption = OptionalThing.empty();
 
     /** The control state of JSON print. (NotNull, EmptyAllowed: if empty, use default) */
-    protected OptionalThing<JsonPrintControlState> jsonPrintControlState = OptionalThing.empty();
+    protected OptionalThing<JsonPrintControlState> printControlState = OptionalThing.empty();
 
     /** The your creator of JSON engine. (NotNull, EmptyAllowed: if empty, use default) */
     protected OptionalThing<YourJsonEngineCreator> yourEngineCreator = OptionalThing.empty();
@@ -82,12 +81,13 @@ public class SimpleJsonManager implements JsonManager {
     public synchronized void initialize() {
         final FwCoreDirection direction = assistCoreDirection();
         developmentHere = direction.isDevelopmentHere();
+
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
-        jsonMappingOption = OptionalThing.ofNullable(extractMappingOption(provider), () -> {
+        mappingOption = OptionalThing.ofNullable(extractMappingOption(provider), () -> {
             throw new IllegalStateException("Not found the JSON mapping option.");
         });
-        jsonPrintControlState = OptionalThing.of(preparePrintState(provider));
-        yourEngineCreator = OptionalThing.ofNullable(provider != null ? provider.prepareYourEngineCreator() : null, () -> {
+        printControlState = OptionalThing.of(preparePrintState(provider)); // fixedly exists for now
+        yourEngineCreator = OptionalThing.ofNullable(extractYourEngineCreator(provider), () -> {
             throw new IllegalStateException("Not found the your engine creator.");
         });
 
@@ -119,15 +119,22 @@ public class SimpleJsonManager implements JsonManager {
     }
 
     // -----------------------------------------------------
+    //                                   Your Engine Creator
+    //                                   -------------------
+    protected YourJsonEngineCreator extractYourEngineCreator(JsonResourceProvider provider) {
+        return provider != null ? provider.prepareYourEngineCreator() : null;
+    }
+
+    // -----------------------------------------------------
     //                                           Json Engine
     //                                           -----------
     protected RealJsonEngine createDefaultJsonEngine() {
         final JsonEngineResource resource = new JsonEngineResource();
-        jsonMappingOption.ifPresent(op -> {
+        mappingOption.ifPresent(op -> {
             resource.acceptMappingOption(op);
         });
         yourEngineCreator.ifPresent(creator -> {
-            resource.overrideYourEngineCreator(creator);
+            resource.useYourEngineCreator(creator);
         });
         return createGsonJsonEngine(resource);
     }
@@ -139,27 +146,14 @@ public class SimpleJsonManager implements JsonManager {
         if (logger.isInfoEnabled()) {
             logger.info("[JSON Manager]");
             logger.info(" realJsonParser: " + DfTypeUtil.toClassTitle(realJsonEngine));
-            final String adjustment = buildAdjustmentExp();
-            if (!adjustment.isEmpty()) {
-                logger.info(" adjustment: " + adjustment);
+            if (mappingOption.isPresent()) { // not use lambda to keep log indent
+                logger.info(" mapping: " + mappingOption.get());
             }
-            if (jsonMappingOption.isPresent()) { // not use lambda to keep log indent
-                logger.info(" option: " + jsonMappingOption.get());
+            // print control cannot be changed (deprecated) so no show for now
+            if (yourEngineCreator.isPresent()) { // me too
+                logger.info(" creator: " + yourEngineCreator.get());
             }
         }
-    }
-
-    protected String buildAdjustmentExp() {
-        final StringBuilder sb = new StringBuilder();
-        final String delimiter = ", ";
-        if (isNullsSuppressed()) {
-            sb.append(delimiter).append("nullsSuppressed");
-        }
-        if (isPrettyPrintSuppressed()) {
-            sb.append(delimiter).append("prettyPrintSuppressed");
-        }
-        final String adjustment = Srl.ltrim(sb.toString(), delimiter);
-        return adjustment;
     }
 
     // ===================================================================================
@@ -278,11 +272,11 @@ public class SimpleJsonManager implements JsonManager {
     //                                                                        Assist Logic
     //                                                                        ============
     protected boolean isNullsSuppressed() {
-        return jsonPrintControlState.map(op -> op.isNullsSuppressed()).orElse(false);
+        return printControlState.map(op -> op.isNullsSuppressed()).orElse(false);
     }
 
     protected boolean isPrettyPrintSuppressed() {
-        return jsonPrintControlState.map(op -> op.isPrettyPrintSuppressed()).orElse(false);
+        return printControlState.map(op -> op.isPrettyPrintSuppressed()).orElse(false);
     }
 
     protected boolean isDevelopmentHere() {
@@ -305,14 +299,14 @@ public class SimpleJsonManager implements JsonManager {
     //                                                                            Accessor
     //                                                                            ========
     public OptionalThing<JsonMappingOption> getJsonMappingOption() { // for compatible, e.g. LastaDoc
-        return jsonMappingOption;
+        return mappingOption;
     }
 
     public OptionalThing<JsonMappingControlMeta> getMappingControlMeta() {
-        return jsonMappingOption.map(op -> op); // strange lambda here, only for cast to meta type
+        return mappingOption.map(op -> op); // strange lambda here, only for cast to meta type
     }
 
     public OptionalThing<JsonPrintControlMeta> getPrintControlOption() {
-        return jsonPrintControlState.map(op -> op); // me too
+        return printControlState.map(op -> op); // me too
     }
 }

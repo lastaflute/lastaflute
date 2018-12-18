@@ -15,6 +15,8 @@
  */
 package org.lastaflute.core.json.control;
 
+import org.dbflute.util.Srl;
+
 /**
  * Basically for framework for now. <br>
  * It's only for keeping fixed control state.
@@ -43,6 +45,22 @@ public class JsonPrintControlState implements JsonPrintControlMeta {
     public JsonPrintControlState asPrettyPrintSuppressed(boolean prettyPrintSuppressed) {
         this.prettyPrintSuppressed = prettyPrintSuppressed;
         return this;
+    }
+
+    // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        final String delimiter = ", ";
+        if (nullsSuppressed) {
+            sb.append(delimiter).append("nullsSuppressed");
+        }
+        if (prettyPrintSuppressed) {
+            sb.append(delimiter).append("prettyPrintSuppressed");
+        }
+        return "{" + Srl.ltrim(sb.toString(), delimiter) + "}";
     }
 
     // ===================================================================================

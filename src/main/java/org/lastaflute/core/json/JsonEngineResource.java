@@ -20,6 +20,7 @@ import org.lastaflute.core.json.engine.YourJsonEngineCreator;
 
 /**
  * @author jflute
+ * @since 1.1.1 (2018/12/18 Tuesday at showbase)
  */
 public class JsonEngineResource {
 
@@ -35,6 +36,12 @@ public class JsonEngineResource {
     // ===================================================================================
     //                                                                              Option
     //                                                                              ======
+    /**
+     * Accept the option of JSON mapping. <br>
+     * If no set here, it uses framework default rule (without assistant director rules).
+     * @param mappingOption The option of JSON mapping. (NotNull)
+     * @return this. (NotNull)
+     */
     public JsonEngineResource acceptMappingOption(JsonMappingOption mappingOption) {
         if (mappingOption == null) {
             throw new IllegalArgumentException("The argument 'mappingOption' should not be null.");
@@ -43,7 +50,13 @@ public class JsonEngineResource {
         return this;
     }
 
-    public JsonEngineResource overrideYourEngineCreator(YourJsonEngineCreator yourEngineCreator) {
+    /**
+     * Use the creator of JSON engine instead of the existing creator (e.g. set by assistant). <br>
+     * If no set here, it uses the existing creator (if it exists).
+     * @param yourEngineCreator The your creator of JSON engine. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonEngineResource useYourEngineCreator(YourJsonEngineCreator yourEngineCreator) {
         if (yourEngineCreator == null) {
             throw new IllegalArgumentException("The argument 'yourEngineCreator' should not be null.");
         }

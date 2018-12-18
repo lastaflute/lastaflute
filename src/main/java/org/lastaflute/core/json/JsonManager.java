@@ -26,6 +26,9 @@ import org.lastaflute.core.json.engine.RealJsonEngine;
  */
 public interface JsonManager {
 
+    // ===================================================================================
+    //                                                                        JSON Frmo/To
+    //                                                                        ============
     /**
      * Convert from the JSON string to the specified bean.
      * @param <BEAN> The type of JSON bean.
@@ -59,6 +62,9 @@ public interface JsonManager {
      */
     String toJson(Object bean);
 
+    // ===================================================================================
+    //                                                                        JSON Control
+    //                                                                        ============
     /**
      * Create new JSON engine as another rule. (old method, use the overload method) <br>
      * (inheriting basic settings e.g. serializeNulls, prettyPrinting)
@@ -70,14 +76,24 @@ public interface JsonManager {
 
     /**
      * Create new JSON engine as new rule. <br>
-     * Inheriting basic settings (e.g. serializeNulls, prettyPrinting) and engine creator.
+     * You can use your option of JSON mapping for the new engine. <br>
+     * If no set here, it uses framework default rule (without assistant director rules). <br>
+     * While, inheriting basic settings (e.g. serializeNulls, prettyPrinting) and engine creator.
+     * <pre>
+     * JsonMappingOption yourOption = new JsonMappingOption();
+     * yourOption... // your rule settings
+     * 
+     * JsonEngineResource resource = new JsonEngineResource();
+     * resource.acceptMappingOption(yourOption);
+     * ... = newRuledEngine(resource);
+     * </pre>
      * @param resource The resource of JSON engine to create instance. (NotNull)
      * @return The JSON engine as another rule. (NotNull)
      */
     RealJsonEngine newRuledEngine(JsonEngineResource resource);
 
     /**
-     * pull out meta of JSON control. (e.g. mapping option) 
+     * Pull out the meta of JSON control that is embeeded in manager. (e.g. mapping option) 
      * @return The meta of JSON control as read-only. (NotNull)
      */
     JsonControlMeta pulloutControlMeta();
