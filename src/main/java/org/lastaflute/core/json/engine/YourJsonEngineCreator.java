@@ -9,25 +9,29 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.json.filter;
+package org.lastaflute.core.json.engine;
+
+import java.util.function.Consumer;
+
+import org.lastaflute.core.json.JsonMappingOption;
+
+import com.google.gson.GsonBuilder;
 
 /**
- * The callback for filtering of simple text parameter. <br>
- * (contains list elements and map keys/values)
  * @author jflute
- * @since 0.7.1 (2015/12/15 Tuesday)
+ * @since 1.1.1 (2018/12/18 Tuesday at bay maihama)
  */
 @FunctionalInterface
-public interface JsonSimpleTextReadingFilter {
+public interface YourJsonEngineCreator {
 
     /**
-     * Filter the simple text parameter. (contains list elements and map keys/values) <br>
-     * @param text The text as JSON reading. (NotNull: not called if null parameter)
-     * @return The filtered parameter or plain parameter. (NullAllowed: then filtered as null value)
+     * @param builderSetupper The setup callback for Gson builder. (NotNull)
+     * @param optionSetupper The setup callback for mapping option. (NotNull)
+     * @return The new-create JSON engine of Gson. (NotNull)
      */
-    String filter(String text);
+    GsonJsonEngine create(Consumer<GsonBuilder> builderSetupper, Consumer<JsonMappingOption> optionSetupper);
 }

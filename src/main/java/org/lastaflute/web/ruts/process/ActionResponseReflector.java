@@ -19,8 +19,10 @@ import java.lang.reflect.Parameter;
 import java.util.function.Consumer;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.json.JsonEngineResource;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.json.JsonMappingOption;
+import org.lastaflute.core.json.engine.RealJsonEngine;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ResponseReflectingOption;
@@ -266,7 +268,7 @@ public class ActionResponseReflector {
                     final Object jsonResult = response.getJsonResult();
                     final OptionalThing<Consumer<JsonMappingOption>> switcher = response.getMappingOptionSwitcher();
                     if (switcher.isPresent()) { // switchMappingOption(), e.g. SwaggerAction@json()
-                        json = toJsonBySwitchedMppingOption(jsonManager, jsonResult, switcher.get());
+                        json = toJsonBySwitchedMappingOption(jsonManager, jsonResult, switcher.get());
                     } else { // mainly here
                         json = jsonManager.toJson(jsonResult);
                     }
@@ -287,10 +289,13 @@ public class ActionResponseReflector {
         });
     }
 
-    protected String toJsonBySwitchedMppingOption(JsonManager jsonManager, Object jsonResult, Consumer<JsonMappingOption> switcher) {
+    protected String toJsonBySwitchedMappingOption(JsonManager jsonManager, Object jsonResult, Consumer<JsonMappingOption> switcher) {
+        final JsonEngineResource resource = new JsonEngineResource();
         final JsonMappingOption option = new JsonMappingOption();
         switcher.accept(option);
-        return jsonManager.newAnotherEngine(OptionalThing.of(option)).toJson(jsonResult);
+        resource.acceptMappingOption(option);
+        final RealJsonEngine ruledEngine = jsonManager.newRuledEngine(resource);
+        return ruledEngine.toJson(jsonResult);
     }
 
     // -----------------------------------------------------

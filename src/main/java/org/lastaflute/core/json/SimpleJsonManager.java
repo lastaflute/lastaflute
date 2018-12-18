@@ -16,7 +16,7 @@
 package org.lastaflute.core.json;
 
 import java.lang.reflect.ParameterizedType;
-import java.util.List;
+import java.util.function.Consumer;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -26,9 +26,13 @@ import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
-import org.lastaflute.core.json.bind.JsonYourCollectionResource;
+import org.lastaflute.core.json.control.JsonControlMeta;
+import org.lastaflute.core.json.control.JsonMappingControlMeta;
+import org.lastaflute.core.json.control.JsonPrintControlMeta;
+import org.lastaflute.core.json.control.JsonPrintControlState;
 import org.lastaflute.core.json.engine.GsonJsonEngine;
 import org.lastaflute.core.json.engine.RealJsonEngine;
+import org.lastaflute.core.json.engine.YourJsonEngineCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,17 +59,17 @@ public class SimpleJsonManager implements JsonManager {
     /** Is development here? */
     protected boolean developmentHere;
 
-    /** Is null property suppressed (not displayed) in output JSON string? */
-    protected boolean nullsSuppressed;
-
-    /** Is pretty print suppressed (not line separating) in output JSON string? */
-    protected boolean prettyPrintSuppressed;
-
     /** The option of JSON mapping. (NotNull, EmptyAllowed: if empty, use default) */
     protected OptionalThing<JsonMappingOption> jsonMappingOption = OptionalThing.empty();
 
-    /** The real parser of JSON. (NotNull: after initialization) */
-    protected RealJsonEngine realJsonParser;
+    /** The control state of JSON print. (NotNull, EmptyAllowed: if empty, use default) */
+    protected OptionalThing<JsonPrintControlState> jsonPrintControlState = OptionalThing.empty();
+
+    /** The your creator of JSON engine. (NotNull, EmptyAllowed: if empty, use default) */
+    protected OptionalThing<YourJsonEngineCreator> yourEngineCreator = OptionalThing.empty();
+
+    /** The real engine of JSON. (NotNull: after initialization) */
+    protected RealJsonEngine realJsonEngine;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -79,16 +83,16 @@ public class SimpleJsonManager implements JsonManager {
         final FwCoreDirection direction = assistCoreDirection();
         developmentHere = direction.isDevelopmentHere();
         final JsonResourceProvider provider = direction.assistJsonResourceProvider();
-        nullsSuppressed = provider != null ? provider.isNullsSuppressed() : false;
-        prettyPrintSuppressed = provider != null ? provider.isPrettyPrintSuppressed() : false;
         jsonMappingOption = OptionalThing.ofNullable(extractMappingOption(provider), () -> {
             throw new IllegalStateException("Not found the JSON mapping option.");
         });
-        reflectCompatibleYourCollections(provider);
+        jsonPrintControlState = OptionalThing.of(preparePrintState(provider));
+        yourEngineCreator = OptionalThing.ofNullable(provider != null ? provider.prepareYourEngineCreator() : null, () -> {
+            throw new IllegalStateException("Not found the your engine creator.");
+        });
 
         // should be last because of using other instance variable
-        final RealJsonEngine provided = provider != null ? provider.swtichJsonEngine() : null;
-        realJsonParser = provided != null ? provided : createDefaultJsonParser();
+        realJsonEngine = createDefaultJsonEngine();
         showBootLogging();
     }
 
@@ -96,37 +100,45 @@ public class SimpleJsonManager implements JsonManager {
         return assistantDirector.assistCoreDirection();
     }
 
+    // -----------------------------------------------------
+    //                                        Mapping Option
+    //                                        --------------
     protected JsonMappingOption extractMappingOption(JsonResourceProvider provider) {
-        if (provider == null) {
-            return null;
-        }
-        @SuppressWarnings("deprecation")
-        final JsonMappingOption providedOption = provider.provideOption();
-        if (providedOption != null) {
-            return providedOption;
-        } else {
-            return provider.provideMappingOption();
-        }
+        return provider != null ? provider.provideMappingOption() : null;
     }
 
-    protected void reflectCompatibleYourCollections(JsonResourceProvider provider) {
-        @SuppressWarnings("deprecation")
-        final List<JsonYourCollectionResource> yourCollections = provider != null ? provider.provideYourCollections() : null;
-        if (yourCollections != null) {
-            jsonMappingOption.ifPresent(op -> op.yourCollections(yourCollections)).orElse(() -> {
-                jsonMappingOption = OptionalThing.of(new JsonMappingOption().yourCollections(yourCollections));
-            });
-        }
+    // -----------------------------------------------------
+    //                                          Print Option
+    //                                          ------------
+    @SuppressWarnings("deprecation")
+    protected JsonPrintControlState preparePrintState(JsonResourceProvider provider) {
+        JsonPrintControlState printState = new JsonPrintControlState();
+        printState.asNullsSuppressed(provider != null ? provider.isNullsSuppressed() : false);
+        printState.asPrettyPrintSuppressed(provider != null ? provider.isPrettyPrintSuppressed() : false);
+        return printState;
     }
 
-    protected RealJsonEngine createDefaultJsonParser() {
-        return createGsonJsonEngine(jsonMappingOption);
+    // -----------------------------------------------------
+    //                                           Json Engine
+    //                                           -----------
+    protected RealJsonEngine createDefaultJsonEngine() {
+        final JsonEngineResource resource = new JsonEngineResource();
+        jsonMappingOption.ifPresent(op -> {
+            resource.acceptMappingOption(op);
+        });
+        yourEngineCreator.ifPresent(creator -> {
+            resource.overrideYourEngineCreator(creator);
+        });
+        return createGsonJsonEngine(resource);
     }
 
+    // -----------------------------------------------------
+    //                                          Boot Logging
+    //                                          ------------
     protected void showBootLogging() {
         if (logger.isInfoEnabled()) {
             logger.info("[JSON Manager]");
-            logger.info(" realJsonParser: " + DfTypeUtil.toClassTitle(realJsonParser));
+            logger.info(" realJsonParser: " + DfTypeUtil.toClassTitle(realJsonEngine));
             final String adjustment = buildAdjustmentExp();
             if (!adjustment.isEmpty()) {
                 logger.info(" adjustment: " + adjustment);
@@ -140,10 +152,10 @@ public class SimpleJsonManager implements JsonManager {
     protected String buildAdjustmentExp() {
         final StringBuilder sb = new StringBuilder();
         final String delimiter = ", ";
-        if (nullsSuppressed) {
+        if (isNullsSuppressed()) {
             sb.append(delimiter).append("nullsSuppressed");
         }
-        if (prettyPrintSuppressed) {
+        if (isPrettyPrintSuppressed()) {
             sb.append(delimiter).append("prettyPrintSuppressed");
         }
         final String adjustment = Srl.ltrim(sb.toString(), delimiter);
@@ -151,17 +163,84 @@ public class SimpleJsonManager implements JsonManager {
     }
 
     // ===================================================================================
+    //                                                                        from/to JSON
+    //                                                                        ============
+    @Override
+    public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
+        assertArgumentNotNull("json", json);
+        assertArgumentNotNull("beanType", beanType);
+        return realJsonEngine.fromJson(json, beanType);
+    }
+
+    @Override
+    public <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType) {
+        assertArgumentNotNull("json", json);
+        assertArgumentNotNull("parameterizedType", parameterizedType);
+        return realJsonEngine.fromJsonParameteried(json, parameterizedType);
+    }
+
+    @Override
+    public String toJson(Object bean) {
+        assertArgumentNotNull("bean", bean);
+        return realJsonEngine.toJson(bean);
+    }
+
+    // ===================================================================================
+    //                                                                    new Ruled Engine
+    //                                                                    ================
+    @Override
+    public RealJsonEngine newAnotherEngine(OptionalThing<JsonMappingOption> mappingOption) {
+        assertArgumentNotNull("mappingOption", mappingOption);
+        final JsonEngineResource resource = new JsonEngineResource();
+        mappingOption.ifPresent(op -> {
+            resource.acceptMappingOption(op);
+        });
+        return newRuledEngine(resource);
+    }
+
+    @Override
+    public RealJsonEngine newRuledEngine(JsonEngineResource resource) {
+        assertArgumentNotNull("resource", resource);
+        return createGsonJsonEngine(resource);
+    }
+
+    // ===================================================================================
+    //                                                                        Control Meta
+    //                                                                        ============
+    @Override
+    public JsonControlMeta pulloutControlMeta() {
+        return new JsonControlMeta(getMappingControlMeta(), getPrintControlOption());
+    }
+
+    // ===================================================================================
     //                                                                               Gson
     //                                                                              ======
-    protected RealJsonEngine createGsonJsonEngine(OptionalThing<JsonMappingOption> mappingOption) {
-        final boolean serializeNulls = !nullsSuppressed;
-        final boolean prettyPrinting = !prettyPrintSuppressed && developmentHere;
-        return new GsonJsonEngine(builder -> {
+    // mappingOption is specified for another engine 
+    protected GsonJsonEngine createGsonJsonEngine(JsonEngineResource resource) {
+        final boolean serializeNulls = isGsonSerializeNulls();
+        final boolean prettyPrinting = isGsonPrettyPrinting();
+        final Consumer<GsonBuilder> builderSetupper = prepareGsonBuilderSetupper(serializeNulls, prettyPrinting);
+        final Consumer<JsonMappingOption> optionSetupper = prepareMappingOptionSetupper(resource.getMappingOption());
+        return resource.getYourEngineCreator().map(creator -> { // rare option
+            return createYourEngine(creator, builderSetupper, optionSetupper);
+        }).orElseGet(() -> { // mainly here
+            return newGsonJsonEngine(builderSetupper, optionSetupper);
+        });
+    }
+
+    protected boolean isGsonSerializeNulls() {
+        return !isNullsSuppressed();
+    }
+
+    protected boolean isGsonPrettyPrinting() {
+        return !isPrettyPrintSuppressed() && isDevelopmentHere(); // in development only
+    }
+
+    protected Consumer<GsonBuilder> prepareGsonBuilderSetupper(boolean serializeNulls, final boolean prettyPrinting) {
+        return builder -> {
             setupSerializeNullsSettings(builder, serializeNulls);
             setupPrettyPrintingSettings(builder, prettyPrinting);
-        }, op -> {
-            mappingOption.ifPresent(another -> op.acceptAnother(another));
-        });
+        };
     }
 
     protected void setupSerializeNullsSettings(GsonBuilder builder, boolean serializeNulls) {
@@ -176,100 +255,38 @@ public class SimpleJsonManager implements JsonManager {
         }
     }
 
-    // ===================================================================================
-    //                                                                              JSONIC
-    //                                                                              ======
-    // memorable code for JSONIC
-    //protected static final Class<?> JSONIC_DUMMY_TYPE = new Object() {
-    //}.getClass();
-    //
-    //protected RealJsonParser newJSonicRealJsonParser() {
-    //    return new RealJsonParser() {
-    //        @Override
-    //        public String encode(Object bean) {
-    //            return JSON.encode(bean, developmentHere);
-    //        }
-    //
-    //        @Override
-    //        public <BEAN> BEAN decode(String json, Class<BEAN> beanType) {
-    //            return JSON.decode(json, beanType);
-    //        }
-    //
-    //        @Override
-    //        public <BEAN> List<BEAN> decodeList(String json, Class<BEAN> beanType) {
-    //            return JSON.decode(json, new TypeReference<List<BEAN>>() {
-    //                // nothing is overridden
-    //            });
-    //        }
-    //
-    //        @SuppressWarnings("unchecked")
-    //        @Override
-    //        public <BEAN> BEAN mappingJsonTo(String json, Supplier<BEAN> beanSupplier) {
-    //            BEAN bean = beanSupplier.get();
-    //            return (BEAN) new JSON() {
-    //                @Override
-    //                protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
-    //                    if (context.getDepth() == 0) {
-    //                        return (T) bean; // first bean instance is provided, basically for action form
-    //                    }
-    //                    return super.create(context, beanType);
-    //                }
-    //            }.parse(json, bean.getClass());
-    //        }
-    //
-    //        @Override
-    //        public <BEAN> List<BEAN> mappingJsonToList(String json, Supplier<BEAN> beanSupplier) {
-    //            return new JSON() {
-    //                private Boolean asList;
-    //
-    //                @SuppressWarnings("unchecked")
-    //                @Override
-    //                protected <T> T create(Context context, Class<? extends T> beanType) throws Exception {
-    //                    if (asList != null && context.getDepth() == 0 && List.class.isAssignableFrom(beanType)) {
-    //                        asList = true;
-    //                    }
-    //                    if (asList != null && asList && context.getDepth() == 1) {
-    //                        return (T) beanSupplier.get(); // element bean instance is provided, basically for action form
-    //                    }
-    //                    return super.create(context, beanType);
-    //                }
-    //            }.parse(json, new TypeReference<List<BEAN>>() {
-    //                // nothing is overridden
-    //            });
-    //        }
-    //    };
-    //}
+    protected Consumer<JsonMappingOption> prepareMappingOptionSetupper(OptionalThing<JsonMappingOption> mappingOption) {
+        return op -> {
+            mappingOption.ifPresent(another -> op.acceptAnother(another));
+        };
+    }
+
+    protected GsonJsonEngine createYourEngine(YourJsonEngineCreator creator, Consumer<GsonBuilder> builderSetupper,
+            Consumer<JsonMappingOption> optionSetupper) {
+        final GsonJsonEngine yourEngine = creator.create(builderSetupper, optionSetupper);
+        if (yourEngine == null) {
+            throw new IllegalStateException("Your engine creator should not return null: " + yourEngineCreator);
+        }
+        return yourEngine;
+    }
+
+    protected GsonJsonEngine newGsonJsonEngine(Consumer<GsonBuilder> builderSetupper, Consumer<JsonMappingOption> optionSetupper) {
+        return new GsonJsonEngine(builderSetupper, optionSetupper);
+    }
 
     // ===================================================================================
-    //                                                                        from/to JSON
+    //                                                                        Assist Logic
     //                                                                        ============
-    @Override
-    public <BEAN> BEAN fromJson(String json, Class<BEAN> beanType) {
-        assertArgumentNotNull("json", json);
-        assertArgumentNotNull("beanType", beanType);
-        return realJsonParser.fromJson(json, beanType);
+    protected boolean isNullsSuppressed() {
+        return jsonPrintControlState.map(op -> op.isNullsSuppressed()).orElse(false);
     }
 
-    @Override
-    public <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType) {
-        assertArgumentNotNull("json", json);
-        assertArgumentNotNull("parameterizedType", parameterizedType);
-        return realJsonParser.fromJsonParameteried(json, parameterizedType);
+    protected boolean isPrettyPrintSuppressed() {
+        return jsonPrintControlState.map(op -> op.isPrettyPrintSuppressed()).orElse(false);
     }
 
-    @Override
-    public String toJson(Object bean) {
-        assertArgumentNotNull("bean", bean);
-        return realJsonParser.toJson(bean);
-    }
-
-    // ===================================================================================
-    //                                                                        Another Rule
-    //                                                                        ============
-    @Override
-    public RealJsonEngine newAnotherEngine(OptionalThing<JsonMappingOption> mappingOption) {
-        assertArgumentNotNull("mappingOption", mappingOption);
-        return createGsonJsonEngine(mappingOption);
+    protected boolean isDevelopmentHere() {
+        return developmentHere;
     }
 
     // ===================================================================================
@@ -287,7 +304,15 @@ public class SimpleJsonManager implements JsonManager {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    public OptionalThing<JsonMappingOption> getJsonMappingOption() { // for e.g. LastaDoc
+    public OptionalThing<JsonMappingOption> getJsonMappingOption() { // for compatible, e.g. LastaDoc
         return jsonMappingOption;
+    }
+
+    public OptionalThing<JsonMappingControlMeta> getMappingControlMeta() {
+        return jsonMappingOption.map(op -> op); // strange lambda here, only for cast to meta type
+    }
+
+    public OptionalThing<JsonPrintControlMeta> getPrintControlOption() {
+        return jsonPrintControlState.map(op -> op); // me too
     }
 }

@@ -27,12 +27,13 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
 import org.lastaflute.core.json.bind.JsonYourScalarResource;
+import org.lastaflute.core.json.control.JsonMappingControlMeta;
 import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
 
 /**
  * @author jflute
  */
-public class JsonMappingOption {
+public class JsonMappingOption implements JsonMappingControlMeta {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -71,7 +72,7 @@ public class JsonMappingOption {
     // ===================================================================================
     //                                                                      Accept Another
     //                                                                      ==============
-    public JsonMappingOption acceptAnother(JsonMappingOption another) {
+    public JsonMappingOption acceptAnother(JsonMappingControlMeta another) {
         localDateFormatter = another.getLocalDateFormatter();
         localDateFormattingTrigger = another.getLocalDateFormattingTrigger();
         localDateTimeFormatter = another.getLocalDateTimeFormatter();

@@ -18,6 +18,7 @@ package org.lastaflute.core.json;
 import java.lang.reflect.ParameterizedType;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.json.control.JsonControlMeta;
 import org.lastaflute.core.json.engine.RealJsonEngine;
 
 /**
@@ -59,10 +60,25 @@ public interface JsonManager {
     String toJson(Object bean);
 
     /**
-     * Create new JSON engine as another rule. <br>
-     * (inheriting basic settings e.g. serializeNulls, yourCollections)
+     * Create new JSON engine as another rule. (old method, use the overload method) <br>
+     * (inheriting basic settings e.g. serializeNulls, prettyPrinting)
      * @param mappingOption The optional option for new another engine. (NotNull, EmptyAllowed: when default options)
      * @return The JSON engine as another rule. (NotNull)
+     * @deprecated use newRuledEngine()
      */
     RealJsonEngine newAnotherEngine(OptionalThing<JsonMappingOption> mappingOption);
+
+    /**
+     * Create new JSON engine as new rule. <br>
+     * Inheriting basic settings (e.g. serializeNulls, prettyPrinting) and engine creator.
+     * @param resource The resource of JSON engine to create instance. (NotNull)
+     * @return The JSON engine as another rule. (NotNull)
+     */
+    RealJsonEngine newRuledEngine(JsonEngineResource resource);
+
+    /**
+     * pull out meta of JSON control. (e.g. mapping option) 
+     * @return The meta of JSON control as read-only. (NotNull)
+     */
+    JsonControlMeta pulloutControlMeta();
 }
