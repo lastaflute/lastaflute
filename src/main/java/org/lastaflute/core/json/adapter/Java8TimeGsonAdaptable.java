@@ -52,10 +52,10 @@ public interface Java8TimeGsonAdaptable {
     //                                                                ====================
     class DateTimeTypeAdapterFactory implements TypeAdapterFactory {
 
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
 
         public DateTimeTypeAdapterFactory(JsonMappingOption option) {
-            this.option = option;
+            this.gsonOption = option;
         }
 
         @Override
@@ -85,19 +85,39 @@ public interface Java8TimeGsonAdaptable {
             }
         }
 
+        // LocalDate
         protected TypeAdapterLocalDate createTypeAdapterLocalDate() {
+            return newTypeAdapterLocalDate(gsonOption);
+        }
+
+        protected TypeAdapterLocalDate newTypeAdapterLocalDate(JsonMappingOption option) {
             return new TypeAdapterLocalDate(option);
         }
 
+        // LocalDateTime
         protected TypeAdapterLocalDateTime createTypeAdapterLocalDateTime() {
+            return newTypeAdapterLocalDateTime(gsonOption);
+        }
+
+        protected TypeAdapterLocalDateTime newTypeAdapterLocalDateTime(JsonMappingOption option) {
             return new TypeAdapterLocalDateTime(option);
         }
 
+        // LocalTime
         protected TypeAdapterLocalTime createTypeAdapterLocalTime() {
+            return newTypeAdapterLocalTime(gsonOption);
+        }
+
+        protected TypeAdapterLocalTime newTypeAdapterLocalTime(JsonMappingOption option) {
             return new TypeAdapterLocalTime(option);
         }
 
+        // ZonedDateTime
         protected TypeAdapterZonedDateTime createTypeAdapterZonedDateTime() {
+            return newTypeAdapterZonedDateTime(gsonOption);
+        }
+
+        protected TypeAdapterZonedDateTime newTypeAdapterZonedDateTime(JsonMappingOption option) {
             return new TypeAdapterZonedDateTime(option);
         }
     }
@@ -406,7 +426,11 @@ public interface Java8TimeGsonAdaptable {
     //                                                                             Creator
     //                                                                             =======
     default DateTimeTypeAdapterFactory createDateTimeTypeAdapterFactory() {
-        return new DateTimeTypeAdapterFactory(getGsonOption());
+        return newDateTimeTypeAdapterFactory(getGsonOption());
+    }
+
+    default DateTimeTypeAdapterFactory newDateTimeTypeAdapterFactory(JsonMappingOption gsonOption) {
+        return new DateTimeTypeAdapterFactory(gsonOption);
     }
 
     // ===================================================================================

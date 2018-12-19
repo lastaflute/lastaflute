@@ -37,12 +37,12 @@ public interface StringGsonAdaptable { // to show property path in exception mes
     class TypeAdapterString extends TypeAdapter<String> {
 
         protected final TypeAdapter<String> realAdapter = TypeAdapters.STRING;
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
         protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
 
-        public TypeAdapterString(JsonMappingOption option) {
-            this.option = option;
-            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+        public TypeAdapterString(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
+            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
         @Override
@@ -63,7 +63,7 @@ public interface StringGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
+            return gsonOption.isEmptyToNullReading();
         }
 
         @Override
@@ -76,7 +76,7 @@ public interface StringGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
+            return gsonOption.isNullToEmptyWriting();
         }
     }
 
@@ -88,7 +88,11 @@ public interface StringGsonAdaptable { // to show property path in exception mes
     }
 
     default TypeAdapterString createTypeAdapterString() {
-        return new TypeAdapterString(getGsonOption());
+        return newTypeAdapterString(getGsonOption());
+    }
+
+    default TypeAdapterString newTypeAdapterString(JsonMappingOption gsonOption) {
+        return new TypeAdapterString(gsonOption);
     }
 
     // ===================================================================================

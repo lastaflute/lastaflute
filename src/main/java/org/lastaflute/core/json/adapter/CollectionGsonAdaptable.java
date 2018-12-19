@@ -46,11 +46,11 @@ public interface CollectionGsonAdaptable { // to show property path in exception
     class WrappingCollectionTypeAdapterFactory implements TypeAdapterFactory {
 
         protected final CollectionTypeAdapterFactory embeddedFactory;
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
 
-        public WrappingCollectionTypeAdapterFactory(JsonMappingOption option) {
+        public WrappingCollectionTypeAdapterFactory(JsonMappingOption gsonOption) {
             this.embeddedFactory = createEmbeddedFactory();
-            this.option = option;
+            this.gsonOption = gsonOption;
         }
 
         protected CollectionTypeAdapterFactory createEmbeddedFactory() {
@@ -79,7 +79,11 @@ public interface CollectionGsonAdaptable { // to show property path in exception
 
         @SuppressWarnings("unchecked")
         protected <T> TypeAdapter<T> createWrappingTypeAdapterCollection(TypeAdapter<T> embedded) {
-            return (TypeAdapter<T>) new WrappingTypeAdapterCollection(embedded, option);
+            return (TypeAdapter<T>) newWrappingTypeAdapterCollection(embedded, gsonOption);
+        }
+
+        protected <T> WrappingTypeAdapterCollection newWrappingTypeAdapterCollection(TypeAdapter<T> embedded, JsonMappingOption option) {
+            return new WrappingTypeAdapterCollection(embedded, option);
         }
     }
 
@@ -122,7 +126,11 @@ public interface CollectionGsonAdaptable { // to show property path in exception
     //                                                                             Creator
     //                                                                             =======
     default TypeAdapterFactory createCollectionTypeAdapterFactory() {
-        return new WrappingCollectionTypeAdapterFactory(getGsonOption());
+        return newWrappingCollectionTypeAdapterFactory(getGsonOption());
+    }
+
+    default WrappingCollectionTypeAdapterFactory newWrappingCollectionTypeAdapterFactory(JsonMappingOption option) {
+        return new WrappingCollectionTypeAdapterFactory(option);
     }
 
     // ===================================================================================

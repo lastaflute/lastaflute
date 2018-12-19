@@ -45,10 +45,10 @@ public interface DBFluteGsonAdaptable {
     //                                                                        ============
     class ClassificationTypeAdapterFactory implements TypeAdapterFactory {
 
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
 
-        public ClassificationTypeAdapterFactory(JsonMappingOption option) {
-            this.option = option;
+        public ClassificationTypeAdapterFactory(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
         }
 
         @Override
@@ -64,6 +64,10 @@ public interface DBFluteGsonAdaptable {
         }
 
         protected TypeAdapterClassification createTypeAdapterClassification(Class<?> rawType) {
+            return newTypeAdapterClassification(rawType, gsonOption);
+        }
+
+        protected TypeAdapterClassification newTypeAdapterClassification(Class<?> rawType, JsonMappingOption option) {
             return new TypeAdapterClassification(rawType, option);
         }
     }
@@ -172,7 +176,11 @@ public interface DBFluteGsonAdaptable {
     //                                                                             Creator
     //                                                                             =======
     default ClassificationTypeAdapterFactory createClassificationTypeAdapterFactory() {
-        return new ClassificationTypeAdapterFactory(getGsonOption());
+        return newClassificationTypeAdapterFactory(getGsonOption());
+    }
+
+    default ClassificationTypeAdapterFactory newClassificationTypeAdapterFactory(JsonMappingOption option) {
+        return new ClassificationTypeAdapterFactory(option);
     }
 
     // ===================================================================================

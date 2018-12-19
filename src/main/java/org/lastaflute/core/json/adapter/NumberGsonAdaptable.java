@@ -43,12 +43,12 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     //                                                                        ============
     abstract class AbstractTypeAdapterNumber<NUM extends Number> extends TypeAdapter<NUM> {
 
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
         protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
 
-        public AbstractTypeAdapterNumber(JsonMappingOption option) {
-            this.option = option;
-            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+        public AbstractTypeAdapterNumber(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
+            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
         @Override
@@ -83,7 +83,7 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
+            return gsonOption.isEmptyToNullReading();
         }
 
         @Override
@@ -100,11 +100,11 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
+            return gsonOption.isNullToEmptyWriting();
         }
 
         protected boolean isEverywhereQuoteWriting() {
-            return option.isEverywhereQuoteWriting();
+            return gsonOption.isEverywhereQuoteWriting();
         }
 
         protected abstract TypeAdapter<NUM> getRealAdapter();
@@ -222,16 +222,31 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     // -----------------------------------------------------
     //                                          Type Adapter
     //                                          ------------
+    // Integer
     default TypeAdapterInteger createTypeAdapterInteger() {
-        return new TypeAdapterInteger(getGsonOption());
+        return newTypeAdapterInteger(getGsonOption());
     }
 
+    default TypeAdapterInteger newTypeAdapterInteger(JsonMappingOption gsonOption) {
+        return new TypeAdapterInteger(gsonOption);
+    }
+
+    // Long
     default TypeAdapterLong createTypeAdapterLong() {
-        return new TypeAdapterLong(getGsonOption());
+        return newTypeAdapterLong(getGsonOption());
     }
 
+    default TypeAdapterLong newTypeAdapterLong(JsonMappingOption gsonOption) {
+        return new TypeAdapterLong(gsonOption);
+    }
+
+    // BigDecimal
     default TypeAdapterBigDecimal createTypeAdapterBigDecimal() {
-        return new TypeAdapterBigDecimal(getGsonOption());
+        return newTypeAdapterBigDecimal(getGsonOption());
+    }
+
+    default TypeAdapterBigDecimal newTypeAdapterBigDecimal(JsonMappingOption gsonOption) {
+        return new TypeAdapterBigDecimal(gsonOption);
     }
 
     // ===================================================================================

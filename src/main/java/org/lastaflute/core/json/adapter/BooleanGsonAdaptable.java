@@ -39,12 +39,12 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
     //                                                                        ============
     class TypeAdapterBoolean extends TypeAdapter<Boolean> {
 
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
         protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
 
-        public TypeAdapterBoolean(JsonMappingOption option) {
-            this.option = option;
-            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+        public TypeAdapterBoolean(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
+            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
         @Override
@@ -77,11 +77,11 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
         }
 
         protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
+            return gsonOption.isEmptyToNullReading();
         }
 
         protected Boolean readAsBoolean(JsonToken token, Object exp) throws IOException {
-            final OptionalThing<Function<Object, Boolean>> deserializer = option.getBooleanDeserializer();
+            final OptionalThing<Function<Object, Boolean>> deserializer = gsonOption.getBooleanDeserializer();
             if (deserializer.isPresent()) { // cannot use lambda because of IOException
                 return deserializer.get().apply(exp);
             } else {
@@ -119,17 +119,17 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
         }
 
         protected OptionalThing<Object> filterBySerializerIfNeeds(Boolean value) {
-            return option.getBooleanSerializer().map(serializer -> {
+            return gsonOption.getBooleanSerializer().map(serializer -> {
                 return serializer.apply(value);
             });
         }
 
         protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
+            return gsonOption.isNullToEmptyWriting();
         }
 
         protected boolean isEverywhereQuoteWriting() {
-            return option.isEverywhereQuoteWriting();
+            return gsonOption.isEverywhereQuoteWriting();
         }
     }
 
@@ -147,7 +147,11 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
     //                                          Type Adapter
     //                                          ------------
     default TypeAdapterBoolean createTypeAdapterBoolean() {
-        return new TypeAdapterBoolean(getGsonOption());
+        return newTypeAdapterBoolean(getGsonOption());
+    }
+
+    default TypeAdapterBoolean newTypeAdapterBoolean(JsonMappingOption option) {
+        return new TypeAdapterBoolean(option);
     }
 
     // ===================================================================================
