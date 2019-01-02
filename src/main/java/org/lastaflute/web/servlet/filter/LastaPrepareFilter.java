@@ -109,7 +109,8 @@ public class LastaPrepareFilter implements Filter {
     }
 
     protected void handleErrorCause(String msg, Throwable cause) {
-        logger.error(msg, cause);
+        cause.printStackTrace(); // because it might fail to initialize logback by e.g. 'lasta.env'
+        logger.error(msg, cause); // to write to application log
         if (cause instanceof RuntimeException) {
             throw (RuntimeException) cause;
         }
