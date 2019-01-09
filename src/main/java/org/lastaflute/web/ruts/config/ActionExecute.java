@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
+import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.web.api.ApiAction;
@@ -70,6 +71,7 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                     Defined Parameter
     //                                     -----------------
+    protected final ExecuteArgAnalyzer executeArgAnalyzer; // not null, keep for general use
     protected final OptionalThing<PathParamArgs> pathParamArgs; // not null, empty allowed
     protected final OptionalThing<ActionFormMeta> formMeta; // not null, empty allowed
 
@@ -111,9 +113,9 @@ public class ActionExecute implements Serializable {
         this.sqlExecutionCountLimit = createOptionalSqlExecutionCountLimit(executeOption);
 
         // defined parameter (needed in URL pattern analyzing)
-        final ExecuteArgAnalyzer executeArgAnalyzer = newExecuteArgAnalyzer();
+        this.executeArgAnalyzer = newExecuteArgAnalyzer();
         final ExecuteArgBox executeArgBox = newExecuteArgBox();
-        executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
+        this.executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
         this.formMeta = analyzeFormMeta(executeMethod, executeArgBox);
 
         // URL pattern (using pathParamTypeList)
@@ -132,7 +134,7 @@ public class ActionExecute implements Serializable {
         this.pathParamArgs = preparePathParamArgs(pathParamTypeList, optionalGenericTypeMap);
 
         // check finally
-        checkExecuteMethod(executeArgAnalyzer);
+        checkExecuteMethod();
 
         // routing determiner (should be last in constructor because of dependencies to instance variables)
         this.routingByPathParamDeterminer = createRoutingByPathParamDeterminer();
@@ -196,41 +198,58 @@ public class ActionExecute implements Serializable {
     //                                           Action Form
     //                                           -----------
     protected OptionalThing<ActionFormMeta> analyzeFormMeta(Method executeMethod, ExecuteArgBox executeArgBox) {
-        return prepareFormMeta(OptionalThing.ofNullable(executeArgBox.getFormType(), () -> {
+        final OptionalThing<Class<?>> rootFormType = OptionalThing.ofNullable(executeArgBox.getRootFormType(), () -> {
             throw new IllegalStateException("Not found the form type: " + executeMethod);
-        }), OptionalThing.ofNullable(executeArgBox.getListFormParameter(), () -> {
+        });
+        final OptionalThing<Parameter> listFormParameter = OptionalThing.ofNullable(executeArgBox.getListFormParameter(), () -> {
             throw new IllegalStateException("Not found the parameter of list form: " + executeMethod);
-        }), OptionalThing.empty());
+        });
+        final OptionalThing<Consumer<Object>> formSetupper = OptionalThing.empty();
+        return prepareFormMeta(rootFormType, listFormParameter, formSetupper);
     }
 
     // public for pushed form
     /**
-     * @param formType The optional type of action form. (NotNull, EmptyAllowed: if empty, no form for the method)
+     * @param rootFormType The optional type of action form defined as root parameter. (NotNull, EmptyAllowed: if empty, no form for the method)
      * @param listFormParameter The optional parameter of list form. (NotNull, EmptyAllowed: normally empty, for e.g. JSON list)
-     * @param formSetupper The optional set-upper of new-created form. (NotNull, EmptyAllowed: normally empty, foro pushed form)
+     * @param formSetupper The optional set-upper of new-created form. (NotNull, EmptyAllowed: normally empty, for pushed form)
      * @return The optional form meta to be prepared. (NotNull)
      */
-    public OptionalThing<ActionFormMeta> prepareFormMeta(OptionalThing<Class<?>> formType, OptionalThing<Parameter> listFormParameter,
+    public OptionalThing<ActionFormMeta> prepareFormMeta(OptionalThing<Class<?>> rootFormType, OptionalThing<Parameter> listFormParameter,
             OptionalThing<Consumer<Object>> formSetupper) {
-        final ActionFormMeta meta = formType.map(tp -> createFormMeta(tp, listFormParameter, formSetupper)).orElse(null);
+        final ActionFormMeta meta = rootFormType.map(tp -> createFormMeta(tp, listFormParameter, formSetupper)).orElse(null);
         return OptionalThing.ofNullable(meta, () -> {
             String msg = "Not found the form meta as parameter for the execute method: " + executeMethod;
             throw new ActionFormNotFoundException(msg);
         });
     }
 
-    protected ActionFormMeta createFormMeta(Class<?> formType, OptionalThing<Parameter> listFormParameter,
+    protected ActionFormMeta createFormMeta(Class<?> rootFormType, OptionalThing<Parameter> listFormParameter,
             OptionalThing<Consumer<Object>> formSetupper) {
-        return newActionFormMeta(buildFormKey(), formType, listFormParameter, formSetupper);
+        final String formKey = buildFormKey();
+        final boolean jsonBodyMapping = isFormJsonBodyMapping(rootFormType, listFormParameter);
+        return newActionFormMeta(formKey, rootFormType, listFormParameter, formSetupper, jsonBodyMapping);
     }
 
     protected String buildFormKey() {
         return actionMapping.getActionDef().getComponentName() + "_" + mappingMethodName + "_Form";
     }
 
-    protected ActionFormMeta newActionFormMeta(String formKey, Class<?> formType, OptionalThing<Parameter> listFormParameter,
-            OptionalThing<Consumer<Object>> formSetupper) {
-        return new ActionFormMeta(this, formKey, formType, listFormParameter, formSetupper);
+    protected boolean isFormJsonBodyMapping(Class<?> formType, OptionalThing<Parameter> listFormParameter) {
+        if (executeArgAnalyzer.isJsonBodyMappingParameter(formType)) {
+            return true; // e.g. SeaBody defined as parameter of execute method
+        }
+        return listFormParameter.map(pm -> {
+            // always exists, already checked in romantic action customizer
+            return DfReflectionUtil.getGenericFirstClass(pm.getParameterizedType());
+        }).map(genericType -> { // e.g. SeaBody of List<SeaBody>
+            return executeArgAnalyzer.isJsonBodyMappingParameter(genericType);
+        }).orElse(false);
+    }
+
+    protected ActionFormMeta newActionFormMeta(String formKey, Class<?> rootFormType, OptionalThing<Parameter> listFormParameter,
+            OptionalThing<Consumer<Object>> formSetupper, boolean jsonBodyMapping) {
+        return new ActionFormMeta(this, formKey, rootFormType, listFormParameter, formSetupper, jsonBodyMapping);
     }
 
     // -----------------------------------------------------
@@ -258,7 +277,7 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                      Check Definition
     //                                      ----------------
-    protected void checkExecuteMethod(ExecuteArgAnalyzer executeArgAnalyzer) {
+    protected void checkExecuteMethod() {
         new ExecuteMethodChecker(executeMethod, formMeta).checkAll(executeArgAnalyzer);
     }
 

@@ -214,8 +214,11 @@ public class ExecuteMethodChecker implements Serializable {
     protected void checkFormValidator() {
         formMeta.ifPresent(meta -> {
             final Deque<String> pathDeque = new LinkedList<String>(); // recycled
-            final Set<Class<?>> mismatchedCheckedTypeSet = DfCollectionUtil.newHashSet(meta.getFormType());
-            final Set<Class<?>> lonelyCheckedTypeSet = DfCollectionUtil.newHashSet(meta.getFormType());
+            // meta.properties() is for root form type, so use it here
+            // while, this cannot work if List<SeaBody> because of List properties
+            // #hope jflute will handle properties of List generic type to check here (2019/01/08)
+            final Set<Class<?>> mismatchedCheckedTypeSet = DfCollectionUtil.newHashSet(meta.getRootFormType());
+            final Set<Class<?>> lonelyCheckedTypeSet = DfCollectionUtil.newHashSet(meta.getRootFormType());
             for (ActionFormProperty property : meta.properties()) {
                 final Field field = property.getPropertyDesc().getField();
                 if (field != null) { // check only field, simply

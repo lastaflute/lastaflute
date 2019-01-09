@@ -71,7 +71,7 @@ public class ExecuteArgAnalyzer {
         }
         box.setPathParamTypeList(preparePathParamTypeList(pathParamTypeList));
         box.setOptionalGenericTypeMap(prepareOptionalGenericTypeMap(executeMethod));
-        box.setFormType(prepareFormType(formParam));
+        box.setRootFormType(prepareRootFormType(formParam));
         box.setListFormParameter(prepareListFormParameter(formParam));
     }
 
@@ -89,19 +89,6 @@ public class ExecuteArgAnalyzer {
         return isBeanActionFormType(parameter.getType());
     }
 
-    protected boolean isBeanActionFormType(Type parameterType) {
-        final String typeName = parameterType.getTypeName();
-        return !typeName.startsWith("java.") && Srl.endsWith(typeName, getFormSuffix(), getBodySuffix());
-    }
-
-    protected String getFormSuffix() {
-        return FORM_SUFFIX; // for form parameters
-    }
-
-    protected String getBodySuffix() {
-        return BODY_SUFFIX; // for JSON body
-    }
-
     // -----------------------------------------------------
     //                                             List Form
     //                                             ---------
@@ -110,12 +97,31 @@ public class ExecuteArgAnalyzer {
     }
 
     protected Class<?> findListFormGenericType(Parameter parameter) {
-        if (List.class.equals(parameter.getType())) { // just List
+        if (isListTypeParameter(parameter)) {
             final Type pt = parameter.getParameterizedType();
             final Class<?> genericType = DfReflectionUtil.getGenericFirstClass(pt); // almost not null, already checked
             return genericType != null && isBeanActionFormType(genericType) ? genericType : null; // e.g. List<SeaForm>
         }
         return null;
+    }
+
+    protected boolean isListTypeParameter(Parameter parameter) {
+        return List.class.equals(parameter.getType()); // just java.util.List
+    }
+
+    // -----------------------------------------------------
+    //                                             Form Type
+    //                                             ---------
+    protected boolean isBeanActionFormType(Type parameterType) {
+        final String typeName = parameterType.getTypeName();
+        if (isJavaStandardClass(typeName)) {
+            return false;
+        }
+        return determineBeanActionFormTypeName(typeName);
+    }
+
+    protected boolean determineBeanActionFormTypeName(String typeName) {
+        return Srl.endsWith(typeName, getFormSuffix(), getBodySuffix());
     }
 
     // -----------------------------------------------------
@@ -140,12 +146,12 @@ public class ExecuteArgAnalyzer {
     // -----------------------------------------------------
     //                                          Prepare Form
     //                                          ------------
-    protected Class<?> prepareFormType(Parameter formParam) {
-        return formParam != null ? formParam.getType() : null;
+    protected Class<?> prepareRootFormType(Parameter formParam) {
+        return formParam != null ? formParam.getType() : null; // e.g. SeaForm, SeaBody, java.util.List
     }
 
-    protected Parameter prepareListFormParameter(Parameter formParam) { // already checked but just in case
-        return (formParam != null && formParam.getParameterizedType() instanceof ParameterizedType) ? formParam : null;
+    protected Parameter prepareListFormParameter(Parameter formParam) {
+        return formParam != null && isListActionFormParameter(formParam) ? formParam : null; // e.g. List<SeaBody>
     }
 
     // ===================================================================================
@@ -291,7 +297,7 @@ public class ExecuteArgAnalyzer {
 
         protected List<Class<?>> pathParamTypeList;
         protected Map<Integer, Class<?>> optionalGenericTypeMap;
-        protected Class<?> formType; // null allowed
+        protected Class<?> rootFormType; // null allowed
         protected Parameter listFormParameter; // null allowed for e.g. JSON list
 
         public List<Class<?>> getPathParamTypeList() {
@@ -310,12 +316,12 @@ public class ExecuteArgAnalyzer {
             this.optionalGenericTypeMap = optionalGenericTypeMap;
         }
 
-        public Class<?> getFormType() {
-            return formType;
+        public Class<?> getRootFormType() {
+            return rootFormType;
         }
 
-        public void setFormType(Class<?> formType) {
-            this.formType = formType;
+        public void setRootFormType(Class<?> rootFormType) {
+            this.rootFormType = rootFormType;
         }
 
         public Parameter getListFormParameter() {
@@ -325,5 +331,38 @@ public class ExecuteArgAnalyzer {
         public void setListFormParameter(Parameter listFormParameter) {
             this.listFormParameter = listFormParameter;
         }
+    }
+
+    // ===================================================================================
+    //                                                                           JSON Body
+    //                                                                           =========
+    public boolean isJsonBodyMappingParameter(Class<?> parameterType) {
+        final String typeName = parameterType.getTypeName();
+        if (isJavaStandardClass(typeName)) {
+            return false;
+        }
+        return determineJsonBodyMappingTypeName(typeName);
+    }
+
+    protected boolean determineJsonBodyMappingTypeName(String typeName) {
+        return Srl.endsWith(typeName, getBodySuffix());
+    }
+
+    // ===================================================================================
+    //                                                                    Form/Body Suffix
+    //                                                                    ================
+    protected String getFormSuffix() {
+        return FORM_SUFFIX; // for form parameters
+    }
+
+    protected String getBodySuffix() {
+        return BODY_SUFFIX; // for JSON body
+    }
+
+    // ===================================================================================
+    //                                                                        Small Helper
+    //                                                                        ============
+    protected boolean isJavaStandardClass(String typeName) {
+        return typeName.startsWith("java.");
     }
 }

@@ -48,23 +48,25 @@ public class ActionFormMeta {
     //                                                                           =========
     protected final ActionExecute execute; // not null
     protected final String formKey; // not null
-    protected final Class<?> formType; // not null
+    protected final Class<?> rootFormType; // not null, e.g. SeaForm or SeaBody or java.util.List
     protected final OptionalThing<Parameter> listFormParameter; // not null, empty allowed
     protected final OptionalThing<Consumer<Object>> formSetupper; // not null, empty allowed
+    protected final boolean jsonBodyMapping;
     protected final Map<String, ActionFormProperty> propertyMap; // not null
-    protected final boolean validatorAnnotated; // not null
+    protected final boolean validatorAnnotated;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionFormMeta(ActionExecute execute, String formKey, Class<?> formType // required
-            , OptionalThing<Parameter> listFormParameter, OptionalThing<Consumer<Object>> formSetupper) {
+    public ActionFormMeta(ActionExecute execute, String formKey, Class<?> rootFormType // required
+            , OptionalThing<Parameter> listFormParameter, OptionalThing<Consumer<Object>> formSetupper, boolean jsonBodyMapping) {
         this.execute = execute;
         this.formKey = formKey;
-        this.formType = formType;
+        this.rootFormType = rootFormType;
         this.listFormParameter = listFormParameter;
         this.formSetupper = formSetupper;
-        this.propertyMap = setupProperties(formType);
+        this.jsonBodyMapping = jsonBodyMapping;
+        this.propertyMap = setupProperties(rootFormType);
         this.validatorAnnotated = mightBeValidatorAnnotated();
     }
 
@@ -162,7 +164,7 @@ public class ActionFormMeta {
         return () -> {
             try {
                 checkInstantiatedFormType();
-                final Object formInstance = formType.newInstance();
+                final Object formInstance = rootFormType.newInstance();
                 formSetupper.ifPresent(setupper -> setupper.accept(formInstance));
                 return formInstance;
             } catch (Exception e) {
@@ -173,8 +175,8 @@ public class ActionFormMeta {
     }
 
     protected void checkInstantiatedFormType() {
-        if (List.class.isAssignableFrom(formType)) { // e.g. List<SeaForm>, JSON body of list type
-            String msg = "Cannot instantiate the form because of list type, should not come here:" + formType;
+        if (List.class.isAssignableFrom(rootFormType)) { // e.g. List<SeaForm>, JSON body of list type
+            String msg = "Cannot instantiate the form because of list type, should not come here:" + rootFormType;
             throw new IllegalStateException(msg);
         }
     }
@@ -191,7 +193,7 @@ public class ActionFormMeta {
             br.addElement(LaActionExecuteUtil.getActionExecute());
         }
         br.addItem("Form Type");
-        br.addElement(formType);
+        br.addElement(rootFormType);
         final String msg = br.buildExceptionMessage();
         throw new ActionFormCreateFailureException(msg, cause);
     }
@@ -205,7 +207,7 @@ public class ActionFormMeta {
         sb.append("formMeta:{").append(formKey);
         sb.append(", ").append(listFormParameter.map(pm -> {
             return pm.getParameterizedType().getTypeName();
-        }).orElse(formType.getName()));
+        }).orElse(rootFormType.getName()));
         sb.append(", props=").append(propertyMap.size());
         sb.append("}");
         return sb.toString();
@@ -214,12 +216,63 @@ public class ActionFormMeta {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                                 Basic
+    //                                                 -----
+    /**
+     * @return The unique key of action form. (NotNull) 
+     */
     public String getFormKey() {
         return formKey;
     }
 
+    /**
+     * @return The type of action form as root parameter type. (NotNull)
+     * @deprecated use getRootFormType() or getSymbolFormType()
+     */
     public Class<?> getFormType() {
-        return formType;
+        return getRootFormType();
+    }
+
+    /**
+     * @return The type of action form as root parameter type, may be java.util.List. (NotNull)
+     */
+    public Class<?> getRootFormType() { // e.g. SeaForm or SeaBody or java.util.List
+        return rootFormType;
+    }
+
+    /**
+     * @return The type of action form as resolved definition location, not java.util.List. (NotNull) 
+     */
+    public Class<?> getSymbolFormType() { // e.g. SeaForm or "SeaBody of java.util.List<SeaBody>"
+        return getListFormParameterGenericType().orElse(rootFormType);
+    }
+
+    /**
+     * Is the symbol form defined at root parameter?
+     * <pre>
+     * public HtmlResponse index(SeaForm form) {
+     * }
+     * 
+     * public JsonResponse&lt;...&gt; index(SeaBody body) {
+     * }
+     * </pre>
+     * @return The determination, true or false.
+     */
+    public boolean isRootSymbolForm() {
+        return !isTypedListForm(); // now only list-form pattern exists
+    }
+
+    /**
+     * Is the form defined as typed list?
+     * <pre>
+     * public JsonResponse&lt;...&gt; index(List&lt;SeaBody&gt; bodyList) {
+     * }
+     * </pre>
+     * @return The determination, true or false.
+     */
+    public boolean isTypedListForm() {
+        return getListFormParameter().isPresent(); // listFormParameter is present only when list form
     }
 
     // -----------------------------------------------------
@@ -241,6 +294,13 @@ public class ActionFormMeta {
             /* always parameterized, already checked in romantic action customizer */
             return (ParameterizedType) pm.getParameterizedType();
         });
+    }
+
+    // -----------------------------------------------------
+    //                                             JSON Body
+    //                                             ---------
+    public boolean isJsonBodyMapping() {
+        return jsonBodyMapping;
     }
 
     // -----------------------------------------------------

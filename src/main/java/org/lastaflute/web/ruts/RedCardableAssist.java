@@ -256,7 +256,7 @@ public class RedCardableAssist {
         br.addItem("Action Execute");
         br.addElement(execute.toSimpleMethodExp());
         br.addItem("Action Form (or Body)");
-        br.addElement(meta.getFormType());
+        br.addElement(meta.getSymbolFormType());
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodLonelyValidatorAnnotationException(msg);
     }
