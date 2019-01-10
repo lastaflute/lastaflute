@@ -302,7 +302,6 @@ public class ExecuteMethodValidatorChecker implements Serializable {
     //                                                         Lonely Validator Annotation
     //                                                         ===========================
     public void checkLonelyValidatorAnnotation(Field field, Map<String, Class<?>> genericMap) {
-        System.out.println("@@@: " + checkedTypeSet);
         doCheckLonelyValidatorAnnotation(field, deriveFieldType(field, genericMap));
     }
 
