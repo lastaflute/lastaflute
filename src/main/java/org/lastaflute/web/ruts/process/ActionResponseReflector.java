@@ -17,6 +17,7 @@ package org.lastaflute.web.ruts.process;
 
 import java.lang.reflect.Parameter;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonEngineResource;
@@ -266,11 +267,16 @@ public class ActionResponseReflector {
                 } else { // mainly here
                     final JsonManager jsonManager = requestManager.getJsonManager();
                     final Object jsonResult = response.getJsonResult();
-                    final OptionalThing<Consumer<JsonMappingOption>> switcher = response.getMappingOptionSwitcher();
-                    if (switcher.isPresent()) { // switchMappingOption(), e.g. SwaggerAction@json()
-                        json = toJsonBySwitchedMappingOption(jsonManager, jsonResult, switcher.get());
+                    final OptionalThing<Supplier<RealJsonEngine>> jsonEngineSwitcher = response.getJsonEngineSwitcher();
+                    if (jsonEngineSwitcher.isPresent()) { // switchJsonEngine() for different rule action
+                        json = toJsonBySwitchedJsonEngine(jsonManager, jsonResult, jsonEngineSwitcher.get());
                     } else { // mainly here
-                        json = jsonManager.toJson(jsonResult);
+                        final OptionalThing<Consumer<JsonMappingOption>> mappingOptionSwitcher = response.getMappingOptionSwitcher();
+                        if (mappingOptionSwitcher.isPresent()) { // switchMappingOption(), e.g. SwaggerAction@json()
+                            json = toJsonBySwitchedMappingOption(jsonManager, jsonResult, mappingOptionSwitcher.get());
+                        } else { // mainly here
+                            json = jsonManager.toJson(jsonResult);
+                        }
                     }
                 }
             }
@@ -287,15 +293,6 @@ public class ActionResponseReflector {
                 }
             });
         });
-    }
-
-    protected String toJsonBySwitchedMappingOption(JsonManager jsonManager, Object jsonResult, Consumer<JsonMappingOption> switcher) {
-        final JsonEngineResource resource = new JsonEngineResource();
-        final JsonMappingOption option = new JsonMappingOption();
-        switcher.accept(option);
-        resource.acceptMappingOption(option);
-        final RealJsonEngine ruledEngine = jsonManager.newRuledEngine(resource);
-        return ruledEngine.toJson(jsonResult);
     }
 
     // -----------------------------------------------------
@@ -320,6 +317,26 @@ public class ActionResponseReflector {
 
     protected ResponseJsonBeanValidator createJsonBeanValidator(JsonResponse<?> response, ResponseReflectingOption option) {
         return new ResponseJsonBeanValidator(requestManager, runtime, option.isJsonBeanValidationErrorWarned(), response);
+    }
+
+    // -----------------------------------------------------
+    //                                       Switched Engine
+    //                                       ---------------
+    protected String toJsonBySwitchedJsonEngine(JsonManager jsonManager, Object jsonResult, Supplier<RealJsonEngine> jsonEngineSwitcher) {
+        final RealJsonEngine switchedEngine = jsonEngineSwitcher.get(); // application's callback
+        if (switchedEngine == null) { // check for user method
+            throw new IllegalStateException("The jsonEngineSwitcher cannot return null: " + jsonEngineSwitcher);
+        }
+        return switchedEngine.toJson(jsonResult);
+    }
+
+    protected String toJsonBySwitchedMappingOption(JsonManager jsonManager, Object jsonResult, Consumer<JsonMappingOption> switcher) {
+        final JsonEngineResource resource = new JsonEngineResource();
+        final JsonMappingOption option = new JsonMappingOption();
+        switcher.accept(option); // application's callback
+        resource.acceptMappingOption(option);
+        final RealJsonEngine ruledEngine = jsonManager.newRuledEngine(resource);
+        return ruledEngine.toJson(jsonResult);
     }
 
     // ===================================================================================
