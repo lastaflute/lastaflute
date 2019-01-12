@@ -30,7 +30,7 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.annotation.JsonDatePattern;
 import org.lastaflute.core.json.exception.JsonPropertyDateTimeParseFailureException;
-import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
@@ -128,11 +128,11 @@ public interface Java8TimeGsonAdaptable {
     abstract class AbstractTypeDateTimeAdapter<DATE extends TemporalAccessor> extends TypeAdapter<DATE> implements LaJsonFieldingAvailable {
 
         protected final JsonMappingOption gsonOption;
-        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
 
         public AbstractTypeDateTimeAdapter(JsonMappingOption gsonOption) {
             this.gsonOption = gsonOption;
-            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+            this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
         }
 
         // -----------------------------------------------------
@@ -161,7 +161,7 @@ public interface Java8TimeGsonAdaptable {
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(text) : text;
+            return readingFilter != null ? readingFilter.filter(getDateType(), text) : text;
         }
 
         protected boolean isEmptyToNullReading() {

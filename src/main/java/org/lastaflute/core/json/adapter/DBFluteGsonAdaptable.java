@@ -22,7 +22,7 @@ import org.dbflute.jdbc.Classification;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeUnknownException;
-import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 import org.lastaflute.core.util.LaClassificationUtil;
 import org.lastaflute.core.util.LaClassificationUtil.ClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
@@ -76,12 +76,12 @@ public interface DBFluteGsonAdaptable {
 
         protected final Class<?> clsType;
         protected final JsonMappingOption gsonOption;
-        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
 
         public TypeAdapterClassification(Class<?> clsType, JsonMappingOption gsonOption) {
             this.clsType = clsType;
             this.gsonOption = gsonOption;
-            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+            this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
         }
 
         @Override
@@ -109,7 +109,7 @@ public interface DBFluteGsonAdaptable {
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(text) : text;
+            return readingFilter != null ? readingFilter.filter(clsType, text) : text;
         }
 
         protected boolean isEmptyToNullReading() {

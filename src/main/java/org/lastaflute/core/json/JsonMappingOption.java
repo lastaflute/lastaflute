@@ -29,6 +29,7 @@ import org.lastaflute.core.json.bind.JsonYourCollectionResource;
 import org.lastaflute.core.json.bind.JsonYourScalarResource;
 import org.lastaflute.core.json.control.JsonMappingControlMeta;
 import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonTypeableTextReadingFilter;
 
 /**
  * @author jflute
@@ -51,6 +52,7 @@ public class JsonMappingOption implements JsonMappingControlMeta {
     protected boolean nullToEmptyWriting; // same
     protected boolean everywhereQuoteWriting; // e.g. Integer(1) to "1"
     protected OptionalThing<JsonSimpleTextReadingFilter> simpleTextReadingFilter = OptionalThing.empty(); // not null
+    protected OptionalThing<JsonTypeableTextReadingFilter> typeableTextReadingFilter = OptionalThing.empty(); // not null
     protected boolean listNullToEmptyReading; // [] if null
     protected boolean listNullToEmptyWriting; // same
     protected OptionalThing<JsonFieldNaming> fieldNaming = OptionalThing.empty(); // not null
@@ -86,6 +88,7 @@ public class JsonMappingOption implements JsonMappingControlMeta {
         nullToEmptyWriting = another.isNullToEmptyWriting();
         everywhereQuoteWriting = another.isEverywhereQuoteWriting();
         simpleTextReadingFilter = another.getSimpleTextReadingFilter();
+        typeableTextReadingFilter = another.getTypeableTextReadingFilter();
         listNullToEmptyReading = another.isListNullToEmptyReading();
         listNullToEmptyWriting = another.isListNullToEmptyWriting();
         fieldNaming = another.getFieldNaming();
@@ -223,6 +226,14 @@ public class JsonMappingOption implements JsonMappingControlMeta {
         return this;
     }
 
+    public JsonMappingOption filterTypeableTextReading(JsonTypeableTextReadingFilter typeableTextReadingFilter) {
+        if (typeableTextReadingFilter == null) {
+            throw new IllegalArgumentException("The argument 'typeableTextReadingFilter' should not be null.");
+        }
+        this.typeableTextReadingFilter = OptionalThing.of(typeableTextReadingFilter);
+        return this;
+    }
+
     // -----------------------------------------------------
     //                                    List Null or Empty
     //                                    ------------------
@@ -338,6 +349,7 @@ public class JsonMappingOption implements JsonMappingControlMeta {
             sb.append(delimiter).append("everywhereQuoteWriting");
         }
         simpleTextReadingFilter.ifPresent(ter -> sb.append(delimiter).append(ter));
+        typeableTextReadingFilter.ifPresent(ter -> sb.append(delimiter).append(ter));
         fieldNaming.ifPresent(ing -> sb.append(delimiter).append(ing));
         if (!yourCollections.isEmpty()) {
             final List<String> expList = yourCollections.stream().map(ons -> {
@@ -408,6 +420,10 @@ public class JsonMappingOption implements JsonMappingControlMeta {
 
     public OptionalThing<JsonSimpleTextReadingFilter> getSimpleTextReadingFilter() {
         return simpleTextReadingFilter;
+    }
+
+    public OptionalThing<JsonTypeableTextReadingFilter> getTypeableTextReadingFilter() {
+        return typeableTextReadingFilter;
     }
 
     public boolean isListNullToEmptyReading() {

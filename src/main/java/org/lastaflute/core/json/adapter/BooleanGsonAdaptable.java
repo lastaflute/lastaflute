@@ -20,7 +20,7 @@ import java.util.function.Function;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonMappingOption;
-import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -40,11 +40,11 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
     class TypeAdapterBoolean extends TypeAdapter<Boolean> {
 
         protected final JsonMappingOption gsonOption;
-        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
 
         public TypeAdapterBoolean(JsonMappingOption gsonOption) {
             this.gsonOption = gsonOption;
-            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+            this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
         }
 
         @Override
@@ -73,7 +73,7 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(text) : text;
+            return readingFilter != null ? readingFilter.filter(Boolean.class, text) : text;
         }
 
         protected boolean isEmptyToNullReading() {

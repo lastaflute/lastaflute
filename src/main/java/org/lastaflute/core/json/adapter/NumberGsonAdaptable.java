@@ -24,7 +24,7 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
-import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -44,11 +44,11 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     abstract class AbstractTypeAdapterNumber<NUM extends Number> extends TypeAdapter<NUM> {
 
         protected final JsonMappingOption gsonOption;
-        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
 
         public AbstractTypeAdapterNumber(JsonMappingOption gsonOption) {
             this.gsonOption = gsonOption;
-            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+            this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
         }
 
         @Override
@@ -79,7 +79,7 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(text) : text;
+            return readingFilter != null ? readingFilter.filter(getNumberType(), text) : text;
         }
 
         protected boolean isEmptyToNullReading() {

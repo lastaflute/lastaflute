@@ -18,7 +18,7 @@ package org.lastaflute.core.json.adapter;
 import java.io.IOException;
 
 import org.lastaflute.core.json.JsonMappingOption;
-import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -38,11 +38,11 @@ public interface StringGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<String> realAdapter = TypeAdapters.STRING;
         protected final JsonMappingOption gsonOption;
-        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
 
         public TypeAdapterString(JsonMappingOption gsonOption) {
             this.gsonOption = gsonOption;
-            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+            this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
         }
 
         @Override
@@ -59,7 +59,7 @@ public interface StringGsonAdaptable { // to show property path in exception mes
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(text) : text;
+            return readingFilter != null ? readingFilter.filter(String.class, text) : text;
         }
 
         protected boolean isEmptyToNullReading() {

@@ -37,6 +37,7 @@ import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
 import org.lastaflute.core.json.adapter.StringGsonAdaptable;
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
 import org.lastaflute.core.json.bind.JsonYourScalarResource;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.FieldNamingStrategy;
@@ -208,10 +209,7 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         @SuppressWarnings("unchecked")
         final Function<Object, String> writer = (Function<Object, String>) resource.getWriter();
 
-        // translate basic options
-        final Function<String, String> readingFilter = option.getSimpleTextReadingFilter().map(specifiedFilter -> {
-            return (Function<String, String>) value -> specifiedFilter.filter(value);
-        }).orElse(null);
+        final JsonUnifiedTextReadingFilter readingFilter = JsonUnifiedTextReadingFilter.unify(option);
         boolean emptyToNullReading = option.isEmptyToNullReading();
         boolean nullToEmptyWriting = option.isNullToEmptyWriting();
 

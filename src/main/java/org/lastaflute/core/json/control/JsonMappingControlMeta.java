@@ -26,6 +26,7 @@ import org.lastaflute.core.json.JsonMappingOption.JsonFieldNaming;
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
 import org.lastaflute.core.json.bind.JsonYourScalarResource;
 import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonTypeableTextReadingFilter;
 
 /**
  * @author jflute
@@ -58,6 +59,8 @@ public interface JsonMappingControlMeta {
     boolean isEverywhereQuoteWriting();
 
     OptionalThing<JsonSimpleTextReadingFilter> getSimpleTextReadingFilter();
+
+    OptionalThing<JsonTypeableTextReadingFilter> getTypeableTextReadingFilter();
 
     boolean isListNullToEmptyReading();
 
