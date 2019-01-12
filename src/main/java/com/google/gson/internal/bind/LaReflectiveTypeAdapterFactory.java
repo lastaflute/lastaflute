@@ -173,7 +173,7 @@ public class LaReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                         LaJsonFieldingContext.setJsonFieldOnThread(field); // to give the field to writer
                         realAdapter.write(writer, fieldValue);
                     } finally {
-                        LaJsonFieldingContext.clearAccessContextOnThread();
+                        LaJsonFieldingContext.clearJsonFieldOnThread();
                     }
                 } else { // avoid try-finally cost
                     realAdapter.write(writer, fieldValue);
@@ -188,7 +188,7 @@ public class LaReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                     try {
                         fieldValue = typeAdapter.read(reader);
                     } finally {
-                        LaJsonFieldingContext.clearAccessContextOnThread();
+                        LaJsonFieldingContext.clearJsonFieldOnThread();
                     }
                 } else { // avoid try-finally cost
                     fieldValue = typeAdapter.read(reader);
