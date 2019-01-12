@@ -90,17 +90,17 @@ public interface CollectionGsonAdaptable { // to show property path in exception
     class WrappingTypeAdapterCollection extends TypeAdapter<Collection<?>> {
 
         protected final TypeAdapter<Collection<?>> embedded;
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
 
         @SuppressWarnings("unchecked")
-        public WrappingTypeAdapterCollection(TypeAdapter<?> embedded, JsonMappingOption option) {
+        public WrappingTypeAdapterCollection(TypeAdapter<?> embedded, JsonMappingOption gsonOption) {
             this.embedded = (TypeAdapter<Collection<?>>) embedded;
-            this.option = option;
+            this.gsonOption = gsonOption;
         }
 
         @Override
         public Collection<?> read(JsonReader in) throws IOException {
-            if (option.isListNullToEmptyReading()) {
+            if (gsonOption.isListNullToEmptyReading()) {
                 if (in.peek() == JsonToken.NULL) {
                     in.nextNull();
                     return Collections.emptyList();
@@ -111,7 +111,7 @@ public interface CollectionGsonAdaptable { // to show property path in exception
 
         @Override
         public void write(JsonWriter out, Collection<?> collection) throws IOException {
-            if (option.isListNullToEmptyWriting()) {
+            if (gsonOption.isListNullToEmptyWriting()) {
                 if (collection == null) {
                     out.beginArray();
                     out.endArray();

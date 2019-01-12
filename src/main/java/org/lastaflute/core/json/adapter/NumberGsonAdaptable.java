@@ -135,8 +135,8 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<Number> realAdapter = TypeAdapters.INTEGER;
 
-        public TypeAdapterInteger(JsonMappingOption option) {
-            super(option);
+        public TypeAdapterInteger(JsonMappingOption gsonOption) {
+            super(gsonOption);
         }
 
         @Override
@@ -157,8 +157,8 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<Number> realAdapter = TypeAdapters.LONG;
 
-        public TypeAdapterLong(JsonMappingOption option) {
-            super(option);
+        public TypeAdapterLong(JsonMappingOption gsonOption) {
+            super(gsonOption);
         }
 
         @Override
@@ -179,8 +179,8 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<BigDecimal> realAdapter = TypeAdapters.BIG_DECIMAL;
 
-        public TypeAdapterBigDecimal(JsonMappingOption option) {
-            super(option);
+        public TypeAdapterBigDecimal(JsonMappingOption gsonOption) {
+            super(gsonOption);
         }
 
         @Override

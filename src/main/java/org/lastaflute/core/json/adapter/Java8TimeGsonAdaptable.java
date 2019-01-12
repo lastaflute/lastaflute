@@ -127,12 +127,12 @@ public interface Java8TimeGsonAdaptable {
     //                                                               =====================
     abstract class AbstractTypeDateTimeAdapter<DATE extends TemporalAccessor> extends TypeAdapter<DATE> implements LaJsonFieldingAvailable {
 
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
         protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
 
-        public AbstractTypeDateTimeAdapter(JsonMappingOption option) {
-            this.option = option;
-            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+        public AbstractTypeDateTimeAdapter(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
+            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
         // -----------------------------------------------------
@@ -165,7 +165,7 @@ public interface Java8TimeGsonAdaptable {
         }
 
         protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
+            return gsonOption.isEmptyToNullReading();
         }
 
         protected DateTimeFormatter prepareReadDateTimeFormatter(String exp) {
@@ -201,7 +201,7 @@ public interface Java8TimeGsonAdaptable {
         }
 
         protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
+            return gsonOption.isNullToEmptyWriting();
         }
 
         protected DateTimeFormatter prepareWriteDateTimeFormatter(DATE value) {
@@ -269,10 +269,10 @@ public interface Java8TimeGsonAdaptable {
         protected final DateTimeFormatter optionFormatter; // null allowed
         protected final Predicate<String> readFormattingTrigger; // null allowed
 
-        public TypeAdapterLocalDate(JsonMappingOption option) {
-            super(option);
-            optionFormatter = option.getLocalDateFormatter().orElse(null);
-            readFormattingTrigger = option.getLocalDateFormattingTrigger().orElse(null);
+        public TypeAdapterLocalDate(JsonMappingOption gsonOption) {
+            super(gsonOption);
+            optionFormatter = gsonOption.getLocalDateFormatter().orElse(null);
+            readFormattingTrigger = gsonOption.getLocalDateFormattingTrigger().orElse(null);
         }
 
         @Override
@@ -310,10 +310,10 @@ public interface Java8TimeGsonAdaptable {
         protected final DateTimeFormatter optionFormatter; // null allowed
         protected final Predicate<String> readFormattingTrigger; // null allowed
 
-        public TypeAdapterLocalDateTime(JsonMappingOption option) {
-            super(option);
-            optionFormatter = option.getLocalDateTimeFormatter().orElse(null);
-            readFormattingTrigger = option.getLocalDateTimeFormattingTrigger().orElse(null);
+        public TypeAdapterLocalDateTime(JsonMappingOption gsonOption) {
+            super(gsonOption);
+            optionFormatter = gsonOption.getLocalDateTimeFormatter().orElse(null);
+            readFormattingTrigger = gsonOption.getLocalDateTimeFormattingTrigger().orElse(null);
         }
 
         @Override
@@ -351,10 +351,10 @@ public interface Java8TimeGsonAdaptable {
         protected final DateTimeFormatter optionFormatter; // null allowed
         protected final Predicate<String> readFormattingTrigger; // null allowed
 
-        public TypeAdapterLocalTime(JsonMappingOption option) {
-            super(option);
-            optionFormatter = option.getLocalTimeFormatter().orElse(null);
-            readFormattingTrigger = option.getLocalTimeFormattingTrigger().orElse(null);
+        public TypeAdapterLocalTime(JsonMappingOption gsonOption) {
+            super(gsonOption);
+            optionFormatter = gsonOption.getLocalTimeFormatter().orElse(null);
+            readFormattingTrigger = gsonOption.getLocalTimeFormattingTrigger().orElse(null);
         }
 
         @Override
@@ -391,9 +391,9 @@ public interface Java8TimeGsonAdaptable {
         public static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
         protected final DateTimeFormatter optionFormatter; // null allowed
 
-        public TypeAdapterZonedDateTime(JsonMappingOption option) {
-            super(option);
-            optionFormatter = option.getZonedDateTimeFormatter().orElse(null);
+        public TypeAdapterZonedDateTime(JsonMappingOption gsonOption) {
+            super(gsonOption);
+            optionFormatter = gsonOption.getZonedDateTimeFormatter().orElse(null);
         }
 
         @Override

@@ -75,13 +75,13 @@ public interface DBFluteGsonAdaptable {
     class TypeAdapterClassification extends TypeAdapter<Classification> {
 
         protected final Class<?> clsType;
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
         protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
 
-        public TypeAdapterClassification(Class<?> clsType, JsonMappingOption option) {
+        public TypeAdapterClassification(Class<?> clsType, JsonMappingOption gsonOption) {
             this.clsType = clsType;
-            this.option = option;
-            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+            this.gsonOption = gsonOption;
+            this.readingFilter = gsonOption.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
         }
 
         @Override
@@ -113,7 +113,7 @@ public interface DBFluteGsonAdaptable {
         }
 
         protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
+            return gsonOption.isEmptyToNullReading();
         }
 
         @Override
@@ -126,7 +126,7 @@ public interface DBFluteGsonAdaptable {
         }
 
         protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
+            return gsonOption.isNullToEmptyWriting();
         }
 
         protected void throwJsonPropertyClassificationCodeOfMethodNotFoundException(String code, JsonReader in,
