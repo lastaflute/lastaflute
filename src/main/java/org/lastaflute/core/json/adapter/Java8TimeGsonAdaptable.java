@@ -54,8 +54,8 @@ public interface Java8TimeGsonAdaptable {
 
         protected final JsonMappingOption gsonOption;
 
-        public DateTimeTypeAdapterFactory(JsonMappingOption option) {
-            this.gsonOption = option;
+        public DateTimeTypeAdapterFactory(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
         }
 
         @Override
@@ -90,8 +90,8 @@ public interface Java8TimeGsonAdaptable {
             return newTypeAdapterLocalDate(gsonOption);
         }
 
-        protected TypeAdapterLocalDate newTypeAdapterLocalDate(JsonMappingOption option) {
-            return new TypeAdapterLocalDate(option);
+        protected TypeAdapterLocalDate newTypeAdapterLocalDate(JsonMappingOption gsonOption) {
+            return new TypeAdapterLocalDate(gsonOption);
         }
 
         // LocalDateTime
@@ -99,8 +99,8 @@ public interface Java8TimeGsonAdaptable {
             return newTypeAdapterLocalDateTime(gsonOption);
         }
 
-        protected TypeAdapterLocalDateTime newTypeAdapterLocalDateTime(JsonMappingOption option) {
-            return new TypeAdapterLocalDateTime(option);
+        protected TypeAdapterLocalDateTime newTypeAdapterLocalDateTime(JsonMappingOption gsonOption) {
+            return new TypeAdapterLocalDateTime(gsonOption);
         }
 
         // LocalTime
@@ -108,8 +108,8 @@ public interface Java8TimeGsonAdaptable {
             return newTypeAdapterLocalTime(gsonOption);
         }
 
-        protected TypeAdapterLocalTime newTypeAdapterLocalTime(JsonMappingOption option) {
-            return new TypeAdapterLocalTime(option);
+        protected TypeAdapterLocalTime newTypeAdapterLocalTime(JsonMappingOption gsonOption) {
+            return new TypeAdapterLocalTime(gsonOption);
         }
 
         // ZonedDateTime
@@ -117,8 +117,8 @@ public interface Java8TimeGsonAdaptable {
             return newTypeAdapterZonedDateTime(gsonOption);
         }
 
-        protected TypeAdapterZonedDateTime newTypeAdapterZonedDateTime(JsonMappingOption option) {
-            return new TypeAdapterZonedDateTime(option);
+        protected TypeAdapterZonedDateTime newTypeAdapterZonedDateTime(JsonMappingOption gsonOption) {
+            return new TypeAdapterZonedDateTime(gsonOption);
         }
     }
 
