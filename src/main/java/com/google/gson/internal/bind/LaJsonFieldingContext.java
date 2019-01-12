@@ -37,6 +37,10 @@ public class LaJsonFieldingContext {
         _defaultThreadLocal.set(field);
     }
 
+    public static boolean existsJsonFieldOnThread() {
+        return _defaultThreadLocal.get() != null;
+    }
+
     public static void clearJsonFieldOnThread() {
         _defaultThreadLocal.set(null);
     }
