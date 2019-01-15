@@ -56,12 +56,16 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
             }
             if (token == JsonToken.STRING) {
                 final String exp = filterReading(in.nextString());
+                if (exp == null) { // filter makes it null
+                    return null;
+                }
                 if (isEmptyToNullReading() && "".equals(exp)) { // option
                     return null;
                 } else {
                     return readAsBoolean(token, exp);
                 }
             } else if (token == JsonToken.NUMBER) { // mainly here
+                // #thinking jflute filter is only for text so what can i do? (2019/01/15)
                 final int exp = in.nextInt();
                 return readAsBoolean(token, exp);
             } else { // mainly here

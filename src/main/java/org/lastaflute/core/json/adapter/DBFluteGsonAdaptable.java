@@ -91,6 +91,9 @@ public interface DBFluteGsonAdaptable {
                 return null;
             }
             final String code = filterReading(in.nextString());
+            if (code == null) { // filter makes it null
+                return null;
+            }
             if (isEmptyToNullReading() && "".equals(code)) { // option
                 return null;
             }

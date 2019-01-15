@@ -58,6 +58,9 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
                 return null;
             }
             final String str = filterReading(in.nextString());
+            if (str == null) { // filter makes it null
+                return null;
+            }
             if (isEmptyToNullReading() && "".equals(str)) {
                 return null;
             }

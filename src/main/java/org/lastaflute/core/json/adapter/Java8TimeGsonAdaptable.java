@@ -145,6 +145,9 @@ public interface Java8TimeGsonAdaptable {
                 return null;
             }
             final String exp = filterReading(in.nextString());
+            if (exp == null) { // filter makes it null
+                return null;
+            }
             if (isEmptyToNullReading() && "".equals(exp)) { // option
                 return null;
             }

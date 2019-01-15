@@ -48,6 +48,9 @@ public interface StringGsonAdaptable { // to show property path in exception mes
         @Override
         public String read(JsonReader in) throws IOException {
             final String read = filterReading(realAdapter.read(in));
+            if (read == null) { // filter makes it null
+                return null;
+            }
             if (isEmptyToNullReading() && "".equals(read)) { // option
                 return null;
             } else { // mainly here
