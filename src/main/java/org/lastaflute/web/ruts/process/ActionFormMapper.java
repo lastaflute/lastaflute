@@ -1060,7 +1060,6 @@ public class ActionFormMapper {
     }
 
     protected TypeFailureBean prepareTypeFailureBean(VirtualForm virtualForm) { // thread cache already checked here
-        // TODO jflute xxxxxxxxxx (2019/01/08)
         final Class<?> keyType = virtualForm.getFormMeta().getRootFormType();
         TypeFailureBean typeFailure = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure(keyType);
         if (typeFailure == null) {
