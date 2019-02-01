@@ -59,7 +59,7 @@ public interface ActionHook {
      * } catch (...) {
      *     godHandExceptionMonologue()
      * } finally {
-     *     callbackFinally()
+     *     hookFinally()
      *     godHandFinally()
      *     godHandEpilogue()
      * }
@@ -81,7 +81,7 @@ public interface ActionHook {
      * } catch (...) {
      *     godHandExceptionMonologue()
      * } finally {
-     *     callbackFinally()
+     *     hookFinally()
      *     godHandFinally()
      *     godHandEpilogue()
      * }
@@ -107,7 +107,7 @@ public interface ActionHook {
      * } catch (...) {
      *     godHandExceptionMonologue() *here
      * } finally {
-     *     callbackFinally()
+     *     hookFinally()
      *     godHandFinally()
      *     godHandEpilogue()
      * }
