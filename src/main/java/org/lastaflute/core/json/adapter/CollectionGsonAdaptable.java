@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,11 +46,11 @@ public interface CollectionGsonAdaptable { // to show property path in exception
     class WrappingCollectionTypeAdapterFactory implements TypeAdapterFactory {
 
         protected final CollectionTypeAdapterFactory embeddedFactory;
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
 
-        public WrappingCollectionTypeAdapterFactory(JsonMappingOption option) {
+        public WrappingCollectionTypeAdapterFactory(JsonMappingOption gsonOption) {
             this.embeddedFactory = createEmbeddedFactory();
-            this.option = option;
+            this.gsonOption = gsonOption;
         }
 
         protected CollectionTypeAdapterFactory createEmbeddedFactory() {
@@ -79,24 +79,28 @@ public interface CollectionGsonAdaptable { // to show property path in exception
 
         @SuppressWarnings("unchecked")
         protected <T> TypeAdapter<T> createWrappingTypeAdapterCollection(TypeAdapter<T> embedded) {
-            return (TypeAdapter<T>) new WrappingTypeAdapterCollection(embedded, option);
+            return (TypeAdapter<T>) newWrappingTypeAdapterCollection(embedded, gsonOption);
+        }
+
+        protected <T> WrappingTypeAdapterCollection newWrappingTypeAdapterCollection(TypeAdapter<T> embedded, JsonMappingOption option) {
+            return new WrappingTypeAdapterCollection(embedded, option);
         }
     }
 
     class WrappingTypeAdapterCollection extends TypeAdapter<Collection<?>> {
 
         protected final TypeAdapter<Collection<?>> embedded;
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
 
         @SuppressWarnings("unchecked")
-        public WrappingTypeAdapterCollection(TypeAdapter<?> embedded, JsonMappingOption option) {
+        public WrappingTypeAdapterCollection(TypeAdapter<?> embedded, JsonMappingOption gsonOption) {
             this.embedded = (TypeAdapter<Collection<?>>) embedded;
-            this.option = option;
+            this.gsonOption = gsonOption;
         }
 
         @Override
         public Collection<?> read(JsonReader in) throws IOException {
-            if (option.isListNullToEmptyReading()) {
+            if (gsonOption.isListNullToEmptyReading()) {
                 if (in.peek() == JsonToken.NULL) {
                     in.nextNull();
                     return Collections.emptyList();
@@ -107,7 +111,7 @@ public interface CollectionGsonAdaptable { // to show property path in exception
 
         @Override
         public void write(JsonWriter out, Collection<?> collection) throws IOException {
-            if (option.isListNullToEmptyWriting()) {
+            if (gsonOption.isListNullToEmptyWriting()) {
                 if (collection == null) {
                     out.beginArray();
                     out.endArray();
@@ -122,7 +126,11 @@ public interface CollectionGsonAdaptable { // to show property path in exception
     //                                                                             Creator
     //                                                                             =======
     default TypeAdapterFactory createCollectionTypeAdapterFactory() {
-        return new WrappingCollectionTypeAdapterFactory(getGsonOption());
+        return newWrappingCollectionTypeAdapterFactory(getGsonOption());
+    }
+
+    default WrappingCollectionTypeAdapterFactory newWrappingCollectionTypeAdapterFactory(JsonMappingOption option) {
+        return new WrappingCollectionTypeAdapterFactory(option);
     }
 
     // ===================================================================================

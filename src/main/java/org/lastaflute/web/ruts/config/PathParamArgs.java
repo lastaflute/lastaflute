@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.lastaflute.web.ruts.config;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.dbflute.util.DfTypeUtil;
 
@@ -51,12 +52,17 @@ public class PathParamArgs implements Serializable {
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
+    // #hope jflute similer to UrlPatternAnalyzer's one so want to refactor (2018/10/30)
     public boolean isNumberTypeParameter(int index) { // contains optional generic type
         if (pathParamTypeList.size() <= index) { // avoid out of bounds
             return false;
         }
         final Class<?> parameterType = pathParamTypeList.get(index);
         if (Number.class.isAssignableFrom(parameterType)) {
+            return true;
+        }
+        if (parameterType.isPrimitive() && Stream.of(long.class, int.class, short.class, byte.class, double.class, float.class)
+                .anyMatch(numType -> numType.isAssignableFrom(parameterType))) { // from pull request #55 (thanks!)
             return true;
         }
         final Class<?> genericType = optionalGenericTypeMap.get(index);

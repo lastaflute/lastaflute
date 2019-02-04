@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,7 +81,6 @@ import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.config.ModuleConfig;
-import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
 import org.lastaflute.web.ruts.inoutlogging.InOutLogKeeper;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
@@ -262,25 +261,16 @@ public class ActionFormMapper {
     //                                                                           JSON Body
     //                                                                           =========
     protected boolean handleJsonBody(ActionRuntime runtime, VirtualForm virtualForm) {
-        if (isJsonBodyForm(virtualForm.getFormMeta().getFormType())) {
-            mappingJsonBody(runtime, virtualForm, prepareJsonFromRequestBody(virtualForm));
-            return true;
-        }
-        if (isListJsonBodyForm(virtualForm)) {
-            mappingListJsonBody(runtime, virtualForm, prepareJsonFromRequestBody(virtualForm));
-            return true;
+        final ActionFormMeta formMeta = virtualForm.getFormMeta();
+        if (formMeta.isJsonBodyMapping()) {
+            if (formMeta.isRootSymbolForm()) {
+                mappingJsonBody(runtime, virtualForm, prepareJsonFromRequestBody(virtualForm));
+            } else if (formMeta.isTypedListForm()) {
+                mappingListJsonBody(runtime, virtualForm, prepareJsonFromRequestBody(virtualForm));
+            }
+            // basically no way here (but no exception just in case)
         }
         return false;
-    }
-
-    protected boolean isJsonBodyForm(Class<? extends Object> formType) {
-        return formType.getName().endsWith(ExecuteArgAnalyzer.BODY_SUFFIX);
-    }
-
-    protected boolean isListJsonBodyForm(VirtualForm virtualForm) {
-        return virtualForm.getFormMeta().getListFormParameterGenericType().map(genericType -> {
-            return isJsonBodyForm(genericType);
-        }).orElse(false);
     }
 
     protected String prepareJsonFromRequestBody(VirtualForm virtualForm) {
@@ -327,7 +317,8 @@ public class ActionFormMapper {
     protected void mappingJsonBody(ActionRuntime runtime, VirtualForm virtualForm, String json) {
         final JsonManager jsonManager = getJsonManager();
         try {
-            final Object fromJson = jsonManager.fromJson(json, virtualForm.getFormMeta().getFormType());
+            final Class<?> formType = virtualForm.getFormMeta().getRootFormType(); // called only when root here
+            final Object fromJson = jsonManager.fromJson(json, formType);
             acceptJsonRealForm(virtualForm, fromJson);
         } catch (RuntimeException e) {
             throwJsonBodyParseFailureException(runtime, virtualForm, json, e);
@@ -1069,7 +1060,7 @@ public class ActionFormMapper {
     }
 
     protected TypeFailureBean prepareTypeFailureBean(VirtualForm virtualForm) { // thread cache already checked here
-        final Class<?> keyType = virtualForm.getFormMeta().getFormType();
+        final Class<?> keyType = virtualForm.getFormMeta().getRootFormType();
         TypeFailureBean typeFailure = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure(keyType);
         if (typeFailure == null) {
             typeFailure = new TypeFailureBean();

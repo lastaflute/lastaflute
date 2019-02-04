@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,7 +109,8 @@ public class LastaPrepareFilter implements Filter {
     }
 
     protected void handleErrorCause(String msg, Throwable cause) {
-        logger.error(msg, cause);
+        cause.printStackTrace(); // because it might fail to initialize logback by e.g. 'lasta.env'
+        logger.error(msg, cause); // to write to application log
         if (cause instanceof RuntimeException) {
             throw (RuntimeException) cause;
         }

@@ -15,6 +15,7 @@ import org.lastaflute.web.response.HtmlResponse;
 
 /**
  * @author jflute
+ * @author pull request #55
  * @since 1.0.1 (2017/10/16 Monday at bay maihama)
  */
 public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
@@ -297,6 +298,73 @@ public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
 
         @Execute
         public HtmlResponse named(String first) {
+            return HtmlResponse.asEmptyBody();
+        }
+    }
+
+    public void test_paramPath_basic36_int_to_string() {
+        ActionMapping mapping = prepareMapping(Basic36Int2strAction.class);
+        assertExecute(mapping, nonno, "sea");
+        assertExecute(mapping, nonno, "sea/named");
+        assertExecute(mapping, nonno, "sea/land");
+        assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, named, "named/sea");
+        assertExecute(mapping, nonno, "named/sea/land");
+        assertExecute(mapping, named, "named/1");
+        assertExecute(mapping, nonno, "named/1/land");
+        assertExecute(mapping, index, "1");
+        assertExecute(mapping, nonno, "1/named");
+        assertExecute(mapping, nonno, "1/land");
+        assertExecute(mapping, index, "-1");
+        assertExecute(mapping, nonno, "-1/named");
+        assertExecute(mapping, nonno, "-1/land");
+    }
+
+    private static class Basic36Int2strAction extends LastaAction {
+
+        @Execute
+        public HtmlResponse index(int first) {
+            return HtmlResponse.asEmptyBody();
+        }
+
+        @Execute
+        public HtmlResponse named(String first) {
+            return HtmlResponse.asEmptyBody();
+        }
+    }
+
+    public void test_paramPath_basic37_int_to_form() {
+        ActionMapping mapping = prepareMapping(Basic37Int2formAction.class);
+        assertExecute(mapping, nonno, "sea");
+        assertExecute(mapping, nonno, "sea/named");
+        assertExecute(mapping, nonno, "sea/land");
+        assertExecute(mapping, nonno, "sea/land/piari");
+        assertExecute(mapping, nonno, "named/sea");
+        assertExecute(mapping, nonno, "named/sea/land");
+        assertExecute(mapping, nonno, "named/1");
+        assertExecute(mapping, nonno, "named/1/land");
+        assertExecute(mapping, index, "1");
+        assertExecute(mapping, nonno, "1/named");
+        assertExecute(mapping, nonno, "1/land");
+        assertExecute(mapping, index, "-1");
+        assertExecute(mapping, nonno, "-1/named");
+        assertExecute(mapping, nonno, "-1/land");
+    }
+
+    private static class Basic37Int2formForm {
+        @SuppressWarnings("unused")
+        public String name;
+    }
+
+    private static class Basic37Int2formAction extends LastaAction {
+
+        @Execute
+        public HtmlResponse index(int first) {
+            return HtmlResponse.asEmptyBody();
+        }
+
+        @Execute
+        public HtmlResponse update(Basic37Int2formForm form) {
             return HtmlResponse.asEmptyBody();
         }
     }

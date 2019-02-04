@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  */
 package org.lastaflute.core.json;
 
-import java.util.List;
-
-import org.lastaflute.core.json.bind.JsonYourCollectionResource;
-import org.lastaflute.core.json.engine.RealJsonEngine;
+import org.lastaflute.core.json.engine.YourJsonEngineCreator;
 
 /**
  * The provider of JSON resource.
@@ -27,24 +24,11 @@ import org.lastaflute.core.json.engine.RealJsonEngine;
 public interface JsonResourceProvider {
 
     // ===================================================================================
-    //                                                                       Gson Settings
-    //                                                                       =============
-    /**
-     * Is null property suppressed (not displayed) in output JSON string?
-     * @return The determination, true or false.
-     */
-    default boolean isNullsSuppressed() {
-        return false; // display nulls as default
-    }
-
-    /**
-     * Is pretty print property suppressed (not line separating) in output JSON string?
-     * @return The determination, true or false.
-     */
-    default boolean isPrettyPrintSuppressed() {
-        return false; // line separating if development.here as default
-    }
-
+    //                                                                        Json Control
+    //                                                                        ============
+    // -----------------------------------------------------
+    //                                        Mapping Option
+    //                                        --------------
     /**
      * Provide the option of JSON mapping, e.g. date format
      * @return The new-created option of JSON mapping. (NullAllowed: if null, use default)
@@ -53,34 +37,38 @@ public interface JsonResourceProvider {
         return null;
     }
 
+    // -----------------------------------------------------
+    //                                          Print Option
+    //                                          ------------
+    // not use option object for now because it's made after these methods...
+    // (and not frequent options)
     /**
-     * Provide the option of JSON mapping, e.g. date format
-     * @return The new-created option of JSON mapping. (NullAllowed: if null, use default)
-     * @deprecated use provideMappingOption()
+     * Is null property suppressed (not displayed) in output JSON string?
+     * @return The determination, true or false.
+     * @deprecated should be fixed control? or may aggregate as option object.
      */
-    default JsonMappingOption provideOption() {
-        return null;
+    default boolean isNullsSuppressed() {
+        return false; // display nulls as default
     }
 
     /**
-     * Provide the your collections for JSON property. <br>
-     * You can use e.g. ImmutableList (Eclipse Collections) as JSON property type.
-     * @return The read-only list of your collection resource. (NullAllowed: if null, no your collection)
-     * @deprecated use JsonMappingOption's yourCollections()
+     * Is pretty print property suppressed (not line separating) in output JSON string?
+     * @return The determination, true or false.
+     * @deprecated should be fixed control? or may aggregate as option object.
      */
-    default List<JsonYourCollectionResource> provideYourCollections() {
-        return null; // do nothing
+    default boolean isPrettyPrintSuppressed() {
+        return false; // line separating if development.here as default
     }
 
     // ===================================================================================
-    //                                                                         Json Engine
+    //                                                                         Your Engine
     //                                                                         ===========
     /**
-     * Switch to the engine of JSON for your parsing. <br>
-     * Dangerous! Embedded Gson settings are disappeared.
-     * @return The instance for real engine of JSON. (NullAllowed: if null, use default)
+     * Create you original engine instance for Gson's JSON. <br>
+     * Dangerous! This method may be changed future. Watch changes of LastaFlute.
+     * @return The creator callback for your original engine instance. (NullAllowed: if null, use default)
      */
-    default RealJsonEngine swtichJsonEngine() {
+    default YourJsonEngineCreator prepareYourEngineCreator() {
         return null; // use default
     }
 }

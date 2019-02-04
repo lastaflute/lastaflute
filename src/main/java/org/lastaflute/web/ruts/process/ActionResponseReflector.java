@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,13 @@ package org.lastaflute.web.ruts.process;
 
 import java.lang.reflect.Parameter;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.core.json.JsonEngineResource;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.json.JsonMappingOption;
+import org.lastaflute.core.json.engine.RealJsonEngine;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ResponseReflectingOption;
@@ -264,11 +267,16 @@ public class ActionResponseReflector {
                 } else { // mainly here
                     final JsonManager jsonManager = requestManager.getJsonManager();
                     final Object jsonResult = response.getJsonResult();
-                    final OptionalThing<Consumer<JsonMappingOption>> switcher = response.getMappingOptionSwitcher();
-                    if (switcher.isPresent()) { // switchMappingOption(), e.g. SwaggerAction@json()
-                        json = toJsonBySwitchedMppingOption(jsonManager, jsonResult, switcher.get());
+                    final OptionalThing<Supplier<RealJsonEngine>> jsonEngineSwitcher = response.getJsonEngineSwitcher();
+                    if (jsonEngineSwitcher.isPresent()) { // switchJsonEngine() for different rule action
+                        json = toJsonBySwitchedJsonEngine(jsonManager, jsonResult, jsonEngineSwitcher.get());
                     } else { // mainly here
-                        json = jsonManager.toJson(jsonResult);
+                        final OptionalThing<Consumer<JsonMappingOption>> mappingOptionSwitcher = response.getMappingOptionSwitcher();
+                        if (mappingOptionSwitcher.isPresent()) { // switchMappingOption(), e.g. SwaggerAction@json()
+                            json = toJsonBySwitchedMappingOption(jsonManager, jsonResult, mappingOptionSwitcher.get());
+                        } else { // mainly here
+                            json = jsonManager.toJson(jsonResult);
+                        }
                     }
                 }
             }
@@ -285,12 +293,6 @@ public class ActionResponseReflector {
                 }
             });
         });
-    }
-
-    protected String toJsonBySwitchedMppingOption(JsonManager jsonManager, Object jsonResult, Consumer<JsonMappingOption> switcher) {
-        final JsonMappingOption option = new JsonMappingOption();
-        switcher.accept(option);
-        return jsonManager.newAnotherEngine(OptionalThing.of(option)).toJson(jsonResult);
     }
 
     // -----------------------------------------------------
@@ -315,6 +317,26 @@ public class ActionResponseReflector {
 
     protected ResponseJsonBeanValidator createJsonBeanValidator(JsonResponse<?> response, ResponseReflectingOption option) {
         return new ResponseJsonBeanValidator(requestManager, runtime, option.isJsonBeanValidationErrorWarned(), response);
+    }
+
+    // -----------------------------------------------------
+    //                                       Switched Engine
+    //                                       ---------------
+    protected String toJsonBySwitchedJsonEngine(JsonManager jsonManager, Object jsonResult, Supplier<RealJsonEngine> jsonEngineSwitcher) {
+        final RealJsonEngine switchedEngine = jsonEngineSwitcher.get(); // application's callback
+        if (switchedEngine == null) { // check for user method
+            throw new IllegalStateException("The jsonEngineSwitcher cannot return null: " + jsonEngineSwitcher);
+        }
+        return switchedEngine.toJson(jsonResult);
+    }
+
+    protected String toJsonBySwitchedMappingOption(JsonManager jsonManager, Object jsonResult, Consumer<JsonMappingOption> switcher) {
+        final JsonEngineResource resource = new JsonEngineResource();
+        final JsonMappingOption option = new JsonMappingOption();
+        switcher.accept(option); // application's callback
+        resource.acceptMappingOption(option);
+        final RealJsonEngine ruledEngine = jsonManager.newRuledEngine(resource);
+        return ruledEngine.toJson(jsonResult);
     }
 
     // ===================================================================================

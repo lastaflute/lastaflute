@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package com.google.gson.internal.bind;
 
 import java.io.IOException;
 import java.util.function.Function;
+
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
@@ -39,7 +41,7 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
     protected final Class<SCALAR> yourType; // not null
     protected final Function<String, SCALAR> reader; // not null
     protected final Function<SCALAR, String> writer; // not null
-    protected final Function<String, String> readingFilter; // null allowed
+    protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
     protected final boolean emptyToNullReading;
     protected final boolean nullToEmptyWriting;
 
@@ -48,7 +50,7 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
     //                                                                         ===========
     public LaYourScalarTypeAdapterFactory(Class<SCALAR> yourType // scalar type
             , Function<String, SCALAR> reader, Function<SCALAR, String> writer // main function
-            , Function<String, String> readingFilter // as basic option
+            , JsonUnifiedTextReadingFilter readingFilter // as basic option
             , boolean emptyToNullReading, boolean nullToEmptyWriting // us too
     ) {
         this.yourType = yourType;
@@ -78,7 +80,7 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
     }
 
     protected TypeAdapter<SCALAR> createYourScalarTypeAdapter() {
-        return new Adapter<SCALAR>(reader, writer, readingFilter, emptyToNullReading, nullToEmptyWriting);
+        return new Adapter<SCALAR>(yourType, reader, writer, readingFilter, emptyToNullReading, nullToEmptyWriting);
     }
 
     // ===================================================================================
@@ -86,14 +88,16 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
     //                                                                        ============
     protected static class Adapter<SCALAR> extends TypeAdapter<SCALAR> implements LaJsonFieldingAvailable {
 
+        protected final Class<SCALAR> yourType; // not null
         protected final Function<String, SCALAR> reader; // not null
         protected final Function<SCALAR, String> writer; // not null
-        protected final Function<String, String> readingFilter; // null allowed
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
         protected final boolean emptyToNullReading;
         protected final boolean nullToEmptyWriting;
 
-        public Adapter(Function<String, SCALAR> reader, Function<SCALAR, String> writer, Function<String, String> readingFilter,
-                boolean emptyToNullReading, boolean nullToEmptyWriting) {
+        public Adapter(Class<SCALAR> yourType, Function<String, SCALAR> reader, Function<SCALAR, String> writer,
+                JsonUnifiedTextReadingFilter readingFilter, boolean emptyToNullReading, boolean nullToEmptyWriting) {
+            this.yourType = yourType;
             this.reader = reader;
             this.writer = writer;
             this.readingFilter = readingFilter; // cache, unwrap for performance
@@ -121,7 +125,7 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.apply(text) : text;
+            return readingFilter != null ? readingFilter.filter(yourType, text) : text;
         }
 
         protected boolean isEmptyToNullReading() {

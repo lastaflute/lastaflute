@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.lastaflute.core.json.engine;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ import org.lastaflute.core.json.adapter.NumberGsonAdaptable;
 import org.lastaflute.core.json.adapter.StringGsonAdaptable;
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
 import org.lastaflute.core.json.bind.JsonYourScalarResource;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.FieldNamingStrategy;
@@ -59,8 +61,8 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final JsonMappingOption option;
-    protected final Gson gson;
+    protected final JsonMappingOption option; // not null
+    protected final Gson gson; // not null
 
     // ===================================================================================
     //                                                                         Constructor
@@ -70,12 +72,22 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         gson = createGson(oneArgLambda); // using option variable
     }
 
+    // -----------------------------------------------------
+    //                                        Mapping Option
+    //                                        --------------
     protected JsonMappingOption createOption(Consumer<JsonMappingOption> opLambda) {
-        final JsonMappingOption option = new JsonMappingOption();
+        final JsonMappingOption option = newJsonMappingOption();
         opLambda.accept(option);
         return option;
     }
 
+    protected JsonMappingOption newJsonMappingOption() {
+        return new JsonMappingOption();
+    }
+
+    // -----------------------------------------------------
+    //                                           Gson Object
+    //                                           -----------
     protected Gson createGson(Consumer<GsonBuilder> settings) {
         final GsonBuilder builder = newGsonBuilder();
         setupDefaultSettings(builder);
@@ -135,6 +147,9 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         builder.setDateFormat("yyyy-MM-dd'T'HH:mm:ss"); // same as local date-time
     }
 
+    // -----------------------------------------------------
+    //                                          Field Policy
+    //                                          ------------
     protected void setupFieldPolicy(GsonBuilder builder) {
         final JsonFieldNaming naming = option.getFieldNaming().orElse(getDefaultFieldNaming());
         builder.setFieldNamingPolicy(deriveFieldNamingPolicy(naming));
@@ -156,6 +171,9 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         return policy;
     }
 
+    // -----------------------------------------------------
+    //                                       Your Collection
+    //                                       ---------------
     protected void setupYourCollectionSettings(GsonBuilder builder) {
         final List<JsonYourCollectionResource> yourCollections = option.getYourCollections();
         for (JsonYourCollectionResource resource : yourCollections) {
@@ -164,9 +182,17 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
     }
 
     protected LaYourCollectionTypeAdapterFactory createYourCollectionTypeAdapterFactory(JsonYourCollectionResource resource) {
-        return new LaYourCollectionTypeAdapterFactory(resource.getYourType(), resource.getYourCollectionCreator());
+        return newLaYourCollectionTypeAdapterFactory(resource.getYourType(), resource.getYourCollectionCreator());
     }
 
+    protected LaYourCollectionTypeAdapterFactory newLaYourCollectionTypeAdapterFactory(Class<?> yourType,
+            Function<Collection<? extends Object>, Iterable<? extends Object>> yourCollectionCreator) {
+        return new LaYourCollectionTypeAdapterFactory(yourType, yourCollectionCreator);
+    }
+
+    // -----------------------------------------------------
+    //                                           Your Scalar
+    //                                           -----------
     protected void setupYourScalarSettings(GsonBuilder builder) {
         final List<JsonYourScalarResource> yourScalars = option.getYourScalars();
         for (JsonYourScalarResource resource : yourScalars) {
@@ -183,10 +209,7 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         @SuppressWarnings("unchecked")
         final Function<Object, String> writer = (Function<Object, String>) resource.getWriter();
 
-        // translate basic options
-        final Function<String, String> readingFilter = option.getSimpleTextReadingFilter().map(specifiedFilter -> {
-            return (Function<String, String>) value -> specifiedFilter.filter(value);
-        }).orElse(null);
+        final JsonUnifiedTextReadingFilter readingFilter = JsonUnifiedTextReadingFilter.unify(option);
         boolean emptyToNullReading = option.isEmptyToNullReading();
         boolean nullToEmptyWriting = option.isNullToEmptyWriting();
 

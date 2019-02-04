@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,11 +110,11 @@ public class RequestRoutingFilter implements Filter {
             chain.doFilter(httpReq, httpRes);
             return;
         }
-        // no extension here (may be SAStruts URL)
+        // no extension here (may be LastaFlute URL)
         final ActionPathResolver resolver = getRequestManager().getActionPathResolver();
         try {
             final String contextPath = extractContextPath(httpReq);
-            final ActionFoundPathHandler handler = createActionPathHandler(httpReq, httpRes, contextPath); // (#to_action)
+            final ActionFoundPathHandler handler = createActionFoundPathHandler(httpReq, httpRes, contextPath); // (#to_action)
             if (resolver.handleActionPath(requestPath, handler)) { // #to_action
                 return;
             }
@@ -179,7 +179,7 @@ public class RequestRoutingFilter implements Filter {
         return contextPath.equals("/") ? "" : contextPath;
     }
 
-    protected ActionFoundPathHandler createActionPathHandler(HttpServletRequest request, HttpServletResponse response, String contextPath) {
+    protected ActionFoundPathHandler createActionFoundPathHandler(HttpServletRequest request, HttpServletResponse response, String contextPath) {
         return (requestPath, actionName, paramPath, execByParam) -> {
             return routingToAction(request, response, contextPath, requestPath, actionName, paramPath, execByParam);
         };

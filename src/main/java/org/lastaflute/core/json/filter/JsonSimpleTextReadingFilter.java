@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package org.lastaflute.core.json.filter;
 
 /**
  * The callback for filtering of simple text parameter. <br>
- * (contains list elements)
+ * (contains list elements and map keys/values)
  * @author jflute
  * @since 0.7.1 (2015/12/15 Tuesday)
  */
@@ -25,7 +25,7 @@ package org.lastaflute.core.json.filter;
 public interface JsonSimpleTextReadingFilter {
 
     /**
-     * Filter the simple text parameter. (contains list elements) <br>
+     * Filter the simple text parameter. (contains list elements and map keys/values) <br>
      * @param text The text as JSON reading. (NotNull: not called if null parameter)
      * @return The filtered parameter or plain parameter. (NullAllowed: then filtered as null value)
      */

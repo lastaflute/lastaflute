@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,12 +27,14 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.json.bind.JsonYourCollectionResource;
 import org.lastaflute.core.json.bind.JsonYourScalarResource;
+import org.lastaflute.core.json.control.JsonMappingControlMeta;
 import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonTypeableTextReadingFilter;
 
 /**
  * @author jflute
  */
-public class JsonMappingOption {
+public class JsonMappingOption implements JsonMappingControlMeta {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -50,6 +52,7 @@ public class JsonMappingOption {
     protected boolean nullToEmptyWriting; // same
     protected boolean everywhereQuoteWriting; // e.g. Integer(1) to "1"
     protected OptionalThing<JsonSimpleTextReadingFilter> simpleTextReadingFilter = OptionalThing.empty(); // not null
+    protected OptionalThing<JsonTypeableTextReadingFilter> typeableTextReadingFilter = OptionalThing.empty(); // not null
     protected boolean listNullToEmptyReading; // [] if null
     protected boolean listNullToEmptyWriting; // same
     protected OptionalThing<JsonFieldNaming> fieldNaming = OptionalThing.empty(); // not null
@@ -71,7 +74,7 @@ public class JsonMappingOption {
     // ===================================================================================
     //                                                                      Accept Another
     //                                                                      ==============
-    public JsonMappingOption acceptAnother(JsonMappingOption another) {
+    public JsonMappingOption acceptAnother(JsonMappingControlMeta another) {
         localDateFormatter = another.getLocalDateFormatter();
         localDateFormattingTrigger = another.getLocalDateFormattingTrigger();
         localDateTimeFormatter = another.getLocalDateTimeFormatter();
@@ -85,6 +88,7 @@ public class JsonMappingOption {
         nullToEmptyWriting = another.isNullToEmptyWriting();
         everywhereQuoteWriting = another.isEverywhereQuoteWriting();
         simpleTextReadingFilter = another.getSimpleTextReadingFilter();
+        typeableTextReadingFilter = another.getTypeableTextReadingFilter();
         listNullToEmptyReading = another.isListNullToEmptyReading();
         listNullToEmptyWriting = another.isListNullToEmptyWriting();
         fieldNaming = another.getFieldNaming();
@@ -222,6 +226,14 @@ public class JsonMappingOption {
         return this;
     }
 
+    public JsonMappingOption filterTypeableTextReading(JsonTypeableTextReadingFilter typeableTextReadingFilter) {
+        if (typeableTextReadingFilter == null) {
+            throw new IllegalArgumentException("The argument 'typeableTextReadingFilter' should not be null.");
+        }
+        this.typeableTextReadingFilter = OptionalThing.of(typeableTextReadingFilter);
+        return this;
+    }
+
     // -----------------------------------------------------
     //                                    List Null or Empty
     //                                    ------------------
@@ -337,6 +349,7 @@ public class JsonMappingOption {
             sb.append(delimiter).append("everywhereQuoteWriting");
         }
         simpleTextReadingFilter.ifPresent(ter -> sb.append(delimiter).append(ter));
+        typeableTextReadingFilter.ifPresent(ter -> sb.append(delimiter).append(ter));
         fieldNaming.ifPresent(ing -> sb.append(delimiter).append(ing));
         if (!yourCollections.isEmpty()) {
             final List<String> expList = yourCollections.stream().map(ons -> {
@@ -407,6 +420,10 @@ public class JsonMappingOption {
 
     public OptionalThing<JsonSimpleTextReadingFilter> getSimpleTextReadingFilter() {
         return simpleTextReadingFilter;
+    }
+
+    public OptionalThing<JsonTypeableTextReadingFilter> getTypeableTextReadingFilter() {
+        return typeableTextReadingFilter;
     }
 
     public boolean isListNullToEmptyReading() {

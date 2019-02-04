@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -173,7 +173,7 @@ public class LaReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                         LaJsonFieldingContext.setJsonFieldOnThread(field); // to give the field to writer
                         realAdapter.write(writer, fieldValue);
                     } finally {
-                        LaJsonFieldingContext.clearAccessContextOnThread();
+                        LaJsonFieldingContext.clearJsonFieldOnThread();
                     }
                 } else { // avoid try-finally cost
                     realAdapter.write(writer, fieldValue);
@@ -188,7 +188,7 @@ public class LaReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                     try {
                         fieldValue = typeAdapter.read(reader);
                     } finally {
-                        LaJsonFieldingContext.clearAccessContextOnThread();
+                        LaJsonFieldingContext.clearJsonFieldOnThread();
                     }
                 } else { // avoid try-finally cost
                     fieldValue = typeAdapter.read(reader);

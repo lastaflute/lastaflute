@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
@@ -382,6 +383,7 @@ public class UrlPatternAnalyzer {
         }
     }
 
+    // #hope jflute similer to PathParamArgs's one so want to refactor (2018/10/30)
     protected boolean needsNumberTypePattern(List<Class<?>> pathParamTypeList, Map<Integer, Class<?>> optionalGenericTypeMap,
             int parameterIndex) {
         if (pathParamTypeList.size() <= parameterIndex) {
@@ -389,6 +391,10 @@ public class UrlPatternAnalyzer {
         }
         final Class<?> parameterType = pathParamTypeList.get(parameterIndex);
         if (Number.class.isAssignableFrom(parameterType)) {
+            return true;
+        }
+        if (parameterType.isPrimitive() && Stream.of(long.class, int.class, short.class, byte.class, double.class, float.class)
+                .anyMatch(numType -> numType.isAssignableFrom(parameterType))) { // from pull request #55 (thanks!)
             return true;
         }
         final Class<?> genericType = optionalGenericTypeMap.get(parameterIndex);

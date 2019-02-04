@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import org.dbflute.jdbc.Classification;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.json.exception.JsonPropertyClassificationCodeUnknownException;
-import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 import org.lastaflute.core.util.LaClassificationUtil;
 import org.lastaflute.core.util.LaClassificationUtil.ClassificationCodeOfMethodNotFoundException;
 import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeException;
@@ -45,10 +45,10 @@ public interface DBFluteGsonAdaptable {
     //                                                                        ============
     class ClassificationTypeAdapterFactory implements TypeAdapterFactory {
 
-        protected final JsonMappingOption option;
+        protected final JsonMappingOption gsonOption;
 
-        public ClassificationTypeAdapterFactory(JsonMappingOption option) {
-            this.option = option;
+        public ClassificationTypeAdapterFactory(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
         }
 
         @Override
@@ -64,6 +64,10 @@ public interface DBFluteGsonAdaptable {
         }
 
         protected TypeAdapterClassification createTypeAdapterClassification(Class<?> rawType) {
+            return newTypeAdapterClassification(rawType, gsonOption);
+        }
+
+        protected TypeAdapterClassification newTypeAdapterClassification(Class<?> rawType, JsonMappingOption option) {
             return new TypeAdapterClassification(rawType, option);
         }
     }
@@ -71,13 +75,13 @@ public interface DBFluteGsonAdaptable {
     class TypeAdapterClassification extends TypeAdapter<Classification> {
 
         protected final Class<?> clsType;
-        protected final JsonMappingOption option;
-        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
+        protected final JsonMappingOption gsonOption;
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
 
-        public TypeAdapterClassification(Class<?> clsType, JsonMappingOption option) {
+        public TypeAdapterClassification(Class<?> clsType, JsonMappingOption gsonOption) {
             this.clsType = clsType;
-            this.option = option;
-            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+            this.gsonOption = gsonOption;
+            this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
         }
 
         @Override
@@ -87,6 +91,9 @@ public interface DBFluteGsonAdaptable {
                 return null;
             }
             final String code = filterReading(in.nextString());
+            if (code == null) { // filter makes it null
+                return null;
+            }
             if (isEmptyToNullReading() && "".equals(code)) { // option
                 return null;
             }
@@ -105,11 +112,11 @@ public interface DBFluteGsonAdaptable {
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(text) : text;
+            return readingFilter != null ? readingFilter.filter(clsType, text) : text;
         }
 
         protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
+            return gsonOption.isEmptyToNullReading();
         }
 
         @Override
@@ -122,7 +129,7 @@ public interface DBFluteGsonAdaptable {
         }
 
         protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
+            return gsonOption.isNullToEmptyWriting();
         }
 
         protected void throwJsonPropertyClassificationCodeOfMethodNotFoundException(String code, JsonReader in,
@@ -172,7 +179,11 @@ public interface DBFluteGsonAdaptable {
     //                                                                             Creator
     //                                                                             =======
     default ClassificationTypeAdapterFactory createClassificationTypeAdapterFactory() {
-        return new ClassificationTypeAdapterFactory(getGsonOption());
+        return newClassificationTypeAdapterFactory(getGsonOption());
+    }
+
+    default ClassificationTypeAdapterFactory newClassificationTypeAdapterFactory(JsonMappingOption option) {
+        return new ClassificationTypeAdapterFactory(option);
     }
 
     // ===================================================================================

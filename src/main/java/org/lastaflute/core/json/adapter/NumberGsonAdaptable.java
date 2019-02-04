@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
-import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -43,12 +43,12 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     //                                                                        ============
     abstract class AbstractTypeAdapterNumber<NUM extends Number> extends TypeAdapter<NUM> {
 
-        protected final JsonMappingOption option;
-        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
+        protected final JsonMappingOption gsonOption;
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
 
-        public AbstractTypeAdapterNumber(JsonMappingOption option) {
-            this.option = option;
-            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+        public AbstractTypeAdapterNumber(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
+            this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
         }
 
         @Override
@@ -58,6 +58,9 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
                 return null;
             }
             final String str = filterReading(in.nextString());
+            if (str == null) { // filter makes it null
+                return null;
+            }
             if (isEmptyToNullReading() && "".equals(str)) {
                 return null;
             }
@@ -79,11 +82,11 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(text) : text;
+            return readingFilter != null ? readingFilter.filter(getNumberType(), text) : text;
         }
 
         protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
+            return gsonOption.isEmptyToNullReading();
         }
 
         @Override
@@ -100,11 +103,11 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
+            return gsonOption.isNullToEmptyWriting();
         }
 
         protected boolean isEverywhereQuoteWriting() {
-            return option.isEverywhereQuoteWriting();
+            return gsonOption.isEverywhereQuoteWriting();
         }
 
         protected abstract TypeAdapter<NUM> getRealAdapter();
@@ -135,8 +138,8 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<Number> realAdapter = TypeAdapters.INTEGER;
 
-        public TypeAdapterInteger(JsonMappingOption option) {
-            super(option);
+        public TypeAdapterInteger(JsonMappingOption gsonOption) {
+            super(gsonOption);
         }
 
         @Override
@@ -157,8 +160,8 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<Number> realAdapter = TypeAdapters.LONG;
 
-        public TypeAdapterLong(JsonMappingOption option) {
-            super(option);
+        public TypeAdapterLong(JsonMappingOption gsonOption) {
+            super(gsonOption);
         }
 
         @Override
@@ -179,8 +182,8 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final TypeAdapter<BigDecimal> realAdapter = TypeAdapters.BIG_DECIMAL;
 
-        public TypeAdapterBigDecimal(JsonMappingOption option) {
-            super(option);
+        public TypeAdapterBigDecimal(JsonMappingOption gsonOption) {
+            super(gsonOption);
         }
 
         @Override
@@ -222,16 +225,31 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
     // -----------------------------------------------------
     //                                          Type Adapter
     //                                          ------------
+    // Integer
     default TypeAdapterInteger createTypeAdapterInteger() {
-        return new TypeAdapterInteger(getGsonOption());
+        return newTypeAdapterInteger(getGsonOption());
     }
 
+    default TypeAdapterInteger newTypeAdapterInteger(JsonMappingOption gsonOption) {
+        return new TypeAdapterInteger(gsonOption);
+    }
+
+    // Long
     default TypeAdapterLong createTypeAdapterLong() {
-        return new TypeAdapterLong(getGsonOption());
+        return newTypeAdapterLong(getGsonOption());
     }
 
+    default TypeAdapterLong newTypeAdapterLong(JsonMappingOption gsonOption) {
+        return new TypeAdapterLong(gsonOption);
+    }
+
+    // BigDecimal
     default TypeAdapterBigDecimal createTypeAdapterBigDecimal() {
-        return new TypeAdapterBigDecimal(getGsonOption());
+        return newTypeAdapterBigDecimal(getGsonOption());
+    }
+
+    default TypeAdapterBigDecimal newTypeAdapterBigDecimal(JsonMappingOption gsonOption) {
+        return new TypeAdapterBigDecimal(gsonOption);
     }
 
     // ===================================================================================

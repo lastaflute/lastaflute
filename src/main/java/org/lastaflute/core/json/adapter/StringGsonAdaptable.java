@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.lastaflute.core.json.adapter;
 import java.io.IOException;
 
 import org.lastaflute.core.json.JsonMappingOption;
-import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -37,17 +37,20 @@ public interface StringGsonAdaptable { // to show property path in exception mes
     class TypeAdapterString extends TypeAdapter<String> {
 
         protected final TypeAdapter<String> realAdapter = TypeAdapters.STRING;
-        protected final JsonMappingOption option;
-        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
+        protected final JsonMappingOption gsonOption;
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
 
-        public TypeAdapterString(JsonMappingOption option) {
-            this.option = option;
-            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+        public TypeAdapterString(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
+            this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
         }
 
         @Override
         public String read(JsonReader in) throws IOException {
             final String read = filterReading(realAdapter.read(in));
+            if (read == null) { // filter makes it null
+                return null;
+            }
             if (isEmptyToNullReading() && "".equals(read)) { // option
                 return null;
             } else { // mainly here
@@ -59,11 +62,11 @@ public interface StringGsonAdaptable { // to show property path in exception mes
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(text) : text;
+            return readingFilter != null ? readingFilter.filter(String.class, text) : text;
         }
 
         protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
+            return gsonOption.isEmptyToNullReading();
         }
 
         @Override
@@ -76,7 +79,7 @@ public interface StringGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
+            return gsonOption.isNullToEmptyWriting();
         }
     }
 
@@ -88,7 +91,11 @@ public interface StringGsonAdaptable { // to show property path in exception mes
     }
 
     default TypeAdapterString createTypeAdapterString() {
-        return new TypeAdapterString(getGsonOption());
+        return newTypeAdapterString(getGsonOption());
+    }
+
+    default TypeAdapterString newTypeAdapterString(JsonMappingOption gsonOption) {
+        return new TypeAdapterString(gsonOption);
     }
 
     // ===================================================================================

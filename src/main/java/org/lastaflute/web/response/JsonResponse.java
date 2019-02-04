@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.lastaflute.web.response;
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -26,6 +27,7 @@ import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.json.JsonMappingOption;
+import org.lastaflute.core.json.engine.RealJsonEngine;
 import org.lastaflute.web.aspect.RomanticActionCustomizer;
 
 /**
@@ -57,6 +59,7 @@ public class JsonResponse<RESULT> implements ApiResponse {
     protected ResponseHook afterTxCommitHook;
     protected Class<?>[] validatorGroups;
     protected boolean validatorSuppressed;
+    protected Supplier<RealJsonEngine> jsonEngineSwitcher; // for different rule action
     protected Consumer<JsonMappingOption> mappingOptionSwitcher; // for e.g. SwaggerAction
 
     // ===================================================================================
@@ -230,11 +233,29 @@ public class JsonResponse<RESULT> implements ApiResponse {
     }
 
     // -----------------------------------------------------
+    //                                           JSON Engine
+    //                                           -----------
+    /**
+     * Switch standard JSON engine to your new-ruled JSON engine. <br>
+     * You can use this when the JSON response of different rule exists. <br>
+     * The specified engine instance should be cached in your application.
+     * @param noArgLambda The callback for engine of JSON, which is used for JSON response writing. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonResponse<RESULT> switchJsonEngine(Supplier<RealJsonEngine> noArgLambda) {
+        assertArgumentNotNull("noArgLambda", noArgLambda);
+        jsonEngineSwitcher = noArgLambda;
+        return this;
+    }
+
+    // -----------------------------------------------------
     //                                        Mapping Option
     //                                        --------------
+    // #thinking jflute will be deprecated? (basically only SwaggerAction uses) (2019/01/10)
     /**
-     * Switch application's option to your mapping option. <br>
-     * For example, SwaggerAction's json() should use this because it's not related to application rule.
+     * (SIMPLE METHOD) Switch application's option to your mapping option. <br>
+     * JSON engine is new-created per response so use switchJsonEngine() for performance. <br>
+     * This is for e.g. SwaggerAction's json() that is not related to application rule.
      * @param opLambda The callback for option settings of JSON mapping for another engine. (NotNull)
      * @return this. (NotNull)
      */
@@ -351,6 +372,16 @@ public class JsonResponse<RESULT> implements ApiResponse {
 
     public boolean isValidatorSuppressed() {
         return validatorSuppressed;
+    }
+
+    // -----------------------------------------------------
+    //                                           JSON Engine
+    //                                           -----------
+    public OptionalThing<Supplier<RealJsonEngine>> getJsonEngineSwitcher() {
+        return OptionalThing.ofNullable(jsonEngineSwitcher, () -> {
+            String msg = "Not found the switcher of JSON engine: " + JsonResponse.this.toString();
+            throw new IllegalStateException(msg);
+        });
     }
 
     // -----------------------------------------------------

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 the original author or authors.
+ * Copyright 2015-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import java.util.function.Function;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonMappingOption;
-import org.lastaflute.core.json.filter.JsonSimpleTextReadingFilter;
+import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -39,12 +39,12 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
     //                                                                        ============
     class TypeAdapterBoolean extends TypeAdapter<Boolean> {
 
-        protected final JsonMappingOption option;
-        protected final JsonSimpleTextReadingFilter readingFilter; // null allowed
+        protected final JsonMappingOption gsonOption;
+        protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
 
-        public TypeAdapterBoolean(JsonMappingOption option) {
-            this.option = option;
-            this.readingFilter = option.getSimpleTextReadingFilter().orElse(null); // cache, unwrap for performance
+        public TypeAdapterBoolean(JsonMappingOption gsonOption) {
+            this.gsonOption = gsonOption;
+            this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
         }
 
         @Override
@@ -56,12 +56,16 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
             }
             if (token == JsonToken.STRING) {
                 final String exp = filterReading(in.nextString());
+                if (exp == null) { // filter makes it null
+                    return null;
+                }
                 if (isEmptyToNullReading() && "".equals(exp)) { // option
                     return null;
                 } else {
                     return readAsBoolean(token, exp);
                 }
             } else if (token == JsonToken.NUMBER) { // mainly here
+                // #thinking jflute filter is only for text so what can i do? (2019/01/15)
                 final int exp = in.nextInt();
                 return readAsBoolean(token, exp);
             } else { // mainly here
@@ -73,15 +77,15 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(text) : text;
+            return readingFilter != null ? readingFilter.filter(Boolean.class, text) : text;
         }
 
         protected boolean isEmptyToNullReading() {
-            return option.isEmptyToNullReading();
+            return gsonOption.isEmptyToNullReading();
         }
 
         protected Boolean readAsBoolean(JsonToken token, Object exp) throws IOException {
-            final OptionalThing<Function<Object, Boolean>> deserializer = option.getBooleanDeserializer();
+            final OptionalThing<Function<Object, Boolean>> deserializer = gsonOption.getBooleanDeserializer();
             if (deserializer.isPresent()) { // cannot use lambda because of IOException
                 return deserializer.get().apply(exp);
             } else {
@@ -119,17 +123,17 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
         }
 
         protected OptionalThing<Object> filterBySerializerIfNeeds(Boolean value) {
-            return option.getBooleanSerializer().map(serializer -> {
+            return gsonOption.getBooleanSerializer().map(serializer -> {
                 return serializer.apply(value);
             });
         }
 
         protected boolean isNullToEmptyWriting() {
-            return option.isNullToEmptyWriting();
+            return gsonOption.isNullToEmptyWriting();
         }
 
         protected boolean isEverywhereQuoteWriting() {
-            return option.isEverywhereQuoteWriting();
+            return gsonOption.isEverywhereQuoteWriting();
         }
     }
 
@@ -147,7 +151,11 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
     //                                          Type Adapter
     //                                          ------------
     default TypeAdapterBoolean createTypeAdapterBoolean() {
-        return new TypeAdapterBoolean(getGsonOption());
+        return newTypeAdapterBoolean(getGsonOption());
+    }
+
+    default TypeAdapterBoolean newTypeAdapterBoolean(JsonMappingOption option) {
+        return new TypeAdapterBoolean(option);
     }
 
     // ===================================================================================
