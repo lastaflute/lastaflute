@@ -74,11 +74,11 @@ public class JsonDebugChallenge {
             if (mappedValue instanceof String) {
                 final String plainStr = (String) mappedValue;
                 if (LocalDate.class.isAssignableFrom(propertyType)) {
-                    return parseStr("seaDate", plainStr, bean -> bean.seaDate);
+                    return parseStr("date", plainStr, bean -> bean.date);
                 } else if (LocalDateTime.class.isAssignableFrom(propertyType)) {
-                    return parseStr("seaDateTime", plainStr, bean -> bean.seaDateTime);
+                    return parseStr("datetime", plainStr, bean -> bean.datetime);
                 } else if (LocalTime.class.isAssignableFrom(propertyType)) {
-                    return parseStr("seaTime", plainStr, bean -> bean.seaTime);
+                    return parseStr("time", plainStr, bean -> bean.time);
                 } else if (LaClassificationUtil.isCls(propertyType)) {
                     return parseCls(propertyType, plainStr);
                 }
@@ -133,9 +133,10 @@ public class JsonDebugChallenge {
 
     public static class MappingCheckingBean {
 
-        public LocalDate seaDate;
-        public LocalDateTime seaDateTime;
-        public LocalTime seaTime;
+        // simple word only not to depend on case conversion settings
+        public LocalDate date;
+        public LocalDateTime datetime;
+        public LocalTime time;
     }
 
     // ===================================================================================
