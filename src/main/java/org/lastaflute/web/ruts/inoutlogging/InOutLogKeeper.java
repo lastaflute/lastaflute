@@ -43,9 +43,11 @@ public class InOutLogKeeper {
     protected InOutLogOption option; // null allowed
     protected LocalDateTime beginDateTime; // null allowed until beginning
     protected String processHash; // null allowed until beginning
+    protected Map<String, Object> requestHeaderMap; // null allowed if request header name is not specified by InOutLogOption
     protected Map<String, Object> requestParameterMap; // null allowed if e.g. no parameter
     protected String requestBodyContent; // null allowed if e.g. no body
     protected String requestBodyType; // body format e.g. json, xml, null allowed if e.g. no body or null body
+    protected Map<String, Object> responseHeaderMap; // null allowed if response header name is not specified by InOutLogOption
     protected String responseBodyContent; // null allowed if e.g. no body or null body
     protected String responseBodyType; // body format e.g. json, xml, null allowed until response or if e.g. no body
     protected Throwable frameworkCause; // runtime has only application's one so keep here, null allowed
@@ -98,6 +100,11 @@ public class InOutLogKeeper {
         this.processHash = processHash;
     }
 
+    public void keepRequestHeader(Map<String, Object> requestHeaderMap) {
+        assertArgumentNotNull("requestHeaderMap", requestHeaderMap);
+        this.requestHeaderMap = requestHeaderMap;
+    }
+
     public void keepRequestParameter(Map<String, Object> parameterMap) {
         assertArgumentNotNull("parameterMap", parameterMap);
         for (Entry<String, Object> entry : parameterMap.entrySet()) {
@@ -117,6 +124,11 @@ public class InOutLogKeeper {
         assertArgumentNotNull("requestBodyType", requestBodyType);
         this.requestBodyContent = requestBodyContent;
         this.requestBodyType = requestBodyType;
+    }
+
+    public void keepResponseHeader(Map<String, Object> responseHeaderMap) {
+        assertArgumentNotNull("responseHeaderMap", responseHeaderMap);
+        this.responseHeaderMap = responseHeaderMap;
     }
 
     public void keepResponseBody(String responseBodyContent, String responseBodyType) { // accept null just in case
@@ -161,6 +173,10 @@ public class InOutLogKeeper {
         });
     }
 
+    public Map<String, Object> getRequestHeaderMap() { // not null
+        return requestHeaderMap != null ? Collections.unmodifiableMap(requestHeaderMap) : Collections.emptyMap();
+    }
+
     public Map<String, Object> getRequestParameterMap() { // not null
         return requestParameterMap != null ? Collections.unmodifiableMap(requestParameterMap) : Collections.emptyMap();
     }
@@ -175,6 +191,10 @@ public class InOutLogKeeper {
         return OptionalThing.ofNullable(requestBodyType, () -> {
             throw new IllegalStateException("Not found the request body type.");
         });
+    }
+
+    public Map<String, Object> getResponseHeaderMap() { // not null
+        return responseHeaderMap != null ? Collections.unmodifiableMap(responseHeaderMap) : Collections.emptyMap();
     }
 
     public OptionalThing<String> getResponseBodyContent() {

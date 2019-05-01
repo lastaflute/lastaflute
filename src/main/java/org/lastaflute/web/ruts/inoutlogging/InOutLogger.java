@@ -108,39 +108,36 @@ public class InOutLogger {
         boolean alreadyLineSep = false;
 
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-        // Request: requestParameter, requestBody
+        // Request: requestHeader, requestParameter, requestBody
         // _/_/_/_/_/_/_/_/_/_/
+        final String requestHeaderExp = buildRequestHeaderExp(keeper);
+        if (requestHeaderExp != null) {
+            final String title = "requestHeader";
+            final String realExp = requestHeaderExp;
+            alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep, keeper);
+        }
         final String paramsExp = buildRequestParameterExp(keeper);
         if (paramsExp != null) {
+            final String title = "requestParameter";
             final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
-            String noSepDelim = " "; // as default (if same line show)
-            if (willBeLineSeparatedLater(keeper) && !realExp.contains("\n") && !alreadyLineSep) {
-                sb.append("\n"); // line-separate request beginning point for view
-                noSepDelim = "";
-            }
-            alreadyLineSep = buildInOut(sb, "requestParameter", realExp, alreadyLineSep, noSepDelim);
-            if (noSepDelim.isEmpty()) { // means already line-separate
-                alreadyLineSep = true;
-            }
+            alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep, keeper);
         }
         if (keeper.getRequestBodyContent().isPresent()) {
             final String body = keeper.getRequestBodyContent().get();
             final String title = "requestBody(" + keeper.getRequestBodyType().orElse("unknown") + ")";
             final String realExp = option.getRequestBodyFilter().map(filter -> filter.apply(body)).orElse(body);
-            String noSepDelim = " "; // as default (if same line show)
-            if (willBeLineSeparatedLater(keeper) && !realExp.contains("\n") && !alreadyLineSep) {
-                sb.append("\n"); // line-separate request beginning point for view
-                noSepDelim = "";
-            }
-            alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep, noSepDelim);
-            if (noSepDelim.isEmpty()) { // means already line-separate
-                alreadyLineSep = true;
-            }
+            alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep, keeper);
         }
 
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-        // Response: responseBody
+        // Response: responseHeader, responseBody
         // _/_/_/_/_/_/_/_/_/_/
+        final String responseHeaderExp = buildResponseHeaderExp(keeper);
+        if (responseHeaderExp != null) {
+            final String title = "responseHeader";
+            final String realExp = responseHeaderExp;
+            alreadyLineSep = buildInOut(sb, title, realExp, alreadyLineSep);
+        }
         if (!keeper.getOption().isSuppressResponseBody()) {
             if (keeper.getResponseBodyContent().isPresent()) {
                 final String body = keeper.getResponseBodyContent().get();
@@ -260,8 +257,19 @@ public class InOutLogger {
         return DfTypeUtil.toLocalDateTime(timeManager.flashDate(), timeManager.getBusinessTimeZone());
     }
 
+    protected String buildRequestHeaderExp(InOutLogKeeper keeper) {
+        return buildMapExp(keeper.getRequestHeaderMap());
+    }
+
     protected String buildRequestParameterExp(InOutLogKeeper keeper) {
-        final Map<String, Object> parameterMap = keeper.getRequestParameterMap();
+        return buildMapExp(keeper.getRequestParameterMap());
+    }
+
+    protected String buildResponseHeaderExp(InOutLogKeeper keeper) {
+        return buildMapExp(keeper.getResponseHeaderMap());
+    }
+
+    protected String buildMapExp(final Map<String, Object> parameterMap) {
         if (parameterMap.isEmpty()) {
             return null;
         }
@@ -293,6 +301,19 @@ public class InOutLogger {
         });
         sb.insert(0, "{").append("}");
         return sb.toString();
+    }
+
+    protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep, InOutLogKeeper keeper) {
+        String noSepDelim = " "; // as default (if same line show)
+        if (willBeLineSeparatedLater(keeper) && !value.contains("\n") && !alreadyLineSep) {
+            sb.append("\n"); // line-separate request beginning point for view
+            noSepDelim = "";
+        }
+        alreadyLineSep = buildInOut(sb, title, value, alreadyLineSep, noSepDelim);
+        if (noSepDelim.isEmpty()) { // means already line-separate
+            alreadyLineSep = true;
+        }
+        return alreadyLineSep;
     }
 
     protected boolean buildInOut(StringBuilder sb, String title, String value, boolean alreadyLineSep) {

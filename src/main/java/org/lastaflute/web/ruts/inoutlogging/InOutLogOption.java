@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.ruts.inoutlogging;
 
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -32,6 +33,8 @@ public class InOutLogOption {
     //                                                                           =========
     protected boolean async;
     protected boolean suppressResponseBody; // may be too big
+    protected Set<String> requestHeaderNames;
+    protected Set<String> responseHeaderNames;
     protected Function<String, String> requestParameterFilter;
     protected Function<String, String> requestBodyFilter;
     protected Function<String, String> responseBodyFilter;
@@ -59,6 +62,30 @@ public class InOutLogOption {
      */
     public InOutLogOption suppressResponseBody() {
         suppressResponseBody = true;
+        return this;
+    }
+
+    /**
+     * @param requestHeaderNames The target request header names. (NotNull)
+     * @return this. (NotNull)
+     */
+    public InOutLogOption specifyRequestHeaderNames(Set<String> requestHeaderNames) {
+        if (requestHeaderNames == null) {
+            throw new IllegalArgumentException("The argument 'requestHeaderNames' should not be null.");
+        }
+        this.requestHeaderNames = requestHeaderNames;
+        return this;
+    }
+
+    /**
+     * @param responseHeaderNames The target response header names. (NotNull)
+     * @return this. (NotNull)
+     */
+    public InOutLogOption specifyResponseHeaderNames(Set<String> responseHeaderNames) {
+        if (responseHeaderNames == null) {
+            throw new IllegalArgumentException("The argument 'responseHeaderNames' should not be null.");
+        }
+        this.responseHeaderNames = responseHeaderNames;
         return this;
     }
 
@@ -121,6 +148,12 @@ public class InOutLogOption {
         return suppressResponseBody;
     }
 
+    public OptionalThing<Set<String>> getSpecifyRequestHeaderNames() {
+        return OptionalThing.ofNullable(requestHeaderNames, () -> {
+            throw new IllegalStateException("Not found the requestHeaderNames.");
+        });
+    }
+
     public OptionalThing<Function<String, String>> getRequestParameterFilter() {
         return OptionalThing.ofNullable(requestParameterFilter, () -> {
             throw new IllegalStateException("Not found the requestParameterFilter.");
@@ -130,6 +163,12 @@ public class InOutLogOption {
     public OptionalThing<Function<String, String>> getRequestBodyFilter() {
         return OptionalThing.ofNullable(requestBodyFilter, () -> {
             throw new IllegalStateException("Not found the requestBodyFilter.");
+        });
+    }
+
+    public OptionalThing<Set<String>> getSpecifyResponseHeaderNames() {
+        return OptionalThing.ofNullable(responseHeaderNames, () -> {
+            throw new IllegalStateException("Not found the responseHeaderNames.");
         });
     }
 

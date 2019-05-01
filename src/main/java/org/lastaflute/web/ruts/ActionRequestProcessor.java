@@ -17,8 +17,14 @@ package org.lastaflute.web.ruts;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
@@ -162,6 +168,7 @@ public class ActionRequestProcessor {
     }
 
     protected void finallyFire(ActionRuntime runtime) {
+        endInOutLoggingIfNeeds();
         showInOutLogIfNeeds(runtime);
     }
 
@@ -308,12 +315,39 @@ public class ActionRequestProcessor {
         InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
             keeper.keepBeginDateTime(beginTime);
             keeper.keepProcessHash(processHash);
+            keeper.getOption().getSpecifyRequestHeaderNames().ifPresent(specifyRequestHeaderNames -> {
+                HttpServletRequest request = getRequestManager().getRequest();
+                List<String> headerNames = Collections.list(request.getHeaderNames());
+                keeper.keepRequestHeader(specifyRequestHeaderNames.stream().filter(specifyRequestHeaderName -> {
+                    return headerNames.stream().anyMatch(headerName -> headerName.equalsIgnoreCase(specifyRequestHeaderName));
+                }).collect(Collectors.toMap(specifyRequestHeaderName -> {
+                    return specifyRequestHeaderName;
+                }, specifyRequestHeaderName -> {
+                    return Collections.list(request.getHeaders(specifyRequestHeaderName)).toArray();
+                })));
+            });
         });
     }
 
     protected void keepInOutLogFrameworkCauseIfNeeds(Throwable frameworkCause) {
         InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
             keeper.keepFrameworkCause(frameworkCause);
+        });
+    }
+
+    protected void endInOutLoggingIfNeeds() {
+        InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
+            keeper.getOption().getSpecifyResponseHeaderNames().ifPresent(specifyResponseHeaderNames -> {
+                HttpServletResponse response = getRequestManager().getResponseManager().getResponse();
+                Collection<String> headerNames = response.getHeaderNames();
+                keeper.keepResponseHeader(specifyResponseHeaderNames.stream().filter(specifyResponseHeaderName -> {
+                    return headerNames.stream().anyMatch(headerName -> headerName.equalsIgnoreCase(specifyResponseHeaderName));
+                }).collect(Collectors.toMap(specifyRequestHeaderName -> {
+                    return specifyRequestHeaderName;
+                }, specifyRequestHeaderName -> {
+                    return response.getHeaders(specifyRequestHeaderName).toArray();
+                })));
+            });
         });
     }
 
