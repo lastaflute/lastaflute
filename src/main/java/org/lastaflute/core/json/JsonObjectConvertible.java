@@ -19,6 +19,7 @@ import java.lang.reflect.ParameterizedType;
 
 /**
  * @author jflute
+ * @since 1.1.2 (2019/05/02 Thursday)
  */
 public interface JsonObjectConvertible {
 
