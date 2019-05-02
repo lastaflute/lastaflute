@@ -15,7 +15,12 @@
  */
 package org.lastaflute.web.path;
 
+import java.util.function.Function;
+
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.core.json.engine.RealJsonEngine;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 
 // package is a little strange (path!? near adjustment provider...)
 // but no change for compatible
@@ -29,24 +34,29 @@ public class ResponseReflectingOption {
     //                                                                           Attribute
     //                                                                           =========
     // -----------------------------------------------------
-    //                                                 HTML
-    //                                                ------
+    //                                             HTML Bean
+    //                                             ---------
     protected boolean htmlBeanValidationErrorWarned;
     protected boolean htmlBeanValidatorSuppressed;
 
     // -----------------------------------------------------
-    //                                                 JSON
-    //                                                ------
+    //                                             JSON Bean
+    //                                             ---------
     protected boolean jsonBeanValidationErrorWarned;
     protected boolean jsonBeanValidatorSuppressed;
     protected boolean jsonEmptyBodyTreatedAsEmptyObject; // for e.g. client fitting
+
+    // -----------------------------------------------------
+    //                                           JSON Engine
+    //                                           -----------
+    protected OptionalThing<Function<ActionRuntime, RealJsonEngine>> responseJsonEngineProvider = OptionalThing.empty();
 
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
     // -----------------------------------------------------
-    //                                                 HTML
-    //                                                ------
+    //                                             HTML Bean
+    //                                             ---------
     public ResponseReflectingOption warnHtmlBeanValidationError() {
         htmlBeanValidationErrorWarned = true;
         return this;
@@ -58,8 +68,8 @@ public class ResponseReflectingOption {
     }
 
     // -----------------------------------------------------
-    //                                                 JSON
-    //                                                ------
+    //                                             JSON Bean
+    //                                             ---------
     public ResponseReflectingOption warnJsonBeanValidationError() {
         jsonBeanValidationErrorWarned = true;
         return this;
@@ -75,6 +85,17 @@ public class ResponseReflectingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                           JSON Engine
+    //                                           -----------
+    public ResponseReflectingOption writeJsonBy(Function<ActionRuntime, RealJsonEngine> responseJsonEngineProvider) {
+        if (responseJsonEngineProvider == null) {
+            throw new IllegalArgumentException("The argument 'responseJsonEngineProvider' should not be null.");
+        }
+        this.responseJsonEngineProvider = OptionalThing.of(responseJsonEngineProvider);
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -83,14 +104,17 @@ public class ResponseReflectingOption {
         final StringBuilder sb = new StringBuilder();
         sb.append(DfTypeUtil.toClassTitle(this));
         sb.append(":{");
-        sb.append("html:{");
+        sb.append("htmlBean:{");
         sb.append(htmlBeanValidationErrorWarned);
         sb.append(", ").append(htmlBeanValidatorSuppressed);
         sb.append("}");
-        sb.append(", json:{");
+        sb.append(", jsonBean:{");
         sb.append(jsonBeanValidationErrorWarned);
         sb.append(", ").append(jsonBeanValidatorSuppressed);
         sb.append(", ").append(jsonEmptyBodyTreatedAsEmptyObject);
+        sb.append("}");
+        sb.append("jsonEngine:{");
+        sb.append(responseJsonEngineProvider);
         sb.append("}");
         sb.append("}");
         return sb.toString();
@@ -100,8 +124,8 @@ public class ResponseReflectingOption {
     //                                                                            Accessor
     //                                                                            ========
     // -----------------------------------------------------
-    //                                                 HTML
-    //                                                ------
+    //                                             HTML Bean
+    //                                             ---------
     public boolean isHtmlBeanValidationErrorWarned() {
         return htmlBeanValidationErrorWarned;
     }
@@ -111,8 +135,8 @@ public class ResponseReflectingOption {
     }
 
     // -----------------------------------------------------
-    //                                                 JSON
-    //                                                ------
+    //                                             JSON Bean
+    //                                             ---------
     public boolean isJsonBeanValidationErrorWarned() {
         return jsonBeanValidationErrorWarned;
     }
@@ -123,5 +147,12 @@ public class ResponseReflectingOption {
 
     public boolean isJsonEmptyBodyTreatedAsEmptyObject() {
         return jsonEmptyBodyTreatedAsEmptyObject;
+    }
+
+    // -----------------------------------------------------
+    //                                           JSON Engine
+    //                                           -----------
+    public OptionalThing<Function<ActionRuntime, RealJsonEngine>> getResponseJsonEngineProvider() {
+        return responseJsonEngineProvider;
     }
 }

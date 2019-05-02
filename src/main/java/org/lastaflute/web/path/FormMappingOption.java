@@ -27,7 +27,9 @@ import java.util.function.Function;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
+import org.lastaflute.core.json.engine.RealJsonEngine;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.ruts.process.populate.FormSimpleTextParameterFilter;
 import org.lastaflute.web.ruts.process.populate.FormYourCollectionResource;
 
@@ -48,6 +50,7 @@ public class FormMappingOption {
     protected List<FormYourCollectionResource> yourCollectionResourceList; // null allowed
     protected OptionalThing<DateTimeFormatter> zonedDateTimeFormatter = OptionalThing.empty();
     protected OptionalThing<Function<Map<String, Object>, Map<String, Object>>> requestParameterMapFilter = OptionalThing.empty();
+    protected OptionalThing<Function<ActionRuntime, RealJsonEngine>> requestJsonEngineProvider = OptionalThing.empty();
 
     // ===================================================================================
     //                                                                              Facade
@@ -130,6 +133,17 @@ public class FormMappingOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                           JSON Engine
+    //                                           -----------
+    public FormMappingOption parseJsonBy(Function<ActionRuntime, RealJsonEngine> requestJsonEngineProvider) {
+        if (requestJsonEngineProvider == null) {
+            throw new IllegalArgumentException("The argument 'requestJsonEngineProvider' should not be null.");
+        }
+        this.requestJsonEngineProvider = OptionalThing.of(requestJsonEngineProvider);
+        return this;
+    }
+
     // ===================================================================================
     //                                                                      Basic Override
     //                                                                      ==============
@@ -138,7 +152,7 @@ public class FormMappingOption {
         final String title = DfTypeUtil.toClassTitle(this);
         return title + ":{" + keepEmptyStringParameter + ", " + simpleTextParameterFilter + ", " + undefinedParameterError + ", "
                 + indefinableParameterSet + ", " + yourCollectionResourceList + ", " + zonedDateTimeFormatter + ", "
-                + requestParameterMapFilter + "}";
+                + requestParameterMapFilter + ", " + requestJsonEngineProvider + "}";
     }
 
     // ===================================================================================
@@ -188,5 +202,12 @@ public class FormMappingOption {
     //                                         -------------
     public OptionalThing<Function<Map<String, Object>, Map<String, Object>>> getRequestParameterMapFilter() {
         return requestParameterMapFilter;
+    }
+
+    // -----------------------------------------------------
+    //                                           JSON Engine
+    //                                           -----------
+    public OptionalThing<Function<ActionRuntime, RealJsonEngine>> getRequestJsonEngineProvider() {
+        return requestJsonEngineProvider;
     }
 }

@@ -23,6 +23,7 @@ import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonEngineResource;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.json.JsonMappingOption;
+import org.lastaflute.core.json.JsonObjectConvertible;
 import org.lastaflute.core.json.engine.RealJsonEngine;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
@@ -249,6 +250,7 @@ public class ActionResponseReflector {
             validateJsonBeanIfNeeds(response.getJsonResult(), response); // not lazy to be in action transaction
         }
         // lazy because of same reason as HTML response (see the comment)
+        final ResponseReflectingOption option = adjustResponseReflecting();
         return createSelfContainedJourney(() -> {
             adjustActionResponseJustBefore(response);
             final ResponseManager responseManager = requestManager.getResponseManager();
@@ -256,7 +258,7 @@ public class ActionResponseReflector {
             setupActionResponseHttpStatus(responseManager, response);
             final String json;
             if (response.isReturnAsEmptyBody()) { // asEmptyBody()
-                if (adjustResponseReflecting().isJsonEmptyBodyTreatedAsEmptyObject()) { // for e.g. client fitting
+                if (option.isJsonEmptyBodyTreatedAsEmptyObject()) { // for e.g. client fitting
                     json = "{}"; // is empty object
                 } else { // basically here if empty body
                     return; // no write
@@ -265,17 +267,20 @@ public class ActionResponseReflector {
                 if (response.isReturnAsJsonDirectly()) { // asJsonDirectly()
                     json = response.getDirectJson().get();
                 } else { // mainly here
-                    final JsonManager jsonManager = requestManager.getJsonManager();
+                    // 1. use engine by switchJsonEngine() if specifed
+                    // 2. use engine by switchMappingOption() (with newRuledEngine()) if specified
+                    // 3. use engine by option if specified
+                    // 4. use JsonManager
                     final Object jsonResult = response.getJsonResult();
                     final OptionalThing<Supplier<RealJsonEngine>> jsonEngineSwitcher = response.getJsonEngineSwitcher();
                     if (jsonEngineSwitcher.isPresent()) { // switchJsonEngine() for different rule action
-                        json = toJsonBySwitchedJsonEngine(jsonManager, jsonResult, jsonEngineSwitcher.get());
+                        json = toJsonBySwitchedJsonEngine(jsonResult, jsonEngineSwitcher.get());
                     } else { // mainly here
                         final OptionalThing<Consumer<JsonMappingOption>> mappingOptionSwitcher = response.getMappingOptionSwitcher();
                         if (mappingOptionSwitcher.isPresent()) { // switchMappingOption(), e.g. SwaggerAction@json()
-                            json = toJsonBySwitchedMappingOption(jsonManager, jsonResult, mappingOptionSwitcher.get());
+                            json = toJsonBySwitchedMappingOption(jsonResult, mappingOptionSwitcher.get());
                         } else { // mainly here
-                            json = jsonManager.toJson(jsonResult);
+                            json = chooseJsonObjectConvertible(option).toJson(jsonResult);
                         }
                     }
                 }
@@ -322,7 +327,7 @@ public class ActionResponseReflector {
     // -----------------------------------------------------
     //                                       Switched Engine
     //                                       ---------------
-    protected String toJsonBySwitchedJsonEngine(JsonManager jsonManager, Object jsonResult, Supplier<RealJsonEngine> jsonEngineSwitcher) {
+    protected String toJsonBySwitchedJsonEngine(Object jsonResult, Supplier<RealJsonEngine> jsonEngineSwitcher) {
         final RealJsonEngine switchedEngine = jsonEngineSwitcher.get(); // application's callback
         if (switchedEngine == null) { // check for user method
             throw new IllegalStateException("The jsonEngineSwitcher cannot return null: " + jsonEngineSwitcher);
@@ -330,13 +335,23 @@ public class ActionResponseReflector {
         return switchedEngine.toJson(jsonResult);
     }
 
-    protected String toJsonBySwitchedMappingOption(JsonManager jsonManager, Object jsonResult, Consumer<JsonMappingOption> switcher) {
+    protected String toJsonBySwitchedMappingOption(Object jsonResult, Consumer<JsonMappingOption> switcher) {
         final JsonEngineResource resource = new JsonEngineResource();
         final JsonMappingOption option = new JsonMappingOption();
         switcher.accept(option); // application's callback
         resource.acceptMappingOption(option);
+        final JsonManager jsonManager = requestManager.getJsonManager();
         final RealJsonEngine ruledEngine = jsonManager.newRuledEngine(resource);
         return ruledEngine.toJson(jsonResult);
+    }
+
+    // -----------------------------------------------------
+    //                                         Chosen Engine
+    //                                         -------------
+    protected JsonObjectConvertible chooseJsonObjectConvertible(ResponseReflectingOption option) {
+        return option.getResponseJsonEngineProvider()
+                .map(provider -> (JsonObjectConvertible) provider.apply(runtime))
+                .orElseGet(() -> requestManager.getJsonManager());
     }
 
     // ===================================================================================

@@ -15,8 +15,6 @@
  */
 package org.lastaflute.core.json;
 
-import java.lang.reflect.ParameterizedType;
-
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.control.JsonControlMeta;
 import org.lastaflute.core.json.engine.RealJsonEngine;
@@ -24,47 +22,13 @@ import org.lastaflute.core.json.engine.RealJsonEngine;
 /**
  * @author jflute
  */
-public interface JsonManager {
-
-    // ===================================================================================
-    //                                                                        JSON Frmo/To
-    //                                                                        ============
-    /**
-     * Convert from the JSON string to the specified bean.
-     * @param <BEAN> The type of JSON bean.
-     * @param json The string of JSON to be parsed. (NotNull, EmptyAllowed: returns new-only)
-     * @param beanType The type of bean to convert, should have default constructor. (NotNull)
-     * @return The new-created bean that has the JSON values. (NotNull: if empty JSON, new-only)
-     */
-    <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
-
-    /**
-     * Convert from the JSON string to the parameterized bean with typo.
-     * You need to specify parameterized type like this:
-     * <pre>
-     * List&lt;SeaBean&gt; <span style="color: #553000">seaList</span> = fromJsonParameteried(<span style="color: #553000">json</span>, new ParameterizedRef<span style="color: #994747">&lt;List&lt;SeaBean&gt;&gt;</span>(){
-     * }.getType());
-     * 
-     * MaihamaBean&lt;SeaBean&gt; maihama = fromJsonParameteried(<span style="color: #553000">json</span>, new ParameterizedRef<span style="color: #994747">&lt;MaihamaBean&lt;SeaBean&gt;&gt;</span>() {
-     * }.getType());
-     * </pre>
-     * @param <BEAN> The type of JSON bean as root.
-     * @param json The string of JSON to be parsed. (NotNull, EmptyAllowed: returns new-only)
-     * @param parameterizedType The parameterized type of bean to convert, should have default constructor. (NotNull)
-     * @return The new-created bean that has the JSON values, also List and Map. (NotNull: if empty JSON, new-only)
-     */
-    <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType);
-
-    /**
-     * Convert from the source object to JSON string.
-     * @param bean The instance of bean to encode. (NotNull)
-     * @return The encoded JSON string. (NotNull)
-     */
-    String toJson(Object bean);
+public interface JsonManager extends JsonObjectConvertible {
 
     // ===================================================================================
     //                                                                        JSON Control
     //                                                                        ============
+    // #for_now RemoteApi uses this so waiting its time by jflute (2019/05/02)
+    // (first use the new method in RemoteApi, second delete the old method)
     /**
      * Create new JSON engine as another rule. (old method, use the overload method) <br>
      * (inheriting basic settings e.g. serializeNulls, prettyPrinting)

@@ -15,44 +15,13 @@
  */
 package org.lastaflute.core.json.engine;
 
-import java.lang.reflect.ParameterizedType;
+import org.lastaflute.core.json.JsonObjectConvertible;
 
 /**
  * The real engine of JSON.
  * @author jflute
  */
-public interface RealJsonEngine {
-
-    /**
-     * Convert from the JSON string to the bean new-created by the specified type.
-     * @param <BEAN> The type of JSON bean.
-     * @param json The string of JSON to be parsed. (NotNull, EmptyAllowed: returns new-only)
-     * @param beanType The type of bean to convert, should have default constructor. (NotNull)
-     * @return The new-created bean that has the JSON values. (NotNull: if empty JSON, new-only)
-     */
-    <BEAN> BEAN fromJson(String json, Class<BEAN> beanType);
-
-    /**
-     * Convert from the JSON string to the parameterized bean.
-     * You need to specify parameterized type like this:
-     * <pre>
-     * List&lt;SeaBean&gt; <span style="color: #553000">seaList</span> = fromJsonParameteried(<span style="color: #553000">json</span>, new ParameterizedRef<span style="color: #994747">&lt;List&lt;SeaBean&gt;&gt;</span>(){
-     * }.getType());
-     * 
-     * MaihamaBean&lt;SeaBean&gt; maihama = fromJsonParameteried(<span style="color: #553000">json</span>, new ParameterizedRef<span style="color: #994747">&lt;MaihamaBean&lt;SeaBean&gt;&gt;</span>() {
-     * }.getType());
-     * </pre>
-     * @param <BEAN> The type of JSON bean as root.
-     * @param json The string of JSON to be parsed. (NotNull, EmptyAllowed: returns new-only)
-     * @param parameterizedType The parameterized type of bean to convert, should have default constructor. (NotNull)
-     * @return The new-created bean that has the JSON values, also List and Map. (NotNull: if empty JSON, new-only)
-     */
-    <BEAN> BEAN fromJsonParameteried(String json, ParameterizedType parameterizedType);
-
-    /**
-     * Convert from the source object to JSON string.
-     * @param bean The instance of bean to encode. (NotNull)
-     * @return The encoded JSON string. (NotNull)
-     */
-    String toJson(Object bean);
+public interface RealJsonEngine extends JsonObjectConvertible {
+    // The "real" means that the engine has its own rule for something (JsonManager's real engine)...
+    // It may be unneeded but no refactoring for compatible and to keep JsonManager's naming independence.
 }
