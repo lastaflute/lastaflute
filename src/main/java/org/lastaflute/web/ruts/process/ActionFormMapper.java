@@ -39,7 +39,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.jdbc.Classification;
-import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
@@ -60,7 +59,6 @@ import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.FormMappingOption;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
-import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.inoutlogging.InOutLogKeeper;
 import org.lastaflute.web.ruts.multipart.MultipartRequestHandler;
 import org.lastaflute.web.ruts.multipart.MultipartRequestWrapper;
@@ -80,7 +78,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @author modified by jflute (originated in Seasar and Struts)
  */
-public class ActionFormMapper {
+public class ActionFormMapper { // created per request (since 1.1.2)
 
     // ===================================================================================
     //                                                                          Definition
@@ -101,33 +99,54 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    // simpleton so cannot keep request instance...
-    // (I wonder this mapper should be request scope because of too many arguments)
-    protected final ModuleConfig moduleConfig;
+    // -----------------------------------------------------
+    //                                       Framework Basic
+    //                                       ---------------
     protected final FwAssistantDirector assistantDirector;
     protected final RequestManager requestManager;
+
+    // -----------------------------------------------------
+    //                                       Current Request
+    //                                       ---------------
+    protected final ActionRuntime runtime; // current action information
+    protected final VirtualForm virtualForm; // *updated here, which has real form
+
+    // -----------------------------------------------------
+    //                                            Supplement
+    //                                            ----------
+    protected final FormMappingOption option;
     protected final FormCoinsHelper coinsHelper;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionFormMapper(ModuleConfig moduleConfig, FwAssistantDirector assistantDirector, RequestManager requestManager) {
-        this.moduleConfig = moduleConfig;
+    public ActionFormMapper(FwAssistantDirector assistantDirector, RequestManager requestManager, ActionRuntime runtime,
+            VirtualForm virtualForm) {
         this.assistantDirector = assistantDirector;
         this.requestManager = requestManager;
-        this.coinsHelper = new FormCoinsHelper(requestManager);
+        this.runtime = runtime;
+        this.virtualForm = virtualForm;
+        this.option = adjustFormMapping(); // not null, should be after assistantDirector setting
+        this.coinsHelper = createFormCoinsHelper(); // not null, should be after assistantDirector, requestManager setting
+    }
+
+    protected FormMappingOption adjustFormMapping() {
+        final FormMappingOption option = getAdjustmentProvider().adjustFormMapping();
+        return option != null ? option : NULLOBJ_FORM_MAPPING_OPTION;
+    }
+
+    protected FormCoinsHelper createFormCoinsHelper() {
+        // keep singleton-able implementation to be simple
+        // but actually prototype here for overridding and to be close in this class
+        return new FormCoinsHelper(assistantDirector, requestManager);
     }
 
     // ===================================================================================
     //                                                                            Populate
     //                                                                            ========
-    public void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> optForm) throws ServletException {
-        if (!optForm.isPresent()) {
-            return;
-        }
-        final FormMappingOption option = adjustFormMapping(); // not null
-        final VirtualForm virtualForm = optForm.get();
-        if (handleJsonBody(runtime, virtualForm, option)) {
+    public void populateParameter() throws ServletException { // *updates real form in virtual form
+        // very sensitive logic so no big refactoring
+        if (handleJsonBody()) {
             return;
         }
         MultipartRequestHandler multipartHandler = null;
@@ -141,15 +160,15 @@ public class ActionFormMapper {
             }
         }
         final Object realForm = virtualForm.getRealForm(); // not null
-        final Map<String, Object> parameterMap = prepareRequestParameterMap(multipartHandler, option);
+        final Map<String, Object> parameterMap = prepareRequestParameterMap(multipartHandler);
         try {
             for (Entry<String, Object> entry : parameterMap.entrySet()) {
                 final String name = entry.getKey();
                 final Object value = entry.getValue();
                 try {
-                    setProperty(runtime, virtualForm, realForm, name, value, /*pathSb*/null, option, null, null);
+                    setProperty(realForm, name, value, /*pathSb*/null, null, null);
                 } catch (Throwable cause) {
-                    handleIllegalPropertyPopulateException(realForm, name, value, runtime, cause); // adjustment here
+                    handleIllegalPropertyPopulateException(realForm, name, value, cause); // adjustment here
                 }
             }
         } finally {
@@ -179,12 +198,11 @@ public class ActionFormMapper {
         return handler;
     }
 
-    protected Map<String, Object> prepareRequestParameterMap(MultipartRequestHandler multipartHandler, FormMappingOption option) {
+    protected Map<String, Object> prepareRequestParameterMap(MultipartRequestHandler multipartHandler) {
         return coinsHelper.prepareRequestParameterMap(multipartHandler, option);
     }
 
-    protected void handleIllegalPropertyPopulateException(Object form, String name, Object value, ActionRuntime runtime, Throwable cause)
-            throws ServletException {
+    protected void handleIllegalPropertyPopulateException(Object form, String name, Object value, Throwable cause) throws ServletException {
         coinsHelper.handleIllegalPropertyPopulateException(form, name, value, runtime, cause);
     }
 
@@ -195,35 +213,35 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                           JSON Body
     //                                                                           =========
-    protected boolean handleJsonBody(ActionRuntime runtime, VirtualForm virtualForm, FormMappingOption option) {
+    protected boolean handleJsonBody() {
         final ActionFormMeta formMeta = virtualForm.getFormMeta();
         if (formMeta.isJsonBodyMapping()) {
             if (formMeta.isRootSymbolForm()) {
-                mappingJsonBody(runtime, virtualForm, prepareJsonFromRequestBody(virtualForm), option);
+                mappingJsonBody(prepareJsonFromRequestBody());
             } else if (formMeta.isTypedListForm()) {
-                mappingListJsonBody(runtime, virtualForm, prepareJsonFromRequestBody(virtualForm), option);
+                mappingListJsonBody(prepareJsonFromRequestBody());
             }
             // basically no way here (but no exception just in case)
         }
         return false;
     }
 
-    protected String prepareJsonFromRequestBody(VirtualForm virtualForm) {
+    protected String prepareJsonFromRequestBody() {
         try {
             final String body = requestManager.getRequestBody();
             if (logger.isDebugEnabled()) {
                 logger.debug("#flow ...Parsing JSON from request body:{}", buildJsonBodyDebugDisplay(body));
             }
-            keepRequestBodyForErrorFlush(virtualForm, body);
+            keepRequestBodyForErrorFlush(body);
             keepRequestBodyForInOutLoggingIfNeeds(body, "json");
             return body;
         } catch (RuntimeException e) {
-            throwJsonBodyCannotReadFromRequestException(virtualForm, e);
+            throwJsonBodyCannotReadFromRequestException(e);
             return null; // unreachable
         }
     }
 
-    protected void throwJsonBodyCannotReadFromRequestException(VirtualForm virtualForm, RuntimeException e) {
+    protected void throwJsonBodyCannotReadFromRequestException(RuntimeException e) {
         coinsHelper.throwJsonBodyCannotReadFromRequestException(virtualForm, e);
     }
 
@@ -231,7 +249,7 @@ public class ActionFormMapper {
         return coinsHelper.buildJsonBodyDebugDisplay(value);
     }
 
-    protected void keepRequestBodyForErrorFlush(VirtualForm virtualForm, String body) {
+    protected void keepRequestBodyForErrorFlush(String body) {
         // request body can be read only once so needs to keep it for error logging
         requestManager.setAttribute(LastaWebKey.REQUEST_BODY_KEY, new WholeShowErrorFlushAttribute(body));
     }
@@ -243,43 +261,42 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                             Bean JSON
     //                                             ---------
-    protected void mappingJsonBody(ActionRuntime runtime, VirtualForm virtualForm, String json, FormMappingOption option) {
-        option.getRequestJsonEngineProvider();
+    protected void mappingJsonBody(String json) {
         try {
             final Class<?> formType = virtualForm.getFormMeta().getRootFormType(); // called only when root here
-            final Object fromJson = chooseJsonObjectConvertible(runtime, option).fromJson(json, formType);
-            acceptJsonRealForm(virtualForm, fromJson);
+            final Object fromJson = chooseJsonObjectConvertible().fromJson(json, formType);
+            acceptJsonRealForm(fromJson);
         } catch (RuntimeException e) {
-            throwJsonBodyParseFailureException(runtime, virtualForm, json, e);
+            throwJsonBodyParseFailureException(json, e);
         }
     }
 
-    protected void throwJsonBodyParseFailureException(ActionRuntime runtime, VirtualForm virtualForm, String json, RuntimeException e) {
+    protected void throwJsonBodyParseFailureException(String json, RuntimeException e) {
         coinsHelper.throwJsonBodyParseFailureException(runtime, virtualForm, json, e);
     }
 
     // -----------------------------------------------------
     //                                             List JSON
     //                                             ---------
-    protected void mappingListJsonBody(ActionRuntime runtime, VirtualForm virtualForm, String json, FormMappingOption option) {
+    protected void mappingListJsonBody(String json) {
         try {
             final ActionFormMeta formMeta = virtualForm.getFormMeta();
             final ParameterizedType pt = formMeta.getListFormParameterParameterizedType().get(); // already checked
-            final List<Object> fromJsonList = chooseJsonObjectConvertible(runtime, option).fromJsonParameteried(json, pt);
-            acceptJsonRealForm(virtualForm, fromJsonList);
+            final List<Object> fromJsonList = chooseJsonObjectConvertible().fromJsonParameteried(json, pt);
+            acceptJsonRealForm(fromJsonList);
         } catch (RuntimeException e) {
-            throwListJsonBodyParseFailureException(runtime, virtualForm, json, e);
+            throwListJsonBodyParseFailureException(json, e);
         }
     }
 
-    protected void throwListJsonBodyParseFailureException(ActionRuntime runtime, VirtualForm virtualForm, String json, RuntimeException e) {
+    protected void throwListJsonBodyParseFailureException(String json, RuntimeException e) {
         coinsHelper.throwListJsonBodyParseFailureException(runtime, virtualForm, json, e);
     }
 
     // -----------------------------------------------------
     //                                          Assist Logic
     //                                          ------------
-    protected void acceptJsonRealForm(VirtualForm virtualForm, Object realForm) {
+    protected void acceptJsonRealForm(Object realForm) {
         virtualForm.acceptRealForm(realForm);
     }
 
@@ -287,57 +304,51 @@ public class ActionFormMapper {
     //                                                                        Property Set
     //                                                                        ============
     /**
-     * @param runtime The runtime information of currently requested action. (NotNull)
-     * @param virtualForm The virtual instance of form, which has real form. (NotNull)
      * @param bean The bean instance that has properties for request parameters e.g. form (NullAllowed: if null, do nothing)
      * @param name The name of property for the parameter. (NotNull)
      * @param value The value of the request parameter (NullAllowed, EmptyAllowed)
      * @param pathSb The property path that has nested structure info e.g. sea.land.iksName (NullAllowed: if first level)
-     * @param option The option of form mapping. (NotNull)
      * @param parentBean The parent bean of current property's bean, for e.g. map property (NullAllowed: if first level)
      * @param parentName The parent property name of current property, for e.g. map property (NullAllowed: if first level)
      */
-    protected void setProperty(ActionRuntime runtime, VirtualForm virtualForm, Object bean, String name, Object value, StringBuilder pathSb,
-            FormMappingOption option, Object parentBean, String parentName) { // may be recursively called
+    protected void setProperty(Object bean, String name, Object value, StringBuilder pathSb, Object parentBean, String parentName) { // may be recursively called
         if (bean == null) { // e.g. recursive call and no property
             return;
         }
-        doSetProperty(runtime, virtualForm, bean, name, value, parentBean, parentName, pathSb != null ? pathSb : new StringBuilder(),
-                option);
+        doSetProperty(bean, name, value, parentBean, parentName, pathSb != null ? pathSb : new StringBuilder());
     }
 
-    protected void doSetProperty(ActionRuntime runtime, VirtualForm virtualForm, Object bean, String name, Object value, Object parentBean,
-            String parentName, StringBuilder pathSb, FormMappingOption option) {
+    protected void doSetProperty(Object bean, String name, Object value, Object parentBean, String parentName, StringBuilder pathSb) {
         final int nestedIndex = name.indexOf(NESTED_DELIM); // e.g. sea.mythica
         final int indexedIndex = name.indexOf(INDEXED_DELIM); // e.g. sea[0]
         final int mappedIndex = name.indexOf(MAPPED_DELIM); // e.g. sea(over)
         pathSb.append(pathSb.length() > 0 ? "." : "").append(name);
         if (nestedIndex < 0 && indexedIndex < 0 && mappedIndex < 0) { // as simple
-            setSimpleProperty(runtime, virtualForm, bean, name, value, pathSb, option, parentBean, parentName);
+            setSimpleProperty(bean, name, value, pathSb, parentBean, parentName);
         } else {
             final int minIndex = minIndex(minIndex(nestedIndex, indexedIndex), mappedIndex);
             if (minIndex == nestedIndex) { // e.g. sea.mythica
                 final String front = name.substring(0, minIndex);
-                final Object simpleProperty = prepareSimpleProperty(runtime, bean, front);
+                final Object simpleProperty = prepareSimpleProperty(bean, front);
                 final String rear = name.substring(minIndex + 1);
-                setProperty(runtime, virtualForm, simpleProperty, rear, value, pathSb, option, bean, front); // *recursive
+                setProperty(simpleProperty, rear, value, pathSb, bean, front); // *recursive
             } else if (minIndex == indexedIndex) { // e.g. sea[0]
                 final IndexParsedResult result = parseIndex(name.substring(indexedIndex + 1)); // e.g. "0]"
                 final int[] resultIndexes = result.indexes;
                 final String resultName = result.name;
                 final String front = name.substring(0, indexedIndex);
                 if (resultName == null || resultName.isEmpty()) { // e.g. sea[0]
-                    setIndexedProperty(bean, front, resultIndexes, value, option);
+                    setIndexedProperty(bean, front, resultIndexes, value);
                 } else { // e.g. sea[0][0], sea[0].mystic
-                    final Object indexedProperty = prepareIndexedProperty(bean, front, resultIndexes, option);
-                    setProperty(runtime, virtualForm, indexedProperty, resultName, value, pathSb, option, bean, front); // *recursive
+                    final Object indexedProperty = prepareIndexedProperty(bean, front, resultIndexes);
+                    setProperty(indexedProperty, resultName, value, pathSb, bean, front); // *recursive
                 }
             } else { // map e.g. sea(over)
                 final int endIndex = name.indexOf(MAPPED_DELIM2, mappedIndex); // sea(over)
                 final String front = name.substring(0, mappedIndex);
                 final String middle = name.substring(mappedIndex + 1, endIndex);
                 final String rear = name.substring(endIndex + 1);
-                setProperty(runtime, virtualForm, bean, front + "." + middle + rear, value, pathSb, option, bean, front); // *recursive
+                setProperty(bean, front + "." + middle + rear, value, pathSb, bean, front); // *recursive
             }
         }
     }
@@ -354,7 +365,7 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                     Simple Property
     //                                                                     ===============
-    protected Object prepareSimpleProperty(ActionRuntime runtime, Object bean, String name) {
+    protected Object prepareSimpleProperty(Object bean, String name) {
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
         if (!beanDesc.hasPropertyDesc(name)) {
             return null;
@@ -381,34 +392,33 @@ public class ActionFormMapper {
         return value;
     }
 
-    protected void setSimpleProperty(ActionRuntime runtime, VirtualForm virtualForm, Object bean, String name, Object value,
-            StringBuilder pathSb, FormMappingOption option, Object parentBean, String parentName) {
+    protected void setSimpleProperty(Object bean, String name, Object value, StringBuilder pathSb, Object parentBean, String parentName) {
         if (bean instanceof Map) {
             @SuppressWarnings("unchecked")
             final Map<String, Object> map = (Map<String, Object>) bean;
-            setMapProperty(map, name, value, option, parentBean, parentName);
+            setMapProperty(map, name, value, parentBean, parentName);
             return;
         }
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
         if (!beanDesc.hasPropertyDesc(name)) {
-            handleUndefinedParameter(bean, name, value, option, beanDesc);
+            handleUndefinedParameter(bean, name, value, beanDesc);
             return;
         }
         final PropertyDesc pd = beanDesc.getPropertyDesc(name);
         if (!pd.isWritable()) {
-            handleUndefinedParameter(bean, name, value, option, beanDesc);
+            handleUndefinedParameter(bean, name, value, beanDesc);
             return;
         }
         try {
-            mappingToProperty(runtime, virtualForm, bean, name, value, pathSb, option, pd);
+            mappingToProperty(bean, name, value, pathSb, pd);
         } catch (RuntimeException e) {
             handleMappingFailureException(beanDesc, name, value, pathSb, pd, e);
         }
     }
 
-    protected void handleUndefinedParameter(Object bean, String name, Object value, FormMappingOption option, BeanDesc beanDesc) {
+    protected void handleUndefinedParameter(Object bean, String name, Object value, BeanDesc beanDesc) {
         if (option.isUndefinedParameterError() && !option.getIndefinableParameterSet().contains(name)) {
-            throwRequestUndefinedParameterInFormException(bean, name, value, option, beanDesc);
+            throwRequestUndefinedParameterInFormException(bean, name, value, beanDesc);
         }
     }
 
@@ -416,36 +426,31 @@ public class ActionFormMapper {
     //                                   Mapping to Property
     //                                   -------------------
     /**
-     * @param runtime The runtime information of currently requested action. (NotNull)
-     * @param virtualForm The virtual instance of form, which has real form. (NotNull
      * @param bean The bean instance that has properties for request parameters e.g. form (NotNull)
      * @param name The name of property for the parameter. (NotNull)
      * @param value The value of the request parameter (NullAllowed, EmptyAllowed)
      * @param pathSb The property path that has nested structure info e.g. sea.land.iksName (NotNull)
-     * @param option The option of form mapping. (NotNull)
      * @param pd The description for the property. (NotNull)
      */
-    protected void mappingToProperty(ActionRuntime runtime, VirtualForm virtualForm, Object bean, String name, Object value,
-            StringBuilder pathSb, FormMappingOption option, PropertyDesc pd) {
+    protected void mappingToProperty(Object bean, String name, Object value, StringBuilder pathSb, PropertyDesc pd) {
         final Class<?> propertyType = pd.getPropertyType();
         final Object mappedValue;
         if (propertyType.isArray()) { // fixedly String #for_now e.g. public String[] strArray; so use List<>
-            mappedValue = prepareStringArray(value, name, propertyType, option); // plain mapping to array, e.g. JSON not supported
+            mappedValue = prepareStringArray(value, name, propertyType); // plain mapping to array, e.g. JSON not supported
         } else { // e.g. List, ImmutableList, MutableList, String, Integer, ...
             // process of your collections should be first because MutableList is java.util.List
-            final Object yourCollection = prepareYourCollection(runtime, virtualForm, bean, name, value, pathSb, option, pd);
+            final Object yourCollection = prepareYourCollection(bean, name, value, pathSb, pd);
             if (yourCollection != null) { // e.g. ImmutableList (Eclipse Collections)
                 mappedValue = yourCollection;
             } else { // mainly here
                 if (List.class.isAssignableFrom(propertyType)) { // e.g. public List<...> anyList;
-                    mappedValue = prepareObjectList(runtime, virtualForm, bean, name, value, pathSb, option, pd);
+                    mappedValue = prepareObjectList(bean, name, value, pathSb, pd);
                 } else { // simple object types
                     final Object scalar = prepareObjectScalar(value);
                     if (isJsonParameterProperty(pd)) { // e.g. JsonPrameter for Object
-                        mappedValue = parseJsonParameterAsObject(runtime, virtualForm, bean, name, adjustAsJsonString(scalar), pathSb,
-                                option, pd);
+                        mappedValue = parseJsonParameterAsObject(bean, name, adjustAsJsonString(scalar), pathSb, pd);
                     } else { // e.g. String, Integer, LocalDate, CDef, MultipartFormFile, ...
-                        mappedValue = prepareNativeValue(runtime, virtualForm, bean, name, scalar, pathSb, option, pd);
+                        mappedValue = prepareNativeValue(bean, name, scalar, pathSb, pd);
                     }
                 }
             }
@@ -456,47 +461,46 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                        Array Property
     //                                        --------------
-    protected String[] prepareStringArray(Object value, String propertyName, Class<?> proeprtyType, FormMappingOption option) { // not null (empty if null)
+    protected String[] prepareStringArray(Object value, String propertyName, Class<?> proeprtyType) { // not null (empty if null)
         final String[] result;
         if (value != null && value instanceof String[]) {
             result = (String[]) value;
         } else {
             result = value != null ? new String[] { value.toString() } : EMPTY_STRING_ARRAY;
         }
-        return filterIfSimpleText(result, option, propertyName, proeprtyType);
+        return filterIfSimpleText(result, propertyName, proeprtyType);
     }
 
     // -----------------------------------------------------
     //                                         List Property
     //                                         -------------
-    protected List<?> prepareObjectList(ActionRuntime runtime, VirtualForm virtualForm, Object bean, String name, Object value,
-            StringBuilder pathSb, FormMappingOption option, PropertyDesc pd) {
+    protected List<?> prepareObjectList(Object bean, String name, Object value, StringBuilder pathSb, PropertyDesc pd) {
         final List<?> mappedValue;
         if (isJsonParameterProperty(pd)) { // e.g. public List<SeaJsonBean> jsonList;
             final Object scalar = prepareObjectScalar(value);
-            mappedValue = parseJsonParameterAsList(runtime, virtualForm, bean, name, adjustAsJsonString(scalar), pathSb, option, pd);
+            mappedValue = parseJsonParameterAsList(bean, name, adjustAsJsonString(scalar), pathSb, pd);
         } else { // e.g. List<String>, List<CDef.MemberStatus>
-            mappedValue = prepareSimpleElementList(virtualForm, bean, name, value, pathSb, option, pd);
+            mappedValue = prepareSimpleElementList(bean, name, value, pathSb, pd);
         }
         return mappedValue;
     }
 
-    protected List<? extends Object> prepareSimpleElementList(VirtualForm virtualForm, Object bean, String name, Object value,
-            StringBuilder pathSb, FormMappingOption option, PropertyDesc pd) {
+    protected List<? extends Object> prepareSimpleElementList(Object bean, String name, Object value, StringBuilder pathSb,
+            PropertyDesc pd) {
         final Class<?> propertyType = pd.getPropertyType();
-        final List<String> strList = prepareStringList(value, name, propertyType, option);
+        final List<String> strList = prepareStringList(value, name, propertyType);
         if (pd.isParameterized()) {
             final Class<?> elementType = pd.getParameterizedClassDesc().getGenericFirstType();
             final List<Object> mappedList = strList.stream().map(exp -> { // already filtered
-                return convertToNativeIfPossible(bean, name, exp, elementType, option);
+                return convertToNativeIfPossible(bean, name, exp, elementType);
             }).collect(Collectors.toList());
             return Collections.unmodifiableList(mappedList);
         }
         return strList;
     }
 
-    protected List<String> prepareStringList(Object value, String propertyName, Class<?> propertyType, FormMappingOption option) {
-        final String[] ary = prepareStringArray(value, propertyName, propertyType, option); // with filter
+    protected List<String> prepareStringList(Object value, String propertyName, Class<?> propertyType) {
+        final String[] ary = prepareStringArray(value, propertyName, propertyType); // with filter
         if (ary.length == 0) {
             return Collections.emptyList();
         }
@@ -516,8 +520,7 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                      Your Collections
     //                                      ----------------
-    protected Object prepareYourCollection(ActionRuntime runtime, VirtualForm virtualForm, Object bean, String name, Object value,
-            StringBuilder pathSb, FormMappingOption option, PropertyDesc pd) {
+    protected Object prepareYourCollection(Object bean, String name, Object value, StringBuilder pathSb, PropertyDesc pd) {
         final List<FormYourCollectionResource> yourCollections = option.getYourCollections();
         if (yourCollections.isEmpty()) {
             return null; // no settings of your collections
@@ -527,7 +530,7 @@ public class ActionFormMapper {
             if (!propertyType.equals(yourCollection.getYourType())) { // just type in form mapping (to avoid complexity)
                 continue;
             }
-            final List<?> objectList = prepareObjectList(runtime, virtualForm, bean, name, value, pathSb, option, pd);
+            final List<?> objectList = prepareObjectList(bean, name, value, pathSb, pd);
             final Iterable<? extends Object> applied = yourCollection.getYourCollectionCreator().apply(objectList);
             final Object mappedValue;
             if (applied instanceof List<?>) {
@@ -558,8 +561,7 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                          Map Property
     //                                          ------------
-    protected void setMapProperty(Map<String, Object> map, String name, Object value, FormMappingOption option, Object parentBean,
-            String parentName) {
+    protected void setMapProperty(Map<String, Object> map, String name, Object value, Object parentBean, String parentName) {
         final boolean strArray = isMapValueStringArray(parentBean, parentName);
         final Object registered;
         if (value instanceof String[]) {
@@ -568,7 +570,7 @@ public class ActionFormMapper {
         } else {
             registered = strArray ? (value != null ? new String[] { value.toString() } : EMPTY_STRING_ARRAY) : value;
         }
-        map.put(name, filterIfSimpleText(registered, option, name, map.getClass()));
+        map.put(name, filterIfSimpleText(registered, name, map.getClass()));
     }
 
     protected boolean isMapValueStringArray(Object parentBean, String parentName) {
@@ -618,8 +620,7 @@ public class ActionFormMapper {
         return false;
     }
 
-    protected List<?> parseJsonParameterAsList(ActionRuntime runtime, VirtualForm virtualForm, Object bean, String name, String json,
-            StringBuilder pathSb, FormMappingOption option, PropertyDesc pd) {
+    protected List<?> parseJsonParameterAsList(Object bean, String name, String json, StringBuilder pathSb, PropertyDesc pd) {
         if (!pd.isParameterized()) { // e.g. public List anyList;
             throwListJsonPropertyNonGenericException(bean, name, json, pd); // program mistake
             return null; // unreachable
@@ -636,18 +637,17 @@ public class ActionFormMapper {
             return null; // unreachable
         }
         try {
-            return (List<?>) chooseJsonObjectConvertible(runtime, option).fromJsonParameteried(json, paramedType); // e.g. public List<SeaBean> beanList;
+            return (List<?>) chooseJsonObjectConvertible().fromJsonParameteried(json, paramedType); // e.g. public List<SeaBean> beanList;
         } catch (RuntimeException e) {
             throwListJsonParameterParseFailureException(bean, name, json, paramedType, e);
             return null; // unreachable
         }
     }
 
-    protected Object parseJsonParameterAsObject(ActionRuntime runtime, VirtualForm virtualForm, Object bean, String name, String json,
-            StringBuilder pathSb, FormMappingOption option, PropertyDesc pd) {
+    protected Object parseJsonParameterAsObject(Object bean, String name, String json, StringBuilder pathSb, PropertyDesc pd) {
         final Class<?> propertyType = pd.getPropertyType();
         try {
-            return chooseJsonObjectConvertible(runtime, option).fromJson(json, propertyType);
+            return chooseJsonObjectConvertible().fromJson(json, propertyType);
         } catch (RuntimeException e) {
             throwJsonParameterParseFailureException(bean, name, json, propertyType, e);
             return null; // unreachable
@@ -697,16 +697,15 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                       Property Native
     //                                       ---------------
-    protected Object prepareNativeValue(ActionRuntime runtime, VirtualForm virtualForm, Object bean, String name, Object exp,
-            StringBuilder pathSb, FormMappingOption option, PropertyDesc pd) {
+    protected Object prepareNativeValue(Object bean, String name, Object exp, StringBuilder pathSb, PropertyDesc pd) {
         final Class<?> propertyType = pd.getPropertyType();
         try {
-            final Object filtered = filterIfSimpleText(exp, option, name, propertyType);
-            return convertToNativeIfPossible(bean, name, filtered, propertyType, option);
+            final Object filtered = filterIfSimpleText(exp, name, propertyType);
+            return convertToNativeIfPossible(bean, name, filtered, propertyType);
         } catch (RuntimeException e) {
             if (isTypeFailureException(e)) {
                 virtualForm.acceptTypeFailure(pathSb.toString(), exp); // to render failure value
-                handleTypeFailure(virtualForm, bean, name, exp, pd, propertyType, pathSb, e);
+                handleTypeFailure(bean, name, exp, pd, propertyType, pathSb, e);
                 return null;
             } else {
                 throw e;
@@ -714,7 +713,7 @@ public class ActionFormMapper {
         }
     }
 
-    protected Object convertToNativeIfPossible(Object bean, String name, Object exp, Class<?> propertyType, FormMappingOption option) {
+    protected Object convertToNativeIfPossible(Object bean, String name, Object exp, Class<?> propertyType) {
         // not to depend on conversion logic in BeanDesc
         final Object converted;
         if (propertyType.isPrimitive()) {
@@ -746,9 +745,9 @@ public class ActionFormMapper {
         } else if (LocalTime.class.isAssignableFrom(propertyType)) {
             converted = DfTypeUtil.toLocalTime(exp); // as flexible parsing
         } else if (ZonedDateTime.class.isAssignableFrom(propertyType)) {
-            converted = toZonedDateTime(exp, option);
+            converted = toZonedDateTime(exp);
         } else if (Boolean.class.isAssignableFrom(propertyType)) {
-            converted = toBoolean(exp, option);
+            converted = toBoolean(exp);
         } else if (isClassificationProperty(propertyType)) { // means CDef
             converted = toVerifiedClassification(bean, name, exp, propertyType);
         } else { // e.g. multipart form file or unsupported type
@@ -757,23 +756,23 @@ public class ActionFormMapper {
         return converted;
     }
 
-    protected Object toZonedDateTime(Object exp, FormMappingOption option) {
+    protected Object toZonedDateTime(Object exp) {
         final Object converted;
         if (exp == null || (exp instanceof String && ((String) exp).isEmpty())) {
             converted = null;
         } else {
             // DfTypeUtil.toZonedDateTime() needs to be adjusted at DBFlute-1.1.3 so parse by myself for now
             // (in the meantime, zoned date-time does not need flexble parsing because of almost transfer expression)
-            converted = ZonedDateTime.parse(exp.toString(), getZonedDateTimeFormatter(option));
+            converted = ZonedDateTime.parse(exp.toString(), getZonedDateTimeFormatter());
         }
         return converted;
     }
 
-    protected DateTimeFormatter getZonedDateTimeFormatter(FormMappingOption option) {
+    protected DateTimeFormatter getZonedDateTimeFormatter() {
         return option.getZonedDateTimeFormatter().orElseGet(() -> DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 
-    protected Object toBoolean(Object exp, FormMappingOption option) {
+    protected Object toBoolean(Object exp) {
         final Object converted;
         if (isCheckboxOn(exp)) {
             converted = true;
@@ -794,12 +793,12 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                          Type Failure
     //                                          ------------
-    protected void handleTypeFailure(VirtualForm virtualForm, Object bean, String name, Object exp, PropertyDesc pd, Class<?> propertyType,
-            StringBuilder pathSb, RuntimeException cause) {
+    protected void handleTypeFailure(Object bean, String name, Object exp, PropertyDesc pd, Class<?> propertyType, StringBuilder pathSb,
+            RuntimeException cause) {
         final ValidateTypeFailure annotation = extractTypeFailureAnnotation(pd);
         if (annotation != null) {
             if (ThreadCacheContext.exists()) { // just in case
-                saveTypeFailureBean(virtualForm, bean, name, exp, propertyType, pathSb, annotation, cause);
+                saveTypeFailureBean(bean, name, exp, propertyType, pathSb, annotation, cause);
             } else { // basically no way
                 logger.debug("*Not found the thread cache for validation of type failure: {}", pathSb, cause);
             }
@@ -827,11 +826,11 @@ public class ActionFormMapper {
         return null;
     }
 
-    protected Object saveTypeFailureBean(VirtualForm virtualForm, Object bean, String name, Object exp, Class<?> propertyType,
-            StringBuilder pathSb, ValidateTypeFailure annotation, RuntimeException cause) {
+    protected Object saveTypeFailureBean(Object bean, String name, Object exp, Class<?> propertyType, StringBuilder pathSb,
+            ValidateTypeFailure annotation, RuntimeException cause) {
         final String propertyPath = pathSb.toString();
         showTypeFailure(propertyPath, propertyType, exp, cause);
-        prepareTypeFailureBean(virtualForm).register(createTypeFailureElement(bean, propertyPath, propertyType, exp, annotation, cause));
+        prepareTypeFailureBean().register(createTypeFailureElement(bean, propertyPath, propertyType, exp, annotation, cause));
         return null; // set null to form here, checked later by thread local
     }
 
@@ -840,7 +839,7 @@ public class ActionFormMapper {
         logger.debug("...Registering type failure as validation: {}({}) '{}' {}", propertyPath, propertyType, exp, causeExp);
     }
 
-    protected TypeFailureBean prepareTypeFailureBean(VirtualForm virtualForm) { // thread cache already checked here
+    protected TypeFailureBean prepareTypeFailureBean() { // thread cache already checked here
         final Class<?> keyType = virtualForm.getFormMeta().getRootFormType();
         TypeFailureBean typeFailure = (TypeFailureBean) ThreadCacheContext.findValidatorTypeFailure(keyType);
         if (typeFailure == null) {
@@ -876,7 +875,7 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                    Filter Simple Text
     //                                    ------------------
-    protected <OBJ> OBJ filterIfSimpleText(OBJ value, FormMappingOption option, String propertyName, Class<?> propertyType) {
+    protected <OBJ> OBJ filterIfSimpleText(OBJ value, String propertyName, Class<?> propertyType) {
         if (value == null) {
             return null;
         }
@@ -993,7 +992,7 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                  Set Indexed Property
     //                                  --------------------
-    protected void setIndexedProperty(Object bean, String name, int[] indexes, Object value, FormMappingOption option) { // e.g. sea[0]
+    protected void setIndexedProperty(Object bean, String name, int[] indexes, Object value) { // e.g. sea[0]
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
         if (!beanDesc.hasPropertyDesc(name)) {
             return;
@@ -1019,15 +1018,15 @@ public class ActionFormMapper {
             setArrayValue(array, indexes, value);
         } else { // e.g. List, ImmutableList, MutableList
             // process of your collections should be first because MutableList is java.util.List 
-            final Optional<FormYourCollectionResource> yourCollection = findListableYourCollection(pd, option);
+            final Optional<FormYourCollectionResource> yourCollection = findListableYourCollection(pd);
             if (yourCollection.isPresent()) { // e.g. ImmutableList, MutableList
-                doSetIndexedPropertyListable(bean, name, indexes, value, beanDesc, pd, option, newList -> {
+                doSetIndexedPropertyListable(bean, name, indexes, value, beanDesc, pd, newList -> {
                     @SuppressWarnings("unchecked")
                     final List<Object> filtered = (List<Object>) yourCollection.get().getYourCollectionCreator().apply(newList);
                     return filtered;
                 });
             } else if (List.class.isAssignableFrom(propertyType)) {
-                doSetIndexedPropertyListable(bean, name, indexes, value, beanDesc, pd, option, Function.identity());
+                doSetIndexedPropertyListable(bean, name, indexes, value, beanDesc, pd, Function.identity());
             } else {
                 throwIndexedPropertyNotListArrayException(beanDesc, pd);
             }
@@ -1035,8 +1034,8 @@ public class ActionFormMapper {
     }
 
     protected void doSetIndexedPropertyListable(Object bean, String name, int[] indexes, Object value, BeanDesc beanDesc, PropertyDesc pd,
-            FormMappingOption option, Function<List<Object>, List<Object>> listInstanceFilter) {
-        handleIndexedPropertyListable(bean, name, indexes, beanDesc, pd, option, listInstanceFilter, list -> {
+            Function<List<Object>, List<Object>> listInstanceFilter) {
+        handleIndexedPropertyListable(bean, name, indexes, beanDesc, pd, listInstanceFilter, list -> {
             list.set(indexes[indexes.length - 1], value);
             return null; // unused
         });
@@ -1049,7 +1048,7 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                              Prepare Indexed Property
     //                              ------------------------
-    protected Object prepareIndexedProperty(Object bean, String name, int[] indexes, FormMappingOption option) {
+    protected Object prepareIndexedProperty(Object bean, String name, int[] indexes) {
         final BeanDesc beanDesc = BeanDescFactory.getBeanDesc(bean.getClass());
         if (!beanDesc.hasPropertyDesc(name)) {
             return null;
@@ -1072,15 +1071,15 @@ public class ActionFormMapper {
             return getArrayValue(array, indexes, elementType);
         } else { // e.g. List, ImmutableList, MutableList
             // process of your collections should be first because MutableList is java.util.List 
-            final Optional<FormYourCollectionResource> yourCollection = findListableYourCollection(pd, option);
+            final Optional<FormYourCollectionResource> yourCollection = findListableYourCollection(pd);
             if (yourCollection.isPresent()) { // e.g. ImmutableList, MutableList
-                return doPrepareIndexedPropertyListable(bean, name, indexes, beanDesc, pd, option, newList -> {
+                return doPrepareIndexedPropertyListable(bean, name, indexes, beanDesc, pd, newList -> {
                     @SuppressWarnings("unchecked")
                     final List<Object> filtered = (List<Object>) yourCollection.get().getYourCollectionCreator().apply(newList);
                     return filtered;
                 });
             } else if (List.class.isAssignableFrom(propertyType)) { // e.g. List (can be ArrayList)
-                return doPrepareIndexedPropertyListable(bean, name, indexes, beanDesc, pd, option, Function.identity());
+                return doPrepareIndexedPropertyListable(bean, name, indexes, beanDesc, pd, Function.identity());
             } else { // cannot treat it
                 throwIndexedPropertyNotListArrayException(beanDesc, pd);
                 return null; // unreachable
@@ -1093,8 +1092,8 @@ public class ActionFormMapper {
     }
 
     protected Object doPrepareIndexedPropertyListable(Object bean, String name, int[] indexes, BeanDesc beanDesc, PropertyDesc pd,
-            FormMappingOption option, Function<List<Object>, List<Object>> listInstanceFilter) {
-        return handleIndexedPropertyListable(bean, name, indexes, beanDesc, pd, option, listInstanceFilter, list -> {
+            Function<List<Object>, List<Object>> listInstanceFilter) {
+        return handleIndexedPropertyListable(bean, name, indexes, beanDesc, pd, listInstanceFilter, list -> {
             return list.get(indexes[indexes.length - 1]);
         });
     }
@@ -1102,7 +1101,7 @@ public class ActionFormMapper {
     // -----------------------------------------------------
     //                                        Indexed Helper
     //                                        --------------
-    protected Optional<FormYourCollectionResource> findListableYourCollection(PropertyDesc pd, FormMappingOption option) {
+    protected Optional<FormYourCollectionResource> findListableYourCollection(PropertyDesc pd) {
         final Class<?> propertyType = pd.getPropertyType();
         final List<FormYourCollectionResource> yourCollections = option.getYourCollections();
         return yourCollections.stream() // checking defined type and instance type
@@ -1113,8 +1112,7 @@ public class ActionFormMapper {
 
     @SuppressWarnings("unchecked")
     protected <RESULT> RESULT handleIndexedPropertyListable(Object bean, String name, int[] indexes, BeanDesc beanDesc, PropertyDesc pd,
-            FormMappingOption option, Function<List<Object>, List<Object>> listInstanceFilter,
-            Function<List<Object>, RESULT> listProcessHandler) {
+            Function<List<Object>, List<Object>> listInstanceFilter, Function<List<Object>, RESULT> listProcessHandler) {
         List<Object> list = (List<Object>) pd.getValue(bean);
         if (list == null) {
             list = listInstanceFilter.apply(new ArrayList<Object>(Math.max(50, indexes[0])));
@@ -1183,7 +1181,7 @@ public class ActionFormMapper {
     // ===================================================================================
     //                                                                         JSON Assist
     //                                                                         ===========
-    protected JsonObjectConvertible chooseJsonObjectConvertible(ActionRuntime runtime, FormMappingOption option) {
+    protected JsonObjectConvertible chooseJsonObjectConvertible() {
         return coinsHelper.chooseJsonObjectConvertible(runtime, option);
     }
 
@@ -1203,19 +1201,13 @@ public class ActionFormMapper {
         coinsHelper.throwRequestPropertyMappingFailureException(msg, cause);
     }
 
-    protected void throwRequestUndefinedParameterInFormException(Object bean, String name, Object value, FormMappingOption option,
-            BeanDesc beanDesc) {
+    protected void throwRequestUndefinedParameterInFormException(Object bean, String name, Object value, BeanDesc beanDesc) {
         coinsHelper.throwRequestUndefinedParameterInFormException(bean, name, value, option, beanDesc);
     }
 
     // ===================================================================================
     //                                                                  Assistant Director
     //                                                                  ==================
-    protected FormMappingOption adjustFormMapping() {
-        final FormMappingOption option = getAdjustmentProvider().adjustFormMapping();
-        return option != null ? option : NULLOBJ_FORM_MAPPING_OPTION;
-    }
-
     protected ActionAdjustmentProvider getAdjustmentProvider() {
         return assistWebDirection().assistActionAdjustmentProvider();
     }

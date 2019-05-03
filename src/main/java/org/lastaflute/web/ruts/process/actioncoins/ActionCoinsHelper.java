@@ -29,7 +29,6 @@ import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.api.ApiFailureResource;
 import org.lastaflute.web.api.ApiManager;
 import org.lastaflute.web.exception.MessagingClientErrorException;
-import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.process.ActionResponseReflector;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter;
@@ -41,20 +40,18 @@ import org.lastaflute.web.util.LaActionRuntimeUtil;
 /**
  * @author jflute
  */
-public class ActionCoinsHelper {
+public class ActionCoinsHelper { // keep singleton-able to be simple
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final ModuleConfig moduleConfig;
     protected final FwAssistantDirector assistantDirector;
     protected final RequestManager requestManager;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionCoinsHelper(ModuleConfig moduleConfig, FwAssistantDirector assistantDirector, RequestManager requestManager) {
-        this.moduleConfig = moduleConfig;
+    public ActionCoinsHelper(FwAssistantDirector assistantDirector, RequestManager requestManager) {
         this.assistantDirector = assistantDirector;
         this.requestManager = requestManager;
     }

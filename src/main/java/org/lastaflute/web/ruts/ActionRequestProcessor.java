@@ -55,9 +55,8 @@ public class ActionRequestProcessor {
     // -----------------------------------------------------
     //                                 Initialized Component
     //                                 ---------------------
-    protected ModuleConfig moduleConfig;
-    protected ActionCoinsHelper actionCoinsHelper;
-    protected ActionFormMapper actionFormMapper;
+    protected ModuleConfig moduleConfig; // almost unused but accept just in case
+    protected ActionCoinsHelper actionCoinsHelper; // keep singleton-nale
     protected InOutLogger inOutLogger; // null allowed if unused logging
 
     // -----------------------------------------------------
@@ -81,20 +80,15 @@ public class ActionRequestProcessor {
     //                                                                          ==========
     public void initialize(ModuleConfig moduleConfig) throws ServletException {
         this.moduleConfig = moduleConfig;
-        this.actionCoinsHelper = createActionCoinHelper(moduleConfig);
-        this.actionFormMapper = createActionFormPopulator(moduleConfig);
-        this.inOutLogger = prepareInOutLogger(moduleConfig);
+        this.actionCoinsHelper = createActionCoinHelper();
+        this.inOutLogger = prepareInOutLogger();
     }
 
-    protected ActionCoinsHelper createActionCoinHelper(ModuleConfig moduleConfig) {
-        return new ActionCoinsHelper(moduleConfig, getAssistantDirector(), getRequestManager());
+    protected ActionCoinsHelper createActionCoinHelper() {
+        return new ActionCoinsHelper(getAssistantDirector(), getRequestManager());
     }
 
-    protected ActionFormMapper createActionFormPopulator(ModuleConfig moduleConfig) {
-        return new ActionFormMapper(moduleConfig, getAssistantDirector(), getRequestManager());
-    }
-
-    protected InOutLogger prepareInOutLogger(ModuleConfig moduleConfig) {
+    protected InOutLogger prepareInOutLogger() {
         return InOutLogKeeper.isEnabled(getRequestManager()) ? createInOutLogger() : null;
     }
 
@@ -219,7 +213,14 @@ public class ActionRequestProcessor {
     }
 
     protected void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> form) throws ServletException {
-        actionFormMapper.populateParameter(runtime, form);
+        if (form.isPresent()) { // cannot be callback for ServletException
+            final ActionFormMapper actionFormPopulator = createActionFormPopulator(runtime, form.get());
+            actionFormPopulator.populateParameter(); // *updates real form in virtual form
+        }
+    }
+
+    protected ActionFormMapper createActionFormPopulator(ActionRuntime runtime, VirtualForm virtualForm) {
+        return new ActionFormMapper(getAssistantDirector(), getRequestManager(), runtime, virtualForm);
     }
 
     // ===================================================================================

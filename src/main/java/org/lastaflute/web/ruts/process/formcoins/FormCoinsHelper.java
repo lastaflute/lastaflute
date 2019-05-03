@@ -41,6 +41,7 @@ import org.dbflute.util.DfReflectionUtil;
 import org.dbflute.util.DfTypeUtil.ParseBooleanException;
 import org.dbflute.util.DfTypeUtil.ParseDateException;
 import org.dbflute.util.Srl;
+import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.json.JsonObjectConvertible;
 import org.lastaflute.core.message.UserMessages;
@@ -76,7 +77,7 @@ import org.lastaflute.web.servlet.request.RequestManager;
  * @author jflute
  * @since 1.1.2 (2019/05/03 Friday)
  */
-public class FormCoinsHelper {
+public class FormCoinsHelper { // keep singleton-able to be simple
 
     // ===================================================================================
     //                                                                          Definition
@@ -86,12 +87,14 @@ public class FormCoinsHelper {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    protected final FwAssistantDirector assistantDirector;
     protected final RequestManager requestManager;
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public FormCoinsHelper(RequestManager requestManager) {
+    public FormCoinsHelper(FwAssistantDirector assistantDirector, RequestManager requestManager) {
+        this.assistantDirector = assistantDirector;
         this.requestManager = requestManager;
     }
 
