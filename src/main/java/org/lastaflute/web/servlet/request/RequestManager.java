@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.servlet.request;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -170,6 +171,13 @@ public interface RequestManager extends ScopedAttributeHolder {
      * @return The optional value of specified header as string. (NotNull, EmptyAllowed)
      */
     OptionalThing<String> getHeader(String headerKey);
+
+    /**
+     * Get header values as list. (case insensitive)
+     * @param headerKey The key of the header. (NotNull)
+     * @return The read-only list of header value. (NotNull, EmptyAllowed)
+     */
+    List<String> getHeaderAsList(String headerKey);
 
     /**
      * Get 'Host' from header.

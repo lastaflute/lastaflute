@@ -15,6 +15,8 @@
  */
 package org.lastaflute.unit.mock.web;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -134,6 +136,11 @@ public class MockRequestManager implements RequestManager {
     @Override
     public OptionalThing<String> getHeader(String headerKey) {
         return null;
+    }
+
+    @Override
+    public List<String> getHeaderAsList(String headerKey) {
+        return Collections.emptyList();
     }
 
     @Override

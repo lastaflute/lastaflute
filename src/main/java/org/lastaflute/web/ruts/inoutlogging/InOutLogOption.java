@@ -15,15 +15,18 @@
  */
 package org.lastaflute.web.ruts.inoutlogging;
 
-import java.util.Set;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import org.dbflute.helper.StringSet;
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 
 /**
  * @author jflute
+ * @author awaawa
  * @since 1.0.0 (2017/08/23 Wednesday)
  */
 public class InOutLogOption {
@@ -33,10 +36,10 @@ public class InOutLogOption {
     //                                                                           =========
     protected boolean async;
     protected boolean suppressResponseBody; // may be too big
-    protected Set<String> requestHeaderNames;
-    protected Set<String> responseHeaderNames;
+    protected List<String> requestHeaderNameList; // keeping order
     protected Function<String, String> requestParameterFilter;
     protected Function<String, String> requestBodyFilter;
+    protected List<String> responseHeaderNameList; // keeping order
     protected Function<String, String> responseBodyFilter;
     protected Predicate<ActionRuntime> loggingExceptDeterminer;
 
@@ -66,26 +69,21 @@ public class InOutLogOption {
     }
 
     /**
-     * @param requestHeaderNames The target request header names. (NotNull)
+     * @param requestHeaderNameList The list of target request header names. (NotNull, NotEmpty)
      * @return this. (NotNull)
      */
-    public InOutLogOption specifyRequestHeaderNames(Set<String> requestHeaderNames) {
-        if (requestHeaderNames == null) {
-            throw new IllegalArgumentException("The argument 'requestHeaderNames' should not be null.");
+    public InOutLogOption showRequestHeader(List<String> requestHeaderNameList) {
+        if (requestHeaderNameList == null) {
+            throw new IllegalArgumentException("The argument 'requestHeaderNameList' should not be null.");
         }
-        this.requestHeaderNames = requestHeaderNames;
-        return this;
-    }
-
-    /**
-     * @param responseHeaderNames The target response header names. (NotNull)
-     * @return this. (NotNull)
-     */
-    public InOutLogOption specifyResponseHeaderNames(Set<String> responseHeaderNames) {
-        if (responseHeaderNames == null) {
-            throw new IllegalArgumentException("The argument 'responseHeaderNames' should not be null.");
+        if (requestHeaderNameList.isEmpty()) {
+            throw new IllegalArgumentException("The argument 'requestHeaderNameList' should not be empty.");
         }
-        this.responseHeaderNames = responseHeaderNames;
+        if (hasDuplicateHeader(requestHeaderNameList)) {
+            String msg = "The argument 'requestHeaderNameList' should not be duplicate: " + requestHeaderNameList;
+            throw new IllegalArgumentException(msg);
+        }
+        this.requestHeaderNameList = requestHeaderNameList;
         return this;
     }
 
@@ -98,6 +96,25 @@ public class InOutLogOption {
             throw new IllegalArgumentException("The argument 'requestParameterFilter' should not be null.");
         }
         this.requestParameterFilter = requestParameterFilter;
+        return this;
+    }
+
+    /**
+     * @param responseHeaderNameList The list of target response header names. (NotNull, NotEmpty)
+     * @return this. (NotNull)
+     */
+    public InOutLogOption showResponseHeader(List<String> responseHeaderNameList) {
+        if (responseHeaderNameList == null) {
+            throw new IllegalArgumentException("The argument 'responseHeaderNameList' should not be null.");
+        }
+        if (responseHeaderNameList.isEmpty()) {
+            throw new IllegalArgumentException("The argument 'responseHeaderNameList' should not be empty.");
+        }
+        if (hasDuplicateHeader(responseHeaderNameList)) {
+            String msg = "The argument 'responseHeaderNameList' should not be duplicate: " + responseHeaderNameList;
+            throw new IllegalArgumentException(msg);
+        }
+        this.responseHeaderNameList = responseHeaderNameList;
         return this;
     }
 
@@ -138,6 +155,15 @@ public class InOutLogOption {
     }
 
     // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    protected boolean hasDuplicateHeader(List<String> requestHeaderNameList) {
+        final StringSet caseInsensitiveSet = StringSet.createAsCaseInsensitive();
+        caseInsensitiveSet.addAll(requestHeaderNameList);
+        return caseInsensitiveSet.size() < requestHeaderNameList.size();
+    }
+
+    // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
     public boolean isAsync() {
@@ -148,10 +174,8 @@ public class InOutLogOption {
         return suppressResponseBody;
     }
 
-    public OptionalThing<Set<String>> getSpecifyRequestHeaderNames() {
-        return OptionalThing.ofNullable(requestHeaderNames, () -> {
-            throw new IllegalStateException("Not found the requestHeaderNames.");
-        });
+    public List<String> getRequestHeaderNameList() { // not null
+        return requestHeaderNameList != null ? requestHeaderNameList : Collections.emptyList();
     }
 
     public OptionalThing<Function<String, String>> getRequestParameterFilter() {
@@ -166,10 +190,8 @@ public class InOutLogOption {
         });
     }
 
-    public OptionalThing<Set<String>> getSpecifyResponseHeaderNames() {
-        return OptionalThing.ofNullable(responseHeaderNames, () -> {
-            throw new IllegalStateException("Not found the responseHeaderNames.");
-        });
+    public List<String> getResponseHeaderNameList() { // not null
+        return responseHeaderNameList != null ? responseHeaderNameList : Collections.emptyList();
     }
 
     public OptionalThing<Function<String, String>> getResponseBodyFilter() {

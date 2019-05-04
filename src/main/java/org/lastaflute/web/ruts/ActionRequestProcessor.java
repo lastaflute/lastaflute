@@ -17,14 +17,8 @@ package org.lastaflute.web.ruts;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
@@ -49,9 +43,11 @@ import org.lastaflute.web.ruts.process.pathparam.RequestPathParam;
 import org.lastaflute.web.ruts.renderer.HtmlRenderer;
 import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.servlet.request.ResponseManager;
 
 /**
  * @author jflute
+ * @author awaawa
  */
 public class ActionRequestProcessor {
 
@@ -312,20 +308,11 @@ public class ActionRequestProcessor {
     //                                                                       InOut Logging
     //                                                                       =============
     protected void beginInOutLoggingIfNeeds(LocalDateTime beginTime, String processHash) {
-        InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
+        final RequestManager requestManager = getRequestManager();
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
             keeper.keepBeginDateTime(beginTime);
             keeper.keepProcessHash(processHash);
-            keeper.getOption().getSpecifyRequestHeaderNames().ifPresent(specifyRequestHeaderNames -> {
-                HttpServletRequest request = getRequestManager().getRequest();
-                List<String> headerNames = Collections.list(request.getHeaderNames());
-                keeper.keepRequestHeader(specifyRequestHeaderNames.stream().filter(specifyRequestHeaderName -> {
-                    return headerNames.stream().anyMatch(headerName -> headerName.equalsIgnoreCase(specifyRequestHeaderName));
-                }).collect(Collectors.toMap(specifyRequestHeaderName -> {
-                    return specifyRequestHeaderName;
-                }, specifyRequestHeaderName -> {
-                    return Collections.list(request.getHeaders(specifyRequestHeaderName)).toArray();
-                })));
-            });
+            keeper.keepRequestHeader(keeper.getOption().getRequestHeaderNameList(), name -> requestManager.getHeaderAsList(name));
         });
     }
 
@@ -336,18 +323,10 @@ public class ActionRequestProcessor {
     }
 
     protected void endInOutLoggingIfNeeds() {
-        InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
-            keeper.getOption().getSpecifyResponseHeaderNames().ifPresent(specifyResponseHeaderNames -> {
-                HttpServletResponse response = getRequestManager().getResponseManager().getResponse();
-                Collection<String> headerNames = response.getHeaderNames();
-                keeper.keepResponseHeader(specifyResponseHeaderNames.stream().filter(specifyResponseHeaderName -> {
-                    return headerNames.stream().anyMatch(headerName -> headerName.equalsIgnoreCase(specifyResponseHeaderName));
-                }).collect(Collectors.toMap(specifyRequestHeaderName -> {
-                    return specifyRequestHeaderName;
-                }, specifyRequestHeaderName -> {
-                    return response.getHeaders(specifyRequestHeaderName).toArray();
-                })));
-            });
+        final RequestManager requestManager = getRequestManager();
+        final ResponseManager responseManager = requestManager.getResponseManager();
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
+            keeper.keepResponseHeader(keeper.getOption().getResponseHeaderNameList(), name -> responseManager.getHeaderAsList(name));
         });
     }
 

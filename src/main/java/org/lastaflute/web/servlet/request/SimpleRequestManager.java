@@ -245,6 +245,10 @@ public class SimpleRequestManager implements RequestManager {
                 }
                 sb.append(line).append("\n");
             }
+            final int length = sb.length();
+            if (length >= 1 && sb.lastIndexOf("\n") >= length - 1) { // endsWith("\n")
+                sb.delete(length - 1, length); // remove the last artifical empty line
+            }
             return sb.toString();
         } catch (IOException e) {
             throw new IllegalStateException("Failed to read the line from the reader: " + reader, e);
@@ -448,9 +452,27 @@ public class SimpleRequestManager implements RequestManager {
     //                                                                     ===============
     @Override
     public OptionalThing<String> getHeader(String headerKey) {
+        assertArgumentNotNull("headerKey", headerKey);
         return OptionalThing.ofNullable(getRequest().getHeader(headerKey), () -> {
             throw new RequestInfoNotFoundException("Not found the header for the request: key=" + headerKey + " path=" + getRequestPath());
         });
+    }
+
+    @Override
+    public List<String> getHeaderAsList(String headerKey) {
+        assertArgumentNotNull("headerKey", headerKey);
+        final Enumeration<String> headers = getRequest().getHeaders(headerKey);
+        if (headers == null) { // just in case
+            return Collections.emptyList();
+        }
+        final List<String> headerList = new ArrayList<>();
+        while (headers.hasMoreElements()) {
+            final String headerValue = (String) headers.nextElement();
+            if (headerValue != null) { // just in case
+                headerList.add(headerValue);
+            }
+        }
+        return Collections.unmodifiableList(headerList);
     }
 
     @Override
