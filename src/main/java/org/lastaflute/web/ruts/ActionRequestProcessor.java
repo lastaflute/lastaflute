@@ -43,9 +43,11 @@ import org.lastaflute.web.ruts.process.pathparam.RequestPathParam;
 import org.lastaflute.web.ruts.renderer.HtmlRenderer;
 import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.servlet.request.ResponseManager;
 
 /**
  * @author jflute
+ * @author awaawa
  */
 public class ActionRequestProcessor {
 
@@ -156,6 +158,7 @@ public class ActionRequestProcessor {
     }
 
     protected void finallyFire(ActionRuntime runtime) {
+        endInOutLoggingIfNeeds();
         showInOutLogIfNeeds(runtime);
     }
 
@@ -306,15 +309,25 @@ public class ActionRequestProcessor {
     //                                                                       InOut Logging
     //                                                                       =============
     protected void beginInOutLoggingIfNeeds(LocalDateTime beginTime, String processHash) {
-        InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
+        final RequestManager requestManager = getRequestManager();
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
             keeper.keepBeginDateTime(beginTime);
             keeper.keepProcessHash(processHash);
+            keeper.keepRequestHeader(keeper.getOption().getRequestHeaderNameList(), name -> requestManager.getHeaderAsList(name));
         });
     }
 
     protected void keepInOutLogFrameworkCauseIfNeeds(Throwable frameworkCause) {
         InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
             keeper.keepFrameworkCause(frameworkCause);
+        });
+    }
+
+    protected void endInOutLoggingIfNeeds() {
+        final RequestManager requestManager = getRequestManager();
+        final ResponseManager responseManager = requestManager.getResponseManager();
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
+            keeper.keepResponseHeader(keeper.getOption().getResponseHeaderNameList(), name -> responseManager.getHeaderAsList(name));
         });
     }
 

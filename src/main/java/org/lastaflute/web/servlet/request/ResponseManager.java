@@ -16,6 +16,7 @@
 package org.lastaflute.web.servlet.request;
 
 import java.io.IOException;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
@@ -192,6 +193,20 @@ public interface ResponseManager {
      * @param sc HTTP response code. use HttpServletResponse.SC_...
      */
     void setResponseStatus(int sc);
+
+    /**
+     * Get header value. (case insensitive)
+     * @param headerKey The key of the header. (NotNull)
+     * @return The optional value of specified header as string. (NotNull, EmptyAllowed)
+     */
+    OptionalThing<String> getHeader(String headerKey);
+
+    /**
+     * Get header values as list. (case insensitive)
+     * @param headerKey The key of the header. (NotNull)
+     * @return The read-only list of header value. (NotNull, EmptyAllowed)
+     */
+    List<String> getHeaderAsList(String headerKey);
 
     // ===================================================================================
     //                                                                        Client Error
