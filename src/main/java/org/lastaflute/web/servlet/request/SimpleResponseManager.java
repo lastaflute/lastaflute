@@ -16,6 +16,10 @@
 package org.lastaflute.web.servlet.request;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -26,6 +30,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.message.UserMessages;
@@ -34,6 +39,7 @@ import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.Forced400BadRequestException;
 import org.lastaflute.web.exception.Forced403ForbiddenException;
 import org.lastaflute.web.exception.Forced404NotFoundException;
+import org.lastaflute.web.exception.ResponseInfoNotFoundException;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
 import org.lastaflute.web.util.LaRequestUtil;
@@ -369,6 +375,9 @@ public class SimpleResponseManager implements ResponseManager {
     // ===================================================================================
     //                                                                     Header Handling
     //                                                                     ===============
+    // -----------------------------------------------------
+    //                                                 Basic
+    //                                                 -----
     @Override
     public void addHeader(String name, String value) {
         assertArgumentNotNull("name", name);
@@ -376,6 +385,33 @@ public class SimpleResponseManager implements ResponseManager {
         getResponse().addHeader(name, value);
     }
 
+    @Override
+    public OptionalThing<String> getHeader(String headerKey) {
+        assertArgumentNotNull("headerKey", headerKey);
+        return OptionalThing.ofNullable(getResponse().getHeader(headerKey), () -> {
+            throw new ResponseInfoNotFoundException("Not found the header for the response: key=" + headerKey);
+        });
+    }
+
+    @Override
+    public List<String> getHeaderAsList(String headerKey) {
+        assertArgumentNotNull("headerKey", headerKey);
+        final Collection<String> headers = getResponse().getHeaders(headerKey);
+        if (headers == null) { // just in case
+            return Collections.emptyList();
+        }
+        final List<String> headerList = new ArrayList<>(headers.size());
+        for (String headerValue : headers) {
+            if (headerValue != null) { // just in case
+                headerList.add(headerValue);
+            }
+        }
+        return Collections.unmodifiableList(headerList);
+    }
+
+    // -----------------------------------------------------
+    //                                         Theme Setting
+    //                                         -------------
     @Override
     public void addNoCache() {
         addHeader(HEADER_PRAGMA, "no-cache");

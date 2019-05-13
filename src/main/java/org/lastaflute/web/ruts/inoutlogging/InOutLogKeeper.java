@@ -18,8 +18,12 @@ package org.lastaflute.web.ruts.inoutlogging;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.LastaWebKey;
@@ -28,6 +32,7 @@ import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
  * @author jflute
+ * @author awaawa
  * @since 1.0.0 (2017/08/11 Friday)
  */
 public class InOutLogKeeper {
@@ -41,13 +46,19 @@ public class InOutLogKeeper {
     //                                                                           Attribute
     //                                                                           =========
     protected InOutLogOption option; // null allowed
+
     protected LocalDateTime beginDateTime; // null allowed until beginning
     protected String processHash; // null allowed until beginning
+
+    protected Supplier<Map<String, Object>> requestHeaderMapProvider; // null allowed if request header name is not specified by InOutLogOption
     protected Map<String, Object> requestParameterMap; // null allowed if e.g. no parameter
     protected String requestBodyContent; // null allowed if e.g. no body
     protected String requestBodyType; // body format e.g. json, xml, null allowed if e.g. no body or null body
+
+    protected Supplier<Map<String, Object>> responseHeaderMapProvider; // null allowed if response header name is not specified by InOutLogOption
     protected String responseBodyContent; // null allowed if e.g. no body or null body
     protected String responseBodyType; // body format e.g. json, xml, null allowed until response or if e.g. no body
+
     protected Throwable frameworkCause; // runtime has only application's one so keep here, null allowed
 
     // ===================================================================================
@@ -98,6 +109,18 @@ public class InOutLogKeeper {
         this.processHash = processHash;
     }
 
+    public void keepRequestHeader(List<String> targetHeaderNameList, Function<String, List<String>> headerListProvider) {
+        assertArgumentNotNull("targetHeaderNameList", targetHeaderNameList);
+        assertArgumentNotNull("headerListProvider", headerListProvider);
+        if (!targetHeaderNameList.isEmpty()) {
+            this.requestHeaderMapProvider = () -> { // lazy avoid cost before response committed
+                return targetHeaderNameList.stream().collect(Collectors.toMap(Function.identity(), name -> {
+                    return headerListProvider.apply(name);
+                }, (first, second) -> second, () -> new LinkedHashMap<>(targetHeaderNameList.size()))); // keeping order
+            };
+        }
+    }
+
     public void keepRequestParameter(Map<String, Object> parameterMap) {
         assertArgumentNotNull("parameterMap", parameterMap);
         for (Entry<String, Object> entry : parameterMap.entrySet()) {
@@ -108,7 +131,7 @@ public class InOutLogKeeper {
     protected void addRequestParameter(String key, Object value) { // value may be null!? accept it just in case
         assertArgumentNotNull("key", key);
         if (requestParameterMap == null) {
-            requestParameterMap = new LinkedHashMap<String, Object>();
+            requestParameterMap = new LinkedHashMap<String, Object>(); // keeping order
         }
         requestParameterMap.put(key, value);
     }
@@ -117,6 +140,18 @@ public class InOutLogKeeper {
         assertArgumentNotNull("requestBodyType", requestBodyType);
         this.requestBodyContent = requestBodyContent;
         this.requestBodyType = requestBodyType;
+    }
+
+    public void keepResponseHeader(List<String> targetHeaderNameList, Function<String, List<String>> headerListProvider) {
+        assertArgumentNotNull("targetHeaderNameList", targetHeaderNameList);
+        assertArgumentNotNull("headerListProvider", headerListProvider);
+        if (!targetHeaderNameList.isEmpty()) {
+            this.responseHeaderMapProvider = () -> { // lazy avoid cost before response committed
+                return targetHeaderNameList.stream().collect(Collectors.toMap(Function.identity(), name -> {
+                    return headerListProvider.apply(name);
+                }, (first, second) -> second, () -> new LinkedHashMap<>(targetHeaderNameList.size()))); // keeping order
+            };
+        }
     }
 
     public void keepResponseBody(String responseBodyContent, String responseBodyType) { // accept null just in case
@@ -161,6 +196,12 @@ public class InOutLogKeeper {
         });
     }
 
+    public OptionalThing<Supplier<Map<String, Object>>> getRequestHeaderMapProvider() {
+        return OptionalThing.ofNullable(requestHeaderMapProvider, () -> {
+            throw new IllegalStateException("Not found the provider of request header map.");
+        });
+    }
+
     public Map<String, Object> getRequestParameterMap() { // not null
         return requestParameterMap != null ? Collections.unmodifiableMap(requestParameterMap) : Collections.emptyMap();
     }
@@ -174,6 +215,12 @@ public class InOutLogKeeper {
     public OptionalThing<String> getRequestBodyType() {
         return OptionalThing.ofNullable(requestBodyType, () -> {
             throw new IllegalStateException("Not found the request body type.");
+        });
+    }
+
+    public OptionalThing<Supplier<Map<String, Object>>> getResponseHeaderMapProvider() {
+        return OptionalThing.ofNullable(responseHeaderMapProvider, () -> {
+            throw new IllegalStateException("Not found the provider of response header map.");
         });
     }
 

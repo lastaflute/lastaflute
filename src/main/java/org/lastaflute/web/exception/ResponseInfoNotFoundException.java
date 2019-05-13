@@ -13,15 +13,23 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.json.engine;
+package org.lastaflute.web.exception;
 
-import org.lastaflute.core.json.JsonObjectConvertible;
+import org.lastaflute.core.exception.LaSystemException;
 
 /**
- * The real engine of JSON.
  * @author jflute
+ * @since 1.1.2 (2019/05/03 Friday at nataraj)
  */
-public interface RealJsonEngine extends JsonObjectConvertible {
-    // The "real" means that the engine has its own rule for something (JsonManager's real engine)...
-    // It may be unneeded but no refactoring for compatible and to keep JsonManager's naming independence.
+public class ResponseInfoNotFoundException extends LaSystemException {
+
+    private static final long serialVersionUID = 1L;
+
+    public ResponseInfoNotFoundException(String msg) {
+        super(msg);
+    }
+
+    public ResponseInfoNotFoundException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

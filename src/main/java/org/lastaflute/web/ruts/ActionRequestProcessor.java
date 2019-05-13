@@ -43,9 +43,11 @@ import org.lastaflute.web.ruts.process.pathparam.RequestPathParam;
 import org.lastaflute.web.ruts.renderer.HtmlRenderer;
 import org.lastaflute.web.ruts.renderer.HtmlRenderingProvider;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.lastaflute.web.servlet.request.ResponseManager;
 
 /**
  * @author jflute
+ * @author awaawa
  */
 public class ActionRequestProcessor {
 
@@ -55,9 +57,8 @@ public class ActionRequestProcessor {
     // -----------------------------------------------------
     //                                 Initialized Component
     //                                 ---------------------
-    protected ModuleConfig moduleConfig;
-    protected ActionCoinsHelper actionCoinsHelper;
-    protected ActionFormMapper actionFormMapper;
+    protected ModuleConfig moduleConfig; // almost unused but accept just in case
+    protected ActionCoinsHelper actionCoinsHelper; // keep singleton-nale
     protected InOutLogger inOutLogger; // null allowed if unused logging
 
     // -----------------------------------------------------
@@ -81,20 +82,15 @@ public class ActionRequestProcessor {
     //                                                                          ==========
     public void initialize(ModuleConfig moduleConfig) throws ServletException {
         this.moduleConfig = moduleConfig;
-        this.actionCoinsHelper = createActionCoinHelper(moduleConfig);
-        this.actionFormMapper = createActionFormPopulator(moduleConfig);
-        this.inOutLogger = prepareInOutLogger(moduleConfig);
+        this.actionCoinsHelper = createActionCoinHelper();
+        this.inOutLogger = prepareInOutLogger();
     }
 
-    protected ActionCoinsHelper createActionCoinHelper(ModuleConfig moduleConfig) {
-        return new ActionCoinsHelper(moduleConfig, getAssistantDirector(), getRequestManager());
+    protected ActionCoinsHelper createActionCoinHelper() {
+        return new ActionCoinsHelper(getAssistantDirector(), getRequestManager());
     }
 
-    protected ActionFormMapper createActionFormPopulator(ModuleConfig moduleConfig) {
-        return new ActionFormMapper(moduleConfig, getAssistantDirector(), getRequestManager());
-    }
-
-    protected InOutLogger prepareInOutLogger(ModuleConfig moduleConfig) {
+    protected InOutLogger prepareInOutLogger() {
         return InOutLogKeeper.isEnabled(getRequestManager()) ? createInOutLogger() : null;
     }
 
@@ -162,6 +158,7 @@ public class ActionRequestProcessor {
     }
 
     protected void finallyFire(ActionRuntime runtime) {
+        endInOutLoggingIfNeeds();
         showInOutLogIfNeeds(runtime);
     }
 
@@ -219,7 +216,14 @@ public class ActionRequestProcessor {
     }
 
     protected void populateParameter(ActionRuntime runtime, OptionalThing<VirtualForm> form) throws ServletException {
-        actionFormMapper.populateParameter(runtime, form);
+        if (form.isPresent()) { // cannot be callback for ServletException
+            final ActionFormMapper actionFormPopulator = createActionFormPopulator(runtime, form.get());
+            actionFormPopulator.populateParameter(); // *updates real form in virtual form
+        }
+    }
+
+    protected ActionFormMapper createActionFormPopulator(ActionRuntime runtime, VirtualForm virtualForm) {
+        return new ActionFormMapper(getAssistantDirector(), getRequestManager(), runtime, virtualForm);
     }
 
     // ===================================================================================
@@ -305,15 +309,25 @@ public class ActionRequestProcessor {
     //                                                                       InOut Logging
     //                                                                       =============
     protected void beginInOutLoggingIfNeeds(LocalDateTime beginTime, String processHash) {
-        InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
+        final RequestManager requestManager = getRequestManager();
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
             keeper.keepBeginDateTime(beginTime);
             keeper.keepProcessHash(processHash);
+            keeper.keepRequestHeader(keeper.getOption().getRequestHeaderNameList(), name -> requestManager.getHeaderAsList(name));
         });
     }
 
     protected void keepInOutLogFrameworkCauseIfNeeds(Throwable frameworkCause) {
         InOutLogKeeper.prepare(getRequestManager()).ifPresent(keeper -> {
             keeper.keepFrameworkCause(frameworkCause);
+        });
+    }
+
+    protected void endInOutLoggingIfNeeds() {
+        final RequestManager requestManager = getRequestManager();
+        final ResponseManager responseManager = requestManager.getResponseManager();
+        InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> {
+            keeper.keepResponseHeader(keeper.getOption().getResponseHeaderNameList(), name -> responseManager.getHeaderAsList(name));
         });
     }
 

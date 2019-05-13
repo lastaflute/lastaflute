@@ -233,7 +233,11 @@ public abstract class TypicalAction extends LastaAction implements ActionHook, L
     }
 
     protected int calculateSqlExecutionCountLimit(ActionRuntime runtime) {
-        return runtime.getActionExecute().getSqlExecutionCountLimit().orElse(30);
+        return runtime.getActionExecute().getSqlExecutionCountLimit().orElseGet(() -> defineSqlExecutionCountDefaultLimit(runtime));
+    }
+
+    protected int defineSqlExecutionCountDefaultLimit(ActionRuntime runtime) { // application may override
+        return 30; // as default
     }
 
     // -----------------------------------------------------

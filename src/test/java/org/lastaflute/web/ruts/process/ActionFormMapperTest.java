@@ -6,6 +6,7 @@ import org.lastaflute.unit.UnitLastaFluteTestCase;
 import org.lastaflute.web.path.FormMappingOption;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
+import org.lastaflute.web.ruts.process.formcoins.FormCoinsHelper;
 
 /**
  * @author jflute
@@ -18,12 +19,11 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
     public void test_setProperty_map_genericArray_array() throws Exception {
         // ## Arrange ##
         ActionFormMapper mapper = createMapper();
-        VirtualForm virtualForm = new VirtualForm(() -> "", (ActionFormMeta) null); // dummy
         SeaForm seaForm = new SeaForm();
         String[] value = new String[] { "a", "b" };
 
         // ## Act ##
-        mapper.setProperty(virtualForm, seaForm, "landMap.oneman", value, null, new FormMappingOption(), null, null);
+        mapper.setProperty(seaForm, "landMap.oneman", value, null, null, null);
 
         // ## Assert ##
         Object actual = seaForm.landMap.get("oneman");
@@ -41,7 +41,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String[] value = new String[] { "a", "b" };
 
         // ## Act ##
-        mapper.setMapProperty(map, "oneman", value, new FormMappingOption(), seaForm, "landMap");
+        mapper.setMapProperty(map, "oneman", value, seaForm, "landMap");
 
         // ## Assert ##
         Object actual = map.get("oneman");
@@ -56,7 +56,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String value = "a";
 
         // ## Act ##
-        mapper.setMapProperty(map, "oneman", value, new FormMappingOption(), seaForm, "landMap");
+        mapper.setMapProperty(map, "oneman", value, seaForm, "landMap");
 
         // ## Assert ##
         String[] actual = (String[]) map.get("oneman");
@@ -72,7 +72,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String[] value = new String[] { "a", "b" };
 
         // ## Act ##
-        mapper.setMapProperty(map, "dstore", value, new FormMappingOption(), seaForm, "iksMap");
+        mapper.setMapProperty(map, "dstore", value, seaForm, "iksMap");
 
         // ## Assert ##
         Object actual = map.get("dstore");
@@ -87,7 +87,7 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
         String value = "a";
 
         // ## Act ##
-        mapper.setMapProperty(map, "dstore", value, new FormMappingOption(), seaForm, "iksMap");
+        mapper.setMapProperty(map, "dstore", value, seaForm, "iksMap");
 
         // ## Assert ##
         Object actual = map.get("dstore");
@@ -103,6 +103,16 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
     //                                                                         Test Helper
     //                                                                         ===========
     protected ActionFormMapper createMapper() {
-        return new ActionFormMapper(null, null, null);
+        VirtualForm virtualForm = new VirtualForm(() -> "", (ActionFormMeta) null); // dummy
+        return new ActionFormMapper(null, null, null, virtualForm) { // to avoid required components
+
+            protected FormMappingOption adjustFormMapping() {
+                return new FormMappingOption();
+            };
+
+            protected FormCoinsHelper createFormCoinsHelper() {
+                return new FormCoinsHelper(null, requestManager);
+            };
+        };
     }
 }
