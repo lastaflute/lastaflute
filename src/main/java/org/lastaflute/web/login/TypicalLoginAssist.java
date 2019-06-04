@@ -87,7 +87,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     private SessionManager sessionManager;
 
     @Resource
-    private CookieManager cookieManager;
+    private CookieManager cookieManager; // for remeber-me, basically used by small protected method to be switchable
 
     @Resource
     private ActionPathResolver actionPathResolver;
@@ -437,6 +437,16 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         logger.debug("...Saving remember-me key to cookie: key={}", cookieKey);
         final String value = buildRememberMeCookieValue(userEntity, userBean, expireDays);
         final int expireSeconds = expireDays * 60 * 60 * 24; // cookie's expire, same as access token
+        registerRememberMeCookie(cookieKey, value, expireSeconds);
+    }
+
+    /**
+     * Register remember-me cookie.
+     * @param cookieKey The key of the cookie. (NotNull)
+     * @param value The value of the cookie, which will be ciphered. (NotNull)
+     * @param expireSeconds The expire seconds of both access token and cookie value.
+     */
+    protected void registerRememberMeCookie(String cookieKey, String value, int expireSeconds) {
         cookieManager.setCookieCiphered(cookieKey, value, expireSeconds);
     }
 
@@ -530,21 +540,26 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     }
 
     protected boolean delegateRememberMe(String cookieKey, RememberMeLoginOpCall opLambda) {
-        return cookieManager.getCookieCiphered(cookieKey).map(cookie -> {
-            final String cookieValue = cookie.getValue();
-            if (cookieValue != null && cookieValue.trim().length() > 0) {
-                final String[] valueAry = cookieValue.split(getRememberMeDelimiter());
-                final RememberMeLoginOption option = createRememberMeLoginOption(opLambda);
-                final Boolean handled = handleRememberMeCookie(valueAry, option);
-                if (handled != null) {
-                    return handled;
-                }
-                if (handleRememberMeInvalidCookie(cookieValue, valueAry)) { // you can also retry
-                    return true; // success by the handling
-                }
-            }
-            return false;
+        return findRememberMeCookie(cookieKey).filter(cookieValue -> !cookieValue.trim().isEmpty()).map(cookieValue -> {
+            return doDelegateRememberMe(cookieKey, cookieValue, opLambda);
         }).orElse(false);
+    }
+
+    protected OptionalThing<String> findRememberMeCookie(String cookieKey) {
+        return cookieManager.getCookieCiphered(cookieKey).map(cookie -> cookie.getValue());
+    }
+
+    protected Boolean doDelegateRememberMe(String cookieKey, String cookieValue, RememberMeLoginOpCall opLambda) {
+        final String[] valueAry = cookieValue.split(getRememberMeDelimiter());
+        final RememberMeLoginOption option = createRememberMeLoginOption(opLambda);
+        final Boolean handled = handleRememberMeCookie(valueAry, option);
+        if (handled != null) {
+            return handled;
+        }
+        if (handleRememberMeInvalidCookie(cookieValue, valueAry)) { // you can also retry
+            return true; // success by the handling
+        }
+        return false;
     }
 
     protected String getRememberMeDelimiter() {
@@ -669,7 +684,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
 
         sessionManager.removeAttribute(getUserBeanKey()); // always just in case though may be invalidated later
         getCookieRememberMeKey().ifPresent(cookieKey -> {
-            cookieManager.removeCookie(cookieKey);
+            removeRememberMeCookie(cookieKey);
         });
 
         // all session attributes are deleted here for more security
@@ -680,6 +695,10 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
 
     protected boolean isSuppressLogoutInvalidate() { // you can override
         return false;
+    }
+
+    protected void removeRememberMeCookie(String cookieKey) {
+        cookieManager.removeCookie(cookieKey);
     }
 
     // ===================================================================================
