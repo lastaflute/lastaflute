@@ -235,6 +235,7 @@ public class SimpleCookieManager implements CookieManager {
             snapshot.setComment(comment);
         }
         snapshot.setVersion(src.getVersion());
+        snapshot.setHttpOnly(src.isHttpOnly());
         return snapshot;
     }
 
