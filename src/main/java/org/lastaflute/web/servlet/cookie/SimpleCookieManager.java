@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.servlet.cookie;
 
+import java.util.function.Consumer;
+
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
@@ -90,35 +92,37 @@ public class SimpleCookieManager implements CookieManager {
         if (logger.isInfoEnabled()) {
             logger.info("[Cookie Manager]");
             logger.info(" cookieCipher: " + cookieCipher);
+            logger.info(" defaultPath: " + defaultPath);
             logger.info(" defaultExpire: " + defaultExpire);
         }
     }
 
     // ===================================================================================
-    //                                                                     Cookie Handling
-    //                                                                     ===============
+    //                                                                          Set Cookie
+    //                                                                          ==========
     // -----------------------------------------------------
-    //                                                   Set
-    //                                                   ---
+    //                                                 Basic
+    //                                                 -----
     @Override
     public void setCookie(String key, String value) {
         assertKeyNotNull(key);
         assertValueNotNull(key, value);
-        setCookie(key, value, getDefaultExpire());
+        doSetCookieDegage(key, value, getDefaultExpire(), cookie -> {});
     }
 
     @Override
     public void setCookie(String key, String value, int expire) {
         assertKeyNotNull(key);
         assertValueNotNull(key, value);
-        doSetCookie(key, value, getDefaultPath(), expire);
+        assertExpirePositive(expire);
+        doSetCookieDegage(key, value, expire, cookie -> {});
     }
 
     @Override
     public void setCookieCiphered(String key, String value) {
         assertKeyNotNull(key);
         assertValueNotNull(key, value);
-        setCookieCiphered(key, value, getDefaultExpire());
+        doSetCookieDegageCiphered(key, value, getDefaultExpire(), cookie -> {});
     }
 
     @Override
@@ -126,21 +130,54 @@ public class SimpleCookieManager implements CookieManager {
         assertKeyNotNull(key);
         assertValueNotNull(key, value);
         assertExpirePositive(expire);
-        final String encrypted = cookieCipher.encrypt(value);
-        doSetCookie(key, encrypted, getDefaultPath(), expire);
+        doSetCookieDegageCiphered(key, value, expire, cookie -> {});
     }
 
-    protected void doSetCookie(String key, String value, String path, int expire) {
-        final Cookie cookie = new Cookie(key, value);
-        cookie.setPath(path);
-        cookie.setMaxAge(expire);
-        setCookieDirectly(cookie);
+    // -----------------------------------------------------
+    //                                                Degage
+    //                                                ------
+    @Override
+    public void setCookieDegage(String key, String value, int expire, Consumer<Cookie> oneArgLambda) {
+        assertKeyNotNull(key);
+        assertValueNotNull(key, value);
+        assertExpirePositive(expire);
+        assertSetupCallbackNotNull(oneArgLambda);
+        doSetCookieDegage(key, value, expire, oneArgLambda);
+    }
+
+    protected void doSetCookieDegage(String key, String value, int expire, Consumer<Cookie> cookieSetupper) {
+        actuallySetCookie(key, value, getDefaultPath(), expire, cookieSetupper);
     }
 
     @Override
+    public void setCookieDegageCiphered(String key, String value, int expire, Consumer<Cookie> oneArgLambda) {
+        assertKeyNotNull(key);
+        assertValueNotNull(key, value);
+        assertExpirePositive(expire);
+        assertSetupCallbackNotNull(oneArgLambda);
+        doSetCookieDegageCiphered(key, value, expire, oneArgLambda);
+    }
+
+    protected void doSetCookieDegageCiphered(String key, String value, int expire, Consumer<Cookie> cookieSetupper) {
+        final String encrypted = cookieCipher.encrypt(value);
+        actuallySetCookie(key, encrypted, getDefaultPath(), expire, cookieSetupper);
+    }
+
+    protected void actuallySetCookie(String key, String value, String path, int expire, Consumer<Cookie> cookieSetupper) {
+        final Cookie cookie = new Cookie(key, value);
+        cookie.setPath(path);
+        cookie.setMaxAge(expire);
+        cookieSetupper.accept(cookie);
+        registerCookieToResponse(cookie);
+    }
+
+    // -----------------------------------------------------
+    //                                              Directly
+    //                                              --------
+    @Override
     public void setCookieDirectly(Cookie cookie) {
         assertCookieNotNull(cookie);
-        getResponse().addCookie(cookie);
+        registerCookieToResponse(cookie);
     }
 
     @Override
@@ -150,15 +187,26 @@ public class SimpleCookieManager implements CookieManager {
         if (value != null) {
             cookie.setValue(cookieCipher.encrypt(value));
         }
-        setCookieDirectly(cookie);
+        registerCookieToResponse(cookie);
     }
 
     // -----------------------------------------------------
-    //                                                  Get
-    //                                                 -----
+    //                                  Register to Response
+    //                                  --------------------
+    protected void registerCookieToResponse(Cookie cookie) {
+        getResponse().addCookie(cookie);
+    }
+
+    // ===================================================================================
+    //                                                                          Get Cookie
+    //                                                                          ==========
     @Override
     public OptionalThing<Cookie> getCookie(String key) {
         assertKeyNotNull(key);
+        return doGetCookie(key);
+    }
+
+    protected OptionalThing<Cookie> doGetCookie(String key) {
         final Cookie[] cookies = getRequest().getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
@@ -193,7 +241,11 @@ public class SimpleCookieManager implements CookieManager {
     @Override
     public OptionalThing<Cookie> getCookieCiphered(String key) {
         assertKeyNotNull(key);
-        return getCookie(key).map(cookie -> {
+        return doGetCookieCiphered(key);
+    }
+
+    protected OptionalThing<Cookie> doGetCookieCiphered(String key) {
+        return doGetCookie(key).map(cookie -> { // is snapshot
             final String value = cookie.getValue();
             if (value != null) {
                 try {
@@ -209,9 +261,9 @@ public class SimpleCookieManager implements CookieManager {
         });
     }
 
-    // -----------------------------------------------------
-    //                                                Remove
-    //                                                ------
+    // ===================================================================================
+    //                                                                       Remove Cookie
+    //                                                                       =============
     @Override
     public void removeCookie(final String key) {
         assertKeyNotNull(key);
@@ -228,9 +280,9 @@ public class SimpleCookieManager implements CookieManager {
         setCookieDirectly(cookie);
     }
 
-    // -----------------------------------------------------
-    //                                               Default
-    //                                               -------
+    // ===================================================================================
+    //                                                                       Default Value
+    //                                                                       =============
     protected String getDefaultPath() {
         if (defaultPath == null) {
             final String msg = "Not found the default path of cookie.";
@@ -274,6 +326,13 @@ public class SimpleCookieManager implements CookieManager {
     protected void assertPathNotNull(final String path) {
         if (path == null) {
             final String msg = "The argument 'path' should not be null.";
+            throw new FwRequiredAssistNotFoundException(msg);
+        }
+    }
+
+    protected void assertSetupCallbackNotNull(final Consumer<Cookie> oneArgLambda) {
+        if (oneArgLambda == null) {
+            final String msg = "The argument 'oneArgLambda(cookieSetupper)' should not be null.";
             throw new FwRequiredAssistNotFoundException(msg);
         }
     }
