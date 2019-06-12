@@ -20,6 +20,7 @@ import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 
 import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
 
 import org.dbflute.helper.HandyDate;
 import org.dbflute.optional.OptionalEntity;
@@ -447,7 +448,17 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
      * @param expireSeconds The expire seconds of both access token and cookie value.
      */
     protected void registerRememberMeCookie(String cookieKey, String value, int expireSeconds) {
-        cookieManager.setCookieCiphered(cookieKey, value, expireSeconds);
+        cookieManager.setCookieDegageCiphered(cookieKey, value, expireSeconds, cookie -> {
+            adjustRegisteredRememberMeCookie(cookie);
+        });
+    }
+
+    /**
+     * Adjust registered remember-me cookie immediately before registration to response. <br>
+     * You can freely set properties to the cookie by overriding.
+     * @param cookie The Servlet cookie for remember-me, which has already basic settings (e.g. expire). (NotNull)
+     */
+    protected void adjustRegisteredRememberMeCookie(Cookie cookie) { // application may override
     }
 
     /**
