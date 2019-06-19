@@ -18,6 +18,7 @@ package org.lastaflute.web.login;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
+import java.util.function.Consumer;
 
 import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
@@ -88,10 +89,10 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     private SessionManager sessionManager;
 
     @Resource
-    private CookieManager cookieManager; // for remeber-me, basically used by small protected method to be switchable
+    private ActionPathResolver actionPathResolver;
 
     @Resource
-    private ActionPathResolver actionPathResolver;
+    private CookieManager defaultCookieManager; // for remeber-me, basically used via only agent to be switchable
 
     // ===================================================================================
     //                                                                           Find User
@@ -448,7 +449,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
      * @param expireSeconds The expire seconds of both access token and cookie value.
      */
     protected void registerRememberMeCookie(String cookieKey, String value, int expireSeconds) {
-        cookieManager.setCookieDegageCiphered(cookieKey, value, expireSeconds, cookie -> {
+        getRememberMeCookieAgent().setCookieDegageCiphered(cookieKey, value, expireSeconds, cookie -> {
             adjustRegisteredRememberMeCookie(cookie);
         });
     }
@@ -557,7 +558,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     }
 
     protected OptionalThing<String> findRememberMeCookie(String cookieKey) {
-        return cookieManager.getCookieCiphered(cookieKey).map(cookie -> cookie.getValue());
+        return getRememberMeCookieAgent().getCookieCiphered(cookieKey).map(cookie -> cookie.getValue());
     }
 
     protected Boolean doDelegateRememberMe(String cookieKey, String cookieValue, RememberMeLoginOpCall opLambda) {
@@ -709,7 +710,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     }
 
     protected void removeRememberMeCookie(String cookieKey) {
-        cookieManager.removeCookie(cookieKey);
+        getRememberMeCookieAgent().removeCookie(cookieKey);
     }
 
     // ===================================================================================
@@ -1035,6 +1036,34 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             logger.debug("...Switching redirection to requested {}", redirectPath);
             return HtmlResponse.fromRedirectPath(redirectPath);
         }).orElse(response);
+    }
+
+    // ===================================================================================
+    //                                                                   RememberMe Cookie
+    //                                                                   =================
+    public static interface RememberMeCookieAgent { // defines methods only needed here
+
+        void setCookieDegageCiphered(String key, String value, int expire, Consumer<Cookie> oneArgLambda);
+
+        OptionalThing<Cookie> getCookieCiphered(String key);
+
+        void removeCookie(String key);
+    }
+
+    protected RememberMeCookieAgent getRememberMeCookieAgent() { // you can override
+        return new RememberMeCookieAgent() {
+            public void setCookieDegageCiphered(String key, String value, int expire, Consumer<Cookie> oneArgLambda) {
+                defaultCookieManager.setCookieDegageCiphered(key, value, expire, oneArgLambda);
+            }
+
+            public OptionalThing<Cookie> getCookieCiphered(String key) {
+                return defaultCookieManager.getCookieCiphered(key);
+            }
+
+            public void removeCookie(String key) {
+                defaultCookieManager.removeCookie(key);
+            }
+        };
     }
 
     // ===================================================================================
