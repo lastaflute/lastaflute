@@ -6,8 +6,9 @@
 
 # IntelliJ IDEA
 **/.idea/*
+!**/.idea/codeStyles
 !**/.idea/inspectionProfiles
-!**/.idea/codeStyleSettings.xml
+!**/.idea/encodings.xml
 !**/.idea/misc.xml
 !**/.idea/saveactions_settings.xml
 **/*.iml
