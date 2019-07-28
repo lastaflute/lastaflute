@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.servlet.cookie;
 
+import java.util.function.Consumer;
+
 import javax.servlet.http.Cookie;
 
 import org.dbflute.optional.OptionalThing;
@@ -24,10 +26,15 @@ import org.dbflute.optional.OptionalThing;
  */
 public interface CookieManager {
 
+    // ===================================================================================
+    //                                                                          Set Cookie
+    //                                                                          ==========
+    // -----------------------------------------------------
+    //                                                 Basic
+    //                                                 -----
     /**
      * Set the cookie by the key and value as the default path and default expire (max age). <br>
-     * This method is for simple cookie settings. <br>
-     * You should use the {@link #setCookieDirectly(Cookie)} method if you need detail settings.
+     * This method is for simple cookie settings.
      * @param key The key of the cookie. (NotNull)
      * @param value The value of the cookie. (NotNull)
      */
@@ -35,8 +42,7 @@ public interface CookieManager {
 
     /**
      * Set the cookie by the key and value and expiration (max age) as the path '/'. <br>
-     * This method is for simple cookie settings. <br>
-     * You should use the {@link #setCookieDirectly(Cookie)} method if you need detail settings.
+     * This method is for simple cookie settings.
      * @param key The key of the cookie. (NotNull)
      * @param value The value of the cookie. (NotNull)
      * @param expire The expire of the cookie in seconds. (NotZero, NotMinus)
@@ -45,8 +51,7 @@ public interface CookieManager {
 
     /**
      * Set the cookie by the key and value as the path '/' and default expire (max age). <br>
-     * This method is for simple cookie settings with cipher by cookie cipher. <br>
-     * You should use the {@link #setCookieDirectlyCiphered(Cookie)} method if you need detail settings.
+     * This method is for simple cookie settings with cipher by cookie cipher.
      * @param key The key of the cookie. (NotNull)
      * @param value The value of the cookie, which is ciphered in this method. (NotNull)
      */
@@ -55,13 +60,40 @@ public interface CookieManager {
     /**
      * Set the cookie by the key and value and expiration (max age) as the path '/'. <br>
      * This method is for simple cookie settings with cipher by cookie cipher. <br>
-     * You should use the {@link #setCookieDirectlyCiphered(Cookie)} method if you need detail settings.
      * @param key The key of the cookie. (NotNull)
      * @param value The value of the cookie, which is ciphered in this method. (NotNull)
      * @param expire The expire of the cookie in seconds. (NotZero, NotMinus)
      */
     void setCookieCiphered(String key, String value, int expire);
 
+    // -----------------------------------------------------
+    //                                                Degage
+    //                                                ------
+    /**
+     * Set the cookie by the key and value and expiration (max age) as the path '/'. <br>
+     * This method is for detail cookie settings as plain cookie, <br>
+     * with callback of setting up cookie finally. (You can handle cookie object)
+     * @param key The key of the cookie. (NotNull)
+     * @param value The value of the cookie. (NotNull)
+     * @param expire The expire of the cookie in seconds. (NotZero, NotMinus)
+     * @param oneArgLambda The callback of setting up cookie finally for various purposes. (NotNull)
+     */
+    void setCookieDegage(String key, String value, int expire, Consumer<Cookie> oneArgLambda);
+
+    /**
+     * Set the cookie by the key and value and expiration (max age) as the path '/'. <br>
+     * This method is for detail cookie settings with cipher by cookie cipher, <br>
+     * with callback of setting up cookie finally. (You can handle cookie object)
+     * @param key The key of the cookie. (NotNull)
+     * @param value The value of the cookie, which is ciphered in this method. (NotNull)
+     * @param expire The expire of the cookie in seconds. (NotZero, NotMinus)
+     * @param oneArgLambda The callback of setting up cookie finally for various purposes. (NotNull)
+     */
+    void setCookieDegageCiphered(String key, String value, int expire, Consumer<Cookie> oneArgLambda);
+
+    // -----------------------------------------------------
+    //                                              Directly
+    //                                              --------
     /**
      * Set the cookie directly by your favorite settings using {@link Cookie} of the Servlet. <br>
      * This method is for detail cookie settings. <br>
@@ -78,6 +110,9 @@ public interface CookieManager {
      */
     void setCookieDirectlyCiphered(Cookie cookie);
 
+    // ===================================================================================
+    //                                                                          Get Cookie
+    //                                                                          ==========
     /**
      * Get the cookie (snapshot) found by the key.
      * @param key The key of the cookie. (NotNull)
@@ -92,6 +127,9 @@ public interface CookieManager {
      */
     OptionalThing<Cookie> getCookieCiphered(String key);
 
+    // ===================================================================================
+    //                                                                       Remove Cookie
+    //                                                                       =============
     /**
      * Remove the cookie of the default path by the key.
      * @param key The key of the cookie. (NotNull)

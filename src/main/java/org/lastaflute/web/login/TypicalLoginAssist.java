@@ -18,8 +18,10 @@ package org.lastaflute.web.login;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
+import java.util.function.Consumer;
 
 import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
 
 import org.dbflute.helper.HandyDate;
 import org.dbflute.optional.OptionalEntity;
@@ -87,10 +89,10 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     private SessionManager sessionManager;
 
     @Resource
-    private CookieManager cookieManager;
+    private ActionPathResolver actionPathResolver;
 
     @Resource
-    private ActionPathResolver actionPathResolver;
+    private CookieManager defaultCookieManager; // for remeber-me, basically used via only agent to be switchable
 
     // ===================================================================================
     //                                                                           Find User
@@ -437,7 +439,27 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
         logger.debug("...Saving remember-me key to cookie: key={}", cookieKey);
         final String value = buildRememberMeCookieValue(userEntity, userBean, expireDays);
         final int expireSeconds = expireDays * 60 * 60 * 24; // cookie's expire, same as access token
-        cookieManager.setCookieCiphered(cookieKey, value, expireSeconds);
+        registerRememberMeCookie(cookieKey, value, expireSeconds);
+    }
+
+    /**
+     * Register remember-me cookie.
+     * @param cookieKey The key of the cookie. (NotNull)
+     * @param value The value of the cookie, which will be ciphered. (NotNull)
+     * @param expireSeconds The expire seconds of both access token and cookie value.
+     */
+    protected void registerRememberMeCookie(String cookieKey, String value, int expireSeconds) {
+        getRememberMeCookieAgent().setCookieDegageCiphered(cookieKey, value, expireSeconds, cookie -> {
+            adjustRegisteredRememberMeCookie(cookie);
+        });
+    }
+
+    /**
+     * Adjust registered remember-me cookie immediately before registration to response. <br>
+     * You can freely set properties to the cookie by overriding.
+     * @param cookie The Servlet cookie for remember-me, which has already basic settings (e.g. expire). (NotNull)
+     */
+    protected void adjustRegisteredRememberMeCookie(Cookie cookie) { // application may override
     }
 
     /**
@@ -530,21 +552,26 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
     }
 
     protected boolean delegateRememberMe(String cookieKey, RememberMeLoginOpCall opLambda) {
-        return cookieManager.getCookieCiphered(cookieKey).map(cookie -> {
-            final String cookieValue = cookie.getValue();
-            if (cookieValue != null && cookieValue.trim().length() > 0) {
-                final String[] valueAry = cookieValue.split(getRememberMeDelimiter());
-                final RememberMeLoginOption option = createRememberMeLoginOption(opLambda);
-                final Boolean handled = handleRememberMeCookie(valueAry, option);
-                if (handled != null) {
-                    return handled;
-                }
-                if (handleRememberMeInvalidCookie(cookieValue, valueAry)) { // you can also retry
-                    return true; // success by the handling
-                }
-            }
-            return false;
+        return findRememberMeCookie(cookieKey).filter(cookieValue -> !cookieValue.trim().isEmpty()).map(cookieValue -> {
+            return doDelegateRememberMe(cookieKey, cookieValue, opLambda);
         }).orElse(false);
+    }
+
+    protected OptionalThing<String> findRememberMeCookie(String cookieKey) {
+        return getRememberMeCookieAgent().getCookieCiphered(cookieKey).map(cookie -> cookie.getValue());
+    }
+
+    protected Boolean doDelegateRememberMe(String cookieKey, String cookieValue, RememberMeLoginOpCall opLambda) {
+        final String[] valueAry = cookieValue.split(getRememberMeDelimiter());
+        final RememberMeLoginOption option = createRememberMeLoginOption(opLambda);
+        final Boolean handled = handleRememberMeCookie(valueAry, option);
+        if (handled != null) {
+            return handled;
+        }
+        if (handleRememberMeInvalidCookie(cookieValue, valueAry)) { // you can also retry
+            return true; // success by the handling
+        }
+        return false;
     }
 
     protected String getRememberMeDelimiter() {
@@ -669,7 +696,7 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
 
         sessionManager.removeAttribute(getUserBeanKey()); // always just in case though may be invalidated later
         getCookieRememberMeKey().ifPresent(cookieKey -> {
-            cookieManager.removeCookie(cookieKey);
+            removeRememberMeCookie(cookieKey);
         });
 
         // all session attributes are deleted here for more security
@@ -680,6 +707,10 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
 
     protected boolean isSuppressLogoutInvalidate() { // you can override
         return false;
+    }
+
+    protected void removeRememberMeCookie(String cookieKey) {
+        getRememberMeCookieAgent().removeCookie(cookieKey);
     }
 
     // ===================================================================================
@@ -1005,6 +1036,34 @@ public abstract class TypicalLoginAssist<ID, USER_BEAN extends UserBean<ID>, USE
             logger.debug("...Switching redirection to requested {}", redirectPath);
             return HtmlResponse.fromRedirectPath(redirectPath);
         }).orElse(response);
+    }
+
+    // ===================================================================================
+    //                                                                   RememberMe Cookie
+    //                                                                   =================
+    public static interface RememberMeCookieAgent { // defines methods only needed here
+
+        void setCookieDegageCiphered(String key, String value, int expire, Consumer<Cookie> oneArgLambda);
+
+        OptionalThing<Cookie> getCookieCiphered(String key);
+
+        void removeCookie(String key);
+    }
+
+    protected RememberMeCookieAgent getRememberMeCookieAgent() { // you can override
+        return new RememberMeCookieAgent() {
+            public void setCookieDegageCiphered(String key, String value, int expire, Consumer<Cookie> oneArgLambda) {
+                defaultCookieManager.setCookieDegageCiphered(key, value, expire, oneArgLambda);
+            }
+
+            public OptionalThing<Cookie> getCookieCiphered(String key) {
+                return defaultCookieManager.getCookieCiphered(key);
+            }
+
+            public void removeCookie(String key) {
+                defaultCookieManager.removeCookie(key);
+            }
+        };
     }
 
     // ===================================================================================
