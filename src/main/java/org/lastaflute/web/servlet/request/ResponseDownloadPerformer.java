@@ -27,8 +27,11 @@ import java.util.zip.ZipOutputStream;
 
 import javax.servlet.http.HttpServletResponse;
 
+import org.dbflute.exception.AccessContextNotFoundException;
+import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.web.exception.ResponseClientAbortIOException;
 import org.lastaflute.web.exception.ResponseDownloadFailureException;
+import org.lastaflute.web.exception.ResponseDownloadStreamCallUpdateException;
 import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
 import org.lastaflute.web.servlet.request.stream.WrittenStreamOut;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
@@ -87,7 +90,7 @@ public class ResponseDownloadPerformer {
             }
             final OutputStream out = response.getOutputStream();
             try {
-                streamCall.callback(createWrittenStreamOut(out));
+                callbackStream(streamCall, createWrittenStreamOut(out), /*for logging*/resource);
                 flushDownloadStream(out);
             } finally {
                 closeDownloadStream(out);
@@ -96,6 +99,46 @@ public class ResponseDownloadPerformer {
             throw new ResponseDownloadFailureException("Failed to download the input stream: " + resource, e);
         } catch (IOException e) {
             handleDownloadIOException(resource, e);
+        }
+    }
+
+    protected void callbackStream(WrittenStreamCall streamCall, WrittenStreamOut streamOut, ResponseDownloadResource resource)
+            throws IOException {
+        try {
+            streamCall.callback(streamOut);
+        } catch (AccessContextNotFoundException e) {
+            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+            br.addNotice("Could not DB-update statement in stream callback.");
+            br.addItem("Advice");
+            br.addElement("You cannot DB-update in stream callback as default.");
+            br.addElement("So call() inActionTransaction() if you need it.");
+            br.addElement("(Or split process if you doesn't need it)");
+            br.addElement("  (x):");
+            br.addElement("    return asStream(\"sea.txt\").stream(out -> { // *Bad");
+            br.addElement("        memberBhv.insert(...);");
+            br.addElement("        out.write(ins);");
+            br.addElement("    });");
+            br.addElement("  (o):");
+            br.addElement("    return asStream(\"sea.txt\").inActionTransaction().stream(out -> { // Good");
+            br.addElement("        memberBhv.insert(...);");
+            br.addElement("        out.write(ins);");
+            br.addElement("    });");
+            br.addElement("  (o):");
+            br.addElement("    memberBhv.insert(...); // Good");
+            br.addElement("    return asStream(\"sea.txt\").stream(out -> {");
+            br.addElement("        out.write(ins);");
+            br.addElement("    });");
+            br.addElement("");
+            br.addElement("However response is already committed in transaction");
+            br.addElement("so e.g. you cannot add headers in hookFinally()");
+            br.addElement("if you call inActionTransaction().");
+            br.addElement("");
+            br.addElement("While, the method is valid in (transactional) execute method.");
+            br.addElement("(no meaning in non-transactional process e.g. hookBefore())");
+            br.addItem("Download Info");
+            br.addElement(resource);
+            final String msg = br.buildExceptionMessage();
+            throw new ResponseDownloadStreamCallUpdateException(msg, e);
         }
     }
 
