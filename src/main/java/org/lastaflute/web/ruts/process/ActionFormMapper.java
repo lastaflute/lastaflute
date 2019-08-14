@@ -218,8 +218,10 @@ public class ActionFormMapper { // created per request (since 1.1.2)
         if (formMeta.isJsonBodyMapping()) {
             if (formMeta.isRootSymbolForm()) {
                 mappingJsonBody(prepareJsonFromRequestBody());
+                return true;
             } else if (formMeta.isTypedListForm()) {
                 mappingListJsonBody(prepareJsonFromRequestBody());
+                return true;
             }
             // basically no way here (but no exception just in case)
         }
