@@ -54,9 +54,10 @@ public class StreamResponse implements ActionResponse {
     protected WrittenStreamCall streamCall;
     protected WritternZipStreamCall zipStreamCall;
     protected Integer contentLength;
-    protected boolean undefined;
     protected boolean returnAsEmptyBody;
+    protected boolean undefined;
     protected ResponseHook afterTxCommitHook;
+    protected boolean treatedInActionTransaction;
 
     protected Map<String, String[]> createHeaderMap() {
         return StringKeyMap.createAsCaseInsensitiveOrdered();
@@ -195,6 +196,16 @@ public class StreamResponse implements ActionResponse {
      *     }
      * });
      * </pre>
+     * <p>This callback is called in out of action transaction and out of access-context scope.
+     * So if you need DB-update in callback, use inActionTransaction().
+     * (However response is already committed in transaction so e.g. you cannot add headers in hookFinally())</p>
+     * <pre>
+     * <span style="color: #70226C">return</span> asStream("sea.txt").<span style="color: #CC4747">inActionTransaction()</span>.stream(<span style="color: #553000">out</span> <span style="color: #90226C; font-weight: bold"><span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #70226C">try</span> (InputStream <span style="color: #553000">ins</span> = ...) {
+     *         <span style="color: #553000">out</span>.write(<span style="color: #553000">ins</span>);
+     *     }
+     * });
+     * </pre>
      * @param writtenStreamLambda The callback for writing stream of download data. (NotNull)
      * @return this. (NotNull)
      */
@@ -304,6 +315,19 @@ public class StreamResponse implements ActionResponse {
     public StreamResponse afterTxCommit(ResponseHook noArgLambda) {
         assertArgumentNotNull("noArgLambda", noArgLambda);
         afterTxCommitHook = noArgLambda;
+        return this;
+    }
+
+    // -----------------------------------------------------
+    //                                         Response Hook
+    //                                         -------------
+    /**
+     * Is the writing response in action transaction? (see stream() javadoc for the detail) <br>
+     * This method is valid in (transactional) execute method (no meaning in non-transactional process e.g. hookBefore())
+     * @return this. (NotNull)
+     */
+    public StreamResponse inActionTransaction() {
+        treatedInActionTransaction = true;
         return this;
     }
 
@@ -448,6 +472,10 @@ public class StreamResponse implements ActionResponse {
     @Override
     public boolean isUndefined() {
         return undefined;
+    }
+
+    public boolean isTreatedInActionTransaction() {
+        return treatedInActionTransaction;
     }
 
     // -----------------------------------------------------

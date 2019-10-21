@@ -378,7 +378,7 @@ public class ActionResponseReflector {
     //                                                                     ===============
     protected NextJourney handleStreamResponse(StreamResponse response) {
         // lazy because of same reason as HTML response (see the comment)
-        return createSelfContainedJourney(() -> {
+        final NextJourney journey = createSelfContainedJourney(() -> {
             adjustActionResponseJustBefore(response);
             final ResponseManager responseManager = requestManager.getResponseManager();
             // needs to be handled in download()
@@ -388,6 +388,14 @@ public class ActionResponseReflector {
             keepStreamBodyForInOutLoggingIfNeeds(resource);
             responseManager.download(resource);
         });
+        if (response.isTreatedInActionTransaction()) { // for e.g. DB-update in stream callback
+            // basically this option is valid in transactional execute method
+            // (however also it can work in non-transactional processes, no care for small problem)
+            journey.getJourneyProvider().bonVoyage(); // write response right now (in action transaction)
+            return NextJourney.undefined(); // do nothing in latter process
+        } else {
+            return journey;
+        }
     }
 
     // ===================================================================================
