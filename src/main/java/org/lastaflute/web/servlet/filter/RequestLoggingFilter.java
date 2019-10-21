@@ -331,8 +331,7 @@ public class RequestLoggingFilter implements Filter {
         /**
          * Is the routing target request?
          * @param request The request of servlet. (NotNull)
-         * @param embeddedDeterminer The determiner
-         * @param targetPathDeterminer The determiner 
+         * @param embeddedDeterminer The determiner of target path as embedded logic. (NotNull)
          * @return The determination, true or false.
          */
         boolean isRoutingTarget(HttpServletRequest request, RequestTargetPathEmbeddedDeterminer embeddedDeterminer);
