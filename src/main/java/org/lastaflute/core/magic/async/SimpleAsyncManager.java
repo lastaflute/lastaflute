@@ -19,7 +19,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -816,15 +815,6 @@ public class SimpleAsyncManager implements AsyncManager {
         final ConcurrentParallelOption op = new ConcurrentParallelOption();
         opLambda.callback(op);
         return op;
-    }
-
-    protected List<Object> prepareConcurrentParallelDefaultParameterList() {
-        final List<Object> parameterList = new ArrayList<Object>();
-        final Object obj = new Object();
-        for (int i = 0; i < 5; i++) {
-            parameterList.add(obj);
-        }
-        return parameterList;
     }
 
     // -----------------------------------------------------
