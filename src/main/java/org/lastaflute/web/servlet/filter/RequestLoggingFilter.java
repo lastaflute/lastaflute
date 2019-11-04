@@ -331,8 +331,7 @@ public class RequestLoggingFilter implements Filter {
         /**
          * Is the routing target request?
          * @param request The request of servlet. (NotNull)
-         * @param embeddedDeterminer The determiner
-         * @param targetPathDeterminer The determiner 
+         * @param embeddedDeterminer The determiner of target path as embedded logic. (NotNull)
          * @return The determination, true or false.
          */
         boolean isRoutingTarget(HttpServletRequest request, RequestTargetPathEmbeddedDeterminer embeddedDeterminer);
@@ -1089,7 +1088,7 @@ public class RequestLoggingFilter implements Filter {
 
         /**
          * Should the logging of the exception suppressed? <br>
-         * For example, suppress if an exception message contains "Bronken pipe". 
+         * For example, suppress if an exception message contains "Broken pipe". 
          * @param cause The cause of this 'Server Error'. (NotNull)
          * @return The determination, true or false.
          */
