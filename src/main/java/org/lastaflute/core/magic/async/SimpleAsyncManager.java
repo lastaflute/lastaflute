@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -65,6 +67,7 @@ import org.lastaflute.core.magic.async.future.DestructiveYourFuture;
 import org.lastaflute.core.magic.async.future.YourFuture;
 import org.lastaflute.core.magic.async.race.LaCountdownRace;
 import org.lastaflute.core.magic.async.race.LaCountdownRaceExecution;
+import org.lastaflute.core.magic.async.race.LaCountdownRaceLatch;
 import org.lastaflute.core.magic.async.race.LaCountdownRaceRunner;
 import org.lastaflute.core.magic.async.race.exception.LaCountdownRaceExecutionException;
 import org.lastaflute.core.magic.destructive.BowgunDestructiveAdjuster;
@@ -821,7 +824,7 @@ public class SimpleAsyncManager implements AsyncManager {
     //                                              Ready Go
     //                                              --------
     protected void readyGo(ConcurrentParallelCall runnerLambda, ConcurrentParallelOption option) {
-        if (isEmptyParallel(option)) {
+        if (isEmptyParallel(option)) { // parameters are specified but empty
             return;
         }
         createCountdownRace(option).readyGo(new LaCountdownRaceExecution() {
@@ -865,19 +868,91 @@ public class SimpleAsyncManager implements AsyncManager {
 
     protected boolean isEmptyParallel(ConcurrentParallelOption option) {
         final OptionalThing<List<Object>> optParamList = option.getParameterList();
-        return optParamList.isPresent() && optParamList.get().isEmpty();
+        return optParamList.isPresent() && optParamList.get().isEmpty(); // specified but empty
     }
 
     protected LaCountdownRace createCountdownRace(ConcurrentParallelOption option) {
+        if (isDestructiveAsyncToNormalSync()) { // when no async
+            logger.debug("...Mocking parallel countdown race for destructive-async request.");
+            return option.getParameterList().map(parameterList -> {
+                return new NoAsyncCountdownRace(parameterList);
+            }).orElseGet(() -> {
+                return new NoAsyncCountdownRace(getParallelEmptyParameterRunnerCount());
+            });
+        }
+        // normally here
         return option.getParameterList().map(parameterList -> {
             return new LaCountdownRace(parameterList);
         }).orElseGet(() -> {
-            return new LaCountdownRace(5);
+            return new LaCountdownRace(getParallelEmptyParameterRunnerCount());
         });
+    }
+
+    protected int getParallelEmptyParameterRunnerCount() {
+        return 5; // #for_now jflute should it be option?
     }
 
     protected ConcurrentParallelRunner createConcurrentParallelRunner(LaCountdownRaceRunner nativeRunner) {
         return new ConcurrentParallelRunner(nativeRunner);
+    }
+
+    // -----------------------------------------------------
+    //                                  Destructive Parallel
+    //                                  --------------------
+    protected static class NoAsyncCountdownRace extends LaCountdownRace {
+
+        public NoAsyncCountdownRace(int runnerCount) {
+            super(runnerCount);
+        }
+
+        public NoAsyncCountdownRace(List<Object> parameterList) {
+            super(parameterList);
+        }
+
+        // to be serial:
+        //  1. remove latch control in each callable process (plain process)
+        //  2. execute the callable processes serially when submit
+        //  3. do nothing in future handling
+
+        @Override
+        protected LaRacingLatchAgent createLatchAgent(int runnerCount, LaCountdownRaceLatch ourLatch) {
+            return new LaRacingLatchAgent() { // no latch control
+                public void readyCountDown() {
+                }
+
+                public void startAwait() {
+                }
+
+                public void startCountDown() {
+                }
+
+                public void goalAwait() {
+                }
+
+                public void goalCountDown() {
+                }
+
+                public void ourLatchReset() {
+                    // only same as formal implementation here
+                    // (this latch might be used in application code)
+                    ourLatch.reset();
+                }
+            };
+        }
+
+        @Override
+        protected LaRacingFutureAgent<Void> serviceSubmit(Callable<Void> callable) {
+            try {
+                callable.call(); // execute now
+            } catch (Exception e) { // thow immediately because of serial process
+                throw new IllegalStateException("Failed to call the callable process: " + callable, e);
+            }
+            return new LaRacingFutureAgent<Void>() { // do nothing here because of already executed
+                public Void get() throws InterruptedException, ExecutionException {
+                    return null;
+                }
+            };
+        }
     }
 
     // -----------------------------------------------------
