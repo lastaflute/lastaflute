@@ -28,8 +28,9 @@ public class ConcurrentParallelOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected List<Object> parameterList; // null allowed
-    protected boolean throwImmediatelyByFirstCause; // null allowed
+    protected List<Object> parameterList; // null allowed (however basically used: mainly parameter-based parallel)
+    protected boolean errorLoggingSubsumed; // as completable asynchronous process if true
+    protected Long waitingIntervalMillis; // null allowed
 
     // ===================================================================================
     //                                                                              Facade
@@ -40,8 +41,16 @@ public class ConcurrentParallelOption {
         return this;
     }
 
-    public ConcurrentParallelOption throwImmediatelyByFirstCause() {
-        this.throwImmediatelyByFirstCause = true;
+    public ConcurrentParallelOption subsumeErrorLogging() {
+        this.errorLoggingSubsumed = true; // error logging enabled in asynchronous process and no thrown in caller process
+        return this;
+    }
+
+    public ConcurrentParallelOption waitingIntervalMillis(long waitingIntervalMillis) {
+        if (waitingIntervalMillis < 0) {
+            throw new IllegalArgumentException("The argument 'waitingIntervalMillis' should not be minus.");
+        }
+        this.waitingIntervalMillis = waitingIntervalMillis;
         return this;
     }
 
@@ -50,7 +59,8 @@ public class ConcurrentParallelOption {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "{parameterList=" + parameterList + "}";
+        return "{parameterList=" + parameterList + ", errorLoggingSubsumed=" + errorLoggingSubsumed + ", waitingIntervalMillis="
+                + waitingIntervalMillis + "}";
     }
 
     // ===================================================================================
@@ -62,7 +72,13 @@ public class ConcurrentParallelOption {
         });
     }
 
-    public boolean isThrowImmediatelyByFirstCause() {
-        return throwImmediatelyByFirstCause;
+    public boolean isErrorLoggingSubsumed() {
+        return errorLoggingSubsumed;
+    }
+
+    public OptionalThing<Long> getWaitingIntervalMillis() {
+        return OptionalThing.ofNullable(waitingIntervalMillis, () -> {
+            throw new IllegalStateException("Not found the waiting-interval milliseconds.");
+        });
     }
 }

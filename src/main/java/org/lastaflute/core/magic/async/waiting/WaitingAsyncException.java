@@ -13,68 +13,52 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.magic.async;
+package org.lastaflute.core.magic.async.waiting;
 
 import org.dbflute.optional.OptionalThing;
 
 /**
  * @author jflute
- * @since 0.9.6 (2017/05/02 Tuesday)
+ * @since 1.1.5 (2019/11/27 Thursday at sky-high)
  */
-public class ConcurrentParallelRunner {
+public class WaitingAsyncException extends RuntimeException { // for one asynchronous process
+
+    private static final long serialVersionUID = 1L;
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final long threadId;
-    protected final int entryNumber;
-    protected final Object parameter; // null allowed when no parameter
-    protected final Object lockObj; // not null
+    // you can keep supplementary values
+    protected Integer entryNumber; // null allowed, used by e.g. parallel()
+    protected Object parameter; // null allowed, used by e.g. parallel()
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ConcurrentParallelRunner(long threadId, int entryNumber, Object parameter, Object lockObj) {
-        this.threadId = threadId;
-        this.entryNumber = entryNumber;
-        this.parameter = parameter;
-        this.lockObj = lockObj;
+    public WaitingAsyncException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
-    /**
-     * Get the thread ID of the car (current thread).
-     * @return The long value of thread ID.
-     */
-    public long getThreadId() {
-        return threadId;
-    }
-
-    /**
-     * Get the entry number of the runner (current thread).
-     * @return The assigned number. e.g. 1, 2, 3... (NotNull)
-     */
-    public int getEntryNumber() {
-        return entryNumber;
-    }
-
-    /**
-     * Get the parameter for the runner (current thread).
-     * @return The optional value as parameter. (NotNull, EmptyAllowed: if no parameters or null element)
-     */
-    public OptionalThing<Object> getParameter() {
-        return OptionalThing.ofNullable(parameter, () -> {
-            throw new IllegalStateException("Not found the parameter for the runner: entryNumber=" + entryNumber);
+    public OptionalThing<Integer> getEntryNumber() {
+        return OptionalThing.ofNullable(entryNumber, () -> {
+            throw new IllegalStateException("Not found the entry number.");
         });
     }
 
-    /**
-     * Get the lock object to handle threads as you like it.
-     * @return The common instance for all runners. (NotNull)
-     */
-    public Object getLockObj() {
-        return lockObj;
+    public void setEntryNumber(Integer entryNumber) {
+        this.entryNumber = entryNumber;
+    }
+
+    public OptionalThing<Object> getParameter() {
+        return OptionalThing.ofNullable(parameter, () -> {
+            throw new IllegalStateException("Not found the parameter.");
+        });
+    }
+
+    public void setParameter(Object parameter) {
+        this.parameter = parameter;
     }
 }

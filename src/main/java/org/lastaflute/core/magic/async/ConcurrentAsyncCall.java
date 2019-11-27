@@ -30,7 +30,7 @@ public interface ConcurrentAsyncCall {
         return false;
     }
 
-    default ConcurrentAsyncImportance importance() {
+    default ConcurrentAsyncImportance importance() { // null allowed
         return null; // as default
     }
 
@@ -38,7 +38,13 @@ public interface ConcurrentAsyncCall {
         PRIMARY, SECONDARY, TERTIARY
     }
 
-    default ConcurrentAsyncOption option() {
+    default ConcurrentAsyncOption option() { // not null
         return new ConcurrentAsyncOption();
+    }
+
+    default boolean suppressesErrorLogging() { // parallel() uses this
+        // basically you don't need to override this
+        // use WaitingAsyncException from waitForDone() if you want
+        return false;
     }
 }

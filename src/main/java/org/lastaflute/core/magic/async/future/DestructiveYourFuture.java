@@ -15,6 +15,8 @@
  */
 package org.lastaflute.core.magic.async.future;
 
+import org.lastaflute.core.magic.async.waiting.WaitingAsyncResult;
+
 /**
  * @author jflute
  * @since 0.9.6 (2017/04/24 Monday at showbase)
@@ -30,6 +32,7 @@ public class DestructiveYourFuture implements YourFuture {
     }
 
     @Override
-    public void waitForDone() {
+    public WaitingAsyncResult waitForDone() {
+        return new WaitingAsyncResult(); // as dummy
     }
 }

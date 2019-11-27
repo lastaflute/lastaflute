@@ -55,7 +55,7 @@ public interface AsyncManager {
      * Execute parallel process and wait for ending of all threads.
      * <pre>
      * asyncManager.<span style="color: #CC4747">parallel</span>(<span style="color: #553000">runner</span> <span style="font-size: 120%">-</span>&gt;</span> {
-     *     String <span style="color: #553000">parameter</span> = (String)<span style="color: #553000">runner</span>.getParameter();
+     *     OptionalThing&lt;Object&gt; <span style="color: #553000">parameter</span> = <span style="color: #553000">runner</span>.getParameter();
      *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
      * }, <span style="color: #553000">op</span> <span style="font-size: 120%">-</span>&gt;</span> <span style="color: #553000">op</span>.params(Arrays.asList("sea", "land", "piari")));
      * </pre>

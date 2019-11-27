@@ -18,15 +18,17 @@ package org.lastaflute.core.magic.async.future;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import org.lastaflute.core.magic.async.waiting.WaitingAsyncResult;
+
 /**
  * @author jflute
  * @since 0.9.6 (2017/04/24 Monday at showbase)
  */
 public class BasicYourFuture implements YourFuture {
 
-    protected final Future<?> wrapped; // not null
+    protected final Future<WaitingAsyncResult> wrapped; // not null
 
-    public BasicYourFuture(Future<?> wrapped) {
+    public BasicYourFuture(Future<WaitingAsyncResult> wrapped) {
         this.wrapped = wrapped;
     }
 
@@ -36,9 +38,9 @@ public class BasicYourFuture implements YourFuture {
     }
 
     @Override
-    public void waitForDone() {
+    public WaitingAsyncResult waitForDone() {
         try {
-            wrapped.get();
+            return wrapped.get();
         } catch (InterruptedException e) {
             String msg = "Interrupted the asynchronous process: " + wrapped;
             throw new YourFutureInterruptedException(msg, e);

@@ -19,13 +19,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -65,11 +66,8 @@ import org.lastaflute.core.magic.async.exception.ConcurrentParallelRunnerExcepti
 import org.lastaflute.core.magic.async.future.BasicYourFuture;
 import org.lastaflute.core.magic.async.future.DestructiveYourFuture;
 import org.lastaflute.core.magic.async.future.YourFuture;
-import org.lastaflute.core.magic.async.race.LaCountdownRace;
-import org.lastaflute.core.magic.async.race.LaCountdownRaceExecution;
-import org.lastaflute.core.magic.async.race.LaCountdownRaceLatch;
-import org.lastaflute.core.magic.async.race.LaCountdownRaceRunner;
-import org.lastaflute.core.magic.async.race.exception.LaCountdownRaceExecutionException;
+import org.lastaflute.core.magic.async.waiting.WaitingAsyncException;
+import org.lastaflute.core.magic.async.waiting.WaitingAsyncResult;
 import org.lastaflute.core.magic.destructive.BowgunDestructiveAdjuster;
 import org.lastaflute.core.mail.PostedMailCounter;
 import org.lastaflute.core.remoteapi.CalledRemoteApiCounter;
@@ -119,10 +117,6 @@ public class SimpleAsyncManager implements AsyncManager {
 
     /** The service of executor for waiting queue. (NullAllowed: lazy-loaded) */
     protected ExecutorService waitingQueueExecutorService;
-
-    // #thinking countdown-race needs batch thread so cannot pool...!? by jflute
-    ///** The service of executor for countdown race process. (NotNull: after initialization) */
-    //protected ExecutorService countdownRaceExecutorService;
 
     // ===================================================================================
     //                                                                          Initialize
@@ -295,8 +289,8 @@ public class SimpleAsyncManager implements AsyncManager {
             return destructiveNormalSync(callback);
         } else { // basically here
             final String keyword = title + buildExecutorHashExp(service);
-            final Runnable task = createRunnable(callback, keyword);
-            final Future<?> nativeFuture = service.submit(task); // real asynchronous
+            final Callable<WaitingAsyncResult> task = createCallableTask(callback, keyword);
+            final Future<WaitingAsyncResult> nativeFuture = service.submit(task); // real asynchronous
             return new BasicYourFuture(nativeFuture);
         }
     }
@@ -313,7 +307,7 @@ public class SimpleAsyncManager implements AsyncManager {
     // ===================================================================================
     //                                                                     Create Runnable
     //                                                                     ===============
-    protected Runnable createRunnable(ConcurrentAsyncCall call, String keyword) { // in caller thread
+    protected Callable<WaitingAsyncResult> createCallableTask(ConcurrentAsyncCall call, String keyword) { // in caller thread
         final Map<String, Object> threadCacheMap = inheritThreadCacheContext(call);
         final AccessContext accessContext = inheritAccessContext(call);
         final CallbackContext callbackContext = inheritCallbackContext(call);
@@ -324,11 +318,12 @@ public class SimpleAsyncManager implements AsyncManager {
             prepareCallbackContext(call, callbackContext);
             final Object variousPreparedObj = prepareVariousContext(call, variousContextMap);
             final long before = showRunning(keyword);
+            final WaitingAsyncResult result = new WaitingAsyncResult();
             Throwable cause = null;
             try {
                 call.callback();
             } catch (Throwable e) {
-                handleAsyncCallbackException(call, before, e);
+                handleAsyncCallbackException(call, before, result, e);
                 cause = e;
             } finally {
                 showFinishing(keyword, before, cause); // should be before clearing because of using them
@@ -337,6 +332,7 @@ public class SimpleAsyncManager implements AsyncManager {
                 clearPreparedAccessContext(call);
                 clearThreadCacheContext(call);
             }
+            return result;
         };
     }
 
@@ -618,13 +614,22 @@ public class SimpleAsyncManager implements AsyncManager {
     // ===================================================================================
     //                                                                  Exception Handling
     //                                                                  ==================
-    protected void handleAsyncCallbackException(ConcurrentAsyncCall call, long before, Throwable cause) {
+    protected void handleAsyncCallbackException(ConcurrentAsyncCall call, long before, WaitingAsyncResult result, Throwable cause) {
         // not use second argument here, same reason as logging filter
         final Throwable handled = exceptionTranslator.filterCause(cause);
-        logger.error(buildAsyncCallbackExceptionMessage(call, before, handled));
+        final boolean errorLoggingEnabled = isErrorLoggingEnabled(call, handled);
+        final String msg = buildAsyncCallbackExceptionMessage(call, before, handled, /*containsStackTrace*/errorLoggingEnabled);
+        if (errorLoggingEnabled) {
+            logger.error(msg); // contains stack trace here
+        }
+        result.setWaitingAsyncException(createWaitingAsyncException(msg, handled));
     }
 
-    protected String buildAsyncCallbackExceptionMessage(ConcurrentAsyncCall call, long before, Throwable cause) {
+    // -----------------------------------------------------
+    //                                         Whole Message
+    //                                         -------------
+    protected String buildAsyncCallbackExceptionMessage(ConcurrentAsyncCall call, long before, Throwable cause,
+            boolean containsStackTrace) {
         final String requestPath = ThreadCacheContext.findRequestPath(); // null allowed when e.g. batch
         final Method entryMethod = ThreadCacheContext.findEntryMethod(); // might be null just in case
         final Object userBean = ThreadCacheContext.findUserBean(); // null allowed when e.g. batch
@@ -655,7 +660,9 @@ public class SimpleAsyncManager implements AsyncManager {
         final String performanceView = DfTraceViewUtil.convertToPerformanceView(after - before);
         sb.append(LF);
         sb.append("= = = = = = = = = =/ [").append(performanceView).append("] #").append(Integer.toHexString(cause.hashCode()));
-        buildExceptionStackTrace(cause, sb);
+        if (containsStackTrace) {
+            buildExceptionStackTrace(cause, sb);
+        }
         return sb.toString().trim();
     }
 
@@ -758,6 +765,20 @@ public class SimpleAsyncManager implements AsyncManager {
         }
     }
 
+    // -----------------------------------------------------
+    //                                         Error Logging
+    //                                         -------------
+    protected boolean isErrorLoggingEnabled(ConcurrentAsyncCall call, Throwable handled) {
+        return !call.suppressesErrorLogging();
+    }
+
+    // -----------------------------------------------------
+    //                                        Waiting Result
+    //                                        --------------
+    protected WaitingAsyncException createWaitingAsyncException(String msg, Throwable handled) {
+        return new WaitingAsyncException(msg, handled);
+    }
+
     // ===================================================================================
     //                                                                         SQL Counter
     //                                                                         ===========
@@ -804,11 +825,7 @@ public class SimpleAsyncManager implements AsyncManager {
     @Override
     public void parallel(ConcurrentParallelCall runnerLambda, ConcurrentParallelOpCall opLambda) {
         final ConcurrentParallelOption option = createConcurrentParallelOption(opLambda);
-        try {
-            readyGo(runnerLambda, option);
-        } catch (LaCountdownRaceExecutionException e) {
-            throwConcurrentParallelRunnerException(option, e);
-        }
+        readyGo(runnerLambda, option);
     }
 
     // -----------------------------------------------------
@@ -825,45 +842,32 @@ public class SimpleAsyncManager implements AsyncManager {
     //                                              --------
     protected void readyGo(ConcurrentParallelCall runnerLambda, ConcurrentParallelOption option) {
         if (isEmptyParallel(option)) { // parameters are specified but empty
+            logger.debug("#flow #parallel Empty parameter list so do nothing");
             return;
         }
-        createCountdownRace(option).readyGo(new LaCountdownRaceExecution() {
-
-            protected Map<String, Object> threadCacheMap; // not null after ready
-            protected AccessContext accessContext; // null allowed after ready
-            protected CallbackContext callbackContext; // null allowed after ready
-
-            @Override
-            public void readyCaller() { // in caller thread
-                threadCacheMap = doInheritThreadCacheContext(); // not null
-                accessContext = doInheritAccessContext(); // null allowed
-                callbackContext = doInheritCallbackContext(() -> {}); // null allowed, dummy call here
+        final Map<Integer, YourFuture> futureMap = new LinkedHashMap<>();
+        final Map<Integer, Object> parameterMap = new LinkedHashMap<>(); // for exception handling
+        final Object lockObj = new Object();
+        option.getParameterList().ifPresent(parameterList -> {
+            logger.debug("#flow #parallel ...Starting parameter-based parallel runners: params=" + parameterList.size());
+            int entryNumber = 1; // e.g. 1, 2, 3...
+            for (Object parameter : parameterList) {
+                final YourFuture future = doParallelAsync(runnerLambda, entryNumber, parameter, lockObj, option);
+                futureMap.put(entryNumber, future);
+                parameterMap.put(entryNumber, parameter);
+                ++entryNumber;
             }
-
-            @Override
-            public void hookBeforeCountdown() { // in new thread
-                doPrepareThreadCacheContext(threadCacheMap);
-                doPreparePreparedAccessContext(accessContext);
-                doPrepareCallbackContext(callbackContext);
-            }
-
-            @Override
-            public void execute(LaCountdownRaceRunner runner) {
-                runnerLambda.callback(createConcurrentParallelRunner(runner));
-            }
-
-            @Override
-            public void hookBeforeGoalFinally() { // in new thread
-                doClearCallbackContext();
-                doClearPreparedAccessContext();
-                doClearThreadCacheContext();
-            }
-
-            @Override
-            public boolean isThrowImmediatelyByFirstCause() {
-                return option.isThrowImmediatelyByFirstCause();
+        }).orElse(() -> {
+            final int runnerCount = getParallelEmptyParameterRunnerCount();
+            logger.debug("#flow #parallel ...Starting fixed-count parallel runners: count=" + runnerCount);
+            for (int i = 0; i < runnerCount; i++) {
+                final int entryNumber = i + 1; // e.g. 1, 2, 3...
+                final YourFuture future = doParallelAsync(runnerLambda, entryNumber, null, lockObj, option);
+                futureMap.put(entryNumber, future);
             }
         });
+        waitForParallelRunnerAllDone(futureMap, option);
+        throwParallelRunnerExceptionIfRequested(futureMap, parameterMap, option);
     }
 
     protected boolean isEmptyParallel(ConcurrentParallelOption option) {
@@ -871,107 +875,106 @@ public class SimpleAsyncManager implements AsyncManager {
         return optParamList.isPresent() && optParamList.get().isEmpty(); // specified but empty
     }
 
-    protected LaCountdownRace createCountdownRace(ConcurrentParallelOption option) {
-        if (isDestructiveAsyncToNormalSync()) { // when no async
-            logger.debug("...Mocking parallel countdown race for destructive-async request.");
-            return option.getParameterList().map(parameterList -> {
-                return new NoAsyncCountdownRace(parameterList);
-            }).orElseGet(() -> {
-                return new NoAsyncCountdownRace(getParallelEmptyParameterRunnerCount());
-            });
-        }
-        // normally here
-        return option.getParameterList().map(parameterList -> {
-            return new LaCountdownRace(parameterList);
-        }).orElseGet(() -> {
-            return new LaCountdownRace(getParallelEmptyParameterRunnerCount());
+    protected YourFuture doParallelAsync(ConcurrentParallelCall runnerLambda, int entryNumber, Object parameter, Object lockObj,
+            ConcurrentParallelOption option) {
+        return async(new ConcurrentAsyncCall() {
+            @Override
+            public void callback() { // contains destructive handling
+                final long threadId = Thread.currentThread().getId();
+                final ConcurrentParallelRunner runner = createConcurrentParallelRunner(threadId, entryNumber, parameter, lockObj);
+                runnerLambda.callback(runner);
+            }
+
+            @Override
+            public boolean suppressesErrorLogging() {
+                return !option.isErrorLoggingSubsumed(); // "suppress" as default
+            }
         });
     }
 
     protected int getParallelEmptyParameterRunnerCount() {
-        return 5; // #for_now jflute should it be option?
+        return 5; // #for_now jflute fixed now, but should it be option? (needed? on-demand supported?)
     }
 
-    protected ConcurrentParallelRunner createConcurrentParallelRunner(LaCountdownRaceRunner nativeRunner) {
-        return new ConcurrentParallelRunner(nativeRunner);
+    protected ConcurrentParallelRunner createConcurrentParallelRunner(long threadId, int entryNumber, Object parameter, Object lockObj) {
+        return new ConcurrentParallelRunner(threadId, entryNumber, parameter, lockObj);
     }
 
     // -----------------------------------------------------
-    //                                  Destructive Parallel
-    //                                  --------------------
-    protected static class NoAsyncCountdownRace extends LaCountdownRace {
-
-        public NoAsyncCountdownRace(int runnerCount) {
-            super(runnerCount);
-        }
-
-        public NoAsyncCountdownRace(List<Object> parameterList) {
-            super(parameterList);
-        }
-
-        // to be serial:
-        //  1. remove latch control in each callable process (plain process)
-        //  2. execute the callable processes serially when submit
-        //  3. do nothing in future handling
-
-        @Override
-        protected LaRacingLatchAgent createLatchAgent(int runnerCount, LaCountdownRaceLatch ourLatch) {
-            return new LaRacingLatchAgent() { // no latch control
-                public void readyCountDown() {
-                }
-
-                public void startAwait() {
-                }
-
-                public void startCountDown() {
-                }
-
-                public void goalAwait() {
-                }
-
-                public void goalCountDown() {
-                }
-
-                public void ourLatchReset() {
-                    // only same as formal implementation here
-                    // (this latch might be used in application code)
-                    ourLatch.reset();
-                }
-            };
-        }
-
-        @Override
-        protected LaRacingFutureAgent<Void> serviceSubmit(Callable<Void> callable) {
-            try {
-                callable.call(); // execute now
-            } catch (Exception e) { // thow immediately because of serial process
-                throw new IllegalStateException("Failed to call the callable process: " + callable, e);
+    //                                     Wait for all done
+    //                                     -----------------
+    protected void waitForParallelRunnerAllDone(Map<Integer, YourFuture> futureMap, ConcurrentParallelOption option) {
+        final long waitingIntervalMillis = option.getWaitingIntervalMillis().orElse(100L); // as default fixedly
+        while (true) {
+            if (futureMap.values().stream().allMatch(future -> future.isDone())) {
+                logger.debug("#flow #parallel ...Finishing all runners of parallel(): runnerCount=" + futureMap.size());
+                break;
             }
-            return new LaRacingFutureAgent<Void>() { // do nothing here because of already executed
-                public Void get() throws InterruptedException, ExecutionException {
-                    return null;
-                }
-            };
+            try {
+                Thread.sleep(waitingIntervalMillis);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("Failed to sleep the current thread: " + Thread.currentThread(), e);
+            }
         }
     }
 
     // -----------------------------------------------------
-    //                                             Exception
-    //                                             ---------
-    protected void throwConcurrentParallelRunnerException(ConcurrentParallelOption option, LaCountdownRaceExecutionException e) {
+    //                                    Parallel Exception
+    //                                    ------------------
+    protected void throwParallelRunnerExceptionIfRequested(Map<Integer, YourFuture> futureMap, Map<Integer, Object> parameterMap,
+            ConcurrentParallelOption option) {
+        if (!option.isErrorLoggingSubsumed()) { // tell caller about exceptions as default
+            final List<WaitingAsyncException> asyncExpList = new ArrayList<>();
+            futureMap.forEach((entryNumber, future) -> {
+                final WaitingAsyncResult result = future.waitForDone();
+                result.getWaitingAsyncException().ifPresent(exp -> {
+                    asyncExpList.add(exp);
+                    exp.setEntryNumber(entryNumber);
+                    exp.setParameter(parameterMap.get(entryNumber));
+                });
+            });
+            if (!asyncExpList.isEmpty()) {
+                throwConcurrentParallelRunnerException(asyncExpList, parameterMap, option);
+            }
+        }
+    }
+
+    protected void throwConcurrentParallelRunnerException(List<WaitingAsyncException> asyncExpList, Map<Integer, Object> parameterMap,
+            ConcurrentParallelOption option) {
         final String notice = "Failed to finish processes of parallel runners.";
-        e.getRunnerCauseList().ifPresent(causeList -> {
-            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-            br.addNotice(notice);
-            br.addItem("Advice");
-            br.addElement("Confirm causes thrown by runners.");
-            br.addItem("Option");
-            br.addElement(option);
-            final String msg = br.buildExceptionMessage();
-            throw new ConcurrentParallelRunnerException(msg, e, causeList);
-        }).orElse(() -> {
-            throw new ConcurrentParallelRunnerException(notice, e);
-        });
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice(notice);
+        br.addItem("Advice");
+        br.addElement("Confirm causes thrown by runners.");
+        br.addElement("The exception of first-done process is treated as main cause.");
+        br.addElement("And you can get all exception instances by getRunnerCauseList().");
+        br.addItem("Option");
+        br.addElement(option); // contains parameterList
+        if (!asyncExpList.isEmpty()) {
+            br.addItem("Native Cause");
+            for (WaitingAsyncException asyncExp : asyncExpList) {
+                final Throwable cause = asyncExp.getCause();
+                final Object causeExp = cause != null ? cause.getClass().getName() : null; // null check just in case
+                final String entrySuffix = asyncExp.getEntryNumber().map(entryNumber -> { // basically present
+                    final String paramExp = asyncExp.getParameter().map(param -> ": " + param).orElse(""); // parameter-based or fixed-count
+                    return " // " + entryNumber + paramExp; // both entry number and parameter are always together in parallel()
+                }).orElse("");
+                br.addElement(causeExp + entrySuffix);
+                if (cause != null) {
+                    final Throwable nestedCause = cause.getCause();
+                    if (nestedCause != null) {
+                        br.addElement(" |-" + nestedCause.getClass().getName());
+                        final Throwable nestedNestedCause = nestedCause.getCause();
+                        if (nestedNestedCause != null) {
+                            br.addElement("   |-" + nestedNestedCause.getClass().getName()); // until here for now
+                        }
+                    }
+                }
+            }
+        }
+        final String msg = br.buildExceptionMessage();
+        final WaitingAsyncException firstCause = !asyncExpList.isEmpty() ? asyncExpList.get(0) : null;
+        throw new ConcurrentParallelRunnerException(msg, firstCause, asyncExpList);
     }
 
     // ===================================================================================
