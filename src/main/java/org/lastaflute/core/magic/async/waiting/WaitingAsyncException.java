@@ -19,7 +19,7 @@ import org.dbflute.optional.OptionalThing;
 
 /**
  * @author jflute
- * @since 1.1.5 (2019/11/27 Thursday at sky-high)
+ * @since 1.1.5 (2019/11/27 Wednesday at sky-high)
  */
 public class WaitingAsyncException extends RuntimeException { // for one asynchronous process
 
