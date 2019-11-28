@@ -867,7 +867,9 @@ public class SimpleAsyncManager implements AsyncManager {
             }
         });
         waitForParallelRunnerAllDone(futureMap, option);
-        throwParallelRunnerExceptionIfRequested(futureMap, parameterMap, option);
+        if (!option.isErrorHandlingSubsumed()) { // default here, tell caller about exceptions
+            throwParallelRunnerException(futureMap, parameterMap, option);
+        }
     }
 
     protected boolean isEmptyParallel(ConcurrentParallelOption option) {
@@ -887,7 +889,7 @@ public class SimpleAsyncManager implements AsyncManager {
 
             @Override
             public boolean suppressesErrorLogging() {
-                return !option.isErrorLoggingSubsumed(); // "suppress" as default
+                return !option.isErrorHandlingSubsumed(); // "suppress" as default
             }
         });
     }
@@ -921,21 +923,19 @@ public class SimpleAsyncManager implements AsyncManager {
     // -----------------------------------------------------
     //                                    Parallel Exception
     //                                    ------------------
-    protected void throwParallelRunnerExceptionIfRequested(Map<Integer, YourFuture> futureMap, Map<Integer, Object> parameterMap,
+    protected void throwParallelRunnerException(Map<Integer, YourFuture> futureMap, Map<Integer, Object> parameterMap,
             ConcurrentParallelOption option) {
-        if (!option.isErrorLoggingSubsumed()) { // tell caller about exceptions as default
-            final List<WaitingAsyncException> asyncExpList = new ArrayList<>();
-            futureMap.forEach((entryNumber, future) -> {
-                final WaitingAsyncResult result = future.waitForDone();
-                result.getWaitingAsyncException().ifPresent(exp -> {
-                    asyncExpList.add(exp);
-                    exp.setEntryNumber(entryNumber);
-                    exp.setParameter(parameterMap.get(entryNumber));
-                });
+        final List<WaitingAsyncException> asyncExpList = new ArrayList<>();
+        futureMap.forEach((entryNumber, future) -> {
+            final WaitingAsyncResult result = future.waitForDone();
+            result.getWaitingAsyncException().ifPresent(exp -> {
+                asyncExpList.add(exp);
+                exp.setEntryNumber(entryNumber);
+                exp.setParameter(parameterMap.get(entryNumber));
             });
-            if (!asyncExpList.isEmpty()) {
-                throwConcurrentParallelRunnerException(asyncExpList, parameterMap, option);
-            }
+        });
+        if (!asyncExpList.isEmpty()) {
+            throwConcurrentParallelRunnerException(asyncExpList, parameterMap, option);
         }
     }
 

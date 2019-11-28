@@ -29,7 +29,7 @@ public class ConcurrentParallelOption {
     //                                                                           Attribute
     //                                                                           =========
     protected List<Object> parameterList; // null allowed (however basically used: mainly parameter-based parallel)
-    protected boolean errorLoggingSubsumed; // as completable asynchronous process if true
+    protected boolean errorHandlingSubsumed; // as completable asynchronous process if true
     protected Long waitingIntervalMillis; // null allowed
 
     // ===================================================================================
@@ -41,8 +41,8 @@ public class ConcurrentParallelOption {
         return this;
     }
 
-    public ConcurrentParallelOption subsumeErrorLogging() {
-        this.errorLoggingSubsumed = true; // error logging enabled in asynchronous process and no thrown in caller process
+    public ConcurrentParallelOption subsumeErrorHandling() {
+        this.errorHandlingSubsumed = true; // error logging enabled in asynchronous process and no thrown in caller process
         return this;
     }
 
@@ -59,7 +59,7 @@ public class ConcurrentParallelOption {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "{parameterList=" + parameterList + ", errorLoggingSubsumed=" + errorLoggingSubsumed + ", waitingIntervalMillis="
+        return "{parameterList=" + parameterList + ", errorLoggingSubsumed=" + errorHandlingSubsumed + ", waitingIntervalMillis="
                 + waitingIntervalMillis + "}";
     }
 
@@ -72,8 +72,8 @@ public class ConcurrentParallelOption {
         });
     }
 
-    public boolean isErrorLoggingSubsumed() {
-        return errorLoggingSubsumed;
+    public boolean isErrorHandlingSubsumed() {
+        return errorHandlingSubsumed;
     }
 
     public OptionalThing<Long> getWaitingIntervalMillis() {
