@@ -852,7 +852,7 @@ public class SimpleAsyncManager implements AsyncManager {
             logger.debug("#flow #parallel ...Starting parameter-based parallel runners: params=" + parameterList.size());
             int entryNumber = 1; // e.g. 1, 2, 3...
             for (Object parameter : parameterList) {
-                final YourFuture future = doParallelAsync(runnerLambda, entryNumber, parameter, lockObj, option);
+                final YourFuture future = doParallelAsync(runnerLambda, entryNumber, parameter, lockObj, futureMap, option);
                 futureMap.put(entryNumber, future);
                 parameterMap.put(entryNumber, parameter);
                 ++entryNumber;
@@ -862,7 +862,7 @@ public class SimpleAsyncManager implements AsyncManager {
             logger.debug("#flow #parallel ...Starting fixed-count parallel runners: count=" + runnerCount);
             for (int i = 0; i < runnerCount; i++) {
                 final int entryNumber = i + 1; // e.g. 1, 2, 3...
-                final YourFuture future = doParallelAsync(runnerLambda, entryNumber, null, lockObj, option);
+                final YourFuture future = doParallelAsync(runnerLambda, entryNumber, /*parameter*/null, lockObj, futureMap, option);
                 futureMap.put(entryNumber, future);
             }
         });
@@ -877,9 +877,40 @@ public class SimpleAsyncManager implements AsyncManager {
         return optParamList.isPresent() && optParamList.get().isEmpty(); // specified but empty
     }
 
+    protected int getParallelEmptyParameterRunnerCount() {
+        return 5; // #for_now jflute fixed now, but should it be option? (needed? on-demand supported?)
+    }
+
+    // -----------------------------------------------------
+    //                                 Parallel Asynchronous
+    //                                 ---------------------
     protected YourFuture doParallelAsync(ConcurrentParallelCall runnerLambda, int entryNumber, Object parameter, Object lockObj,
+            Map<Integer, YourFuture> currentFutureMap, ConcurrentParallelOption option) {
+        option.getConcurrencyCountLimit().ifPresent(concurrencyCountlimit -> {
+            waitForParallelConcurrencyLimitation(concurrencyCountlimit, currentFutureMap, option);
+        });
+        return async(createParallelAsyncCall(runnerLambda, entryNumber, parameter, lockObj, option));
+    }
+
+    protected void waitForParallelConcurrencyLimitation(Integer concurrencyCountlimit, Map<Integer, YourFuture> currentFutureMap,
             ConcurrentParallelOption option) {
-        return async(new ConcurrentAsyncCall() {
+        final long waitingIntervalMillis = option.getWaitingIntervalMillis().orElse(100L); // as default fixedly
+        while (true) {
+            final long runningCount = currentFutureMap.values().stream().filter(future -> !future.isDone()).count();
+            if (runningCount < concurrencyCountlimit) {
+                break; // OK
+            }
+            try {
+                Thread.sleep(waitingIntervalMillis);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("Failed to sleep the current thread: " + Thread.currentThread(), e);
+            }
+        }
+    }
+
+    protected ConcurrentAsyncCall createParallelAsyncCall(ConcurrentParallelCall runnerLambda, int entryNumber, Object parameter,
+            Object lockObj, ConcurrentParallelOption option) {
+        return new ConcurrentAsyncCall() {
             @Override
             public void callback() { // contains destructive handling
                 final long threadId = Thread.currentThread().getId();
@@ -891,11 +922,7 @@ public class SimpleAsyncManager implements AsyncManager {
             public boolean suppressesErrorLogging() {
                 return !option.isErrorHandlingSubsumed(); // "suppress" as default
             }
-        });
-    }
-
-    protected int getParallelEmptyParameterRunnerCount() {
-        return 5; // #for_now jflute fixed now, but should it be option? (needed? on-demand supported?)
+        };
     }
 
     protected ConcurrentParallelRunner createConcurrentParallelRunner(long threadId, int entryNumber, Object parameter, Object lockObj) {
@@ -909,7 +936,7 @@ public class SimpleAsyncManager implements AsyncManager {
         final long waitingIntervalMillis = option.getWaitingIntervalMillis().orElse(100L); // as default fixedly
         while (true) {
             if (futureMap.values().stream().allMatch(future -> future.isDone())) {
-                logger.debug("#flow #parallel ...Finishing all runners of parallel(): runnerCount=" + futureMap.size());
+                logger.debug("#flow #parallel ...Finishing all runners of parallel(): runnerCount={}", futureMap.size());
                 break;
             }
             try {
