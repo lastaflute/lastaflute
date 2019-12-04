@@ -22,9 +22,11 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -845,16 +847,17 @@ public class SimpleAsyncManager implements AsyncManager {
             logger.debug("#flow #parallel Empty parameter list so do nothing");
             return;
         }
-        final Map<Integer, YourFuture> futureMap = new LinkedHashMap<>();
-        final Map<Integer, Object> parameterMap = new LinkedHashMap<>(); // for exception handling
+        final Map<Integer, Object> parameterHistoryMap = new LinkedHashMap<>(); // for exception handling
+        final Map<Integer, YourFuture> allFutureMap = new LinkedHashMap<>(); // for e.g. waiting for all done, exception handling
+        final Set<YourFuture> runningPossibleFutureSet = new LinkedHashSet<>(); // for e.g. control of concurrency count limit
         final Object lockObj = new Object();
         option.getParameterList().ifPresent(parameterList -> {
             logger.debug("#flow #parallel ...Starting parameter-based parallel runners: params=" + parameterList.size());
             int entryNumber = 1; // e.g. 1, 2, 3...
             for (Object parameter : parameterList) {
-                final YourFuture future = doParallelAsync(runnerLambda, entryNumber, parameter, lockObj, futureMap, option);
-                futureMap.put(entryNumber, future);
-                parameterMap.put(entryNumber, parameter);
+                parameterHistoryMap.put(entryNumber, parameter);
+                final YourFuture future = doParallelAsync(runnerLambda, entryNumber, parameter, lockObj, runningPossibleFutureSet, option);
+                keepParallelFuture(entryNumber, future, allFutureMap, runningPossibleFutureSet);
                 ++entryNumber;
             }
         }).orElse(() -> {
@@ -862,13 +865,14 @@ public class SimpleAsyncManager implements AsyncManager {
             logger.debug("#flow #parallel ...Starting fixed-count parallel runners: count=" + runnerCount);
             for (int i = 0; i < runnerCount; i++) {
                 final int entryNumber = i + 1; // e.g. 1, 2, 3...
-                final YourFuture future = doParallelAsync(runnerLambda, entryNumber, /*parameter*/null, lockObj, futureMap, option);
-                futureMap.put(entryNumber, future);
+                final YourFuture future =
+                        doParallelAsync(runnerLambda, entryNumber, /*parameter*/null, lockObj, runningPossibleFutureSet, option);
+                keepParallelFuture(entryNumber, future, allFutureMap, runningPossibleFutureSet);
             }
         });
-        waitForParallelRunnerAllDone(futureMap, option);
+        waitForParallelRunnerAllDone(allFutureMap, option);
         if (!option.isErrorHandlingSubsumed()) { // default here, tell caller about exceptions
-            throwParallelRunnerException(futureMap, parameterMap, option);
+            throwParallelRunnerException(allFutureMap, parameterHistoryMap, option);
         }
     }
 
@@ -881,22 +885,31 @@ public class SimpleAsyncManager implements AsyncManager {
         return 5; // #for_now jflute fixed now, but should it be option? (needed? on-demand supported?)
     }
 
+    protected void keepParallelFuture(int entryNumber, YourFuture future, Map<Integer, YourFuture> allFutureMap,
+            Set<YourFuture> runningPossibleFutureSet) {
+        allFutureMap.put(entryNumber, future);
+        runningPossibleFutureSet.add(future);
+        if (entryNumber % 20 == 0) { // sometimes to avoid many iterator instances
+            runningPossibleFutureSet.removeIf(existing -> existing.isDone()); // running only at this moment
+        }
+    }
+
     // -----------------------------------------------------
     //                                 Parallel Asynchronous
     //                                 ---------------------
     protected YourFuture doParallelAsync(ConcurrentParallelCall runnerLambda, int entryNumber, Object parameter, Object lockObj,
-            Map<Integer, YourFuture> currentFutureMap, ConcurrentParallelOption option) {
+            Set<YourFuture> runningPossibleFutureSet, ConcurrentParallelOption option) {
         option.getConcurrencyCountLimit().ifPresent(concurrencyCountlimit -> {
-            waitForParallelConcurrencyLimitation(concurrencyCountlimit, currentFutureMap, option);
+            waitForParallelConcurrencyLimitation(concurrencyCountlimit, runningPossibleFutureSet, option);
         });
         return async(createParallelAsyncCall(runnerLambda, entryNumber, parameter, lockObj, option));
     }
 
-    protected void waitForParallelConcurrencyLimitation(Integer concurrencyCountlimit, Map<Integer, YourFuture> currentFutureMap,
+    protected void waitForParallelConcurrencyLimitation(Integer concurrencyCountlimit, Set<YourFuture> runningPossibleFutureSet,
             ConcurrentParallelOption option) {
-        final long waitingIntervalMillis = option.getWaitingIntervalMillis().orElse(100L); // as default fixedly
+        final long waitingIntervalMillis = option.getWaitingIntervalMillis().orElse(20L); // as default fixedly
         while (true) {
-            final long runningCount = currentFutureMap.values().stream().filter(future -> !future.isDone()).count();
+            final long runningCount = runningPossibleFutureSet.stream().filter(future -> !future.isDone()).count();
             if (runningCount < concurrencyCountlimit) {
                 break; // OK
             }
@@ -950,19 +963,19 @@ public class SimpleAsyncManager implements AsyncManager {
     // -----------------------------------------------------
     //                                    Parallel Exception
     //                                    ------------------
-    protected void throwParallelRunnerException(Map<Integer, YourFuture> futureMap, Map<Integer, Object> parameterMap,
+    protected void throwParallelRunnerException(Map<Integer, YourFuture> allFutureMap, Map<Integer, Object> parameterHistoryMap,
             ConcurrentParallelOption option) {
         final List<WaitingAsyncException> asyncExpList = new ArrayList<>();
-        futureMap.forEach((entryNumber, future) -> {
+        allFutureMap.forEach((entryNumber, future) -> {
             final WaitingAsyncResult result = future.waitForDone();
             result.getWaitingAsyncException().ifPresent(exp -> {
                 asyncExpList.add(exp);
                 exp.setEntryNumber(entryNumber);
-                exp.setParameter(parameterMap.get(entryNumber));
+                exp.setParameter(parameterHistoryMap.get(entryNumber)); // null allowed when no-parameter
             });
         });
         if (!asyncExpList.isEmpty()) {
-            throwConcurrentParallelRunnerException(asyncExpList, parameterMap, option);
+            throwConcurrentParallelRunnerException(asyncExpList, parameterHistoryMap, option);
         }
     }
 
