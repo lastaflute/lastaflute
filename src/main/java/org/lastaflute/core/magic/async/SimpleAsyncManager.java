@@ -333,6 +333,7 @@ public class SimpleAsyncManager implements AsyncManager {
                 clearCallbackContext(call);
                 clearPreparedAccessContext(call);
                 clearThreadCacheContext(call);
+                call.hookFinally(result);
             }
             return result;
         };
@@ -907,7 +908,14 @@ public class SimpleAsyncManager implements AsyncManager {
 
     protected void waitForParallelConcurrencyLimitation(Integer concurrencyCountlimit, Set<YourFuture> runningPossibleFutureSet,
             ConcurrentParallelOption option) {
-        final long waitingIntervalMillis = option.getWaitingIntervalMillis().orElse(20L); // as default fixedly
+        // [waiting-interval milliseconds performance]
+        // when 2000 parameters and limit 5 and light processes
+        //   1L  : 00m00s925ms, 00m01s133ms
+        //   10L : 00m03s502ms, 00m02s447ms
+        //   20L : 00m05s249ms, 00m05s193ms
+        //   100L: 00m31s037ms
+        // (avoid too late and too short-span) 
+        final long waitingIntervalMillis = option.getWaitingIntervalMillis().orElse(20L);
         while (true) {
             final long runningCount = runningPossibleFutureSet.stream().filter(future -> !future.isDone()).count();
             if (runningCount < concurrencyCountlimit) {
