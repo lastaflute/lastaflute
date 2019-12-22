@@ -26,9 +26,9 @@ import org.lastaflute.core.magic.async.waiting.WaitingAsyncResult;
  */
 public class AsyncStateBridge {
 
-    protected final BridgeCallAdapter callAdapter;
-    protected final Callable<WaitingAsyncResult> callableTask;
-    protected final AsyncStateBridgeOption option; // for future
+    protected final BridgeCallAdapter callAdapter; // not null
+    protected final Callable<WaitingAsyncResult> callableTask; // not null
+    protected final AsyncStateBridgeOption option; // not null, for future
 
     public AsyncStateBridge(BridgeCallAdapter callAdapter, Callable<WaitingAsyncResult> callableTask, AsyncStateBridgeOption option) {
         this.callAdapter = callAdapter;
@@ -36,6 +36,20 @@ public class AsyncStateBridge {
         this.option = option;
     }
 
+    /**
+     * Cross the bridge like this:
+     * <pre>
+     * AsyncStateBridge <span style="color: #553000">bridge</span> = <span style="color: #0000C0">asyncManager</span>.<span style="color: #994747">bridgeState</span>(<span style="color: #553000">op</span> <span style="font-size: 120%">-</span>&gt;</span> {});
+     * yourOtherAsync.something(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #553000">bridge</span>.<span style="color: #CC4747">cross</span>(() <span style="font-size: 120%">-</span>&gt;</span> { <span style="color: #3F7E5E">// inherits caller thread states</span>
+     *         <span style="color: #0000C0">transactionStage</span>.requiresNew(tx <span style="font-size: 120%">-</span>&gt;</span> { <span style="color: #3F7E5E">// should be in cross()</span>
+     *             ... <span style="color: #3F7E5E">// asynchronous process here e.g. insert(), update()</span>
+     *         });
+     *     });
+     * );
+     * </pre>
+     * @param noArgLambda The callback for application logic as asynchronous process that has caller thread states. (NotNull)
+     */
     public void cross(IndependentProcessor noArgLambda) {
         callAdapter.adapt(noArgLambda);
         try {
