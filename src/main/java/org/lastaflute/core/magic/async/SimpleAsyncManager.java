@@ -64,6 +64,10 @@ import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.core.magic.ThreadCompleted;
 import org.lastaflute.core.magic.async.ConcurrentAsyncCall.ConcurrentAsyncImportance;
 import org.lastaflute.core.magic.async.ConcurrentAsyncOption.ConcurrentAsyncInheritType;
+import org.lastaflute.core.magic.async.bridge.AsyncStateBridge;
+import org.lastaflute.core.magic.async.bridge.AsyncStateBridgeOpCall;
+import org.lastaflute.core.magic.async.bridge.AsyncStateBridgeOption;
+import org.lastaflute.core.magic.async.bridge.BridgeCallAdapter;
 import org.lastaflute.core.magic.async.exception.ConcurrentParallelRunnerException;
 import org.lastaflute.core.magic.async.future.BasicYourFuture;
 import org.lastaflute.core.magic.async.future.DestructiveYourFuture;
@@ -820,6 +824,34 @@ public class SimpleAsyncManager implements AsyncManager {
     //                                                                         ===========
     protected boolean isDestructiveAsyncToNormalSync() { // basically for UnitTest
         return BowgunDestructiveAdjuster.isAsyncToNormalSync();
+    }
+
+    // ===================================================================================
+    //                                                                        Bridge State
+    //                                                                        ============
+    @Override
+    public AsyncStateBridge bridgeState(AsyncStateBridgeOpCall opLambda) {
+        final AsyncStateBridgeOption option = createAsyncStateBridgeOption(opLambda);
+        final BridgeCallAdapter callAdapter = newBridgeCallAdapter();
+        final Callable<WaitingAsyncResult> callableTask = createCallableTask(() -> {
+            callAdapter.delegate();
+        }, "bridge");
+        return newAsyncStateBridge(callAdapter, callableTask, option);
+    }
+
+    protected AsyncStateBridgeOption createAsyncStateBridgeOption(AsyncStateBridgeOpCall opLambda) {
+        final AsyncStateBridgeOption option = new AsyncStateBridgeOption();
+        opLambda.callback(option);
+        return option;
+    }
+
+    protected BridgeCallAdapter newBridgeCallAdapter() {
+        return new BridgeCallAdapter();
+    }
+
+    protected AsyncStateBridge newAsyncStateBridge(BridgeCallAdapter callAdapter, Callable<WaitingAsyncResult> callableTask,
+            AsyncStateBridgeOption option) {
+        return new AsyncStateBridge(callAdapter, callableTask, option);
     }
 
     // ===================================================================================
