@@ -15,6 +15,8 @@
  */
 package org.lastaflute.core.magic.async;
 
+import org.lastaflute.core.magic.async.bridge.AsyncStateBridge;
+import org.lastaflute.core.magic.async.bridge.AsyncStateBridgeOpCall;
 import org.lastaflute.core.magic.async.exception.ConcurrentParallelRunnerException;
 import org.lastaflute.core.magic.async.future.YourFuture;
 
@@ -26,13 +28,13 @@ public interface AsyncManager {
     /**
      * Execute asynchronous process by other thread. <br>
      * <pre>
-     * asyncManager.<span style="color: #CC4747">async</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
+     * <span style="color: #0000C0">asyncManager</span>.<span style="color: #CC4747">async</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
      *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
      * });
      * 
      * <span style="color: #3F7E5E">// begin asynchronous process after action transaction finished</span>
      * <span style="color: #70226C">return</span> asHtml(...).<span style="color: #994747">afterTxCommit</span>(() <span style="font-size: 120%">-</span>&gt;</span> {
-     *     asyncManager.async(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #0000C0">asyncManager</span>.async(() <span style="font-size: 120%">-</span>&gt;</span> {
      *         ...
      *     });
      * });
@@ -52,10 +54,30 @@ public interface AsyncManager {
     YourFuture async(ConcurrentAsyncCall noArgLambda);
 
     /**
+     * Bridge current thread states (managed by LastaFlute) to other-managed asynchronous processes. <br>
+     * The rule is same as async(), e.g. ThreadCacheContext, AccessContext, CallbackContext, ExceptionHandling. <br>
+     * Also it contains exception handling (error logging) so you does not need to catch it basically.
+     * <pre>
+     * AsyncStateBridge <span style="color: #553000">bridge</span> = <span style="color: #0000C0">asyncManager</span>.<span style="color: #CC4747">bridgeState</span>(<span style="color: #553000">op</span> <span style="font-size: 120%">-</span>&gt;</span> {});
+     * yourOtherAsync.something(() <span style="font-size: 120%">-</span>&gt;</span> {
+     *     <span style="color: #553000">bridge</span>.<span style="color: #994747">cross</span>(() <span style="font-size: 120%">-</span>&gt;</span> { <span style="color: #3F7E5E">// inherits caller thread states</span>
+     *         ... <span style="color: #3F7E5E">// non-transactional process here</span>
+     *         <span style="color: #0000C0">transactionStage</span>.requiresNew(tx <span style="font-size: 120%">-</span>&gt;</span> { <span style="color: #3F7E5E">// should be in cross()</span>
+     *             ... <span style="color: #3F7E5E">// asynchronous process here e.g. insert(), update()</span>
+     *         });
+     *     });
+     * );
+     * </pre>
+     * @param opLambda The callback for option of bridge. (NotNull)
+     * @return The bridge that can migrate asynchronous state to other asynchronous processes. (NotNull)
+     */
+    AsyncStateBridge bridgeState(AsyncStateBridgeOpCall opLambda);
+
+    /**
      * Execute parallel process and wait for ending of all threads.
      * <pre>
-     * asyncManager.<span style="color: #CC4747">parallel</span>(<span style="color: #553000">runner</span> <span style="font-size: 120%">-</span>&gt;</span> {
-     *     String <span style="color: #553000">parameter</span> = (String)<span style="color: #553000">runner</span>.getParameter();
+     * <span style="color: #0000C0">asyncManager</span>.<span style="color: #CC4747">parallel</span>(<span style="color: #553000">runner</span> <span style="font-size: 120%">-</span>&gt;</span> {
+     *     OptionalThing&lt;Object&gt; <span style="color: #553000">parameter</span> = <span style="color: #553000">runner</span>.getParameter();
      *     ... <span style="color: #3F7E5E">// asynchronous process here</span>
      * }, <span style="color: #553000">op</span> <span style="font-size: 120%">-</span>&gt;</span> <span style="color: #553000">op</span>.params(Arrays.asList("sea", "land", "piari")));
      * </pre>

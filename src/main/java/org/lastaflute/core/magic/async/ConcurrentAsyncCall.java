@@ -15,6 +15,8 @@
  */
 package org.lastaflute.core.magic.async;
 
+import org.lastaflute.core.magic.async.waiting.WaitingAsyncResult;
+
 /**
  * @author jflute
  */
@@ -26,11 +28,14 @@ public interface ConcurrentAsyncCall {
      */
     void callback();
 
-    default boolean asPrimary() { // for compatible, keep as forcing option
+    default boolean asPrimary() { // will be deprecated at future, use importance()
         return false;
     }
 
-    default ConcurrentAsyncImportance importance() {
+    default void hookFinally(WaitingAsyncResult result) { // for e.g. count-down latch
+    }
+
+    default ConcurrentAsyncImportance importance() { // null allowed
         return null; // as default
     }
 
@@ -38,7 +43,12 @@ public interface ConcurrentAsyncCall {
         PRIMARY, SECONDARY, TERTIARY
     }
 
-    default ConcurrentAsyncOption option() {
-        return new ConcurrentAsyncOption();
+    default ConcurrentAsyncOption option() { // not null
+        return new ConcurrentAsyncOption(); // actually ConcurrentAsyncInheritOption (2019/12/05)
+    }
+
+    default boolean suppressesErrorLogging() { // parallel() uses this
+        // basically you don't need to override this, use WaitingAsyncException from waitForDone() if you want
+        return false;
     }
 }

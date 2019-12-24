@@ -15,6 +15,8 @@
  */
 package org.lastaflute.core.magic.async.future;
 
+import org.lastaflute.core.magic.async.waiting.WaitingAsyncResult;
+
 /**
  * @author jflute
  * @since 0.9.6 (2017/04/24 Monday at showbase)
@@ -28,9 +30,12 @@ public interface YourFuture {
     boolean isDone();
 
     /**
-     * Wait for done of asynchronous execution.
+     * Wait for done of asynchronous execution. <br>
+     * The exception in the result is already handled as error logging as default option. <br>
+     * So basically the exception is only for business determination.
+     * @return The result of asynchronous execution. (NotNull)
      */
-    void waitForDone();
+    WaitingAsyncResult waitForDone();
 
     public static class YourFutureInterruptedException extends RuntimeException {
 

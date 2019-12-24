@@ -18,6 +18,7 @@ package org.lastaflute.core.magic.async.exception;
 import java.util.List;
 
 import org.lastaflute.core.exception.LaSystemException;
+import org.lastaflute.core.magic.async.waiting.WaitingAsyncException;
 
 /**
  * @author jflute
@@ -26,18 +27,18 @@ public class ConcurrentParallelRunnerException extends LaSystemException {
 
     private static final long serialVersionUID = 1L;
 
-    protected List<Throwable> runnerCauseList; // null allowed, contains first cause
+    protected List<WaitingAsyncException> runnerCauseList; // null allowed, contains first cause
 
-    public ConcurrentParallelRunnerException(String msg, Throwable firstCause) {
+    public ConcurrentParallelRunnerException(String msg, WaitingAsyncException firstCause) {
         super(msg, firstCause);
     }
 
-    public ConcurrentParallelRunnerException(String msg, Throwable firstCause, List<Throwable> runnerCauseList) {
+    public ConcurrentParallelRunnerException(String msg, WaitingAsyncException firstCause, List<WaitingAsyncException> runnerCauseList) {
         super(msg, firstCause);
         this.runnerCauseList = runnerCauseList;
     }
 
-    public List<Throwable> getRunnerCauseList() {
-        return runnerCauseList;
+    public List<WaitingAsyncException> getRunnerCauseList() {
+        return (List<WaitingAsyncException>) runnerCauseList;
     }
 }

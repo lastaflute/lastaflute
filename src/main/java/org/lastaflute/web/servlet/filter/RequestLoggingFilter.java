@@ -1088,7 +1088,7 @@ public class RequestLoggingFilter implements Filter {
 
         /**
          * Should the logging of the exception suppressed? <br>
-         * For example, suppress if an exception message contains "Bronken pipe". 
+         * For example, suppress if an exception message contains "Broken pipe". 
          * @param cause The cause of this 'Server Error'. (NotNull)
          * @return The determination, true or false.
          */

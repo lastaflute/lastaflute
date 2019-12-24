@@ -48,7 +48,7 @@ public class LaCountdownRace { // migrated from DBFlute
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final Map<Integer, Object> _runnerRequestMap; // map:{entryNumber, parameterObject} 
+    protected final Map<Integer, Object> _runnerRequestMap; // as read-only, e.g. map:{entryNumber, parameterObject} 
     protected final ExecutorService _service;
 
     // ===================================================================================
@@ -67,6 +67,7 @@ public class LaCountdownRace { // migrated from DBFlute
         _service = prepareExecutorService();
     }
 
+    // #fow_now jflute generic type should be "? extends Object"...but keep compatible just in case (2019/11/04)
     public LaCountdownRace(List<Object> parameterList) { // assigned by parameters (the size is runner count)
         if (parameterList == null) {
             throw new IllegalArgumentException("The argument 'parameterList' should not be null.");
@@ -104,41 +105,70 @@ public class LaCountdownRace { // migrated from DBFlute
             return;
         }
         final int runnerCount = _runnerRequestMap.size();
-        final CountDownLatch ready = new CountDownLatch(runnerCount);
-        final CountDownLatch start = new CountDownLatch(1);
-        final CountDownLatch goal = new CountDownLatch(runnerCount);
-        final LaCountdownRaceLatch ourLatch = new LaCountdownRaceLatch(runnerCount);
-        final Object lockObj = new Object();
-        final List<Future<Void>> futureList = new ArrayList<Future<Void>>();
-        for (Entry<Integer, Object> entry : _runnerRequestMap.entrySet()) {
-            final Integer entryNumber = entry.getKey();
-            final Object parameter = entry.getValue(); // null allowed
-            final Callable<Void> callable = createCallable(execution, ready, start, goal, ourLatch, entryNumber, parameter, lockObj);
-            final Future<Void> future = _service.submit(callable);
-            futureList.add(future);
-        }
-
+        final LaCountdownRaceLatch ourLatch = createOurLatch(runnerCount);
+        final LaRacingLatchAgent latchAgent = createLatchAgent(runnerCount, ourLatch);
+        final List<LaRacingFutureAgent<Void>> futureList = submitRunner(execution, ourLatch, latchAgent);
         if (_log.isDebugEnabled()) {
-            _log.debug("...Ready Go! CountDownRace just begun! (runner=" + runnerCount + ")");
+            _log.debug("...Ready Go! CountdownRace just begun! (runner=" + runnerCount + ")");
         }
-        start.countDown(); // fire!
-        try {
-            goal.await(); // wait until all threads are finished
-            if (_log.isDebugEnabled()) {
-                _log.debug("All runners finished line! (runner=" + runnerCount + ")");
-            }
-        } catch (InterruptedException e) {
-            String msg = "goal.await() was interrupted!";
-            throw new IllegalStateException(msg, e);
-        }
-
+        beginCountdownRace(latchAgent, runnerCount);
         handleFuture(futureList, execution);
     }
 
-    protected void handleFuture(List<Future<Void>> futureList, LaCountdownRaceExecution execution) {
+    // -----------------------------------------------------
+    //                                           Latch Agent
+    //                                           -----------
+    protected LaCountdownRaceLatch createOurLatch(int runnerCount) {
+        return new LaCountdownRaceLatch(runnerCount);
+    }
+
+    protected LaRacingLatchAgent createLatchAgent(int runnerCount, LaCountdownRaceLatch ourLatch) {
+        final CountDownLatch ready = new CountDownLatch(runnerCount);
+        final CountDownLatch start = new CountDownLatch(1);
+        final CountDownLatch goal = new CountDownLatch(runnerCount);
+        return new LaRacingLatchByCountdown(ready, start, goal, ourLatch); // you can mock here
+    }
+
+    // -----------------------------------------------------
+    //                                         Submit Runner
+    //                                         -------------
+    protected List<LaRacingFutureAgent<Void>> submitRunner(LaCountdownRaceExecution execution, LaCountdownRaceLatch ourLatch,
+            LaRacingLatchAgent latchAgent) {
+        final Object lockObj = new Object();
+        final List<LaRacingFutureAgent<Void>> futureList = new ArrayList<LaRacingFutureAgent<Void>>();
+        for (Entry<Integer, Object> entry : _runnerRequestMap.entrySet()) {
+            final Integer entryNumber = entry.getKey();
+            final Object parameter = entry.getValue(); // null allowed
+            final Callable<Void> callable = createCallable(execution, latchAgent, ourLatch, entryNumber, parameter, lockObj);
+            final LaRacingFutureAgent<Void> future = serviceSubmit(callable);
+            futureList.add(future);
+        }
+        return futureList;
+    }
+
+    protected LaRacingFutureAgent<Void> serviceSubmit(Callable<Void> callable) {
+        final Future<Void> future = _service.submit(callable);
+        return new LaRacingFutureByFuture<Void>(future);
+    }
+
+    // -----------------------------------------------------
+    //                                            Begin Race
+    //                                            ----------
+    protected void beginCountdownRace(LaRacingLatchAgent latchAgent, int runnerCount) {
+        latchAgent.startCountDown(); // fire!
+        latchAgent.goalAwait(); // wait until all threads are finished
+        if (_log.isDebugEnabled()) {
+            _log.debug("All runners finished line! (runner=" + runnerCount + ")");
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                         Handle Future
+    //                                         -------------
+    protected void handleFuture(List<LaRacingFutureAgent<Void>> futureList, LaCountdownRaceExecution execution) {
         final boolean throwImmediatelyByFirstCause = execution.isThrowImmediatelyByFirstCause();
         final List<Throwable> runnerCauseList = new ArrayList<Throwable>();
-        for (Future<Void> future : futureList) {
+        for (LaRacingFutureAgent<Void> future : futureList) {
             try {
                 future.get();
             } catch (InterruptedException e) {
@@ -152,22 +182,33 @@ public class LaCountdownRace { // migrated from DBFlute
             }
         }
         if (!runnerCauseList.isEmpty()) {
-            final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-            br.addNotice(buildRunnerGoalFailureNotice());
-            br.addItem("Advice");
-            br.addElement("Confirm all causes thrown by runners.");
-            br.addItem("Runner Cause");
-            int index = 0;
-            for (Throwable cause : runnerCauseList) {
-                if (index > 0) {
-                    br.addElement("");
-                }
-                buildRunnerExStackTrace(br, cause, 0);
-                ++index;
-            }
-            final String msg = br.buildExceptionMessage();
-            throw new LaCountdownRaceExecutionException(msg, runnerCauseList);
+            handleRunnerException(runnerCauseList);
         }
+    }
+
+    protected void futureGet(Future<Void> future) throws InterruptedException, ExecutionException {
+        future.get();
+    }
+
+    // -----------------------------------------------------
+    //                                             Exception
+    //                                             ---------
+    protected void handleRunnerException(List<Throwable> runnerCauseList) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice(buildRunnerGoalFailureNotice());
+        br.addItem("Advice");
+        br.addElement("Confirm all causes thrown by runners.");
+        br.addItem("Runner Cause");
+        int index = 0;
+        for (Throwable cause : runnerCauseList) {
+            if (index > 0) {
+                br.addElement("");
+            }
+            buildRunnerExStackTrace(br, cause, 0);
+            ++index;
+        }
+        final String msg = br.buildExceptionMessage();
+        throw new LaCountdownRaceExecutionException(msg, runnerCauseList);
     }
 
     protected String buildRunnerGoalFailureNotice() {
@@ -222,42 +263,144 @@ public class LaCountdownRace { // migrated from DBFlute
     // ===================================================================================
     //                                                                            Callable
     //                                                                            ========
-    protected Callable<Void> createCallable(LaCountdownRaceExecution execution, CountDownLatch ready, CountDownLatch start,
-            CountDownLatch goal, LaCountdownRaceLatch ourLatch, int entryNumber, Object parameter, Object lockObj) {
+    protected Callable<Void> createCallable(LaCountdownRaceExecution execution, LaRacingLatchAgent latchAgent,
+            LaCountdownRaceLatch ourLatch, int entryNumber, Object parameter, Object lockObj) {
         execution.readyCaller();
-        return new Callable<Void>() {
-            public Void call() { // each thread here
-                execution.hookBeforeCountdown();
-                final long threadId = Thread.currentThread().getId();
+        return () -> { // each thread here
+            execution.hookBeforeCountdown();
+            final long threadId = Thread.currentThread().getId();
+            try {
+                latchAgent.readyCountDown();
+                latchAgent.startAwait();
+                final LaCountdownRaceRunner runner = createRunner(threadId, ourLatch, entryNumber, parameter, lockObj);
+                RuntimeException cause = null;
                 try {
-                    ready.countDown();
-                    try {
-                        start.await();
-                    } catch (InterruptedException e) {
-                        String msg = "start.await() was interrupted: start=" + start;
-                        throw new IllegalStateException(msg, e);
-                    }
-                    RuntimeException cause = null;
-                    try {
-                        execution.execute(createRunner(threadId, ourLatch, entryNumber, parameter, lockObj));
-                    } catch (RuntimeException e) {
-                        cause = e;
-                    }
-                    if (cause != null) {
-                        throw cause;
-                    }
-                } finally {
-                    execution.hookBeforeGoalFinally();
-                    goal.countDown();
-                    ourLatch.reset(); // to release waiting threads
+                    execution.execute(runner);
+                } catch (RuntimeException e) {
+                    cause = e;
                 }
-                return null;
+                if (cause != null) {
+                    throw cause;
+                }
+            } finally {
+                execution.hookBeforeGoalFinally();
+                latchAgent.goalCountDown();
+                latchAgent.ourLatchReset(); // to release waiting threads
             }
+            return null;
         };
     }
 
     protected LaCountdownRaceRunner createRunner(long threadId, LaCountdownRaceLatch ourLatch, int entryNumber, Object parameter,
             Object lockObj) {
         return new LaCountdownRaceRunner(threadId, ourLatch, entryNumber, parameter, lockObj, _runnerRequestMap.size());
+    }
+
+    // ===================================================================================
+    //                                                                         Latch Agent
+    //                                                                         ===========
+    // interface dispatch for e.g. destructive-async
+    protected static interface LaRacingLatchAgent {
+
+        void readyCountDown();
+
+        void startAwait();
+
+        void startCountDown();
+
+        void goalAwait();
+
+        void goalCountDown();
+
+        void ourLatchReset();
+    }
+
+    protected static class LaRacingLatchByCountdown implements LaRacingLatchAgent {
+
+        protected final CountDownLatch ready;
+        protected final CountDownLatch start;
+        protected final CountDownLatch goal;
+        protected final LaCountdownRaceLatch ourLatch;
+
+        public LaRacingLatchByCountdown(CountDownLatch ready, CountDownLatch start, CountDownLatch goal, LaCountdownRaceLatch ourLatch) {
+            this.ready = ready;
+            this.start = start;
+            this.goal = goal;
+            this.ourLatch = ourLatch;
+        }
+
+        // control method
+        public void readyCountDown() {
+            ready.countDown();
+        }
+
+        public void startAwait() {
+            try {
+                start.await();
+            } catch (InterruptedException e) {
+                String msg = "start.await() was interrupted: start=" + start;
+                throw new IllegalStateException(msg, e);
+            }
+        }
+
+        public void startCountDown() {
+            start.countDown();
+        }
+
+        public void goalAwait() {
+            try {
+                goal.await();
+            } catch (InterruptedException e) {
+                String msg = "goal.await() was interrupted: goal=" + goal;
+                throw new IllegalStateException(msg, e);
+            }
+        }
+
+        public void goalCountDown() {
+            goal.countDown();
+        }
+
+        public void ourLatchReset() {
+            ourLatch.reset();
+        }
+
+        // accessor
+        public CountDownLatch getReady() {
+            return ready;
+        }
+
+        public CountDownLatch getStart() {
+            return start;
+        }
+
+        public CountDownLatch getGoal() {
+            return goal;
+        }
+
+        public LaCountdownRaceLatch getOurLatch() {
+            return ourLatch;
+        }
+    }
+
+    // ===================================================================================
+    //                                                                         Latch Agent
+    //                                                                         ===========
+    // interface dispatch for e.g. destructive-async
+    protected static interface LaRacingFutureAgent<RESULT> {
+
+        RESULT get() throws InterruptedException, ExecutionException;
+    }
+
+    protected static class LaRacingFutureByFuture<RESULT> implements LaRacingFutureAgent<RESULT> {
+
+        protected final Future<RESULT> future;
+
+        public LaRacingFutureByFuture(Future<RESULT> future) {
+            this.future = future;
+        }
+
+        public RESULT get() throws InterruptedException, ExecutionException {
+            return future.get();
+        }
     }
 }

@@ -23,6 +23,9 @@ public class ConcurrentAsyncOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // #thinking jflute application default can be specified so cannot add option easily now... (2019/12/05)
+    // basically use ConcurrentAsyncCall default method for option that does not need to be application default
+    // (should I rename ConcurrentAsyncOption to e.g. ConcurrentAsyncInheritOption?)
     protected ConcurrentAsyncInheritType behaviorCommandHookType;
     protected ConcurrentAsyncInheritType sqlFireHookType;
     protected ConcurrentAsyncInheritType sqlLogHandlerType;

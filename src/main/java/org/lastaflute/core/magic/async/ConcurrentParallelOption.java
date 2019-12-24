@@ -28,8 +28,10 @@ public class ConcurrentParallelOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected List<Object> parameterList; // null allowed
-    protected boolean throwImmediatelyByFirstCause; // null allowed
+    protected List<Object> parameterList; // null allowed (however basically used: mainly parameter-based parallel)
+    protected boolean errorHandlingSubsumed; // as completable asynchronous process if true
+    protected Integer concurrencyCountLimit; // null allowed, to avoid large concurrency (independent from thread pool, so no max)
+    protected Long waitingIntervalMillis; // null allowed, to adjust polling efficiency
 
     // ===================================================================================
     //                                                                              Facade
@@ -40,8 +42,28 @@ public class ConcurrentParallelOption {
         return this;
     }
 
-    public ConcurrentParallelOption throwImmediatelyByFirstCause() {
-        this.throwImmediatelyByFirstCause = true;
+    public ConcurrentParallelOption subsumeErrorHandling() {
+        this.errorHandlingSubsumed = true; // error logging enabled in asynchronous process and no thrown in caller process
+        return this;
+    }
+
+    public ConcurrentParallelOption limitConcurrencyCount(Integer concurrencyCountLimit) {
+        if (concurrencyCountLimit == null) {
+            throw new IllegalArgumentException("The argument 'concurrencyCountLimit' should not be null.");
+        }
+        if (concurrencyCountLimit <= 0) {
+            throw new IllegalArgumentException(
+                    "The argument 'concurrencyCountLimit' should not be minus or zero: " + concurrencyCountLimit);
+        }
+        this.concurrencyCountLimit = concurrencyCountLimit;
+        return this;
+    }
+
+    public ConcurrentParallelOption waitingIntervalMillis(long waitingIntervalMillis) {
+        if (waitingIntervalMillis < 0) {
+            throw new IllegalArgumentException("The argument 'waitingIntervalMillis' should not be minus.");
+        }
+        this.waitingIntervalMillis = waitingIntervalMillis;
         return this;
     }
 
@@ -50,7 +72,7 @@ public class ConcurrentParallelOption {
     //                                                                      ==============
     @Override
     public String toString() {
-        return "{parameterList=" + parameterList + "}";
+        return "{" + parameterList + ", " + errorHandlingSubsumed + ", " + concurrencyCountLimit + ", " + waitingIntervalMillis + "}";
     }
 
     // ===================================================================================
@@ -62,7 +84,19 @@ public class ConcurrentParallelOption {
         });
     }
 
-    public boolean isThrowImmediatelyByFirstCause() {
-        return throwImmediatelyByFirstCause;
+    public boolean isErrorHandlingSubsumed() {
+        return errorHandlingSubsumed;
+    }
+
+    public OptionalThing<Integer> getConcurrencyCountLimit() {
+        return OptionalThing.ofNullable(concurrencyCountLimit, () -> {
+            throw new IllegalStateException("Not found the concurrency count limit.");
+        });
+    }
+
+    public OptionalThing<Long> getWaitingIntervalMillis() {
+        return OptionalThing.ofNullable(waitingIntervalMillis, () -> {
+            throw new IllegalStateException("Not found the waiting-interval milliseconds.");
+        });
     }
 }

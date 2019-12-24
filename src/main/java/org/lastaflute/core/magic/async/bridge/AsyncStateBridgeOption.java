@@ -13,26 +13,13 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.core.magic.async.future;
-
-import org.lastaflute.core.magic.async.waiting.WaitingAsyncResult;
+package org.lastaflute.core.magic.async.bridge;
 
 /**
  * @author jflute
- * @since 0.9.6 (2017/04/24 Monday at showbase)
+ * @since 1.1.5 (2019/12/22 Sunday at bay maihama)
  */
-public class DestructiveYourFuture implements YourFuture {
+public class AsyncStateBridgeOption {
 
-    public DestructiveYourFuture() {
-    }
-
-    @Override
-    public boolean isDone() {
-        return true;
-    }
-
-    @Override
-    public WaitingAsyncResult waitForDone() {
-        return new WaitingAsyncResult(); // as dummy
-    }
+    // for future
 }
