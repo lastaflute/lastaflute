@@ -223,6 +223,13 @@ public abstract class LaTypicalPostcard implements LaMailPostcard {
     }
 
     /**
+     * Set up synchronous execution definitely in spite of async() call and always-async settings.
+     */
+    public void definitelySync() {
+        postcard.definitelySync();
+    }
+
+    /**
      * Retry sending if failure.
      * @param retryCount The count of retry. (NotZero, NotMinus)
      * @param intervalMillis The milliseconds to wait for retrying. (NotZero, NotMinus)
