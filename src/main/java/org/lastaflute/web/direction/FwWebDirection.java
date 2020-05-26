@@ -292,7 +292,7 @@ public class FwWebDirection {
     //                                              API Call
     //                                              --------
     public ApiFailureHook assistApiFailureHook() {
-        assertAssistObjectNotNull(appMessageName, "Not found the hook for API failure.");
+        assertAssistObjectNotNull(apiFailureHook, "Not found the hook for API failure.");
         return apiFailureHook;
     }
 
