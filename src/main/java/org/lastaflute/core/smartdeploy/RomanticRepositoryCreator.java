@@ -19,16 +19,17 @@ import java.util.List;
 
 import org.lastaflute.core.smartdeploy.coins.CreatorPackageProvider;
 import org.lastaflute.core.smartdeploy.coins.CreatorStateChecker;
-import org.lastaflute.core.smartdeploy.exception.ServiceExtendsActionException;
+import org.lastaflute.core.smartdeploy.exception.RepositoryExtendsActionException;
+import org.lastaflute.core.smartdeploy.exception.RepositoryWebReferenceException;
 import org.lastaflute.di.core.ComponentDef;
-import org.lastaflute.di.core.creator.ServiceCreator;
+import org.lastaflute.di.core.creator.RepositoryCreator;
 import org.lastaflute.di.naming.NamingConvention;
 
 /**
  * @author jflute
- * @since 0.7.3 (2015/12/27 Sunday)
+ * @since 0.8.3 (2020/07/01)
  */
-public class RomanticServiceCreator extends ServiceCreator {
+public class RomanticRepositoryCreator extends RepositoryCreator {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -45,7 +46,7 @@ public class RomanticServiceCreator extends ServiceCreator {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public RomanticServiceCreator(NamingConvention namingConvention) {
+    public RomanticRepositoryCreator(NamingConvention namingConvention) {
         super(namingConvention);
         webPackagePrefixList = deriveWebPackageList(namingConvention);
     }
@@ -59,15 +60,35 @@ public class RomanticServiceCreator extends ServiceCreator {
     //                                                                       =============
     @Override
     public ComponentDef createComponentDef(Class<?> componentClass) {
-        // env dispatch is unsupported at service because of too large concept, so use e.g. logic for environment process
-        final ComponentDef componentDef = super.createComponentDef(componentClass); // null allowed
+        final ComponentDef componentDef = prepareComponentDef(componentClass);
         if (componentDef == null) {
             return null;
         }
         checkExtendsAction(componentDef);
-        // service has delicate role for various people so no check about web reference
-        //checkWebReference(componentDef);
+        checkWebReference(componentDef);
         return componentDef;
+    }
+
+    // same as logic
+    protected ComponentDef prepareComponentDef(Class<?> componentClass) {
+        final ComponentDef dispatched = dispatchByEnv(componentClass);
+        if (dispatched != null) {
+            return dispatched;
+        }
+        return super.createComponentDef(componentClass); // null allowed
+    }
+
+    protected ComponentDef dispatchByEnv(Class<?> componentClass) {
+        if (!ComponentEnvDispatcher.canDispatch(componentClass)) { // check before for performance
+            return null;
+        }
+        final ComponentEnvDispatcher envDispatcher = createEnvDispatcher();
+        return envDispatcher.dispatch(componentClass);
+    }
+
+    protected ComponentEnvDispatcher createEnvDispatcher() {
+        return new ComponentEnvDispatcher(getNamingConvention(), getInstanceDef(), getAutoBindingDef(), isExternalBinding(),
+                getCustomizer(), getNameSuffix());
     }
 
     // ===================================================================================
@@ -75,7 +96,13 @@ public class RomanticServiceCreator extends ServiceCreator {
     //                                                                         ===========
     protected void checkExtendsAction(ComponentDef componentDef) {
         stateChecker.checkExtendsAction(componentDef, getNameSuffix(), msg -> {
-            return new ServiceExtendsActionException(msg);
+            return new RepositoryExtendsActionException(msg);
+        });
+    }
+
+    protected void checkWebReference(ComponentDef componentDef) {
+        stateChecker.checkWebReference(componentDef, webPackagePrefixList, getNameSuffix(), msg -> {
+            return new RepositoryWebReferenceException(msg);
         });
     }
 }
