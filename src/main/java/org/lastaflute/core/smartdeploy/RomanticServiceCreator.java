@@ -19,8 +19,8 @@ import java.util.List;
 
 import org.lastaflute.core.smartdeploy.coins.CreatorPackageProvider;
 import org.lastaflute.core.smartdeploy.coins.CreatorStateChecker;
-import org.lastaflute.core.smartdeploy.exception.LogicWebReferenceException;
 import org.lastaflute.core.smartdeploy.exception.ServiceExtendsActionException;
+import org.lastaflute.core.smartdeploy.exception.ServiceWebReferenceException;
 import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.core.creator.ServiceCreator;
 import org.lastaflute.di.naming.NamingConvention;
@@ -87,7 +87,7 @@ public class RomanticServiceCreator extends ServiceCreator {
 
     protected void checkWebReference(ComponentDef componentDef) {
         stateChecker.checkWebReference(componentDef, webPackagePrefixList, getNameSuffix(), msg -> {
-            return new LogicWebReferenceException(msg);
+            return new ServiceWebReferenceException(msg);
         });
     }
 }
