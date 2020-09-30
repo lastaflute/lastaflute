@@ -16,6 +16,7 @@
 package org.lastaflute.core.json.adapter;
 
 import java.io.IOException;
+import java.util.function.Predicate;
 
 import org.lastaflute.core.json.JsonMappingOption;
 import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
@@ -37,12 +38,18 @@ public interface StringGsonAdaptable { // to show property path in exception mes
     class TypeAdapterString extends TypeAdapter<String> {
 
         protected final TypeAdapter<String> realAdapter = TypeAdapters.STRING;
+        protected final Class<?> yourType; // not null
         protected final JsonMappingOption gsonOption;
         protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
+        protected final Predicate<Class<?>> emptyToNullReadingDeterminer; // null allowed
+        protected final Predicate<Class<?>> nullToEmptyWritingDeterminer; // null allowed
 
         public TypeAdapterString(JsonMappingOption gsonOption) {
+            this.yourType = String.class;
             this.gsonOption = gsonOption;
             this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
+            this.emptyToNullReadingDeterminer = gsonOption.getEmptyToNullReadingDeterminer().orElse(null); // me too
+            this.nullToEmptyWritingDeterminer = gsonOption.getNullToEmptyWritingDeterminer().orElse(null); // me too
         }
 
         @Override
@@ -51,7 +58,7 @@ public interface StringGsonAdaptable { // to show property path in exception mes
             if (read == null) { // filter makes it null
                 return null;
             }
-            if (isEmptyToNullReading() && "".equals(read)) { // option
+            if ("".equals(read) && isEmptyToNullReading()) { // option
                 return null;
             } else { // mainly here
                 return read;
@@ -66,12 +73,12 @@ public interface StringGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isEmptyToNullReading() {
-            return gsonOption.isEmptyToNullReading();
+            return emptyToNullReadingDeterminer != null && emptyToNullReadingDeterminer.test(yourType);
         }
 
         @Override
         public void write(JsonWriter out, String value) throws IOException {
-            if (isNullToEmptyWriting() && value == null) { // option
+            if (value == null && isNullToEmptyWriting()) { // option
                 out.value("");
             } else { // mainly here
                 realAdapter.write(out, value);
@@ -79,7 +86,7 @@ public interface StringGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isNullToEmptyWriting() {
-            return gsonOption.isNullToEmptyWriting();
+            return nullToEmptyWritingDeterminer != null && nullToEmptyWritingDeterminer.test(yourType);
         }
     }
 

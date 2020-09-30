@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfReflectionUtil;
@@ -209,11 +210,13 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         @SuppressWarnings("unchecked")
         final Function<Object, String> writer = (Function<Object, String>) resource.getWriter();
 
-        final JsonUnifiedTextReadingFilter readingFilter = JsonUnifiedTextReadingFilter.unify(option);
-        boolean emptyToNullReading = option.isEmptyToNullReading();
-        boolean nullToEmptyWriting = option.isNullToEmptyWriting();
+        final JsonUnifiedTextReadingFilter readingFilter = JsonUnifiedTextReadingFilter.unify(option); // null allowed
+        final Predicate<Class<?>> emptyToNullReadingDeterminer = option.getEmptyToNullReadingDeterminer().orElse(null);
+        final Predicate<Class<?>> nullToEmptyWritingDeterminer = option.getNullToEmptyWritingDeterminer().orElse(null);
 
-        return new LaYourScalarTypeAdapterFactory<Object>(yourType, reader, writer, readingFilter, emptyToNullReading, nullToEmptyWriting);
+        return new LaYourScalarTypeAdapterFactory<Object>(yourType, reader, writer // scalar type, main function
+                , readingFilter, emptyToNullReadingDeterminer, nullToEmptyWritingDeterminer // as basic option
+        );
     }
 
     protected void setupYourUltimateSettings(GsonBuilder builder) {

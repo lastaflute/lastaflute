@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfTypeUtil;
@@ -45,10 +46,14 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
 
         protected final JsonMappingOption gsonOption;
         protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
+        protected final Predicate<Class<?>> emptyToNullReadingDeterminer; // null allowed
+        protected final Predicate<Class<?>> nullToEmptyWritingDeterminer; // null allowed
 
         public AbstractTypeAdapterNumber(JsonMappingOption gsonOption) {
             this.gsonOption = gsonOption;
             this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
+            this.emptyToNullReadingDeterminer = gsonOption.getEmptyToNullReadingDeterminer().orElse(null); // me too
+            this.nullToEmptyWritingDeterminer = gsonOption.getNullToEmptyWritingDeterminer().orElse(null); // me too
         }
 
         @Override
@@ -61,7 +66,7 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
             if (str == null) { // filter makes it null
                 return null;
             }
-            if (isEmptyToNullReading() && "".equals(str)) {
+            if ("".equals(str) && isEmptyToNullReading()) {
                 return null;
             }
             try {
@@ -86,12 +91,12 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isEmptyToNullReading() {
-            return gsonOption.isEmptyToNullReading();
+            return emptyToNullReadingDeterminer != null && emptyToNullReadingDeterminer.test(getNumberType());
         }
 
         @Override
         public void write(JsonWriter out, NUM value) throws IOException {
-            if (isNullToEmptyWriting() && value == null) { // option
+            if (value == null && isNullToEmptyWriting()) { // option
                 out.value("");
             } else {
                 if (isEverywhereQuoteWriting()) { // option
@@ -103,7 +108,7 @@ public interface NumberGsonAdaptable { // to show property path in exception mes
         }
 
         protected boolean isNullToEmptyWriting() {
-            return gsonOption.isNullToEmptyWriting();
+            return nullToEmptyWritingDeterminer != null && nullToEmptyWritingDeterminer.test(getNumberType());
         }
 
         protected boolean isEverywhereQuoteWriting() {
