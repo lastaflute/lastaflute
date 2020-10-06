@@ -52,9 +52,9 @@ public interface JsonMappingControlMeta {
 
     OptionalThing<Function<Boolean, Object>> getBooleanSerializer();
 
-    boolean isEmptyToNullReading();
+    OptionalThing<Predicate<Class<?>>> getEmptyToNullReadingDeterminer();
 
-    boolean isNullToEmptyWriting();
+    OptionalThing<Predicate<Class<?>>> getNullToEmptyWritingDeterminer();
 
     boolean isEverywhereQuoteWriting();
 

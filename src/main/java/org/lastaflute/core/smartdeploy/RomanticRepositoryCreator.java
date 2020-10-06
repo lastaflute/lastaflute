@@ -19,17 +19,17 @@ import java.util.List;
 
 import org.lastaflute.core.smartdeploy.coins.CreatorPackageProvider;
 import org.lastaflute.core.smartdeploy.coins.CreatorStateChecker;
-import org.lastaflute.core.smartdeploy.exception.JobAssistWebReferenceException;
-import org.lastaflute.core.smartdeploy.exception.JobExtendsActionException;
+import org.lastaflute.core.smartdeploy.exception.RepositoryExtendsActionException;
+import org.lastaflute.core.smartdeploy.exception.RepositoryWebReferenceException;
 import org.lastaflute.di.core.ComponentDef;
-import org.lastaflute.di.core.creator.JobCreator;
+import org.lastaflute.di.core.creator.RepositoryCreator;
 import org.lastaflute.di.naming.NamingConvention;
 
 /**
  * @author jflute
- * @since 0.7.8 (2016/01/10 Sunday)
+ * @since 0.8.3 (2020/07/01)
  */
-public class RomanticJobCreator extends JobCreator {
+public class RomanticRepositoryCreator extends RepositoryCreator {
 
     // ===================================================================================
     //                                                                           Attribute
@@ -46,7 +46,7 @@ public class RomanticJobCreator extends JobCreator {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public RomanticJobCreator(NamingConvention namingConvention) {
+    public RomanticRepositoryCreator(NamingConvention namingConvention) {
         super(namingConvention);
         webPackagePrefixList = deriveWebPackageList(namingConvention);
     }
@@ -60,7 +60,7 @@ public class RomanticJobCreator extends JobCreator {
     //                                                                       =============
     @Override
     public ComponentDef createComponentDef(Class<?> componentClass) {
-        final ComponentDef componentDef = super.createComponentDef(componentClass); // null allowed
+        final ComponentDef componentDef = prepareComponentDef(componentClass);
         if (componentDef == null) {
             return null;
         }
@@ -69,18 +69,40 @@ public class RomanticJobCreator extends JobCreator {
         return componentDef;
     }
 
+    // same as logic
+    protected ComponentDef prepareComponentDef(Class<?> componentClass) {
+        final ComponentDef dispatched = dispatchByEnv(componentClass);
+        if (dispatched != null) {
+            return dispatched;
+        }
+        return super.createComponentDef(componentClass); // null allowed
+    }
+
+    protected ComponentDef dispatchByEnv(Class<?> componentClass) {
+        if (!ComponentEnvDispatcher.canDispatch(componentClass)) { // check before for performance
+            return null;
+        }
+        final ComponentEnvDispatcher envDispatcher = createEnvDispatcher();
+        return envDispatcher.dispatch(componentClass);
+    }
+
+    protected ComponentEnvDispatcher createEnvDispatcher() {
+        return new ComponentEnvDispatcher(getNamingConvention(), getInstanceDef(), getAutoBindingDef(), isExternalBinding(),
+                getCustomizer(), getNameSuffix());
+    }
+
     // ===================================================================================
     //                                                                         State Check
     //                                                                         ===========
     protected void checkExtendsAction(ComponentDef componentDef) {
         stateChecker.checkExtendsAction(componentDef, getNameSuffix(), msg -> {
-            return new JobExtendsActionException(msg);
+            return new RepositoryExtendsActionException(msg);
         });
     }
 
     protected void checkWebReference(ComponentDef componentDef) {
         stateChecker.checkWebReference(componentDef, webPackagePrefixList, getNameSuffix(), msg -> {
-            return new JobAssistWebReferenceException(msg);
+            return new RepositoryWebReferenceException(msg);
         });
     }
 }

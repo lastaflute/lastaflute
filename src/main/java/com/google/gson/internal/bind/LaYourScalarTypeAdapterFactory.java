@@ -17,6 +17,7 @@ package com.google.gson.internal.bind;
 
 import java.io.IOException;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.lastaflute.core.json.filter.JsonUnifiedTextReadingFilter;
 
@@ -42,8 +43,8 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
     protected final Function<String, SCALAR> reader; // not null
     protected final Function<SCALAR, String> writer; // not null
     protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
-    protected final boolean emptyToNullReading;
-    protected final boolean nullToEmptyWriting;
+    protected final Predicate<Class<?>> emptyToNullReadingDeterminer; // null allowed
+    protected final Predicate<Class<?>> nullToEmptyWritingDeterminer; // null allowed
 
     // ===================================================================================
     //                                                                         Constructor
@@ -51,14 +52,15 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
     public LaYourScalarTypeAdapterFactory(Class<SCALAR> yourType // scalar type
             , Function<String, SCALAR> reader, Function<SCALAR, String> writer // main function
             , JsonUnifiedTextReadingFilter readingFilter // as basic option
-            , boolean emptyToNullReading, boolean nullToEmptyWriting // us too
+            , Predicate<Class<?>> emptyToNullReadingDeterminer // me too
+            , Predicate<Class<?>> nullToEmptyWritingDeterminer // me too
     ) {
         this.yourType = yourType;
         this.reader = reader;
         this.writer = writer;
         this.readingFilter = readingFilter;
-        this.emptyToNullReading = emptyToNullReading;
-        this.nullToEmptyWriting = nullToEmptyWriting;
+        this.emptyToNullReadingDeterminer = emptyToNullReadingDeterminer;
+        this.nullToEmptyWritingDeterminer = nullToEmptyWritingDeterminer;
     }
 
     // ===================================================================================
@@ -80,7 +82,7 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
     }
 
     protected TypeAdapter<SCALAR> createYourScalarTypeAdapter() {
-        return new Adapter<SCALAR>(yourType, reader, writer, readingFilter, emptyToNullReading, nullToEmptyWriting);
+        return new Adapter<SCALAR>(yourType, reader, writer, readingFilter, emptyToNullReadingDeterminer, nullToEmptyWritingDeterminer);
     }
 
     // ===================================================================================
@@ -92,17 +94,18 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
         protected final Function<String, SCALAR> reader; // not null
         protected final Function<SCALAR, String> writer; // not null
         protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
-        protected final boolean emptyToNullReading;
-        protected final boolean nullToEmptyWriting;
+        protected final Predicate<Class<?>> emptyToNullReadingDeterminer; // null allowed
+        protected final Predicate<Class<?>> nullToEmptyWritingDeterminer; // null allowed
 
         public Adapter(Class<SCALAR> yourType, Function<String, SCALAR> reader, Function<SCALAR, String> writer,
-                JsonUnifiedTextReadingFilter readingFilter, boolean emptyToNullReading, boolean nullToEmptyWriting) {
+                JsonUnifiedTextReadingFilter readingFilter, Predicate<Class<?>> emptyToNullReadingDeterminer,
+                Predicate<Class<?>> nullToEmptyWritingDeterminer) {
             this.yourType = yourType;
             this.reader = reader;
             this.writer = writer;
             this.readingFilter = readingFilter; // cache, unwrap for performance
-            this.emptyToNullReading = emptyToNullReading;
-            this.nullToEmptyWriting = nullToEmptyWriting;
+            this.emptyToNullReadingDeterminer = emptyToNullReadingDeterminer; // me too
+            this.nullToEmptyWritingDeterminer = nullToEmptyWritingDeterminer; // me too
         }
 
         // -----------------------------------------------------
@@ -115,7 +118,7 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
                 return null;
             }
             final String exp = filterReading(in.nextString());
-            if (isEmptyToNullReading() && "".equals(exp)) { // option
+            if ("".equals(exp) && isEmptyToNullReading()) { // option
                 return null;
             }
             return reader.apply(exp);
@@ -129,7 +132,7 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
         }
 
         protected boolean isEmptyToNullReading() {
-            return emptyToNullReading;
+            return emptyToNullReadingDeterminer != null && emptyToNullReadingDeterminer.test(yourType);
         }
 
         // -----------------------------------------------------
@@ -137,7 +140,7 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
         //                                                 -----
         @Override
         public void write(JsonWriter out, SCALAR value) throws IOException {
-            if (isNullToEmptyWriting() && value == null) { // option
+            if (value == null && isNullToEmptyWriting()) { // option
                 out.value("");
             } else { // mainly here
                 writer.apply(value);
@@ -146,7 +149,7 @@ public class LaYourScalarTypeAdapterFactory<SCALAR> implements TypeAdapterFactor
         }
 
         protected boolean isNullToEmptyWriting() {
-            return nullToEmptyWriting;
+            return nullToEmptyWritingDeterminer != null && nullToEmptyWritingDeterminer.test(yourType);
         }
     }
 }

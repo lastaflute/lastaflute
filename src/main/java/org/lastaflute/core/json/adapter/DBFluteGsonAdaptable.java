@@ -16,6 +16,7 @@
 package org.lastaflute.core.json.adapter;
 
 import java.io.IOException;
+import java.util.function.Predicate;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
@@ -77,11 +78,15 @@ public interface DBFluteGsonAdaptable {
         protected final Class<?> clsType;
         protected final JsonMappingOption gsonOption;
         protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
+        protected final Predicate<Class<?>> emptyToNullReadingDeterminer; // null allowed
+        protected final Predicate<Class<?>> nullToEmptyWritingDeterminer; // null allowed
 
         public TypeAdapterClassification(Class<?> clsType, JsonMappingOption gsonOption) {
             this.clsType = clsType;
             this.gsonOption = gsonOption;
             this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
+            this.emptyToNullReadingDeterminer = gsonOption.getEmptyToNullReadingDeterminer().orElse(null); // me too
+            this.nullToEmptyWritingDeterminer = gsonOption.getNullToEmptyWritingDeterminer().orElse(null); // me too
         }
 
         @Override
@@ -94,7 +99,7 @@ public interface DBFluteGsonAdaptable {
             if (code == null) { // filter makes it null
                 return null;
             }
-            if (isEmptyToNullReading() && "".equals(code)) { // option
+            if ("".equals(code) && isEmptyToNullReading()) { // option
                 return null;
             }
             try {
@@ -116,20 +121,20 @@ public interface DBFluteGsonAdaptable {
         }
 
         protected boolean isEmptyToNullReading() {
-            return gsonOption.isEmptyToNullReading();
+            return emptyToNullReadingDeterminer != null && emptyToNullReadingDeterminer.test(clsType);
         }
 
         @Override
         public void write(JsonWriter out, Classification value) throws IOException {
-            if (isNullToEmptyWriting() && value == null) { // option
+            if (value == null && isNullToEmptyWriting()) { // option
                 out.value("");
             } else { // mainly here
-                out.value(value != null ? value.code() : null);
+                out.value(value != null ? value.code() : null); // always treated as String code
             }
         }
 
         protected boolean isNullToEmptyWriting() {
-            return gsonOption.isNullToEmptyWriting();
+            return nullToEmptyWritingDeterminer != null && nullToEmptyWritingDeterminer.test(clsType);
         }
 
         protected void throwJsonPropertyClassificationCodeOfMethodNotFoundException(String code, JsonReader in,

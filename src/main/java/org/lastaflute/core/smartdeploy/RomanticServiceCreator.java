@@ -16,15 +16,14 @@
 package org.lastaflute.core.smartdeploy;
 
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.lastaflute.core.smartdeploy.coins.CreatorPackageProvider;
+import org.lastaflute.core.smartdeploy.coins.CreatorStateChecker;
 import org.lastaflute.core.smartdeploy.exception.ServiceExtendsActionException;
+import org.lastaflute.core.smartdeploy.exception.ServiceWebReferenceException;
 import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.core.creator.ServiceCreator;
 import org.lastaflute.di.naming.NamingConvention;
-import org.lastaflute.web.LastaAction;
 
 /**
  * @author jflute
@@ -37,6 +36,13 @@ public class RomanticServiceCreator extends ServiceCreator {
     //                                                                           =========
     protected final List<String> webPackagePrefixList; // not null, for check, e.g. 'org.docksidestage.app.web.'
 
+    protected final CreatorPackageProvider packageProvider = new CreatorPackageProvider();
+    protected final CreatorStateChecker stateChecker = createCreatorStateChecker();
+
+    protected CreatorStateChecker createCreatorStateChecker() {
+        return new CreatorStateChecker();
+    }
+
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
@@ -46,9 +52,7 @@ public class RomanticServiceCreator extends ServiceCreator {
     }
 
     protected List<String> deriveWebPackageList(NamingConvention namingConvention) {
-        final String[] packageNames = namingConvention.getRootPackageNames();
-        final String webRoot = namingConvention.getWebRootPackageName();
-        return Stream.of(packageNames).map(name -> name + "." + webRoot + ".").collect(Collectors.toList());
+        return packageProvider.deriveWebPackageList(namingConvention);
     }
 
     // ===================================================================================
@@ -56,47 +60,34 @@ public class RomanticServiceCreator extends ServiceCreator {
     //                                                                       =============
     @Override
     public ComponentDef createComponentDef(Class<?> componentClass) {
-        // env dispatch is only for logic (so use logic about environment process)
+        // env dispatch is unsupported at service because of too large concept, so use e.g. logic for environment process
         final ComponentDef componentDef = super.createComponentDef(componentClass); // null allowed
         if (componentDef == null) {
             return null;
         }
         checkExtendsAction(componentDef);
-        // service has delicate role for various people so no check about web reference
-        //checkWebReference(componentDef);
+        if (isWebReferenceChecked()) {
+            checkWebReference(componentDef);
+        }
         return componentDef;
     }
 
-    // ===================================================================================
-    //                                                                      Extends Action
-    //                                                                      ==============
-    protected void checkExtendsAction(ComponentDef componentDef) {
-        final Class<?> componentType = componentDef.getComponentClass();
-        if (LastaAction.class.isAssignableFrom(componentType)) {
-            throwServiceExtendsActionException(componentType);
-        }
+    protected boolean isWebReferenceChecked() {
+        return false; // service has delicate role for various people so no check about web reference
     }
 
-    protected void throwServiceExtendsActionException(Class<?> componentType) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("No way, the service extends action.");
-        br.addItem("Advice");
-        br.addElement("Service is not Action,");
-        br.addElement("so the service cannot extend action.");
-        br.addElement("For example:");
-        br.addElement("  (x):");
-        br.addElement("    public class SeaService extends MaihamaBaseAction { // *Bad");
-        br.addElement("       ...");
-        br.addElement("    }");
-        br.addElement("  (o):");
-        br.addElement("    public class SeaService { // Good");
-        br.addElement("       ...");
-        br.addElement("    }");
-        br.addItem("Service");
-        br.addElement(componentType);
-        br.addItem("Super Class");
-        br.addElement(componentType.getSuperclass());
-        final String msg = br.buildExceptionMessage();
-        throw new ServiceExtendsActionException(msg);
+    // ===================================================================================
+    //                                                                         State Check
+    //                                                                         ===========
+    protected void checkExtendsAction(ComponentDef componentDef) {
+        stateChecker.checkExtendsAction(componentDef, getNameSuffix(), msg -> {
+            return new ServiceExtendsActionException(msg);
+        });
+    }
+
+    protected void checkWebReference(ComponentDef componentDef) {
+        stateChecker.checkWebReference(componentDef, webPackagePrefixList, getNameSuffix(), msg -> {
+            return new ServiceWebReferenceException(msg);
+        });
     }
 }

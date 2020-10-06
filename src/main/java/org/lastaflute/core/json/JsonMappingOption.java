@@ -48,8 +48,8 @@ public class JsonMappingOption implements JsonMappingControlMeta {
     protected OptionalThing<DateTimeFormatter> zonedDateTimeFormatter = OptionalThing.empty(); // not null
     protected OptionalThing<Function<Object, Boolean>> booleanDeserializer = OptionalThing.empty(); // not null
     protected OptionalThing<Function<Boolean, Object>> booleanSerializer = OptionalThing.empty(); // not null
-    protected boolean emptyToNullReading; // e.g. String, Integer, LocalDate, ... (except List)
-    protected boolean nullToEmptyWriting; // same
+    protected OptionalThing<Predicate<Class<?>>> emptyToNullReadingDeterminer = OptionalThing.empty(); // e.g. String, Integer, LocalDate, ... (except List)
+    protected OptionalThing<Predicate<Class<?>>> nullToEmptyWritingDeterminer = OptionalThing.empty(); // same
     protected boolean everywhereQuoteWriting; // e.g. Integer(1) to "1"
     protected OptionalThing<JsonSimpleTextReadingFilter> simpleTextReadingFilter = OptionalThing.empty(); // not null
     protected OptionalThing<JsonTypeableTextReadingFilter> typeableTextReadingFilter = OptionalThing.empty(); // not null
@@ -84,8 +84,8 @@ public class JsonMappingOption implements JsonMappingControlMeta {
         zonedDateTimeFormatter = another.getZonedDateTimeFormatter();
         booleanDeserializer = another.getBooleanDeserializer();
         booleanSerializer = another.getBooleanSerializer();
-        emptyToNullReading = another.isEmptyToNullReading();
-        nullToEmptyWriting = another.isNullToEmptyWriting();
+        emptyToNullReadingDeterminer = another.getEmptyToNullReadingDeterminer();
+        nullToEmptyWritingDeterminer = another.getNullToEmptyWritingDeterminer();
         everywhereQuoteWriting = another.isEverywhereQuoteWriting();
         simpleTextReadingFilter = another.getSimpleTextReadingFilter();
         typeableTextReadingFilter = another.getTypeableTextReadingFilter();
@@ -186,20 +186,44 @@ public class JsonMappingOption implements JsonMappingControlMeta {
     //                                         Null or Empty
     //                                         -------------
     /**
-     * Set up as empty-to-null reading.
+     * Set up as empty-to-null reading. (e.g. String, Integer, LocalDate, Classification) <br>
+     * All scalar types are target (except List itself).
      * @return this. (NotNull)
      */
     public JsonMappingOption asEmptyToNullReading() {
-        emptyToNullReading = true;
+        return asEmptyToNullReading(tp -> true);
+    }
+
+    /**
+     * Set up as empty-to-null reading. (You can select target types)
+     * @param oneArgLambda The callback of determiner for targeting type. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonMappingOption asEmptyToNullReading(Predicate<Class<?>> oneArgLambda) {
+        emptyToNullReadingDeterminer = OptionalThing.ofNullable(oneArgLambda, () -> {
+            throw new IllegalStateException("Not found the emptyToNullReadingDeterminer.");
+        });
         return this;
     }
 
     /**
-     * Set up as null-to-empty writing.
+     * Set up as null-to-empty writing. (e.g. String, Integer, LocalDate, Classification) <br>
+     * All scalar types are target (except List itself).
      * @return this. (NotNull)
      */
     public JsonMappingOption asNullToEmptyWriting() {
-        nullToEmptyWriting = true;
+        return asNullToEmptyWriting(tp -> true);
+    }
+
+    /**
+     * Set up as null-to-empty writing. (You can select target types)
+     * @param oneArgLambda The callback of determiner for targeting type. (NotNull)
+     * @return this. (NotNull)
+     */
+    public JsonMappingOption asNullToEmptyWriting(Predicate<Class<?>> oneArgLambda) {
+        nullToEmptyWritingDeterminer = OptionalThing.ofNullable(oneArgLambda, () -> {
+            throw new IllegalStateException("Not found the nullToEmptyWritingDeterminer.");
+        });
         return this;
     }
 
@@ -339,10 +363,10 @@ public class JsonMappingOption implements JsonMappingControlMeta {
         zonedDateTimeFormatter.ifPresent(ter -> sb.append(delimiter).append(ter));
         booleanDeserializer.ifPresent(zer -> sb.append(delimiter).append(zer));
         booleanSerializer.ifPresent(zer -> sb.append(delimiter).append(zer));
-        if (emptyToNullReading) {
+        if (emptyToNullReadingDeterminer.isPresent()) {
             sb.append(delimiter).append("emptyToNullReading");
         }
-        if (nullToEmptyWriting) {
+        if (nullToEmptyWritingDeterminer.isPresent()) {
             sb.append(delimiter).append("nullToEmptyWriting");
         }
         if (everywhereQuoteWriting) {
@@ -406,12 +430,12 @@ public class JsonMappingOption implements JsonMappingControlMeta {
         return booleanSerializer;
     }
 
-    public boolean isEmptyToNullReading() {
-        return emptyToNullReading;
+    public OptionalThing<Predicate<Class<?>>> getEmptyToNullReadingDeterminer() {
+        return emptyToNullReadingDeterminer;
     }
 
-    public boolean isNullToEmptyWriting() {
-        return nullToEmptyWriting;
+    public OptionalThing<Predicate<Class<?>>> getNullToEmptyWritingDeterminer() {
+        return nullToEmptyWritingDeterminer;
     }
 
     public boolean isEverywhereQuoteWriting() {

@@ -129,10 +129,14 @@ public interface Java8TimeGsonAdaptable {
 
         protected final JsonMappingOption gsonOption;
         protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
+        protected final Predicate<Class<?>> emptyToNullReadingDeterminer; // null allowed
+        protected final Predicate<Class<?>> nullToEmptyWritingDeterminer; // null allowed
 
         public AbstractTypeDateTimeAdapter(JsonMappingOption gsonOption) {
             this.gsonOption = gsonOption;
             this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
+            this.emptyToNullReadingDeterminer = gsonOption.getEmptyToNullReadingDeterminer().orElse(null); // me too
+            this.nullToEmptyWritingDeterminer = gsonOption.getNullToEmptyWritingDeterminer().orElse(null); // me too
         }
 
         // -----------------------------------------------------
@@ -148,7 +152,7 @@ public interface Java8TimeGsonAdaptable {
             if (exp == null) { // filter makes it null
                 return null;
             }
-            if (isEmptyToNullReading() && "".equals(exp)) { // option
+            if ("".equals(exp) && isEmptyToNullReading()) { // option
                 return null;
             }
             final DateTimeFormatter formatter = prepareReadDateTimeFormatter(exp);
@@ -168,7 +172,7 @@ public interface Java8TimeGsonAdaptable {
         }
 
         protected boolean isEmptyToNullReading() {
-            return gsonOption.isEmptyToNullReading();
+            return emptyToNullReadingDeterminer != null && emptyToNullReadingDeterminer.test(getDateType());
         }
 
         protected DateTimeFormatter prepareReadDateTimeFormatter(String exp) {
@@ -196,7 +200,7 @@ public interface Java8TimeGsonAdaptable {
         //                                                 -----
         @Override
         public void write(JsonWriter out, DATE value) throws IOException {
-            if (isNullToEmptyWriting() && value == null) { // option
+            if (value == null && isNullToEmptyWriting()) { // option
                 out.value("");
             } else { // mainly here
                 out.value(value != null ? prepareWriteDateTimeFormatter(value).format(value) : null);
@@ -204,7 +208,7 @@ public interface Java8TimeGsonAdaptable {
         }
 
         protected boolean isNullToEmptyWriting() {
-            return gsonOption.isNullToEmptyWriting();
+            return nullToEmptyWritingDeterminer != null && nullToEmptyWritingDeterminer.test(getDateType());
         }
 
         protected DateTimeFormatter prepareWriteDateTimeFormatter(DATE value) {

@@ -17,6 +17,7 @@ package org.lastaflute.core.json.adapter;
 
 import java.io.IOException;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.json.JsonMappingOption;
@@ -39,12 +40,18 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
     //                                                                        ============
     class TypeAdapterBoolean extends TypeAdapter<Boolean> {
 
-        protected final JsonMappingOption gsonOption;
+        protected final Class<?> yourType; // not null
+        protected final JsonMappingOption gsonOption; // not null
         protected final JsonUnifiedTextReadingFilter readingFilter; // null allowed
+        protected final Predicate<Class<?>> emptyToNullReadingDeterminer; // null allowed
+        protected final Predicate<Class<?>> nullToEmptyWritingDeterminer; // null allowed
 
         public TypeAdapterBoolean(JsonMappingOption gsonOption) {
+            this.yourType = Boolean.class;
             this.gsonOption = gsonOption;
             this.readingFilter = JsonUnifiedTextReadingFilter.unify(gsonOption); // cache as plain for performance
+            this.emptyToNullReadingDeterminer = gsonOption.getEmptyToNullReadingDeterminer().orElse(null); // me too
+            this.nullToEmptyWritingDeterminer = gsonOption.getNullToEmptyWritingDeterminer().orElse(null); // me too
         }
 
         @Override
@@ -59,7 +66,7 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
                 if (exp == null) { // filter makes it null
                     return null;
                 }
-                if (isEmptyToNullReading() && "".equals(exp)) { // option
+                if ("".equals(exp) && isEmptyToNullReading()) { // option
                     return null;
                 } else {
                     return readAsBoolean(token, exp);
@@ -77,11 +84,11 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
             if (text == null) {
                 return null;
             }
-            return readingFilter != null ? readingFilter.filter(Boolean.class, text) : text;
+            return readingFilter != null ? readingFilter.filter(yourType, text) : text;
         }
 
         protected boolean isEmptyToNullReading() {
-            return gsonOption.isEmptyToNullReading();
+            return emptyToNullReadingDeterminer != null && emptyToNullReadingDeterminer.test(yourType);
         }
 
         protected Boolean readAsBoolean(JsonToken token, Object exp) throws IOException {
@@ -129,7 +136,7 @@ public interface BooleanGsonAdaptable { // to show property path in exception me
         }
 
         protected boolean isNullToEmptyWriting() {
-            return gsonOption.isNullToEmptyWriting();
+            return nullToEmptyWritingDeterminer != null && nullToEmptyWritingDeterminer.test(yourType);
         }
 
         protected boolean isEverywhereQuoteWriting() {
