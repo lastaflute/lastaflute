@@ -254,7 +254,7 @@
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>4.8.2</version> <!-- is latest version without hamcrest -->
+			<version>4.13.1</version> <!-- is latest version without hamcrest -->
 			<scope>test</scope>
 		</dependency>
 		<dependency>
