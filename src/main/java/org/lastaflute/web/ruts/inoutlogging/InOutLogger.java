@@ -17,6 +17,7 @@ package org.lastaflute.web.ruts.inoutlogging;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -112,13 +113,13 @@ public class InOutLogger {
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
         // Request: requestHeader, requestParameter, requestBody
         // _/_/_/_/_/_/_/_/_/_/
-        final String requestHeaderExp = buildRequestHeaderExp(keeper);
+        final String requestHeaderExp = buildRequestHeaderExp(keeper, option);
         if (requestHeaderExp != null) {
             final String title = "requestHeader";
             final String realExp = requestHeaderExp;
             alreadyLineSep = buildInOutRequest(sb, title, realExp, alreadyLineSep, keeper);
         }
-        final String paramsExp = buildRequestParameterExp(keeper);
+        final String paramsExp = buildRequestParameterExp(keeper, option);
         if (paramsExp != null) {
             final String title = "requestParameter";
             final String realExp = option.getRequestParameterFilter().map(filter -> filter.apply(paramsExp)).orElse(paramsExp);
@@ -256,19 +257,50 @@ public class InOutLogger {
     // ===================================================================================
     //                                                                    Build Expression
     //                                                                    ================
-    protected String buildRequestHeaderExp(InOutLogKeeper keeper) {
+    // -----------------------------------------------------
+    //                                        Request Header
+    //                                        --------------
+    protected String buildRequestHeaderExp(InOutLogKeeper keeper, InOutLogOption option) {
         return keeper.getRequestHeaderMapProvider().map(provider -> buildMapExp(provider.get())).orElse(null);
     }
 
-    protected String buildRequestParameterExp(InOutLogKeeper keeper) {
-        return buildMapExp(keeper.getRequestParameterMap());
+    // -----------------------------------------------------
+    //                                     Request Parameter
+    //                                     -----------------
+    protected String buildRequestParameterExp(InOutLogKeeper keeper, InOutLogOption option) {
+        return doBuildRequestParameterExp(keeper.getRequestParameterMap(), option);
     }
 
+    protected String doBuildRequestParameterExp(Map<String, Object> requestParameterMap, InOutLogOption option) {
+        return buildMapExp(filterRequestParameterMap(requestParameterMap, option));
+    }
+
+    protected Map<String, Object> filterRequestParameterMap(Map<String, Object> requestParameterMap, InOutLogOption option) {
+        final Map<String, Object> realMap = option.getRequestParameterValueFilter().map(filter -> {
+            if (requestParameterMap.isEmpty()) {
+                return requestParameterMap;
+            }
+            final Map<String, Object> filteredMap = new LinkedHashMap<>(requestParameterMap.size());
+            requestParameterMap.forEach((key, value) -> {
+                final Object filteredValue = filter.apply(new InOutValueEntry(key, value));
+                filteredMap.put(key, filteredValue != null ? filteredValue : value);
+            });
+            return filteredMap;
+        }).orElse(requestParameterMap);
+        return realMap;
+    }
+
+    // -----------------------------------------------------
+    //                                    Response Parameter
+    //                                    ------------------
     protected String buildResponseHeaderExp(InOutLogKeeper keeper) {
         return keeper.getResponseHeaderMapProvider().map(provider -> buildMapExp(provider.get())).orElse(null);
     }
 
-    protected String buildMapExp(final Map<String, Object> parameterMap) {
+    // -----------------------------------------------------
+    //                                   Building Expression
+    //                                   -------------------
+    protected String buildMapExp(Map<String, Object> parameterMap) {
         if (parameterMap.isEmpty()) {
             return null;
         }
@@ -279,35 +311,47 @@ public class InOutLogger {
             }
             sb.append(key).append("=");
             if (value instanceof Object[]) {
-                final Object[] objArray = (Object[]) value;
-                if (objArray.length == 1) {
-                    sb.append(objArray[0]);
-                } else {
-                    int index = 0;
-                    sb.append("[");
-                    for (Object obj : objArray) {
-                        if (index > 0) {
-                            sb.append(", ");
-                        }
-                        sb.append(obj);
-                        ++index;
-                    }
-                    sb.append("]");
-                }
+                doBuildMapExpObjectArray(sb, value);
             } else if (value instanceof List<?>) {
-                @SuppressWarnings("unchecked")
-                final List<Object> objList = (List<Object>) value;
-                if (objList.size() == 1) {
-                    sb.append(objList.get(0));
-                } else {
-                    sb.append(objList.toString()); // e.g. [sea, land]
-                }
+                doBuildMapExpList(sb, value);
             } else {
-                sb.append(value);
+                doBuildMapExpScalar(sb, value);
             }
         });
         sb.insert(0, "{").append("}");
         return sb.toString();
+    }
+
+    protected void doBuildMapExpObjectArray(StringBuilder sb, Object value) {
+        final Object[] objArray = (Object[]) value;
+        if (objArray.length == 1) {
+            sb.append(objArray[0]); // request parameter may have one parameter as array
+        } else {
+            int index = 0;
+            sb.append("[");
+            for (Object obj : objArray) {
+                if (index > 0) {
+                    sb.append(", ");
+                }
+                doBuildMapExpScalar(sb, obj);
+                ++index;
+            }
+            sb.append("]");
+        }
+    }
+
+    protected void doBuildMapExpList(StringBuilder sb, Object value) {
+        @SuppressWarnings("unchecked")
+        final List<Object> objList = (List<Object>) value;
+        if (objList.size() == 1) {
+            sb.append(objList.get(0));
+        } else {
+            sb.append(objList.toString()); // e.g. [sea, land]
+        }
+    }
+
+    protected void doBuildMapExpScalar(StringBuilder sb, Object value) {
+        sb.append(value);
     }
 
     // ===================================================================================
@@ -361,5 +405,27 @@ public class InOutLogger {
                 log(whole);
             }
         });
+    }
+
+    // ===================================================================================
+    //                                                                         Value Entry
+    //                                                                         ===========
+    public static class InOutValueEntry {
+
+        protected final String key;
+        protected final Object value;
+
+        public InOutValueEntry(String key, Object value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public Object getValue() {
+            return value;
+        }
     }
 }
