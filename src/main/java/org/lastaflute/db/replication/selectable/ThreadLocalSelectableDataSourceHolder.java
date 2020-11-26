@@ -29,7 +29,13 @@ public class ThreadLocalSelectableDataSourceHolder implements SelectableDataSour
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    protected static final ThreadLocal<String> selectableDataSourceKey = new ThreadLocal<String>();
+    // no static because it may be created per schema (for e.g. multiple schema (DB))
+    //
+    // and you cannot nest use of SlaveDBAccessor between several schemas
+    // because of only-one thread-local instance (if you use selectable_datasource.xml)
+    // if you want wide-scope selectable, you should define instances per schema
+    //
+    protected final ThreadLocal<String> selectableDataSourceKey = new ThreadLocal<String>();
 
     // ===================================================================================
     //                                                                           Attribute
