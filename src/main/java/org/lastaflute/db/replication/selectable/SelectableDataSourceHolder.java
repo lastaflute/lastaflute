@@ -25,12 +25,12 @@ import org.lastaflute.di.core.exception.ComponentNotFoundException;
 public interface SelectableDataSourceHolder {
 
     /**
-     * @param key The key of data source. (NotNull)
+     * @param key The key of data source. (NullAllowed: if null, no selectable)
      */
     void switchSelectableDataSourceKey(String key);
 
     /**
-     * @return The current key of data source. (NotNull)
+     * @return The current key of data source. (NullAllowed: if no selectable)
      */
     String getCurrentSelectableDataSourceKey();
 

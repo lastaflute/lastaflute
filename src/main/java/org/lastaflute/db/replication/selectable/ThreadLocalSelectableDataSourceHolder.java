@@ -49,14 +49,30 @@ public class ThreadLocalSelectableDataSourceHolder implements SelectableDataSour
     }
 
     public DataSource getSelectedDataSource() {
-        return container.getRoot().getComponent(getDataSourceComponentName());
+        return getDataSourceComponent(getDataSourceComponentName());
     }
 
+    protected DataSource getDataSourceComponent(String dataSourceComponentName) {
+        // uses the root container so the component name must be unique in your project
+        return container.getRoot().getComponent(dataSourceComponentName);
+    }
+
+    // ===================================================================================
+    //                                                                      Component Name
+    //                                                                      ==============
     protected String getDataSourceComponentName() {
-        final String dsName = getCurrentSelectableDataSourceKey();
-        if (LdiStringUtil.isEmpty(dsName)) {
+        final String dataSourceKey = getCurrentSelectableDataSourceKey();
+        if (LdiStringUtil.isEmpty(dataSourceKey)) {
             throw new IllegalStateException("Not found the current selectable data source key.");
         }
-        return dsName + "DataSource";
+        return buildDataSourceComponentName(dataSourceKey);
+    }
+
+    protected String buildDataSourceComponentName(String dataSourceKey) {
+        return dataSourceKey + getDataSourceSuffix();
+    }
+
+    protected String getDataSourceSuffix() {
+        return "DataSource";
     }
 }
