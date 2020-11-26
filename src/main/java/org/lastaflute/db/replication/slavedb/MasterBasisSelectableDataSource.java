@@ -42,13 +42,12 @@ public class MasterBasisSelectableDataSource extends SelectableDataSourceProxy {
      */
     @Override
     public DataSource getSelectedDataSource() {
-        final String dataSourceName = getCurrentSelectableDataSourceKey();
-        if (dataSourceName != null) {
+        final String current = getCurrentSelectableDataSourceKey();
+        if (current != null) {
             return selectDataSrouce();
         } else { // means no name set on thread local
             try {
-                final String keyPrefix = getMasterDataSourceKeyPrefix();
-                switchSelectableDataSourceKey(keyPrefix);
+                switchSelectableDataSourceKey(getMasterDataSourceKey());
                 return selectDataSrouce();
             } finally {
                 switchSelectableDataSourceKey(null); // restore
@@ -67,14 +66,14 @@ public class MasterBasisSelectableDataSource extends SelectableDataSourceProxy {
         return selectableDataSourceHolder.getSelectedDataSource();
     }
 
-    protected void switchSelectableDataSourceKey(String keyPrefix) {
-        selectableDataSourceHolder.switchSelectableDataSourceKey(keyPrefix);
+    protected void switchSelectableDataSourceKey(String key) {
+        selectableDataSourceHolder.switchSelectableDataSourceKey(key);
     }
 
     // ===================================================================================
-    //                                                                          Key Prefix
-    //                                                                          ==========
-    protected String getMasterDataSourceKeyPrefix() { // you can override (if e.g. multiple DB)
+    //                                                                      DataSource Key
+    //                                                                      ==============
+    protected String getMasterDataSourceKey() { // you can override (if e.g. multiple DB)
         return SlaveDBAccessor.MASTER_DB; // as default
     }
 }
