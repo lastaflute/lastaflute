@@ -38,7 +38,7 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
     //                                                                           Attribute
     //                                                                           =========
     @Resource
-    protected SelectableDataSourceHolder selectableDataSourceHolder;
+    private SelectableDataSourceHolder selectableDataSourceHolder; // needs selectable_datasource.xml
 
     // ===================================================================================
     //                                                                      SlaveDB Access

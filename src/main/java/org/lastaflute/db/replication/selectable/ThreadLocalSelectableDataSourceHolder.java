@@ -41,7 +41,7 @@ public class ThreadLocalSelectableDataSourceHolder implements SelectableDataSour
     //                                                                           Attribute
     //                                                                           =========
     @Resource
-    protected LaContainer container;
+    private LaContainer container;
 
     // ===================================================================================
     //                                                                           Operation
