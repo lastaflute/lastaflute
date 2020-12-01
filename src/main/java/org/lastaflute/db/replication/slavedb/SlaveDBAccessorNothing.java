@@ -17,6 +17,7 @@ package org.lastaflute.db.replication.slavedb;
 
 /**
  * @author jflute
+ * @deprecated unneeded so delete future
  */
 public class SlaveDBAccessorNothing implements SlaveDBAccessor {
 
@@ -43,5 +44,15 @@ public class SlaveDBAccessorNothing implements SlaveDBAccessor {
             String msg = "The argument 'noArgLambda' should not be null.";
             throw new IllegalArgumentException(msg);
         }
+    }
+
+    @Override
+    public String prepareMasterDataSourceKey() { // unused
+        return MASTER_DB;
+    }
+
+    @Override
+    public String prepareSlaveDataSourceKey() { // unused
+        return SLAVE_DB;
     }
 }

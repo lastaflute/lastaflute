@@ -21,6 +21,7 @@ import org.dbflute.bhv.core.BehaviorCommandHook;
 import org.dbflute.bhv.core.BehaviorCommandMeta;
 import org.dbflute.hook.CallbackContext;
 import org.lastaflute.db.replication.selectable.SelectableDataSourceHolder;
+import org.lastaflute.di.util.LdiSrl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,12 +57,12 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
         assertCallbackNotNull(callback);
         final String currentKey = selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
         try {
-            final String slaveDB = SLAVE_DB;
+            final String slaveKey = prepareSlaveDataSourceKey();
             if (logger.isDebugEnabled()) {
-                logger.debug(buildSlaveDBAccessDebugMessage(slaveDB));
+                logger.debug(buildSlaveDBAccessDebugMessage(slaveKey));
             }
             setupForcedMasterCallback();
-            selectableDataSourceHolder.switchSelectableDataSourceKey(slaveDB);
+            selectableDataSourceHolder.switchSelectableDataSourceKey(slaveKey);
             return callback.callback();
         } finally {
             selectableDataSourceHolder.switchSelectableDataSourceKey(currentKey);
@@ -69,8 +70,8 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
         }
     }
 
-    protected String buildSlaveDBAccessDebugMessage(String slaveDB) {
-        return "...Accessing to SlaveDB for " + mySchemaDisp() + ": " + slaveDB;
+    protected String buildSlaveDBAccessDebugMessage(String slaveKey) {
+        return "...Accessing to SlaveDB for " + mySchemaDisp() + " by the key: " + slaveKey;
     }
 
     // -----------------------------------------------------
@@ -111,11 +112,11 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
     protected <RESULT> RESULT doMasterAccessFixedly(SlaveDBCallback<RESULT> noArgLambda) {
         assertCallbackNotNull(noArgLambda);
         final String currentKey = selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
-        final String masterDB = MASTER_DB;
+        final String masterKey = prepareMasterDataSourceKey();
         if (logger.isDebugEnabled()) {
-            logger.debug(buildMasterAccessFixedlyDebugMessage(masterDB));
+            logger.debug(buildMasterAccessFixedlyDebugMessage(masterKey));
         }
-        selectableDataSourceHolder.switchSelectableDataSourceKey(masterDB);
+        selectableDataSourceHolder.switchSelectableDataSourceKey(masterKey);
         try {
             return noArgLambda.callback();
         } finally {
@@ -123,8 +124,8 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
         }
     }
 
-    protected String buildMasterAccessFixedlyDebugMessage(String masterDB) {
-        return "...Accessing to MasterDB for " + mySchemaDisp() + " fixedly: " + masterDB;
+    protected String buildMasterAccessFixedlyDebugMessage(String masterKey) {
+        return "...Accessing to MasterDB for " + mySchemaDisp() + " fixedly by the key: " + masterKey;
     }
 
     // ===================================================================================
@@ -142,13 +143,13 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
 
             public void hookBefore(BehaviorCommandMeta meta) {
                 if (needsForcedMasterCommand(meta)) {
-                    final String masterDB = MASTER_DB;
+                    final String masterKey = prepareMasterDataSourceKey();
                     currentKey = selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
-                    if (!masterDB.equals(currentKey)) {
+                    if (!masterKey.equals(currentKey)) {
                         if (logger.isDebugEnabled()) {
-                            logger.debug(buildForcedMasterHookDebugMessage(masterDB));
+                            logger.debug(buildForcedMasterHookDebugMessage(masterKey));
                         }
-                        selectableDataSourceHolder.switchSelectableDataSourceKey(masterDB);
+                        selectableDataSourceHolder.switchSelectableDataSourceKey(masterKey);
                         forcedSet = true;
                     }
                 }
@@ -171,8 +172,8 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
         return !meta.isSelect();
     }
 
-    protected String buildForcedMasterHookDebugMessage(String masterDB) {
-        return "...Accessing to MasterDB for " + mySchemaDisp() + " forcedly: " + masterDB;
+    protected String buildForcedMasterHookDebugMessage(String masterKey) {
+        return "...Accessing to MasterDB for " + mySchemaDisp() + " forcedly by the key: " + masterKey;
     }
 
     protected boolean isExistingHookInherited() {
@@ -184,6 +185,40 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
     }
 
     // ===================================================================================
+    //                                                                         Schema Info
+    //                                                                         ===========
+    protected String mySchemaDisp() { // for debug log, not null
+        final String mySchemaKeyword = mySchemaKeyword();
+        return mySchemaKeyword != null ? mySchemaKeyword : getDefalutSchemaDisp();
+    }
+
+    protected String getDefalutSchemaDisp() {
+        return "main schema";
+    }
+
+    // ===================================================================================
+    //                                                                      DataSource Key
+    //                                                                      ==============
+    @Override
+    public String prepareMasterDataSourceKey() {
+        return MASTER_DB + getSchemaSuffix();
+    }
+
+    @Override
+    public String prepareSlaveDataSourceKey() {
+        return SLAVE_DB + getSchemaSuffix();
+    }
+
+    protected String getSchemaSuffix() {
+        final String keyword = mySchemaKeyword(); // null allowed
+        return keyword != null ? LdiSrl.initCap(keyword) : ""; // e.g. seadb to Seadb (for masterSeadb)
+    }
+
+    protected String mySchemaKeyword() { // you can override (if e.g. multiple DB)
+        return null; // no schema keyword as default
+    }
+
+    // ===================================================================================
     //                                                                        Small Helper
     //                                                                        ============
     protected <RESULT> void assertCallbackNotNull(SlaveDBCallback<RESULT> callback) {
@@ -191,12 +226,5 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
             String msg = "The argument 'noArgLambda' should not be null.";
             throw new IllegalArgumentException(msg);
         }
-    }
-
-    // ===================================================================================
-    //                                                                         Schema Info
-    //                                                                         ===========
-    protected String mySchemaDisp() {
-        return "main schema";
     }
 }

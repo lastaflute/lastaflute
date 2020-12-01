@@ -20,14 +20,9 @@ import javax.sql.DataSource;
 
 import org.lastaflute.db.replication.selectable.SelectableDataSourceHolder;
 import org.lastaflute.db.replication.selectable.SelectableDataSourceProxy;
-import org.lastaflute.di.util.LdiSrl;
 
 /**
- * The proxy for selectable data-source that is on master basis. <br>
- * 
- * <p>The default data source key is very simple for only-one schema.
- * So you should override the schema keyword at your own sub-class if multiple schema (multiple DB).</p>
- * 
+ * The proxy for selectable data-source that is on master basis.
  * @author jflute
  */
 public class MasterBasisSelectableDataSource extends SelectableDataSourceProxy {
@@ -35,6 +30,8 @@ public class MasterBasisSelectableDataSource extends SelectableDataSourceProxy {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    @Resource
+    private SlaveDBAccessor slaveDBAccessor; // to use data source key
     @Resource
     private SelectableDataSourceHolder selectableDataSourceHolder; // needs selectable_datasource.xml
 
@@ -53,7 +50,7 @@ public class MasterBasisSelectableDataSource extends SelectableDataSourceProxy {
             return selectDataSrouce();
         } else { // means no name set on thread local
             try {
-                switchSelectableDataSourceKey(getMasterDataSourceKey());
+                switchSelectableDataSourceKey(prepareMasterDataSourceKey());
                 return selectDataSrouce();
             } finally {
                 switchSelectableDataSourceKey(null); // restore
@@ -79,16 +76,7 @@ public class MasterBasisSelectableDataSource extends SelectableDataSourceProxy {
     // ===================================================================================
     //                                                                      DataSource Key
     //                                                                      ==============
-    protected String getMasterDataSourceKey() { // you can override (if e.g. multiple DB)
-        return SlaveDBAccessor.MASTER_DB + getSchemaSuffix();
-    }
-
-    protected String getSchemaSuffix() {
-        final String keyword = mySchemaKeyword(); // null allowed
-        return keyword != null ? LdiSrl.initCap(keyword) : ""; // e.g. seadb to Seadb (for masterSeadb)
-    }
-
-    protected String mySchemaKeyword() { // you can override (if e.g. multiple DB)
-        return null; // no schema keyword as default
+    protected String prepareMasterDataSourceKey() {
+        return slaveDBAccessor.prepareMasterDataSourceKey();
     }
 }
