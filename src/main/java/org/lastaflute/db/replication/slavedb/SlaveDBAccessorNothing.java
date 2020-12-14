@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.lastaflute.db.replication.slavedb;
 
 /**
  * @author jflute
+ * @deprecated unneeded so delete future
  */
 public class SlaveDBAccessorNothing implements SlaveDBAccessor {
 
@@ -43,5 +44,15 @@ public class SlaveDBAccessorNothing implements SlaveDBAccessor {
             String msg = "The argument 'noArgLambda' should not be null.";
             throw new IllegalArgumentException(msg);
         }
+    }
+
+    @Override
+    public String prepareMasterDataSourceKey() { // unused
+        return MASTER_DB;
+    }
+
+    @Override
+    public String prepareSlaveDataSourceKey() { // unused
+        return SLAVE_DB;
     }
 }

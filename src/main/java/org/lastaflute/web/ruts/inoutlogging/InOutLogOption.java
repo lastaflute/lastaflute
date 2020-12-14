@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.function.Predicate;
 
 import org.dbflute.helper.StringSet;
 import org.dbflute.optional.OptionalThing;
+import org.lastaflute.web.ruts.inoutlogging.InOutLogger.InOutValueEntry;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 
 /**
@@ -38,6 +39,7 @@ public class InOutLogOption {
     protected boolean suppressResponseBody; // may be too big
     protected List<String> requestHeaderNameList; // keeping order
     protected Function<String, String> requestParameterFilter;
+    protected Function<InOutValueEntry, Object> requestParameterValueFilter;
     protected Function<String, String> requestBodyFilter;
     protected List<String> responseHeaderNameList; // keeping order
     protected Function<String, String> responseBodyFilter;
@@ -46,6 +48,9 @@ public class InOutLogOption {
     // ===================================================================================
     //                                                                         Easy-to-Use
     //                                                                         ===========
+    // -----------------------------------------------------
+    //                                                 Basic
+    //                                                 -----
     /**
      * Enable logging as asynchronous. <br>
      * However basically unneeded because logging is after writing response so no wait. <br>
@@ -68,6 +73,9 @@ public class InOutLogOption {
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                               Request
+    //                                               -------
     /**
      * @param requestHeaderNameList The list of target request header names. (NotNull, NotEmpty)
      * @return this. (NotNull)
@@ -88,17 +96,50 @@ public class InOutLogOption {
     }
 
     /**
-     * @param requestParameterFilter The filter of request parameters, no filter if returns null. (NotNull)
+     * (Old Style) <br>
+     * Filter the request parameter (whole) expression that contains all parameters. <br>
+     * The callback argument is e.g. requestParameter:{sea=mystic, land=oneman}. <br>
+     * If you need to adjust detailedly, you can use filterRequestParameterMap().
+     * @param oneArgLambda The filter of request parameter expression, no filter if returns null. (NotNull)
      * @return this. (NotNull)
      */
-    public InOutLogOption filterRequestParameter(Function<String, String> requestParameterFilter) {
-        if (requestParameterFilter == null) {
-            throw new IllegalArgumentException("The argument 'requestParameterFilter' should not be null.");
+    public InOutLogOption filterRequestParameter(Function<String, String> oneArgLambda) {
+        if (oneArgLambda == null) {
+            throw new IllegalArgumentException("The argument 'oneArgLambda' should not be null.");
         }
-        this.requestParameterFilter = requestParameterFilter;
+        this.requestParameterFilter = oneArgLambda;
         return this;
     }
 
+    /**
+     * Filter the request parameter value per key (of request parameter map from Servlet). <br>
+     * The callback argument is e.g. sea, land (if the map has sea, land as key).
+     * @param oneArgLambda The filter of request parameter value, no filter if returns null. (NotNull)
+     * @return this. (NotNull)
+     */
+    public InOutLogOption filterRequestParameterValue(Function<InOutValueEntry, Object> oneArgLambda) {
+        if (oneArgLambda == null) {
+            throw new IllegalArgumentException("The argument 'oneArgLambda' should not be null.");
+        }
+        this.requestParameterValueFilter = oneArgLambda;
+        return this;
+    }
+
+    /**
+     * @param oneArgLambda The filter of request body, no filter if returns null. (NotNull)
+     * @return this. (NotNull)
+     */
+    public InOutLogOption filterRequestBody(Function<String, String> oneArgLambda) {
+        if (oneArgLambda == null) {
+            throw new IllegalArgumentException("The argument 'requestBodyFilter' should not be null.");
+        }
+        this.requestBodyFilter = oneArgLambda;
+        return this;
+    }
+
+    // -----------------------------------------------------
+    //                                              Response
+    //                                              --------
     /**
      * @param responseHeaderNameList The list of target response header names. (NotNull, NotEmpty)
      * @return this. (NotNull)
@@ -119,29 +160,20 @@ public class InOutLogOption {
     }
 
     /**
-     * @param requestBodyFilter The filter of request body, no filter if returns null. (NotNull)
+     * @param oneArgLambda The filter of response body, no filter if returns null. (NotNull)
      * @return this. (NotNull)
      */
-    public InOutLogOption filterRequestBody(Function<String, String> requestBodyFilter) {
-        if (requestBodyFilter == null) {
-            throw new IllegalArgumentException("The argument 'requestBodyFilter' should not be null.");
-        }
-        this.requestBodyFilter = requestBodyFilter;
-        return this;
-    }
-
-    /**
-     * @param responseBodyFilter The filter of response body, no filter if returns null. (NotNull)
-     * @return this. (NotNull)
-     */
-    public InOutLogOption filterResponseBody(Function<String, String> responseBodyFilter) {
-        if (responseBodyFilter == null) {
+    public InOutLogOption filterResponseBody(Function<String, String> oneArgLambda) {
+        if (oneArgLambda == null) {
             throw new IllegalArgumentException("The argument 'responseBodyFilter' should not be null.");
         }
-        this.responseBodyFilter = responseBodyFilter;
+        this.responseBodyFilter = oneArgLambda;
         return this;
     }
 
+    // -----------------------------------------------------
+    //                                            Targetting
+    //                                            ----------
     /**
      * @param loggingExceptDeterminer The determiner to except logging. (NotNull)
      * @return this. (NotNull)
@@ -181,6 +213,12 @@ public class InOutLogOption {
     public OptionalThing<Function<String, String>> getRequestParameterFilter() {
         return OptionalThing.ofNullable(requestParameterFilter, () -> {
             throw new IllegalStateException("Not found the requestParameterFilter.");
+        });
+    }
+
+    public OptionalThing<Function<InOutValueEntry, Object>> getRequestParameterValueFilter() {
+        return OptionalThing.ofNullable(requestParameterValueFilter, () -> {
+            throw new IllegalStateException("Not found the requestParameterValueFilter.");
         });
     }
 

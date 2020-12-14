@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ public interface SlaveDBAccessor {
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    // these are base prefix of data source key e.g. masterDataSource, masterSeadbDataSource
     public static final String MASTER_DB = "master";
     public static final String SLAVE_DB = "slave";
 
@@ -93,4 +94,20 @@ public interface SlaveDBAccessor {
      * @return The result of call-back process. (NullAllowed)
      */
     <RESULT> RESULT accessRandomFifty(SlaveDBCallback<RESULT> noArgLambda, long determinationNumber);
+
+    // ===================================================================================
+    //                                                                      DataSource Key
+    //                                                                      ==============
+    // basically for framework
+    /**
+     * Prepare data source key for MasterDB. (basically for framework)
+     * @return The key string corresponding to master schema. (NotNull)
+     */
+    String prepareMasterDataSourceKey();
+
+    /**
+     * Prepare data source key for SlaveDB. (basically for framework)
+     * @return The key string corresponding to  slave schema. (NotNull)
+     */
+    String prepareSlaveDataSourceKey();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@ import org.lastaflute.di.core.exception.ComponentNotFoundException;
 public interface SelectableDataSourceHolder {
 
     /**
-     * @param key The key of data source. (NotNull)
+     * @param key The key of data source. (NullAllowed: if null, no selectable)
      */
     void switchSelectableDataSourceKey(String key);
 
     /**
-     * @return The current key of data source. (NotNull)
+     * @return The current key of data source. (NullAllowed: if no selectable)
      */
     String getCurrentSelectableDataSourceKey();
 

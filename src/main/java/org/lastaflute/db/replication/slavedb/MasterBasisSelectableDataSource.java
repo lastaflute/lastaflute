@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,30 +22,61 @@ import org.lastaflute.db.replication.selectable.SelectableDataSourceHolder;
 import org.lastaflute.db.replication.selectable.SelectableDataSourceProxy;
 
 /**
+ * The proxy for selectable data-source that is on master basis.
  * @author jflute
  */
 public class MasterBasisSelectableDataSource extends SelectableDataSourceProxy {
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    @Resource
+    private SlaveDBAccessor slaveDBAccessor; // to use data source key
     @Resource
     private SelectableDataSourceHolder selectableDataSourceHolder; // needs selectable_datasource.xml
 
+    // ===================================================================================
+    //                                                                 Selected DataSource
+    //                                                                 ===================
     /**
      * Get the real data-source selected. <br>
-     * This overrides to return data-source for MasterDB as default. 
+     * This overrides to return data-source for master DB as default. 
      * @return The instance of real data-source. (NotNull)
      */
     @Override
     public DataSource getSelectedDataSource() {
-        final String dataSourceName = selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
-        if (dataSourceName != null) {
-            return selectableDataSourceHolder.getSelectedDataSource();
+        final String current = getCurrentSelectableDataSourceKey();
+        if (current != null) {
+            return selectDataSrouce();
         } else { // means no name set on thread local
             try {
-                selectableDataSourceHolder.switchSelectableDataSourceKey(SlaveDBAccessor.MASTER_DB); // as default
-                return selectableDataSourceHolder.getSelectedDataSource();
+                switchSelectableDataSourceKey(prepareMasterDataSourceKey());
+                return selectDataSrouce();
             } finally {
-                selectableDataSourceHolder.switchSelectableDataSourceKey(null); // restore
+                switchSelectableDataSourceKey(null); // restore
             }
         }
+    }
+
+    // ===================================================================================
+    //                                                                          Selectable
+    //                                                                          ==========
+    protected String getCurrentSelectableDataSourceKey() {
+        return selectableDataSourceHolder.getCurrentSelectableDataSourceKey();
+    }
+
+    protected DataSource selectDataSrouce() {
+        return selectableDataSourceHolder.getSelectedDataSource();
+    }
+
+    protected void switchSelectableDataSourceKey(String key) {
+        selectableDataSourceHolder.switchSelectableDataSourceKey(key);
+    }
+
+    // ===================================================================================
+    //                                                                      DataSource Key
+    //                                                                      ==============
+    protected String prepareMasterDataSourceKey() {
+        return slaveDBAccessor.prepareMasterDataSourceKey();
     }
 }

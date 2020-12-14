@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 the original author or authors.
+ * Copyright 2015-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,19 @@ public class ThreadLocalSelectableDataSourceHolder implements SelectableDataSour
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
-    protected static final ThreadLocal<String> selectableDataSourceKey = new ThreadLocal<String>();
+    // no static because it may be created per schema (for e.g. multiple schema (DB))
+    //
+    // and you cannot nest use of SlaveDBAccessor between several schemas
+    // because of only-one thread-local instance (if you use selectable_datasource.xml)
+    // if you want wide-scope selectable, you should define instances per schema
+    //
+    protected final ThreadLocal<String> selectableDataSourceKey = new ThreadLocal<String>();
 
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
     @Resource
-    protected LaContainer container;
+    private LaContainer container;
 
     // ===================================================================================
     //                                                                           Operation
@@ -49,14 +55,30 @@ public class ThreadLocalSelectableDataSourceHolder implements SelectableDataSour
     }
 
     public DataSource getSelectedDataSource() {
-        return container.getRoot().getComponent(getDataSourceComponentName());
+        return getDataSourceComponent(getDataSourceComponentName());
     }
 
+    protected DataSource getDataSourceComponent(String dataSourceComponentName) {
+        // uses the root container so the component name must be unique in your project
+        return container.getRoot().getComponent(dataSourceComponentName);
+    }
+
+    // ===================================================================================
+    //                                                                      Component Name
+    //                                                                      ==============
     protected String getDataSourceComponentName() {
-        final String dsName = getCurrentSelectableDataSourceKey();
-        if (LdiStringUtil.isEmpty(dsName)) {
+        final String dataSourceKey = getCurrentSelectableDataSourceKey();
+        if (LdiStringUtil.isEmpty(dataSourceKey)) {
             throw new IllegalStateException("Not found the current selectable data source key.");
         }
-        return dsName + "DataSource";
+        return buildDataSourceComponentName(dataSourceKey);
+    }
+
+    protected String buildDataSourceComponentName(String dataSourceKey) {
+        return dataSourceKey + getDataSourceSuffix();
+    }
+
+    protected String getDataSourceSuffix() {
+        return "DataSource";
     }
 }
