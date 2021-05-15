@@ -67,7 +67,8 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
     public ApiResponse handleValidationError(ApiFailureResource resource) {
         final FaihyUnifiedFailureType failureType = FaihyUnifiedFailureType.VALIDATION_ERROR;
         final FaihyUnifiedFailureResult result = createFailureResult(failureType, resource, null);
-        return asJson(result).httpStatus(prepareBusinessFailureStatus());
+        final int failureStatus = prepareBusinessFailureStatus(result, resource, /*cause*/null);
+        return asJson(result).httpStatus(failureStatus);
     }
 
     // -----------------------------------------------------
@@ -77,14 +78,15 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
     public ApiResponse handleApplicationException(ApiFailureResource resource, RuntimeException cause) {
         final FaihyUnifiedFailureType failureType = FaihyUnifiedFailureType.BUSINESS_ERROR;
         final FaihyUnifiedFailureResult result = createFailureResult(failureType, resource, cause);
-        return asJson(result).httpStatus(prepareBusinessFailureStatus());
+        final int failureStatus = prepareBusinessFailureStatus(result, resource, cause);
+        return asJson(result).httpStatus(failureStatus);
     }
 
     // -----------------------------------------------------
     //                                        Failure Status
     //                                        --------------
-    protected int prepareBusinessFailureStatus() {
-        return BUSINESS_FAILURE_STATUS;
+    protected int prepareBusinessFailureStatus(FaihyUnifiedFailureResult result, ApiFailureResource resource, RuntimeException cause) {
+        return BUSINESS_FAILURE_STATUS; // as default
     }
 
     // ===================================================================================
