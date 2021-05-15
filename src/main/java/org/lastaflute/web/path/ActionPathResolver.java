@@ -337,7 +337,7 @@ public class ActionPathResolver {
     protected boolean executeHandlerIfFound(MappingPathResource pathResource, ActionFoundPathHandler handler, String actionName,
             String paramPath) throws Exception {
         final boolean emptyParam = paramPath == null || paramPath.isEmpty();
-        final ActionExecute execByParam = !emptyParam ? findExecuteConfig(actionName, paramPath).orElse(null) : null;
+        final ActionExecute execByParam = !emptyParam ? findActionExecute(actionName, paramPath).orElse(null) : null;
         if (emptyParam || execByParam != null) { // certainly hit
             final String requestPath = pathResource.getRequestPath(); // no mapping, plain path here (for e.g. redirect)
             return handler.handleActionPath(requestPath, actionName, paramPath, execByParam);
@@ -345,7 +345,7 @@ public class ActionPathResolver {
         return false;
     }
 
-    protected OptionalThing<ActionExecute> findExecuteConfig(String actionName, String paramPath) {
+    protected OptionalThing<ActionExecute> findActionExecute(String actionName, String paramPath) {
         return LaActionExecuteUtil.findActionExecute(actionName, paramPath);
     }
 
