@@ -28,12 +28,18 @@ public class UrlMappingOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected Function<String, String> requestPathFilter; // null allowed, convert requestPath e.g. '/product/list/' to mappingPath
+    protected Function<String, String> requestPathFilter; // null allowed
     protected String actionNameSuffix; // null allowed, basically initial upper case, e.g. if 'Sp', search as productListSpAction
 
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
+    /**
+     * Set filter function to convert requestPath (makingMappingPath) to mappingPath. <br>
+     * Returning null in the funtion means no filter. 
+     * @param filter the function argument is requestPath (makingMappingPath). (NotNull, CanNullReturn: no filter)
+     * @return this. (NotNull)
+     */
     public UrlMappingOption filterRequestPath(Function<String, String> filter) {
         if (filter == null) {
             throw new IllegalArgumentException("The argument 'filter' should not be null.");

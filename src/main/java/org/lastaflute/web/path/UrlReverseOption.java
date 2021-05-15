@@ -28,21 +28,36 @@ public class UrlReverseOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    /**
-     * The filter function for action name (that is without 'Action' suffix). <br>
-     *  e.g. if ProductListSpAction, convert productListSp to spProductList (/sp/product/list/) <br>
-     * (NullAllowed: if null, no filter, CannotNullReturn: function cannot return null)
-     */
-    protected Function<String, String> actionNameFilter;
+    protected Function<String, String> actionNameFilter; // null allowed
+    protected Function<String, String> actionUrlFilter; // null allowed
 
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
+    /**
+     * Set filter function of action name to build action URL, which is without 'Action' suffix. <br>
+     * e.g. if ProductListSpAction, convert productListSp to spProductList (/sp/product/list/) <br>
+     * @param filter the function argument is action name e.g. productList. (NotNull, CanNullReturn: no filter)
+     * @return this. (NotNull)
+     */
     public UrlReverseOption filterActionName(Function<String, String> filter) {
         if (filter == null) {
             throw new IllegalArgumentException("The argument 'filter' should not be null.");
         }
         actionNameFilter = filter;
+        return this;
+    }
+
+    /**
+     * Set filter function of action URL which has action name, URL parts, query parameter and hash. <br>
+     * @param filter the function argument is action URL e.g. /product/list?productName=S. (NotNull, CanNullReturn: no filter)
+     * @return this. (NotNull)
+     */
+    public UrlReverseOption filterActionUrl(Function<String, String> filter) {
+        if (filter == null) {
+            throw new IllegalArgumentException("The argument 'filter' should not be null.");
+        }
+        actionUrlFilter = filter;
         return this;
     }
 
@@ -52,6 +67,12 @@ public class UrlReverseOption {
     public OptionalThing<Function<String, String>> getActionNameFilter() {
         return OptionalThing.ofNullable(actionNameFilter, () -> {
             throw new IllegalStateException("Not found the actionNameFilter.");
+        });
+    }
+
+    public OptionalThing<Function<String, String>> getActionUrlFilter() {
+        return OptionalThing.ofNullable(actionUrlFilter, () -> {
+            throw new IllegalStateException("Not found the actionUrlFilter.");
         });
     }
 }

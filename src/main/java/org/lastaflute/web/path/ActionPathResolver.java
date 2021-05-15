@@ -154,7 +154,8 @@ public class ActionPathResolver {
     }
 
     protected MappingPathResource deeplyCustomizeUrlMapping(String requestPath, String simplyFiltered) {
-        final UrlMappingOption option = actionAdjustmentProvider.customizeActionUrlMapping(createUrlMappingResource(requestPath));
+        final UrlMappingResource urlMappingResource = createUrlMappingResource(requestPath, simplyFiltered);
+        final UrlMappingOption option = actionAdjustmentProvider.customizeActionUrlMapping(urlMappingResource);
         final String mappingPath;
         final String actionNameSuffix;
         if (option != null) {
@@ -167,8 +168,8 @@ public class ActionPathResolver {
         return new MappingPathResource(requestPath, mappingPath, actionNameSuffix);
     }
 
-    protected UrlMappingResource createUrlMappingResource(String requestPath) {
-        return new UrlMappingResource(requestPath);
+    protected UrlMappingResource createUrlMappingResource(String requestPath, String simplyFiltered) {
+        return new UrlMappingResource(requestPath, simplyFiltered);
     }
 
     // -----------------------------------------------------
@@ -380,11 +381,13 @@ public class ActionPathResolver {
         buildUrlParts(sb, chain);
         buildGetParam(sb, chain);
         buildHashOnUrl(sb, chain);
-        return sb.toString();
+        final String actionUrl = sb.toString();
+        return filterActionUrl(actionUrl, option);
     }
 
     protected UrlReverseOption customizeActionUrlReverse(Class<?> actionType, UrlChain chain) {
-        final UrlReverseOption option = actionAdjustmentProvider.customizeActionUrlReverse(createUrlReverseResource(actionType, chain));
+        final UrlReverseResource resource = createUrlReverseResource(actionType, chain);
+        final UrlReverseOption option = actionAdjustmentProvider.customizeActionUrlReverse(resource);
         return option != null ? option : EMPTY_URL_REVERSE_OPTION;
     }
 
@@ -434,7 +437,7 @@ public class ActionPathResolver {
             }
         }
         if (existsParts) {
-            sb.delete(sb.length() - 1, sb.length()); // e.g. member/edit/3/ to member/edit/3
+            sb.delete(sb.length() - URL_DELIMITER.length(), sb.length()); // e.g. member/edit/3/ to member/edit/3
         }
     }
 
@@ -475,6 +478,13 @@ public class ActionPathResolver {
         if (hash != null) {
             sb.append("#").append(hash);
         }
+    }
+
+    // -----------------------------------------------------
+    //                                          Final Filter
+    //                                          ------------
+    protected String filterActionUrl(String actionUrl, UrlReverseOption option) {
+        return option.getActionUrlFilter().map(filter -> filter.apply(actionUrl)).orElse(actionUrl);
     }
 
     // ===================================================================================
