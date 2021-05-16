@@ -16,12 +16,21 @@
 package org.lastaflute.web.ruts.config;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
+import org.dbflute.util.Srl;
 import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
@@ -40,12 +49,18 @@ public class ActionMapping {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    // all not null
-    protected final ComponentDef actionDef;
-    protected final BeanDesc actionDesc;
-    protected final String actionName; // actually actionDef's component name, used as mapping key in module config
-    protected final ActionAdjustmentProvider adjustmentProvider;
-    protected final ArrayMap<String, ActionExecute> executeMap = new ArrayMap<String, ActionExecute>(); // array to get first
+    protected final ComponentDef actionDef; // not null
+    protected final BeanDesc actionDesc; // not null
+    protected final String actionName; // not null, actually actionDef's component name, used as mapping key in module config
+    protected final ActionAdjustmentProvider adjustmentProvider; // not null
+
+    // -----------------------------------------------------
+    //                                        Action Execute
+    //                                        --------------
+    // #thinking jflute already not needs to be map? may migrate to simple list after deleting getExecuteMap() (2021/05/16)
+    protected final ArrayMap<String, ActionExecute> executeMap = new ArrayMap<String, ActionExecute>(); // not null, array to get first
+    protected ActionExecute defaultablePlainExecute; // null allowed
+    protected Map<String, ActionExecute> defaultableRestfulExecuteMap; // null allowed, map:{httpMethod : execute}
 
     // ===================================================================================
     //                                                                         Constructor
@@ -57,12 +72,84 @@ public class ActionMapping {
         this.adjustmentProvider = adjustmentProvider;
     }
 
-    // -----------------------------------------------------
-    //                                      Register Execute
-    //                                      ----------------
+    // ===================================================================================
+    //                                                                    Register Execute
+    //                                                                    ================
     public void registerExecute(ActionExecute execute) {
         // plain name here, may contain restful http method e.g. get$index
-        executeMap.put(execute.getExecuteMethod().getName(), execute);
+        final String executeKey = generateExecuteKey(execute);
+        executeMap.put(executeKey, execute);
+        if (isDefaultableExecuteMethod(execute)) {
+            setupDefaultableIndexExecute(execute);
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                           Execute Key
+    //                                           -----------
+    protected String generateExecuteKey(ActionExecute execute) {
+        // can accept overload methods here for RESTful GET pair
+        // however overload is restricted by customizer with the pair control
+        // e.g.
+        //  index(Integer productId) => index(java.lang.Integer)
+        //  index(Integer productId, Long purchaseid) => index(java.lang.Integer,java.lang.Long)
+        //  index(OptionalThing<Integer> productId) => index(org.dbflute.optional.OptionalThing)
+        //  sea(SeaForm form) => sea()
+        final Method executeMethod = execute.getExecuteMethod();
+        final String paramExp = execute.getPathParamArgs().map(args -> {
+            return args.getPathParamTypeList().stream().map(tp -> tp.getName()).collect(Collectors.joining(","));
+        }).orElse("");
+        return executeMethod.getName() + "(" + paramExp + ")";
+    }
+
+    // -----------------------------------------------------
+    //                                   Defaultable Execute
+    //                                   -------------------
+    protected boolean isDefaultableExecuteMethod(ActionExecute execute) {
+        if (!execute.isIndexMethod()) {
+            return false;
+        }
+        // index() or e.g. get$index() here
+        final OptionalThing<PathParamArgs> args = execute.getPathParamArgs();
+        return !args.isPresent() || args.get().isOptionalParameter(0); // can accept when no parameter
+    }
+
+    protected void setupDefaultableIndexExecute(ActionExecute execute) {
+        // only either index() and index(OptionalThing) exists as LastaFlute rule
+        // so actually no overriding happens here
+        if (execute.getRestfulHttpMethod().isPresent()) { // e.g. get$index()
+            final String httpMethod = execute.getRestfulHttpMethod().get();
+            if (defaultableRestfulExecuteMap == null) {
+                defaultableRestfulExecuteMap = new HashMap<String, ActionExecute>();
+            }
+            final ActionExecute existingExecute = defaultableRestfulExecuteMap.get(httpMethod);
+            if (existingExecute != null) {
+                if (existingExecute.getPathParamArgs().isPresent()) { // has optional first parameter
+                    defaultableRestfulExecuteMap.put(httpMethod, execute); // use current execute that has no parameter
+                }
+                // if existing execute has no parameter, keep it
+            } else {
+                defaultableRestfulExecuteMap.put(httpMethod, execute);
+            }
+        } else { // e.g. index()
+            if (defaultablePlainExecute != null) {
+                if (defaultablePlainExecute.getPathParamArgs().isPresent()) { // has optional first parameter
+                    defaultablePlainExecute = execute; // use current execute that has no parameter
+                }
+                // if existing execute has no parameter, keep it
+            } else {
+                defaultablePlainExecute = execute;
+            }
+        }
+    }
+
+    // ===================================================================================
+    //                                                                      Search Execute
+    //                                                                      ==============
+    public List<ActionExecute> searchExecuteByMethodName(String methodName) { // empty allowed when not found
+        return executeMap.values().stream().filter(ex -> {
+            return ex.getExecuteMethod().getName().equals(methodName);
+        }).collect(Collectors.toList());
     }
 
     // ===================================================================================
@@ -73,8 +160,8 @@ public class ActionMapping {
     }
 
     // ===================================================================================
-    //                                                                        Find Execute
-    //                                                                        ============
+    //                                                              Find Execute (Mapping)
+    //                                                              ======================
     // optional unused for performance
     public ActionExecute findActionExecute(String paramPath) { // null allowed when not found
         for (ActionExecute execute : executeMap.values()) {
@@ -94,33 +181,30 @@ public class ActionMapping {
         return doFindFixedActionExecute(request); // e.g. index() for /sea/land/
     }
 
-    protected ActionExecute doFindFixedActionExecute(HttpServletRequest request) {
-        final ActionExecute indexFound = executeMap.get("index");
-        if (indexFound != null) {
-            return indexFound;
+    protected ActionExecute doFindFixedActionExecute(HttpServletRequest request) { // for no path parameter
+        if (defaultablePlainExecute != null) {
+            return defaultablePlainExecute;
         }
-        final String httpMethod = request.getMethod();
-        if (httpMethod != null) { // just in case
-            final String restIndex = httpMethod.toLowerCase() + "$index"; // e.g. get$index()
-            final ActionExecute restFound = executeMap.get(restIndex); // retry as restful
-            if (restFound != null) {
-                return restFound;
+        if (defaultableRestfulExecuteMap != null) {
+            final String httpMethod = request.getMethod(); // basically not null
+            if (httpMethod != null) { // just in case
+                final ActionExecute restFound = defaultableRestfulExecuteMap.get(httpMethod.toLowerCase());
+                if (restFound != null) { // e.g. get$index()
+                    return restFound;
+                }
             }
         }
-        // remove it on LastaFlute, more strict mapping as possible
+        // traditional code, remove it on LastaFlute, more strict mapping as possible
         //if (executeMap.size() == 1) { // e.g. no index() but only-one method exists
         //    return executeMap.get(0);
         //}
         return null; // not found
     }
 
-    public ActionExecute getActionExecute(Method method) { // null allowed when not found
-        return executeMap.get(method.getName()); // find plainly, key may contain restful HTTP method
-    }
-
     // ===================================================================================
-    //                                                                  Forward Adjustment
-    //                                                                  ==================
+    //                                                              Next Journey (Forward)
+    //                                                              ======================
+    // #for_now jflute traditional code, may not need to be here but keep it (2021/05/16)
     // o to suppress that URL that contains dot is handled as JSP
     // o routing path of forward e.g. /member/list/ -> MemberListAction
     public NextJourney createNextJourney(PlannedJourneyProvider journeyProvider, HtmlResponse response) { // almost copied from super
@@ -209,7 +293,39 @@ public class ActionMapping {
         return actionName;
     }
 
+    @Deprecated // map should be closed, but for compatible (e.g. UTFlute mock logic)
     public Map<String, ActionExecute> getExecuteMap() {
+        final Map<String, ActionExecute> adjustedMap = new LinkedHashMap<String, ActionExecute>();
+        final Set<Entry<String, ActionExecute>> entrySet = executeMap.entrySet();
+        for (Entry<String, ActionExecute> entry : entrySet) {
+            final String key = entry.getKey();
+            ActionExecute execute = entry.getValue();
+            adjustedMap.put(key, execute);
+
+            // compatible logic (limitted)
+            if (!execute.getPathParamArgs().isPresent()) { // only case of no parameter
+                final String compatibleKey = Srl.substringFirstFront(key, "("); // e.g. index
+                adjustedMap.put(compatibleKey, execute); // you can get by "index", "sea"
+            }
+        }
         return executeMap;
+    }
+
+    public List<ActionExecute> getExecuteList() { // read-only
+        return Collections.unmodifiableList(new ArrayList<ActionExecute>(executeMap.values()));
+    }
+
+    public OptionalThing<ActionExecute> getDefaultablePlainExecute() {
+        return OptionalThing.ofNullable(defaultablePlainExecute, () -> {
+            throw new IllegalStateException("Not found the defaultablePlainExecute.");
+        });
+    }
+
+    public Map<String, ActionExecute> getDefaultableRestfulExecuteMap() { // read-only
+        if (defaultableRestfulExecuteMap != null) {
+            return Collections.unmodifiableMap(defaultableRestfulExecuteMap);
+        } else {
+            return Collections.emptyMap();
+        }
     }
 }

@@ -72,7 +72,7 @@ public class ActionExecute implements Serializable {
     //                                     Defined Parameter
     //                                     -----------------
     protected final ExecuteArgAnalyzer executeArgAnalyzer; // not null, keep for general use
-    protected final OptionalThing<PathParamArgs> pathParamArgs; // not null, empty allowed
+    protected final OptionalThing<PathParamArgs> pathParamArgs; // not null, empty allowed (at least has one if present)
     protected final OptionalThing<ActionFormMeta> formMeta; // not null, empty allowed
 
     // -----------------------------------------------------
@@ -393,10 +393,10 @@ public class ActionExecute implements Serializable {
     //                                     Defined Parameter
     //                                     -----------------
     /**
-     * @return The optional arguments of path parameter for the method. (NotNull, EmptyAllowed: when no path parameter)
+     * @return The optional arguments of path parameter for the method. (NotNull, EmptyAllowed: no parameter)
      */
     public OptionalThing<PathParamArgs> getPathParamArgs() {
-        return pathParamArgs;
+        return pathParamArgs; // at least has one if present
     }
 
     /**

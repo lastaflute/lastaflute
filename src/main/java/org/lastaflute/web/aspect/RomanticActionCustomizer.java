@@ -16,8 +16,8 @@
 package org.lastaflute.web.aspect;
 
 import java.lang.reflect.Method;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Collection;
+import java.util.List;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.Srl;
@@ -35,6 +35,7 @@ import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.config.ExecuteOption;
 import org.lastaflute.web.ruts.config.ModuleConfig;
+import org.lastaflute.web.ruts.config.restful.RestfulGetPairHandler;
 import org.lastaflute.web.util.LaModuleConfigUtil;
 
 /**
@@ -42,6 +43,15 @@ import org.lastaflute.web.util.LaModuleConfigUtil;
  * @author jflute
  */
 public class RomanticActionCustomizer implements ComponentCustomizer {
+
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final RestfulGetPairHandler restfulGetPairHandler = newRestfulGetPairHandler();
+
+    protected RestfulGetPairHandler newRestfulGetPairHandler() {
+        return new RestfulGetPairHandler();
+    }
 
     // ===================================================================================
     //                                                                           Customize
@@ -118,11 +128,9 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
             if (!isExecuteMethod(declaredMethod)) {
                 continue;
             }
-            final ActionExecute existing = actionMapping.getActionExecute(declaredMethod);
-            if (existing != null) {
-                throwOverloadMethodCannotDefinedException(actionType);
-            }
-            actionMapping.registerExecute(createActionExecute(actionMapping, declaredMethod));
+            final ActionExecute execute = createActionExecute(actionMapping, declaredMethod);
+            handleExistingActionExecute(actionMapping, actionType, execute);
+            actionMapping.registerExecute(execute);
         }
         verifyExecuteMethodSize(actionMapping, actionType);
         verifyExecuteMethodNotShadowingOthers(actionMapping, actionType);
@@ -130,38 +138,99 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         verifyExecuteMethodRestfulIndependent(actionMapping, actionType);
     }
 
-    protected void throwOverloadMethodCannotDefinedException(final Class<?> actionType) {
+    // -----------------------------------------------------
+    //                                     Overload Handling
+    //                                     -----------------
+    protected void handleExistingActionExecute(ActionMapping actionMapping, Class<?> actionType, ActionExecute currentExecute) {
+        final String methodName = currentExecute.getExecuteMethod().getName(); // plain mapping name or containing HTTP method
+        final List<ActionExecute> existingList = actionMapping.searchExecuteByMethodName(methodName);
+        if (existingList.isEmpty() || isOverloadAllowedExecuteSet(currentExecute, existingList)) {
+            return;
+        }
+        throwOverloadMethodCannotDefinedException(actionType, currentExecute, existingList);
+    }
+
+    protected boolean isOverloadAllowedExecuteSet(ActionExecute currentExecute, List<ActionExecute> existingList) {
+        // pair of get$index([no-param] or Form) and get$index(ID (not optional)) is allowed
+        return isRestfulGetPairExecute(currentExecute, existingList);
+    }
+
+    protected void throwOverloadMethodCannotDefinedException(Class<?> actionType, ActionExecute currentExecute,
+            List<ActionExecute> existingList) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Cannot define overload method of action execute.");
+        br.addNotice("Cannot define overload methods of action execute.");
         br.addItem("Advice");
-        br.addElement("Same-name different-parameter method");
-        br.addElement("cannot be defined as execute method.");
+        br.addElement("Same-name different-parameter methods cannot be defined as execute method.");
         br.addElement("For example:");
         br.addElement("  (x):");
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse index() {");
         br.addElement("    }");
         br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse index(String sea) {");
+        br.addElement("    public HtmlResponse index(String sea) { // *Bad");
         br.addElement("    }");
         br.addElement("  (o):");
         br.addElement("    @Execute");
         br.addElement("    public HtmlResponse index() {");
         br.addElement("    }");
         br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse land(String sea) {");
+        br.addElement("    public HtmlResponse land(String sea) { // Good");
         br.addElement("    }");
+        if (currentExecute.getRestfulHttpMethod().isPresent()) { // tell about RESTful GET pair
+            br.addElement("");
+            br.addElement("While RESTful GET pair methods are allowed.");
+            br.addElement("However you cannot use first optional parameter.");
+            br.addElement("For example:");
+            br.addElement("  (x):");
+            br.addElement("    @Execute");
+            br.addElement("    public JsonResponse<...> get$index(no-param or Form) {");
+            br.addElement("    }");
+            br.addElement("    @Execute");
+            br.addElement("    public JsonResponse<...> get$index(OptionalThing<Integer> seaId) { // *Bad");
+            br.addElement("    }");
+            br.addElement("  (o):");
+            br.addElement("    @Execute");
+            br.addElement("    public JsonResponse<...> get$index(no-param or Form) {");
+            br.addElement("    }");
+            br.addElement("    @Execute");
+            br.addElement("    public JsonResponse<...> get$index(Integer seaId) { // Good");
+            br.addElement("    }");
+            br.addElement("  (o):");
+            br.addElement("    @Execute");
+            br.addElement("    public JsonResponse<...> get$index(Integer seaId (+ Form)) {");
+            br.addElement("    }");
+            br.addElement("    @Execute");
+            br.addElement("    public JsonResponse<...> get$index(Integer seaId, Integer hangarId) { // Good");
+            br.addElement("    }");
+        }
         br.addItem("Action");
         br.addElement(actionType);
+        br.addItem("Current Execute");
+        br.addElement(currentExecute);
+        br.addItem("Existing List");
+        for (ActionExecute existingExecute : existingList) {
+            br.addElement(existingExecute);
+        }
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    // -----------------------------------------------------
+    //                                      RESTful GET Pair
+    //                                      ----------------
+    protected boolean isRestfulGetPairExecute(ActionExecute currentExecute, List<ActionExecute> existingList) {
+        if (existingList.size() != 1) { // basically no way here, just in case
+            return false; // in case multiple, means not pair (then overload exception)
+        }
+        final ActionExecute existingExecute = existingList.get(0);
+        return restfulGetPairHandler.determineRestfulGetPairExecute(currentExecute, existingExecute);
     }
 
     // -----------------------------------------------------
     //                                     Verify Definition
     //                                     -----------------
     protected void verifyExecuteMethodSize(ActionMapping actionMapping, Class<?> actionType) {
-        if (actionMapping.getExecuteMap().isEmpty()) {
+        if (actionMapping.getExecuteList().isEmpty()) {
             throwExecuteMethodNotFoundInActionException(actionType);
         }
     }
@@ -187,8 +256,8 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     }
 
     protected void verifyExecuteMethodNotShadowingOthers(ActionMapping actionMapping, Class<?> actionType) {
-        final Map<String, ActionExecute> executeMap = actionMapping.getExecuteMap();
-        executeMap.values().stream().filter(execute -> {
+        final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
+        executeList.stream().filter(execute -> {
             // if urlPattern is specified, cannot determine shadowing so skip checking
             return execute.isIndexMethod() // e.g. index() or get$index() or ...
                     && execute.getPathParamArgs().isPresent() // no shadowing if no parameter
@@ -201,7 +270,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
             // e.g.
             //  index(String sea) or get$index(String sea) or index(String sea, Integer ...)
             //  or index(LocalDate sea) or index(CDef.MemberStatus sea) or ...
-            executeMap.values().stream().filter(execute -> !execute.isIndexMethod()).filter(named -> { // named execute
+            executeList.stream().filter(execute -> !execute.isIndexMethod()).filter(named -> { // named execute
                 return !isDifferentRestfulHttpMethod(index, named); // except e.g. index:GET, named:POST
             }).forEach(named -> { // e.g. dockside() or dockside(String hangar) or ...
                 if (isShadowingExecuteMethod(index, named)) {
@@ -309,19 +378,19 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     }
 
     protected void verifyExecuteMethodRestfulIndependent(ActionMapping actionMapping, Class<?> actionType) {
-        final Map<String, ActionExecute> executeMap = actionMapping.getExecuteMap();
-        for (Entry<String, ActionExecute> entry : executeMap.entrySet()) {
-            final ActionExecute execute = entry.getValue();
+        final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
+        for (ActionExecute execute : executeList) {
             if (execute.getRestfulHttpMethod().isPresent()) { // e.g. get$index
-                final ActionExecute plainMethod = executeMap.get(execute.getMappingMethodName()); // e.g. index
-                if (plainMethod != null) { // conflict, e.g. both index() and get$index() exist
-                    throwExecuteMethodRestfulConflictException(actionType, execute, plainMethod);
+                final List<ActionExecute> plainList = actionMapping.searchExecuteByMethodName(execute.getMappingMethodName()); // e.g. index
+                if (!plainList.isEmpty()) { // conflict, e.g. both index() and get$index() exist
+                    throwExecuteMethodRestfulConflictException(actionType, execute, plainList);
                 }
             }
         }
     }
 
-    protected void throwExecuteMethodRestfulConflictException(Class<?> actionType, ActionExecute restfulMethod, ActionExecute plainMethod) {
+    protected void throwExecuteMethodRestfulConflictException(Class<?> actionType, ActionExecute restfulExecute,
+            List<ActionExecute> plainList) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Conflicted the execute methods between restful and plain.");
         br.addItem("Advice");
@@ -351,9 +420,11 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addItem("Action");
         br.addElement(actionType);
         br.addItem("Restful Method");
-        br.addElement(restfulMethod);
+        br.addElement(restfulExecute);
         br.addItem("Plain Method");
-        br.addElement(plainMethod);
+        for (ActionExecute plain : plainList) { // basically one loop
+            br.addElement(plain);
+        }
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
