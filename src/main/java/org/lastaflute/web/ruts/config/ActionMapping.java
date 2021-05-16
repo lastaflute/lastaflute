@@ -152,6 +152,13 @@ public class ActionMapping {
         }).collect(Collectors.toList());
     }
 
+    @Deprecated // for Lasta Meta (lasta-doc engine), use searchExecuteByMethodName() insteadO
+    public ActionExecute getActionExecute(Method method) {
+        // basically not multiple as LastaFlute rule except RESTful GET pairs
+        final List<ActionExecute> executeList = searchExecuteByMethodName(method.getName());
+        return !executeList.isEmpty() ? executeList.get(0) : null;
+    }
+
     // ===================================================================================
     //                                                                       Create Action
     //                                                                       =============
