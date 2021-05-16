@@ -34,6 +34,8 @@ import org.lastaflute.web.exception.Forced404NotFoundException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
 import org.lastaflute.web.path.ActionFoundPathHandler;
 import org.lastaflute.web.path.ActionPathResolver;
+import org.lastaflute.web.path.MappingPathResource;
+import org.lastaflute.web.path.MappingResolutionResult;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.ruts.config.ActionExecute;
@@ -112,12 +114,15 @@ public class RequestRoutingFilter implements Filter {
         }
         // no extension here (may be LastaFlute URL)
         final ActionPathResolver resolver = getRequestManager().getActionPathResolver();
+        final MappingPathResource pathResource; // not null, keep for logging
         try {
             final String contextPath = extractContextPath(httpReq);
             final ActionFoundPathHandler handler = createActionFoundPathHandler(httpReq, httpRes, contextPath); // (#to_action)
-            if (resolver.handleActionPath(requestPath, handler)) { // #to_action
+            final MappingResolutionResult result = resolver.handleActionPath(requestPath, handler); // #to_action
+            if (result.isPathHandled()) {
                 return;
             }
+            pathResource = result.getPathResource();
         } catch (Exception e) {
             if (e instanceof IOException) {
                 throw (IOException) e;
@@ -130,7 +135,7 @@ public class RequestRoutingFilter implements Filter {
             }
         }
         // no routing here
-        showExpectedRouting(requestPath, resolver); // for developer
+        showNoRouting(pathResource, resolver); // for developer
         handleNoRoutingRequest(httpReq, requestPath); // 404 if it needs
         chain.doFilter(servReq, servRes); // to next filter outside LastaFlute
     }
@@ -179,16 +184,17 @@ public class RequestRoutingFilter implements Filter {
         return contextPath.equals("/") ? "" : contextPath;
     }
 
-    protected ActionFoundPathHandler createActionFoundPathHandler(HttpServletRequest request, HttpServletResponse response, String contextPath) {
-        return (requestPath, actionName, paramPath, execByParam) -> {
-            return routingToAction(request, response, contextPath, requestPath, actionName, paramPath, execByParam);
+    protected ActionFoundPathHandler createActionFoundPathHandler(HttpServletRequest request, HttpServletResponse response,
+            String contextPath) {
+        return (pathResource, actionName, paramPath, execByParam) -> {
+            return routingToAction(request, response, contextPath, pathResource, actionName, paramPath, execByParam);
         };
     }
 
-    protected void showExpectedRouting(String requestPath, ActionPathResolver resolver) { // for debug
+    protected void showNoRouting(MappingPathResource pathResource, ActionPathResolver resolver) { // for debug
         if (logger.isDebugEnabled()) {
-            if (!requestPath.contains(".")) { // e.g. routing target can be adjusted so may be .jpg
-                logger.debug(resolver.prepareExpectedRoutingMessage(requestPath));
+            if (!pathResource.getRequestPath().contains(".")) { // e.g. routing target can be adjusted so may be .jpg
+                logger.debug(resolver.prepareNoRoutingMessage(pathResource));
             }
         }
     }
@@ -203,19 +209,21 @@ public class RequestRoutingFilter implements Filter {
     // ===================================================================================
     //                                                                   Routing to Action
     //                                                                   =================
-    protected boolean routingToAction(HttpServletRequest request, HttpServletResponse response, String contextPath, String requestPath,
-            String actionName, String paramPath, ActionExecute execByParam) throws IOException, ServletException {
+    protected boolean routingToAction(HttpServletRequest request, HttpServletResponse response, String contextPath,
+            MappingPathResource pathResource, String actionName, String paramPath, ActionExecute execByParam)
+            throws IOException, ServletException {
         if (execByParam != null) { // already found
-            processAction(request, response, execByParam, paramPath); // #to_action
+            processAction(pathResource, request, response, execByParam, paramPath); // #to_action
             return true;
         }
         final OptionalThing<ActionExecute> found = LaActionExecuteUtil.findActionExecute(actionName, request);
         if (found.isPresent()) { // not use lambda because of throws definition
             final ActionExecute execute = found.get();
+            final String requestPath = pathResource.getRequestPath();
             if (needsTrailingSlashRedirect(request, requestPath, execute)) { // index() or by request parameter
                 redirectWithTrailingSlash(request, response, contextPath, requestPath);
             } else {
-                processAction(request, response, execute, null); // #to_action
+                processAction(pathResource, request, response, execute, null); // #to_action
             }
             return true;
         } else { // e.g. not found index()
@@ -259,9 +267,12 @@ public class RequestRoutingFilter implements Filter {
     // ===================================================================================
     //                                                                      Process Action
     //                                                                      ==============
-    protected void processAction(HttpServletRequest request, HttpServletResponse response, ActionExecute execute, String paramPath)
-            throws IOException, ServletException {
-        logger.debug("...Routing to action: name={} params={}", execute.getActionMapping().getActionName(), paramPath);
+    protected void processAction(MappingPathResource pathResource, HttpServletRequest request, HttpServletResponse response,
+            ActionExecute execute, String paramPath) throws IOException, ServletException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("...Routing to action: name={} params={}", execute.getActionMapping().getActionName(), paramPath);
+            logger.debug(" by the mapping path: {}", pathResource.getMappingPath());
+        }
         LaActionExecuteUtil.setActionExecute(execute); // for e.g. tag-library use
         getRequestProcessor().process(execute, analyzePathParam(execute, paramPath)); // #to_action
     }

@@ -103,41 +103,15 @@ public class ActionPathResolver {
      * Handle the action path from the specified request path.
      * @param requestPath The request path to be analyzed. (NotNull)
      * @param handler The handler of the action path when the action is found. (NotNull)
-     * @return Is it actually handled? (false if not found)
+     * @return The result of the resolution having whether is it actually handled? (false if not found)
      * @throws Exception When the handler throws or internal process throws.
      */
-    public boolean handleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
+    public MappingResolutionResult handleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
         assertArgumentNotNull("requestPath", requestPath);
         assertArgumentNotNull("handler", handler);
         final MappingPathResource pathResource = customizeActionMapping(requestPath);
-        return mappingActionPath(pathResource, handler);
-    }
-
-    protected static class MappingPathResource {
-
-        protected final String requestPath; // not null, means plain path
-        protected final String mappingPath; // not null, same value as requestPath if no customization
-        protected final OptionalThing<String> actionNameSuffix; // not null, empty allowed
-
-        public MappingPathResource(String requestPath, String mappingPath, String actionNameSuffix) {
-            this.requestPath = requestPath;
-            this.mappingPath = mappingPath;
-            this.actionNameSuffix = OptionalThing.ofNullable(actionNameSuffix, () -> { // avoid several instances by getter
-                throw new IllegalStateException("Not found the actionNameSuffix.");
-            });
-        }
-
-        public String getRequestPath() {
-            return requestPath;
-        }
-
-        public String getMappingPath() {
-            return mappingPath;
-        }
-
-        public OptionalThing<String> getActionNameSuffix() {
-            return actionNameSuffix;
-        }
+        final boolean pathHandled = mappingActionPath(pathResource, handler);
+        return new MappingResolutionResult(pathResource, pathHandled);
     }
 
     // -----------------------------------------------------
@@ -339,8 +313,7 @@ public class ActionPathResolver {
         final boolean emptyParam = paramPath == null || paramPath.isEmpty();
         final ActionExecute execByParam = !emptyParam ? findActionExecute(actionName, paramPath).orElse(null) : null;
         if (emptyParam || execByParam != null) { // certainly hit
-            final String requestPath = pathResource.getRequestPath(); // no mapping, plain path here (for e.g. redirect)
-            return handler.handleActionPath(requestPath, actionName, paramPath, execByParam);
+            return handler.handleActionPath(pathResource, actionName, paramPath, execByParam);
         }
         return false;
     }
@@ -550,15 +523,19 @@ public class ActionPathResolver {
     }
 
     // ===================================================================================
-    //                                                                    Expected Routing
-    //                                                                    ================
-    public String prepareExpectedRoutingMessage(String requestPath) { // for debug
+    //                                                                  No Routing Message
+    //                                                                  ==================
+    public String prepareNoRoutingMessage(MappingPathResource pathResource) { // for debug
+        final String requestPath = pathResource.getRequestPath();
+        final String mappingPath = pathResource.getMappingPath();
         final StringBuilder sb = new StringBuilder();
         sb.append("\n");
         sb.append("/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = *No routing action:\n");
         sb.append("e.g. expected actions for ").append(requestPath).append("\n");
-        final MappingPathResource pathResource = customizeActionMapping(requestPath);
-        final List<String> nameList = buildExpectedRoutingActionList(pathResource.getMappingPath());
+        if (!requestPath.equals(mappingPath)) {
+            sb.append("(the request path was filtered for mapping: ").append(mappingPath).append(")\n");
+        }
+        final List<String> nameList = buildExpectedRoutingActionList(mappingPath);
         boolean exists = false;
         for (String name : nameList) {
             if (name.endsWith("@index()") && containsNotAllowedCharacterAsActionPath(requestPath)) { // e.g. /product/List/
