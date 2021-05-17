@@ -30,6 +30,7 @@ public class UrlMappingOption {
     //                                                                           =========
     protected Function<String, String> requestPathFilter; // null allowed
     protected String actionNameSuffix; // null allowed, basically initial upper case, e.g. if 'Sp', search as productListSpAction
+    protected boolean restfulMapping; // if customized by RESTful router
 
     // ===================================================================================
     //                                                                              Facade
@@ -56,6 +57,11 @@ public class UrlMappingOption {
         return this;
     }
 
+    public UrlMappingOption tellRestfulMapping() { // called by e.g. RESTful router
+        restfulMapping = true;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
@@ -69,5 +75,9 @@ public class UrlMappingOption {
         return OptionalThing.ofNullable(actionNameSuffix, () -> {
             throw new IllegalStateException("Not found the actionNameSuffix.");
         });
+    }
+
+    public boolean isRestfulMapping() {
+        return restfulMapping;
     }
 }

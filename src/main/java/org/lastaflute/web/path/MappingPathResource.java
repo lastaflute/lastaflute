@@ -26,13 +26,15 @@ public class MappingPathResource {
     protected final String requestPath; // not null, means plain path
     protected final String mappingPath; // not null, same value as requestPath if no customization
     protected final OptionalThing<String> actionNameSuffix; // not null, empty allowed
+    protected final boolean restfulMapping; // if customized by RESTful router
 
-    public MappingPathResource(String requestPath, String mappingPath, String actionNameSuffix) {
+    public MappingPathResource(String requestPath, String mappingPath, String actionNameSuffix, boolean restfulMapping) {
         this.requestPath = requestPath;
         this.mappingPath = mappingPath;
         this.actionNameSuffix = OptionalThing.ofNullable(actionNameSuffix, () -> { // avoid several instances by getter
             throw new IllegalStateException("Not found the actionNameSuffix.");
         });
+        this.restfulMapping = restfulMapping;
     }
 
     public boolean hasChanged() {
@@ -49,5 +51,9 @@ public class MappingPathResource {
 
     public OptionalThing<String> getActionNameSuffix() {
         return actionNameSuffix;
+    }
+
+    public boolean isRestfulMapping() {
+        return restfulMapping;
     }
 }
