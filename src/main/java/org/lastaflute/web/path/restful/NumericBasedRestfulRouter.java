@@ -56,7 +56,7 @@ public class NumericBasedRestfulRouter {
         final String makingMappingPath = resource.getMakingMappingPath(); // may be filtered before
         final List<String> elementList = splitPath(makingMappingPath); // only for determination
 
-        if (!isRestfulPath(elementList)) { // e.g. /, /1/products/, /products/purchases/
+        if (!determineRestfulPath(resource, elementList)) { // e.g. /, /1/products/, /products/purchases/
             return OptionalThing.empty(); // no filter
         }
         // comment out because of virtual list handling and RESTful mapping message
@@ -111,11 +111,14 @@ public class NumericBasedRestfulRouter {
     // -----------------------------------------------------
     //                                 RESTful Determination
     //                                 ---------------------
-    protected boolean isRestfulPath(List<String> elementList) {
-        if (isRootAction(elementList)) { // e.g. "/" (RootAction)
+    protected boolean determineRestfulPath(UrlMappingResource resource, List<String> elementList) {
+        if (isRootAction(resource, elementList)) { // e.g. "/" (RootAction)
             return false;
         }
-        if (isSwaggerPath(elementList)) { // e.g. /swagger/ (not business request)
+        if (isSwaggerPath(resource, elementList)) { // e.g. /swagger/ (not business request)
+            return false;
+        }
+        if (isExceptPath(resource, elementList)) { // for application requirement
             return false;
         }
         int index = 0;
@@ -140,19 +143,23 @@ public class NumericBasedRestfulRouter {
         return true;
     }
 
-    protected boolean isRootAction(List<String> elementList) {
+    protected boolean isRootAction(UrlMappingResource resource, List<String> elementList) {
         return elementList.isEmpty();
     }
 
-    protected boolean isSwaggerPath(List<String> elementList) {
+    protected boolean isSwaggerPath(UrlMappingResource resource, List<String> elementList) {
         return !elementList.isEmpty() && elementList.get(0).equals("swagger");
+    }
+
+    protected boolean isExceptPath(UrlMappingResource resource, List<String> elementList) { // you can override
+        return false;
     }
 
     // ===================================================================================
     //                                                                         URL Reverse
     //                                                                         ===========
     public OptionalThing<UrlReverseOption> toRestfulReversePath(UrlReverseResource resource) {
-        if (!isRestfulAction(resource)) {
+        if (!determineRestfulAction(resource)) {
             return OptionalThing.empty();
         }
         final int classElementCount = countClassElement(resource);
@@ -217,7 +224,7 @@ public class NumericBasedRestfulRouter {
     // -----------------------------------------------------
     //                                 RESTful Determination
     //                                 ---------------------
-    protected boolean isRestfulAction(UrlReverseResource resource) {
+    protected boolean determineRestfulAction(UrlReverseResource resource) {
         // restful action's method verification is at action initialization
         return resource.getActionType().getAnnotation(RestfulAction.class) != null;
     }
