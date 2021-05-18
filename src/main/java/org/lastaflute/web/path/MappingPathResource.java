@@ -23,11 +23,17 @@ import org.dbflute.optional.OptionalThing;
  */
 public class MappingPathResource {
 
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
     protected final String requestPath; // not null, means plain path
     protected final String mappingPath; // not null, same value as requestPath if no customization
     protected final OptionalThing<String> actionNameSuffix; // not null, empty allowed
     protected final boolean restfulMapping; // if customized by RESTful router
 
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
     public MappingPathResource(String requestPath, String mappingPath, String actionNameSuffix, boolean restfulMapping) {
         this.requestPath = requestPath;
         this.mappingPath = mappingPath;
@@ -37,10 +43,24 @@ public class MappingPathResource {
         this.restfulMapping = restfulMapping;
     }
 
+    // ===================================================================================
+    //                                                                         Easy-to-Use
+    //                                                                         ===========
     public boolean hasChanged() {
         return !requestPath.equals(mappingPath);
     }
 
+    // ===================================================================================
+    //                                                                      Basic Override
+    //                                                                      ==============
+    @Override
+    public String toString() {
+        return "{" + requestPath + ", " + mappingPath + ", " + actionNameSuffix + ", " + restfulMapping + "}";
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
     public String getRequestPath() {
         return requestPath;
     }

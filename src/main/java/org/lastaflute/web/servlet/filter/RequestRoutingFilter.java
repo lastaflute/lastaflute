@@ -36,6 +36,7 @@ import org.lastaflute.web.path.ActionFoundPathHandler;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.path.MappingPathResource;
 import org.lastaflute.web.path.MappingResolutionResult;
+import org.lastaflute.web.path.restful.RestfulMappingVerifier;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.ruts.config.ActionExecute;
@@ -92,6 +93,15 @@ public class RequestRoutingFilter implements Filter {
     //                                             ---------
     /** The processor of action request, lazy loaded so use the getter. (NotNull: after lazy-load) */
     protected ActionRequestProcessor lazyLoadedProcessor; // lazy loaded
+
+    // -----------------------------------------------------
+    //                                               Restful
+    //                                               -------
+    private final RestfulMappingVerifier restfulMappingVerifier = newRestfulMappingVerifier();
+
+    protected RestfulMappingVerifier newRestfulMappingVerifier() {
+        return new RestfulMappingVerifier();
+    }
 
     // ===================================================================================
     //                                                                          Initialize
@@ -273,8 +283,13 @@ public class RequestRoutingFilter implements Filter {
             logger.debug("...Routing to action: name={} params={}", execute.getActionMapping().getActionName(), paramPath);
             logger.debug(" by the mapping path: {}", pathResource.getMappingPath());
         }
+        verifyRestfulMapping(pathResource, execute, paramPath);
         LaActionExecuteUtil.setActionExecute(execute); // for e.g. tag-library use
         getRequestProcessor().process(execute, analyzePathParam(execute, paramPath)); // #to_action
+    }
+
+    protected void verifyRestfulMapping(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
+        restfulMappingVerifier.verifyRestfulMapping(pathResource, execute, paramPath);
     }
 
     // -----------------------------------------------------
