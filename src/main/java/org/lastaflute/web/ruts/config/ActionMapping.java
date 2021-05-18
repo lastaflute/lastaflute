@@ -44,7 +44,7 @@ import org.lastaflute.web.util.LaServletContextUtil;
 /**
  * @author modified by jflute (originated in Seasar and Struts)
  */
-public class ActionMapping {
+public class ActionMapping { // created per action
 
     // ===================================================================================
     //                                                                           Attribute
@@ -57,6 +57,10 @@ public class ActionMapping {
     // -----------------------------------------------------
     //                                        Action Execute
     //                                        --------------
+    // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+    // setup process is serial in boot (or hot deploy synchronization)
+    // so concurrent collections are unneeded here
+    // _/_/_/_/_/_/_/_/_/_/
     // #thinking jflute already not needs to be map? may migrate to simple list after deleting getExecuteMap() (2021/05/16)
     protected final ArrayMap<String, ActionExecute> executeMap = new ArrayMap<String, ActionExecute>(); // not null, array to get first
     protected ActionExecute defaultablePlainExecute; // null allowed
@@ -146,7 +150,7 @@ public class ActionMapping {
     // ===================================================================================
     //                                                                      Search Execute
     //                                                                      ==============
-    public List<ActionExecute> searchExecuteByMethodName(String methodName) { // empty allowed when not found
+    public List<ActionExecute> searchByMethodName(String methodName) { // empty allowed when not found
         return executeMap.values().stream().filter(ex -> {
             return ex.getExecuteMethod().getName().equals(methodName);
         }).collect(Collectors.toList());
@@ -155,7 +159,7 @@ public class ActionMapping {
     @Deprecated // for Lasta Meta (lasta-doc engine), use searchExecuteByMethodName() insteadO
     public ActionExecute getActionExecute(Method method) {
         // basically not multiple as LastaFlute rule except RESTful GET pairs
-        final List<ActionExecute> executeList = searchExecuteByMethodName(method.getName());
+        final List<ActionExecute> executeList = searchByMethodName(method.getName());
         return !executeList.isEmpty() ? executeList.get(0) : null;
     }
 

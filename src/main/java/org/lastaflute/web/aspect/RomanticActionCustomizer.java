@@ -143,7 +143,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     //                                     -----------------
     protected void handleExistingActionExecute(ActionMapping actionMapping, Class<?> actionType, ActionExecute currentExecute) {
         final String methodName = currentExecute.getExecuteMethod().getName(); // plain mapping name or containing HTTP method
-        final List<ActionExecute> existingList = actionMapping.searchExecuteByMethodName(methodName);
+        final List<ActionExecute> existingList = actionMapping.searchByMethodName(methodName);
         if (existingList.isEmpty() || isOverloadAllowedExecuteSet(currentExecute, existingList)) {
             return;
         }
@@ -381,7 +381,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
         for (ActionExecute execute : executeList) {
             if (execute.getRestfulHttpMethod().isPresent()) { // e.g. get$index
-                final List<ActionExecute> plainList = actionMapping.searchExecuteByMethodName(execute.getMappingMethodName()); // e.g. index
+                final List<ActionExecute> plainList = actionMapping.searchByMethodName(execute.getMappingMethodName()); // e.g. index
                 if (!plainList.isEmpty()) { // conflict, e.g. both index() and get$index() exist
                     throwExecuteMethodRestfulConflictException(actionType, execute, plainList);
                 }
