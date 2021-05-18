@@ -139,7 +139,8 @@ public class ActionPathResolver {
             mappingPath = simplyFiltered;
             actionNameSuffix = null;
         }
-        return createaMappingPathResource(requestPath, mappingPath, actionNameSuffix, option.isRestfulMapping());
+        final boolean restfulMapping = option != null && option.isRestfulMapping();
+        return createaMappingPathResource(requestPath, mappingPath, actionNameSuffix, restfulMapping);
     }
 
     protected UrlMappingResource createUrlMappingResource(String requestPath, String simplyFiltered) {

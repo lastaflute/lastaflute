@@ -112,7 +112,10 @@ public class NumericBasedRestfulRouter {
     //                                 RESTful Determination
     //                                 ---------------------
     protected boolean isRestfulPath(List<String> elementList) {
-        if (elementList.isEmpty()) { // e.g. "/" (RootAction)
+        if (isRootAction(elementList)) { // e.g. "/" (RootAction)
+            return false;
+        }
+        if (isSwaggerPath(elementList)) { // e.g. /swagger/ (not business request)
             return false;
         }
         int index = 0;
@@ -135,6 +138,14 @@ public class NumericBasedRestfulRouter {
             ++index;
         }
         return true;
+    }
+
+    protected boolean isRootAction(List<String> elementList) {
+        return elementList.isEmpty();
+    }
+
+    protected boolean isSwaggerPath(List<String> elementList) {
+        return !elementList.isEmpty() && elementList.get(0).equals("swagger");
     }
 
     // ===================================================================================
