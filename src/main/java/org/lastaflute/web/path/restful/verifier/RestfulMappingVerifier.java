@@ -59,7 +59,7 @@ public class RestfulMappingVerifier {
     protected void throwRestfulMappingNonRestfulActionException(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Restful mapping but non-restful action");
-        br.addItem("[Advice]");
+        br.addItem("Advice");
         br.addElement("Restful mapping path should be mapped to restful action.");
         br.addElement("(Restful mapping path means the path is provided by restful router)");
         br.addElement("(Restful action means the action has @RestfulAction annotation)");
@@ -100,7 +100,7 @@ public class RestfulMappingVerifier {
             String paramPath, RestfulAction anno) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Restful action but non-restful mapping");
-        br.addItem("[Advice]");
+        br.addItem("Advice");
         br.addElement("Restful action should be mapped by restful mapping path.");
         br.addElement("(Restful action means the action has @RestfulAction annotation)");
         br.addElement("(Restful mapping path means the path is provided by restful router)");

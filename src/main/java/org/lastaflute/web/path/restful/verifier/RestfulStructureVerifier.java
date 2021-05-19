@@ -104,7 +104,7 @@ public class RestfulStructureVerifier {
     protected void throwExecuteMethodRestfulNonHttpMethodException(Class<?> actionType, ActionExecute execute) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Execute methods in restful action should have HTTP method.");
-        br.addItem("[Advice]");
+        br.addItem("Advice");
         br.addElement("Add HTTP method to your execute method.");
         br.addElement("For example:");
         br.addElement("  (x):");
