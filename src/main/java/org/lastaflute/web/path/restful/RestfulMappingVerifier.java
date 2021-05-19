@@ -15,6 +15,8 @@
  */
 package org.lastaflute.web.path.restful;
 
+import java.util.List;
+
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.exception.RestfulMappingNonRestfulActionException;
@@ -31,7 +33,9 @@ public class RestfulMappingVerifier {
         if (pathResource.isRestfulMapping()) {
             final RestfulAction anno = execute.getActionType().getAnnotation(RestfulAction.class);
             if (anno == null) { // don't forget RestfulAction annotation
-                throwRestfulMappingNonRestfulActionException(pathResource, execute, paramPath);
+                if (shouldBeRestful(pathResource, execute, paramPath)) {
+                    throwRestfulMappingNonRestfulActionException(pathResource, execute, paramPath);
+                }
             }
         } else {
             final RestfulAction anno = execute.getActionType().getAnnotation(RestfulAction.class);
@@ -39,6 +43,17 @@ public class RestfulMappingVerifier {
                 throwRestfulMappingPlainPathRestfulActionException(pathResource, execute, paramPath, anno);
             }
         }
+    }
+
+    protected boolean shouldBeRestful(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
+        // router treats /normal/ as restful by limitted logic
+        // however non-restful actions in same application are allowed as possible
+        // while restful actions without annotation should be checked here
+        // so it uses this logic:
+        //  o actions using HTTP method (at least one) should be restful actions
+        //  o non-restful actions in same application should not use HTTP method
+        final List<ActionExecute> groupedList = execute.getActionMapping().getExecuteList();
+        return groupedList.stream().anyMatch(colleague -> colleague.getRestfulHttpMethod().isPresent());
     }
 
     protected void throwRestfulMappingNonRestfulActionException(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
@@ -57,6 +72,15 @@ public class RestfulMappingVerifier {
         br.addElement("  (o):");
         br.addElement("    @RestfulAction // Good");
         br.addElement("    public class SeaAction {");
+        br.addElement("    }");
+        br.addElement("");
+        br.addElement("Or don't use HTTP method if the action is not for restful.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public JsonResponse<...> get$index() {");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public JsonResponse<...> index() {");
         br.addElement("    }");
         br.addItem("Request Path");
         br.addElement(pathResource.getRequestPath());
