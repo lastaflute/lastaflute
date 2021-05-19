@@ -36,7 +36,7 @@ import org.lastaflute.web.path.ActionFoundPathHandler;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.path.MappingPathResource;
 import org.lastaflute.web.path.MappingResolutionResult;
-import org.lastaflute.web.path.restful.RestfulMappingVerifier;
+import org.lastaflute.web.path.restful.verifier.RestfulMappingVerifier;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
 import org.lastaflute.web.ruts.config.ActionExecute;

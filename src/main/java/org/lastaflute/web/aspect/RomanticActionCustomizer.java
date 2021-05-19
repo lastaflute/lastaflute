@@ -31,6 +31,7 @@ import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.ActionPackageHasUpperCaseException;
 import org.lastaflute.web.exception.ExecuteMethodIllegalDefinitionException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.path.restful.verifier.RestfulStructureVerifier;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.config.ExecuteOption;
@@ -51,6 +52,12 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
 
     protected RestfulGetPairHandler newRestfulGetPairHandler() {
         return new RestfulGetPairHandler();
+    }
+
+    protected final RestfulStructureVerifier restfulStructureVerifier = newRestfulStructureVerifier();
+
+    protected RestfulStructureVerifier newRestfulStructureVerifier() {
+        return new RestfulStructureVerifier();
     }
 
     // ===================================================================================
@@ -136,6 +143,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         verifyExecuteMethodNotShadowingOthers(actionMapping, actionType);
         verifyExecuteMethodDefinedInConcreteClassOnly(actionMapping, actionType);
         verifyExecuteMethodRestfulIndependent(actionMapping, actionType);
+        verifyExecuteMethodRestfulHttpMethodAll(actionMapping, actionType);
     }
 
     // -----------------------------------------------------
@@ -378,55 +386,11 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     }
 
     protected void verifyExecuteMethodRestfulIndependent(ActionMapping actionMapping, Class<?> actionType) {
-        final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
-        for (ActionExecute execute : executeList) {
-            if (execute.getRestfulHttpMethod().isPresent()) { // e.g. get$index
-                final List<ActionExecute> plainList = actionMapping.searchByMethodName(execute.getMappingMethodName()); // e.g. index
-                if (!plainList.isEmpty()) { // conflict, e.g. both index() and get$index() exist
-                    throwExecuteMethodRestfulConflictException(actionType, execute, plainList);
-                }
-            }
-        }
+        restfulStructureVerifier.verifyRestfulIndependent(actionMapping, actionType);
     }
 
-    protected void throwExecuteMethodRestfulConflictException(Class<?> actionType, ActionExecute restfulExecute,
-            List<ActionExecute> plainList) {
-        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Conflicted the execute methods between restful and plain.");
-        br.addItem("Advice");
-        br.addElement("You cannot define restful method with same-name plain method.");
-        br.addElement("For example:");
-        br.addElement("  (x):");
-        br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse index() { // *Bad");
-        br.addElement("    }");
-        br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse get$index() { // *Bad");
-        br.addElement("    }");
-        br.addElement("  (o):");
-        br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse sea() { // Good");
-        br.addElement("    }");
-        br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse get$index() {");
-        br.addElement("    }");
-        br.addElement("  (o):");
-        br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse index() {");
-        br.addElement("    }");
-        br.addElement("    @Execute");
-        br.addElement("    public HtmlResponse get$sea() { // Good");
-        br.addElement("    }");
-        br.addItem("Action");
-        br.addElement(actionType);
-        br.addItem("Restful Method");
-        br.addElement(restfulExecute);
-        br.addItem("Plain Method");
-        for (ActionExecute plain : plainList) { // basically one loop
-            br.addElement(plain);
-        }
-        final String msg = br.buildExceptionMessage();
-        throw new ExecuteMethodIllegalDefinitionException(msg);
+    protected void verifyExecuteMethodRestfulHttpMethodAll(ActionMapping actionMapping, Class<?> actionType) {
+        restfulStructureVerifier.verifyRestfulHttpMethodAll(actionMapping, actionType);
     }
 
     // ===================================================================================
