@@ -23,6 +23,7 @@ import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.exception.ExecuteMethodIllegalDefinitionException;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
+import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
 
 /**
  * @author jflute (2021/05/19 Wednesday at roppongi japanese)
@@ -90,7 +91,7 @@ public class RestfulStructureVerifier {
     //                                                                     HTTP Method All
     //                                                                     ===============
     public void verifyRestfulHttpMethodAll(ActionMapping actionMapping, Class<?> actionType) {
-        if (actionType.getAnnotation(RestfulAction.class) == null) {
+        if (!hasRestfulAnnotation(actionType)) {
             return;
         }
         final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
@@ -103,8 +104,9 @@ public class RestfulStructureVerifier {
 
     protected void throwExecuteMethodRestfulNonHttpMethodException(Class<?> actionType, ActionExecute execute) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
-        br.addNotice("Execute methods in restful action should have HTTP method.");
+        br.addNotice("Found the execute method without HTTP method in restful action.");
         br.addItem("Advice");
+        br.addElement("Execute methods in restful action should have HTTP method.");
         br.addElement("Add HTTP method to your execute method.");
         br.addElement("For example:");
         br.addElement("  (x):");
@@ -119,5 +121,85 @@ public class RestfulStructureVerifier {
         br.addElement(execute);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                        Cannot @word
+    //                                                                        ============
+    public void verifyRestfulCannotAtWord(ActionMapping actionMapping, Class<?> actionType) {
+        if (!hasRestfulAnnotation(actionType)) {
+            return;
+        }
+        final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
+        for (ActionExecute execute : executeList) {
+            final String urlPattern = execute.getExecuteOption().getSpecifiedUrlPattern(); // null allowed
+            if (urlPattern != null && urlPattern.contains(UrlPatternAnalyzer.METHOD_KEYWORD_MARK)) {
+                // to begin with, index() cannot use @word by other check
+                // so actually this check is only for e.g. get$sea() that is restish
+                throwExecuteMethodRestfulCannotAtWordException(actionType, execute);
+            }
+        }
+    }
+
+    protected void throwExecuteMethodRestfulCannotAtWordException(Class<?> actionType, ActionExecute execute) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Found the @word at urlPattern in restful action.");
+        br.addItem("Advice");
+        br.addElement("You cannot use @word at urlPattern in restful action.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    @Execute(urlPattern=\"{}/@word\") // *bad");
+        br.addElement("    public JsonResponse<...> get$sea() {");
+        br.addElement("  (o):");
+        br.addElement("    @Execute(urlPattern=\"{}/@word\") // Good");
+        br.addElement("    public JsonResponse<...> get$sea() {");
+        br.addItem("Action");
+        br.addElement(actionType);
+        br.addItem("Execute Method");
+        br.addElement(execute);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                     Cannot Optional
+    //                                                                     ===============
+    public void verifyRestfulCannotOpitional(ActionMapping actionMapping, Class<?> actionType) {
+        if (!hasRestfulAnnotation(actionType)) {
+            return;
+        }
+        final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
+        for (ActionExecute execute : executeList) {
+            if (execute.getPathParamArgs().filter(args -> !args.getOptionalGenericTypeMap().isEmpty()).isPresent()) {
+                throwExecuteMethodRestfulCannotOptionalException(actionType, execute);
+            }
+        }
+    }
+
+    protected void throwExecuteMethodRestfulCannotOptionalException(Class<?> actionType, ActionExecute execute) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Found the optional parameter in restful action.");
+        br.addItem("Advice");
+        br.addElement("You cannot define optional parameter in restful action.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public JsonResponse<...> get$index(OptionalThing<Integer> productId) { // *Bad");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public JsonResponse<...> get$sea(Integer productId) { // Good");
+        br.addElement("    }");
+        br.addItem("Action");
+        br.addElement(actionType);
+        br.addItem("Execute Method");
+        br.addElement(execute);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    protected boolean hasRestfulAnnotation(Class<?> actionType) {
+        return actionType.getAnnotation(RestfulAction.class) != null;
     }
 }

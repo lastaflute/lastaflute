@@ -59,8 +59,16 @@ public class ActionExecute implements Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                           Basic Given
+    //                                           -----------
     protected final ActionMapping actionMapping; // not null
     protected final Method executeMethod; // not null
+    protected final ExecuteOption executeOption; // not null, basically keep for verifier
+
+    // -----------------------------------------------------
+    //                                         Basic Derived
+    //                                         -------------
     protected final String mappingMethodName; // not null
     protected final OptionalThing<String> restfulHttpMethod; // not null, empty allowed
     protected final boolean indexMethod;
@@ -102,8 +110,12 @@ public class ActionExecute implements Serializable {
      * @param executeOption The user option of action execute. (NotNull)
      */
     public ActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {
+        // basic given
         this.actionMapping = actionMapping;
         this.executeMethod = executeMethod;
+        this.executeOption = executeOption;
+
+        // basic derived
         final MethodNameAnalyzer methodNameAnalyzer = newMethodNameAnalyzer();
         this.mappingMethodName = methodNameAnalyzer.analyzeMappingMethodName(executeMethod);
         this.restfulHttpMethod = methodNameAnalyzer.analyzeRestfulHttpMethod(executeMethod);
@@ -344,6 +356,9 @@ public class ActionExecute implements Serializable {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                           Basic Given
+    //                                           -----------
     /**
      * @return The action mapping for the execute method. (NotNull)
      */
@@ -365,6 +380,16 @@ public class ActionExecute implements Serializable {
         return executeMethod;
     }
 
+    /**
+     * @return The user option of action execute. (NotNull)
+     */
+    public ExecuteOption getExecuteOption() {
+        return executeOption;
+    }
+
+    // -----------------------------------------------------
+    //                                         Basic Derived
+    //                                         -------------
     public String getMappingMethodName() {
         return mappingMethodName;
     }
