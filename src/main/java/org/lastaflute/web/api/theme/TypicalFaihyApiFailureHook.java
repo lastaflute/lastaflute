@@ -33,6 +33,7 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.api.ApiFailureResource;
+import org.lastaflute.web.api.BusinessFailureMapping;
 import org.lastaflute.web.api.theme.FaihyUnifiedFailureResult.FaihyFailureErrorPart;
 import org.lastaflute.web.api.theme.FaihyUnifiedFailureResult.FaihyUnifiedFailureType;
 import org.lastaflute.web.login.exception.LoginRequiredException;
@@ -56,6 +57,32 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
     //                                                                          ==========
     protected static final int BUSINESS_FAILURE_STATUS = HttpServletResponse.SC_BAD_REQUEST;
     protected static final String LF = "\n";
+
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final BusinessFailureMapping<Integer> businessHttpStatusMapping; // for business failure
+
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public TypicalFaihyApiFailureHook() {
+        businessHttpStatusMapping = createBusinessHttpStatusMapping();
+    }
+
+    // -----------------------------------------------------
+    //                                   Failure HTTP Status
+    //                                   -------------------
+    protected BusinessFailureMapping<Integer> createBusinessHttpStatusMapping() {
+        return new BusinessFailureMapping<Integer>(failureMap -> {
+            setupBusinessHttpStatusMap(failureMap);
+        });
+    }
+
+    protected void setupBusinessHttpStatusMap(Map<Class<?>, Integer> failureMap) { // you can override
+        // you can add mapping of failure status with exception here
+        //  e.g. failureMap.put(AccessTokenUnauthorizedException.class, HttpServletResponse.SC_UNAUTHORIZED);
+    }
 
     // ===================================================================================
     //                                                                    Business Failure
@@ -87,6 +114,14 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
     //                                        --------------
     protected int prepareBusinessFailureStatus(FaihyUnifiedFailureResult result, ApiFailureResource resource,
             OptionalThing<RuntimeException> optCause) {
+        return optCause.flatMap(cause -> {
+            return businessHttpStatusMapping.findAssignable(cause);
+        }).orElseGet(() -> {
+            return getDefaultBusinessFailureStatus();
+        });
+    }
+
+    protected int getDefaultBusinessFailureStatus() {
         return BUSINESS_FAILURE_STATUS; // as default
     }
 
@@ -417,5 +452,12 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
         if (nested != null && nested != cause) {
             buildSmartStackTrace(sb, nested, nestLevel + 1);
         }
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public BusinessFailureMapping<Integer> getBusinessHttpStatusMapping() { // for e.g. swagger
+        return businessHttpStatusMapping;
     }
 }
