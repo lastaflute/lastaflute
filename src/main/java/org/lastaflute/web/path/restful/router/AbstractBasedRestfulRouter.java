@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.lastaflute.web.path.restful;
+package org.lastaflute.web.path.restful.router;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -22,32 +22,17 @@ import java.util.stream.Collectors;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
-import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.path.UrlMappingOption;
 import org.lastaflute.web.path.UrlMappingResource;
 import org.lastaflute.web.path.UrlReverseOption;
 import org.lastaflute.web.path.UrlReverseResource;
-import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
- * @author jflute (2021/05/18 Tuesday at roppongi japanese)
+ * @author jflute
+ * @since 1.2.1 (2021/05/20)
  */
-public class NumericBasedRestfulRouter {
-
-    // ===================================================================================
-    //                                                                           Attribute
-    //                                                                           =========
-    // #thinking jflute already unneeded? waiting for working of LastaFlute RESTful GET pair (2021/05/16)
-    protected boolean virtualListHandling;
-
-    // ===================================================================================
-    //                                                                              Option
-    //                                                                              ======
-    public NumericBasedRestfulRouter enableVirtualListHandling() {
-        virtualListHandling = true;
-        return this;
-    }
+public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
 
     // ===================================================================================
     //                                                                         URL Mapping
@@ -73,39 +58,11 @@ public class NumericBasedRestfulRouter {
 
     protected UrlMappingOption createUrlMappingOption(UrlMappingResource resource, List<String> elementList) {
         final UrlMappingOption option = new UrlMappingOption();
-        final boolean listGetRequest = isVirtualListGetRequest(elementList); // e.g. GET /products/1/purchases/
-        option.filterRequestPath(requestPath -> { // is makingMappingPaths
-            return convertToMappingPath(requestPath, listGetRequest);
+        option.filterRequestPath(requestPath -> { // is makingMappingPath
+            return convertToMappingPath(requestPath);
         });
         option.tellRestfulMapping();
         return option;
-    }
-
-    // -----------------------------------------------------
-    //                                          Convert Path
-    //                                          ------------
-    protected String convertToMappingPath(String requestPath, boolean listGetRequest) {
-        // e.g.
-        //  /products/1/purchases/
-        //  /products/1/purchases/2/
-        //  /products/1/purchases/2/payments/
-        final List<String> stringList = new ArrayList<>();
-        final List<String> numberList = new ArrayList<>();
-        final List<String> elementList = splitPath(requestPath);
-        for (String element : elementList) {
-            if (Srl.isNumberHarfAll(element)) {
-                numberList.add(element);
-            } else {
-                stringList.add(element);
-            }
-        }
-        final List<String> arrangedList = new ArrayList<>();
-        arrangedList.addAll(stringList); // e.g. /products/purchases/
-        if (listGetRequest) {
-            arrangedList.add(getListGetMethodKeyword()); // e.g. get$list()
-        }
-        arrangedList.addAll(numberList); // e.g. /products/purchases/1/2/
-        return buildPath(arrangedList);
     }
 
     // -----------------------------------------------------
@@ -121,27 +78,10 @@ public class NumericBasedRestfulRouter {
         if (isExceptPath(resource, elementList)) { // for application requirement
             return false;
         }
-        int index = 0;
-        boolean numberAppeared = false;
-        for (String element : elementList) {
-            if (Srl.isNumberHarfAll(element)) { // e.g. 1
-                if (index % 2 == 0) { // first, third... e.g. /[1]/products/, /products/1/[2]/purchases
-                    return false;
-                }
-                numberAppeared = true;
-            } else { // e.g. products
-                if (index % 2 == 1) { // second, fourth... e.g. /products/[purchases]/
-                    // allows e.g. /products/1/purchases/[sea]
-                    // one crossed number parameter is enough to judge RESTful
-                    if (!numberAppeared) {
-                        return false;
-                    }
-                }
-            }
-            ++index;
-        }
-        return true;
+        return doDetermineRestfulPath(resource, elementList);
     }
+
+    protected abstract boolean doDetermineRestfulPath(UrlMappingResource resource, List<String> elementList);
 
     protected boolean isRootAction(UrlMappingResource resource, List<String> elementList) {
         return elementList.isEmpty();
@@ -154,6 +94,11 @@ public class NumericBasedRestfulRouter {
     protected boolean isExceptPath(UrlMappingResource resource, List<String> elementList) { // you can override
         return false;
     }
+
+    // -----------------------------------------------------
+    //                                          Convert Path
+    //                                          ------------
+    protected abstract String convertToMappingPath(String requestPath);
 
     // ===================================================================================
     //                                                                         URL Reverse
@@ -170,6 +115,18 @@ public class NumericBasedRestfulRouter {
         return OptionalThing.of(option);
     }
 
+    protected boolean determineRestfulAction(UrlReverseResource resource) {
+        // restful action's method verification is at action initialization
+        return resource.getActionType().getAnnotation(RestfulAction.class) != null;
+    }
+
+    protected int countClassElement(UrlReverseResource resource) {
+        final Class<?> actionType = resource.getActionType();
+        final String actionName = Srl.substringLastFront(actionType.getSimpleName(), "Action");
+        final String snakeCaseName = Srl.decamelize(actionName);
+        return Srl.count(snakeCaseName, "_") + 1;
+    }
+
     protected String convertToRestfulPath(String actionUrl, int classElementCount) {
         final String withoutHash = Srl.substringLastFront(actionUrl, "#");
         final String actionPath = Srl.substringFirstFront(withoutHash, "?"); // without query parameter
@@ -179,9 +136,6 @@ public class NumericBasedRestfulRouter {
         }
         final List<String> classElementList = elementList.subList(0, classElementCount);
         final LinkedList<String> partsElementList = new LinkedList<>(elementList.subList(classElementCount, elementList.size()));
-        if (isVirtualListGetNamingFirst(partsElementList)) {
-            partsElementList.removeFirst();
-        }
         final List<String> restfulList = new ArrayList<>();
         final List<String> methodKeywordList = new ArrayList<>(); // lazy loaded
         boolean numberAppeared = false;
@@ -214,53 +168,6 @@ public class NumericBasedRestfulRouter {
         return buildPath(restfulList);
     }
 
-    protected int countClassElement(UrlReverseResource resource) {
-        final Class<?> actionType = resource.getActionType();
-        final String actionName = Srl.substringLastFront(actionType.getSimpleName(), "Action");
-        final String snakeCaseName = Srl.decamelize(actionName);
-        return Srl.count(snakeCaseName, "_") + 1;
-    }
-
-    // -----------------------------------------------------
-    //                                 RESTful Determination
-    //                                 ---------------------
-    protected boolean determineRestfulAction(UrlReverseResource resource) {
-        // restful action's method verification is at action initialization
-        return resource.getActionType().getAnnotation(RestfulAction.class) != null;
-    }
-
-    // ===================================================================================
-    //                                                               Virtual List Handling
-    //                                                               =====================
-    protected boolean isVirtualListGetRequest(List<String> elementList) { // e.g. GET /products/1/purchases/
-        return isVirtualListHandling() && isCurrentRequestGet() && isLastElementString(elementList);
-    }
-
-    protected boolean isCurrentRequestGet() {
-        final RequestManager requestManager = getRequestManager();
-        return requestManager.getHttpMethod().filter(mt -> mt.equalsIgnoreCase("get")).isPresent();
-    }
-
-    protected boolean isLastElementString(List<String> elementList) {
-        String lastElement = elementList.get(elementList.size() - 1);
-        return !Srl.isNumberHarfAll(lastElement);
-    }
-
-    protected boolean isVirtualListGetNamingFirst(LinkedList<String> partsElementList) {
-        return isVirtualListHandling() && getListGetMethodKeyword().equals(partsElementList.getFirst());
-    }
-
-    protected String getListGetMethodKeyword() {
-        return "list"; // as default
-    }
-
-    // ===================================================================================
-    //                                                                           Component
-    //                                                                           =========
-    protected RequestManager getRequestManager() { // used by virtual list
-        return ContainerUtil.getComponent(RequestManager.class);
-    }
-
     // ===================================================================================
     //                                                                         Path Helper
     //                                                                         ===========
@@ -270,12 +177,5 @@ public class NumericBasedRestfulRouter {
 
     protected List<String> splitPath(String path) {
         return Srl.splitList(path, "/").stream().filter(el -> !el.isEmpty()).collect(Collectors.toList());
-    }
-
-    // ===================================================================================
-    //                                                                            Accessor
-    //                                                                            ========
-    public boolean isVirtualListHandling() {
-        return virtualListHandling;
     }
 }
