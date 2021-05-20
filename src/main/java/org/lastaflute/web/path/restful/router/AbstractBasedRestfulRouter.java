@@ -109,8 +109,9 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         }
         final int classElementCount = countClassElement(resource);
         final UrlReverseOption option = new UrlReverseOption();
+        final Class<?> actionType = resource.getActionType();
         option.filterActionUrl(actionUrl -> {
-            return convertToRestfulPath(actionUrl, classElementCount);
+            return convertToRestfulPath(actionType, actionUrl, classElementCount);
         });
         return OptionalThing.of(option);
     }
@@ -127,7 +128,7 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         return Srl.count(snakeCaseName, "_") + 1;
     }
 
-    protected String convertToRestfulPath(String actionUrl, int classElementCount) {
+    protected String convertToRestfulPath(Class<?> actionType, String actionUrl, int classElementCount) {
         final String withoutHash = Srl.substringLastFront(actionUrl, "#");
         final String actionPath = Srl.substringFirstFront(withoutHash, "?"); // without query parameter
         final List<String> elementList = splitPath(actionPath);
@@ -135,22 +136,21 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
             return null; // no filter
         }
         final List<String> classElementList = elementList.subList(0, classElementCount);
-        final LinkedList<String> partsElementList = new LinkedList<>(elementList.subList(classElementCount, elementList.size()));
+        final LinkedList<String> rearElementList = new LinkedList<>(elementList.subList(classElementCount, elementList.size()));
         final List<String> restfulList = new ArrayList<>();
         final List<String> methodKeywordList = new ArrayList<>(); // lazy loaded
-        boolean numberAppeared = false;
+        boolean parameterAppeared = false;
         for (String classElement : classElementList) {
             restfulList.add(classElement);
             while (true) { // for recursive
-                if (partsElementList.isEmpty()) {
+                if (rearElementList.isEmpty()) {
                     break;
                 }
-                final String first = String.valueOf(partsElementList.pollFirst());
-                if (Srl.isNumberHarfAll(first) || "{}".equals(first)) { // number parameter, {} (urlPattern) if Lasta Meta
-                    // #for_now jflute thought rare case, dangerous if "{}" is real value for redirect (2021/05/17)
-                    numberAppeared = true;
+                final String first = String.valueOf(rearElementList.pollFirst());
+                if (isParameterInRearPart(actionType, rearElementList, first)) { // e.g. number parameter, {} (urlPattern) if Lasta Meta
+                    parameterAppeared = true;
                 }
-                if (numberAppeared) {
+                if (parameterAppeared) {
                     restfulList.add(first);
                     break;
                 } else { // before number parameter
@@ -162,11 +162,13 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         for (String methodKeyword : methodKeywordList) { // e.g. get$sea()
             restfulList.add(methodKeyword); // e.g. /products/{productId}/purchases/sea/
         }
-        for (String remainingElement : partsElementList) { // basically empty if pure RESTful
+        for (String remainingElement : rearElementList) { // basically empty if pure RESTful
             restfulList.add(remainingElement); // e.g. /products/1/purchases/2/3/4
         }
         return buildPath(restfulList);
     }
+
+    protected abstract boolean isParameterInRearPart(Class<?> actionType, LinkedList<String> rearElementList, String first);
 
     // ===================================================================================
     //                                                                         Path Helper

@@ -16,6 +16,7 @@
 package org.lastaflute.web.path.restful.router;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.dbflute.util.Srl;
@@ -80,5 +81,13 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
         arrangedList.addAll(stringList); // e.g. /products/purchases/
         arrangedList.addAll(numberList); // e.g. /products/purchases/1/2/
         return buildPath(arrangedList);
+    }
+
+    // ===================================================================================
+    //                                                                         URL Reverse
+    //                                                                         ===========
+    @Override
+    protected boolean isParameterInRearPart(Class<?> actionType, LinkedList<String> rearElementList, String first) {
+        return Srl.isNumberHarfAll(first) || "{}".equals(first);
     }
 }

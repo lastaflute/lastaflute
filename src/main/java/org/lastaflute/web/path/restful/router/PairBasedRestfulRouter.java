@@ -16,6 +16,7 @@
 package org.lastaflute.web.path.restful.router;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.dbflute.util.Srl;
@@ -67,5 +68,15 @@ public class PairBasedRestfulRouter extends AbstractBasedRestfulRouter {
         }
         arrangedList.addAll(parameterList); // e.g. /products/purchases/1/2/
         return buildPath(arrangedList);
+    }
+
+    // ===================================================================================
+    //                                                                         URL Reverse
+    //                                                                         ===========
+    @Override
+    protected boolean isParameterInRearPart(Class<?> actionType, LinkedList<String> rearElementList, String first) {
+        // #for_now cannot determine method name so treat all elements as parameter in rear part by jflute (2021/05/20)
+        // (pair-based cannot support restish method e.g. get$sea())
+        return true;
     }
 }
