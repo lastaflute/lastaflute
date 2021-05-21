@@ -57,4 +57,8 @@ public class BusinessFailureMapping<VALUE> {
             });
         }
     }
+
+    public Map<Class<?>, VALUE> getFailureMap() { // read only
+        return Collections.unmodifiableMap(failureMap);
+    }
 }
