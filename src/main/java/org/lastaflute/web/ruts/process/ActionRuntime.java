@@ -112,6 +112,14 @@ public class ActionRuntime {
     //                                              Response
     //                                              --------
     /**
+     * Does it have action response?
+     * @return The determination, true or false.
+     */
+    public boolean hasActionResponse() {
+        return actionResponse != null;
+    }
+
+    /**
      * Is the result of the action execute, forward to HTML template?
      * @return The determination, true or false.
      */
