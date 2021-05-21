@@ -120,6 +120,7 @@ public class GodHandableAction implements VirtualAction {
             final ActionResponse monologue = tellExceptionMonologue(hook, e);
             return reflect(monologue);
         } catch (Error e) {
+            runtime.manageSeriousAbnormalError(e); // keep pure error
             redCardableAssist.translateToHotdeployErrorIfPossible(e);
             throw e;
         } finally {
