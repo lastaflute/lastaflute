@@ -86,7 +86,7 @@ public class ActionMappingNearpathAsdefaultTest extends UnitLastaFluteTestCase {
         }
     }
 
-    // TODO jflute pending, after resolving near-path headache (2020/10/06)
+    // #needs_fix jflute pending, after resolving near-path headache (2020/10/06)
     //    public void test_paramPath_asdefault15_optional_string_more_to_string() {
     //        ActionMapping mapping = prepareMapping(NearpathByword15Optstrmore2strAction.class);
     //        assertExecute(mapping, index, "sea");
