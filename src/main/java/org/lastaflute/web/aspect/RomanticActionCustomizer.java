@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.util.ContainerUtil;
@@ -37,6 +38,8 @@ import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.config.ExecuteOption;
 import org.lastaflute.web.ruts.config.ModuleConfig;
 import org.lastaflute.web.ruts.config.restful.RestfulGetPairHandler;
+import org.lastaflute.web.ruts.config.specifed.SpecifiedHttpStatus;
+import org.lastaflute.web.ruts.config.specifed.SpecifiedUrlPattern;
 import org.lastaflute.web.util.LaModuleConfigUtil;
 
 /**
@@ -417,11 +420,13 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     }
 
     protected ExecuteOption createExecuteOption(Execute anno) {
-        final String urlPattern = anno.urlPattern();
+        final OptionalThing<SpecifiedUrlPattern> specifiedUrlPattern = SpecifiedUrlPattern.create(anno.urlPattern());
         final boolean suppressTransaction = anno.suppressTransaction();
         final boolean suppressValidatorCallCheck = anno.suppressValidatorCallCheck();
         final int sqlExecutionCountLimit = anno.sqlExecutionCountLimit();
-        return new ExecuteOption(urlPattern, suppressTransaction, suppressValidatorCallCheck, sqlExecutionCountLimit);
+        final OptionalThing<SpecifiedHttpStatus> successHttpStatus = SpecifiedHttpStatus.create(anno.successHttpStatus());
+        return new ExecuteOption(specifiedUrlPattern, suppressTransaction, suppressValidatorCallCheck, sqlExecutionCountLimit,
+                successHttpStatus);
     }
 
     protected ActionExecute newActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {

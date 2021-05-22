@@ -32,6 +32,7 @@ import org.lastaflute.web.exception.UrlPatternEndBraceNotFoundException;
 import org.lastaflute.web.exception.UrlPatternFrontOrRearSlashUnneededException;
 import org.lastaflute.web.exception.UrlPatternMethodKeywordWithOptionalArgException;
 import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
+import org.lastaflute.web.ruts.config.specifed.SpecifiedUrlPattern;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
 /**
@@ -61,16 +62,19 @@ public class UrlPatternAnalyzer {
     // ===================================================================================
     //                                                                              Choose
     //                                                                              ======
-    public UrlPatternChosenBox choose(Method executeMethod, String mappingMethodName, String specifiedUrlPattern,
-            List<Class<?>> pathParamTypeList) {
-        checkSpecifiedUrlPattern(executeMethod, specifiedUrlPattern, pathParamTypeList);
+    public UrlPatternChosenBox choose(Method executeMethod, String mappingMethodName,
+            OptionalThing<SpecifiedUrlPattern> specifiedUrlPattern, List<Class<?>> pathParamTypeList) {
+        specifiedUrlPattern.ifPresent(pattern -> {
+            checkSpecifiedUrlPattern(executeMethod, pattern, pathParamTypeList);
+        });
         final UrlPatternChosenBox chosenBox;
-        if (specifiedUrlPattern != null && !specifiedUrlPattern.isEmpty()) { // e.g. urlPattern="{}"
-            chosenBox = adjustUrlPatternMethodPrefix(executeMethod, specifiedUrlPattern, mappingMethodName, /*specified*/true);
+        if (specifiedUrlPattern.isPresent()) { // e.g. urlPattern="{}"
+            final String patternValue = specifiedUrlPattern.get().getPatternValue();
+            chosenBox = adjustUrlPatternMethodPrefix(executeMethod, patternValue, mappingMethodName, /*specified*/true);
         } else { // urlPattern=[no definition]
             if (!pathParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
                 final String derivedUrlPattern = buildDerivedUrlPattern(pathParamTypeList);
-                chosenBox = adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, mappingMethodName, /*non-specified*/false);
+                chosenBox = adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, mappingMethodName, /*specified*/false);
             } else { // e.g. index(), sea() *no parameter
                 chosenBox = adjustUrlPatternByMethodNameWithoutParam(mappingMethodName);
             }
@@ -135,17 +139,17 @@ public class UrlPatternAnalyzer {
     // -----------------------------------------------------
     //                                       Check Specified
     //                                       ---------------
-    protected void checkSpecifiedUrlPattern(Method executeMethod, String specifiedUrlPattern, List<Class<?>> pathParamTypeList) {
-        if (specifiedUrlPattern != null) {
-            if (canBeAbbreviatedUrlPattern(specifiedUrlPattern)) {
-                throwUrlPatternNonsenseSettingException(executeMethod, specifiedUrlPattern);
-            }
-            if (hasFrontOrRearSlashUrlPattern(specifiedUrlPattern)) {
-                throwUrlPatternFrontOrRearSlashUnneededException(executeMethod, specifiedUrlPattern);
-            }
-            if (hasMethodKeywordWithOptionalArg(specifiedUrlPattern, pathParamTypeList)) {
-                throwUrlPatternMethodKeywordWithOptionalArgException(executeMethod, specifiedUrlPattern);
-            }
+    protected void checkSpecifiedUrlPattern(Method executeMethod, SpecifiedUrlPattern specifiedUrlPattern,
+            List<Class<?>> pathParamTypeList) {
+        final String patternStr = specifiedUrlPattern.getPatternValue();
+        if (canBeAbbreviatedUrlPattern(patternStr)) {
+            throwUrlPatternNonsenseSettingException(executeMethod, patternStr);
+        }
+        if (hasFrontOrRearSlashUrlPattern(patternStr)) {
+            throwUrlPatternFrontOrRearSlashUnneededException(executeMethod, patternStr);
+        }
+        if (hasMethodKeywordWithOptionalArg(patternStr, pathParamTypeList)) {
+            throwUrlPatternMethodKeywordWithOptionalArgException(executeMethod, patternStr);
         }
     }
 

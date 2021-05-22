@@ -132,12 +132,13 @@ public class RestfulStructureVerifier {
         }
         final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
         for (ActionExecute execute : executeList) {
-            final String urlPattern = execute.getExecuteOption().getSpecifiedUrlPattern(); // null allowed
-            if (urlPattern != null && urlPattern.contains(UrlPatternAnalyzer.METHOD_KEYWORD_MARK)) {
-                // to begin with, index() cannot use @word by other check
-                // so actually this check is only for e.g. get$sea() that is restish
-                throwExecuteMethodRestfulCannotAtWordException(actionType, execute);
-            }
+            execute.getExecuteOption().getSpecifiedUrlPattern().ifPresent(pattern -> {
+                if (pattern.getPatternValue().contains(UrlPatternAnalyzer.METHOD_KEYWORD_MARK)) {
+                    // to begin with, index() cannot use @word by other check
+                    // so actually this check is only for e.g. get$sea() that is restish
+                    throwExecuteMethodRestfulCannotAtWordException(actionType, execute);
+                }
+            });
         }
     }
 
