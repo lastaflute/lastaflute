@@ -53,7 +53,7 @@ public class PairBasedRestfulRouter extends AbstractBasedRestfulRouter {
     //                                          Convert Path
     //                                          ------------
     @Override
-    protected String convertToMappingPath(String requestPath) {
+    protected String doConvertToMappingPath(String requestPath) {
         final List<String> elementList = splitPath(requestPath);
         final List<String> arrangedList = new ArrayList<>();
         final List<String> parameterList = new ArrayList<>();

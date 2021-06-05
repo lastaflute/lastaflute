@@ -62,7 +62,7 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
     //                                          Convert Path
     //                                          ------------
     @Override
-    protected String convertToMappingPath(String requestPath) {
+    protected String doConvertToMappingPath(String requestPath) {
         // e.g.
         //  /products/1/purchases/
         //  /products/1/purchases/2/

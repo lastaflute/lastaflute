@@ -78,10 +78,14 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         if (isExceptPath(resource, elementList)) { // for application requirement
             return false;
         }
-        return doDetermineRestfulPath(resource, elementList);
+        final List<String> restfulList;
+        if (isTopCategorizedPath(resource.getMakingMappingPath())) { // e.g. /mockhama/products/1/purchases/
+            restfulList = elementList.subList(1, elementList.size());
+        } else { // mainly here
+            restfulList = elementList;
+        }
+        return doDetermineRestfulPath(resource, restfulList);
     }
-
-    protected abstract boolean doDetermineRestfulPath(UrlMappingResource resource, List<String> elementList);
 
     protected boolean isRootAction(UrlMappingResource resource, List<String> elementList) {
         return elementList.isEmpty();
@@ -95,10 +99,23 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         return false;
     }
 
+    protected abstract boolean doDetermineRestfulPath(UrlMappingResource resource, List<String> elementList);
+
     // -----------------------------------------------------
     //                                          Convert Path
     //                                          ------------
-    protected abstract String convertToMappingPath(String requestPath);
+    protected String convertToMappingPath(String requestPath) {
+        if (isTopCategorizedPath(requestPath)) {
+            final String ltrimmedPath = Srl.ltrim(requestPath, "/");
+            final String topCategory = Srl.substringFirstFront(ltrimmedPath, "/");
+            final String restfulPath = Srl.substringFirstRear(ltrimmedPath, "/");
+            return "/" + topCategory + doConvertToMappingPath(restfulPath);
+        } else { // mainly here
+            return doConvertToMappingPath(requestPath);
+        }
+    }
+
+    protected abstract String doConvertToMappingPath(String requestPath);
 
     // ===================================================================================
     //                                                                         URL Reverse
@@ -131,13 +148,26 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
     protected String convertToRestfulPath(Class<?> actionType, String actionUrl, int classElementCount) {
         final String withoutHash = Srl.substringLastFront(actionUrl, "#");
         final String actionPath = Srl.substringFirstFront(withoutHash, "?"); // without query parameter
-        final List<String> elementList = splitPath(actionPath);
+        String topCategory = null;
+        final String restfulPath;
+        if (isTopCategorizedPath(actionPath)) {
+            final String ltrimmedPath = Srl.ltrim(actionPath, "/");
+            topCategory = Srl.substringFirstFront(ltrimmedPath, "/");
+            restfulPath = Srl.substringFirstRear(ltrimmedPath, "/");
+            --classElementCount;
+        } else { // mainly here
+            restfulPath = actionPath;
+        }
+        final List<String> elementList = splitPath(restfulPath);
         if (elementList.size() < classElementCount) { // basically no way, at least out of target
             return null; // no filter
         }
         final List<String> classElementList = elementList.subList(0, classElementCount);
         final LinkedList<String> rearElementList = new LinkedList<>(elementList.subList(classElementCount, elementList.size()));
         final List<String> restfulList = new ArrayList<>();
+        if (topCategory != null) {
+            restfulList.add(topCategory);
+        }
         final List<String> methodKeywordList = new ArrayList<>(); // lazy loaded
         boolean parameterAppeared = false;
         for (String classElement : classElementList) {
@@ -169,6 +199,13 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
     }
 
     protected abstract boolean isParameterInRearPart(Class<?> actionType, LinkedList<String> rearElementList, String first);
+
+    // ===================================================================================
+    //                                                                        Top Category
+    //                                                                        ============
+    protected boolean isTopCategorizedPath(String requestPath) { // you can override
+        return false;
+    }
 
     // ===================================================================================
     //                                                                         Path Helper
