@@ -81,7 +81,9 @@ public abstract class TypicalFaicliApiFailureHook implements ApiFailureHook {
 
     protected void setupBusinessHttpStatusMap(Map<Class<?>, Integer> failureMap) { // you can override
         // you can add mapping of failure status with exception here
-        //  e.g. failureMap.put(AccessTokenUnauthorizedException.class, HttpServletResponse.SC_UNAUTHORIZED);
+        //  e.g.
+        //   failureMap.put(AccessTokenUnauthorizedException.class, HttpServletResponse.SC_UNAUTHORIZED);
+        //   failureMap.put(AccessUnderstoodButRefusedException.class, HttpServletResponse.SC_FORBIDDEN);
     }
 
     // ===================================================================================
