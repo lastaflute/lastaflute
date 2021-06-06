@@ -148,7 +148,8 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         verifyExecuteMethodRestfulIndependent(actionMapping, actionType);
         verifyExecuteMethodRestfulHttpMethodAll(actionMapping, actionType);
         verifyExecuteMethodRestfulCannotAtWord(actionMapping, actionType);
-        verifyExecuteMethodRestfulCannotOpitional(actionMapping, actionType);
+        verifyExecuteMethodRestfulCannotOptional(actionMapping, actionType);
+        verifyExecuteMethodRestfulCannotEventSuffix(actionMapping, actionType);
     }
 
     // -----------------------------------------------------
@@ -402,8 +403,12 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         restfulStructureVerifier.verifyRestfulCannotAtWord(actionMapping, actionType);
     }
 
-    protected void verifyExecuteMethodRestfulCannotOpitional(ActionMapping actionMapping, Class<?> actionType) {
-        restfulStructureVerifier.verifyRestfulCannotOpitional(actionMapping, actionType);
+    protected void verifyExecuteMethodRestfulCannotOptional(ActionMapping actionMapping, Class<?> actionType) {
+        restfulStructureVerifier.verifyRestfulCannotOptional(actionMapping, actionType);
+    }
+
+    protected void verifyExecuteMethodRestfulCannotEventSuffix(ActionMapping actionMapping, Class<?> actionType) {
+        restfulStructureVerifier.verifyRestfulCannotEventSuffix(actionMapping, actionType);
     }
 
     // ===================================================================================

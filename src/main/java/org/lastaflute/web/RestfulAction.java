@@ -28,4 +28,10 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Documented
 public @interface RestfulAction {
+
+    /**
+     * You can define e.g. get$sea(), get$land() in RESTful action.
+     * @return true if you use event suffix.
+     */
+    boolean allowEventSuffix() default false;
 }

@@ -71,7 +71,7 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                         Basic Derived
     //                                         -------------
-    protected final String mappingMethodName; // not null
+    protected final String mappingMethodName; // not null, e.g. index (even if get$index())
     protected final OptionalThing<String> restfulHttpMethod; // not null, empty allowed
     protected final boolean indexMethod;
     protected final TransactionGenre transactionGenre; // not null

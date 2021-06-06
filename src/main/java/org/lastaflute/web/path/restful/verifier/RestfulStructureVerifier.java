@@ -165,7 +165,7 @@ public class RestfulStructureVerifier {
     // ===================================================================================
     //                                                                     Cannot Optional
     //                                                                     ===============
-    public void verifyRestfulCannotOpitional(ActionMapping actionMapping, Class<?> actionType) {
+    public void verifyRestfulCannotOptional(ActionMapping actionMapping, Class<?> actionType) {
         if (!hasRestfulAnnotation(actionType)) {
             return;
         }
@@ -198,9 +198,56 @@ public class RestfulStructureVerifier {
     }
 
     // ===================================================================================
+    //                                                                  Cannot EventSuffix
+    //                                                                  ==================
+    public void verifyRestfulCannotEventSuffix(ActionMapping actionMapping, Class<?> actionType) {
+        if (!hasRestfulAnnotation(actionType)) {
+            return;
+        }
+        final RestfulAction restfulAnno = getRestfulAnnotation(actionType); // not null here
+        if (restfulAnno.allowEventSuffix()) {
+            return; // no check
+        }
+        final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
+        for (ActionExecute execute : executeList) {
+            if (!execute.isIndexMethod()) { // not (e.g. index(), get$index())
+                throwExecuteMethodRestfulCannotEventSuffixException(actionType, execute);
+            }
+        }
+    }
+
+    protected void throwExecuteMethodRestfulCannotEventSuffixException(Class<?> actionType, ActionExecute execute) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Found the event suffix (disallowed) in restful action.");
+        br.addItem("Advice");
+        br.addElement("You cannot define event suffix in restful action.");
+        br.addElement("Or use allowEventSuffix attribute of @RestfulAction.");
+        br.addElement("For example:");
+        br.addElement("  (x):");
+        br.addElement("    public JsonResponse<...> get$sea(ProductsSearchForm form) { // *Bad");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    public JsonResponse<...> get$index(ProductsSearchForm form) { // Good");
+        br.addElement("    }");
+        br.addElement("  (o):");
+        br.addElement("    @RestfulAction(allowEventSuffix=true) // Good");
+        br.addElement("    public class ProductsAction extends ... {");
+        br.addItem("Action");
+        br.addElement(actionType);
+        br.addItem("Execute Method");
+        br.addElement(execute);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    // ===================================================================================
     //                                                                        Assist Logic
     //                                                                        ============
     protected boolean hasRestfulAnnotation(Class<?> actionType) {
         return actionType.getAnnotation(RestfulAction.class) != null;
+    }
+
+    protected RestfulAction getRestfulAnnotation(Class<?> actionType) {
+        return actionType.getAnnotation(RestfulAction.class);
     }
 }
