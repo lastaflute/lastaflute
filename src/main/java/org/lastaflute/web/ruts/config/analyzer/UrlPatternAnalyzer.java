@@ -44,7 +44,32 @@ public class UrlPatternAnalyzer {
     //                                                                          Definition
     //                                                                          ==========
     public static final String ELEMENT_BASIC_PATTERN = "([^/]+)";
-    public static final String ELEMENT_NUMBER_PATTERN = "([^/&&\\-\\.\\d]+)";
+
+    // [RegularExpression and JDK Version Story] by jflute (2021/06/09)
+    // e.g.
+    //  ProductsAction@get$index()
+    //  ProductsPurchasesAction@get$index()
+    //
+    // GET /products/1/purchases2/ was ProductsAction hit (then NumberFormatException 404)
+    //
+    // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+    // // JDK 8: false
+    // // JDK 11: true
+    // // JDK 16: true
+    // log(Pattern.compile("^([^/&&\\-\\.\\d]+)$").matcher("purchases/1/2").find());
+    //
+    // // JDK 8: false
+    // // JDK 11: false
+    // // JDK 16: false
+    // log(Pattern.compile("^([[^/]&&\\-\\.\\d]+)$").matcher("purchases/1/2").find());
+    // _/_/_/_/_/_/_/_/_/_/
+    //
+    // it works well by quoting "^/" (means not slach) with "[]"
+    // so first I wrote test deeply to keep matching result and after that I fixed it
+    //
+    //public static final String ELEMENT_NUMBER_PATTERN = "([^/&&\\-\\.\\d]+)";
+    public static final String ELEMENT_NUMBER_PATTERN = "([[^/]&&\\-\\.\\d]+)";
+
     public static final String METHOD_KEYWORD_MARK = "@word";
     public static final String REST_DELIMITER = "$";
 
