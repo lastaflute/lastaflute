@@ -15,9 +15,9 @@
  */
 package org.lastaflute.db.replication.slavedb;
 
+// once made this deprecated, but feedback from user who uses this by jflute (2021/06/10)
 /**
  * @author jflute
- * @deprecated unneeded so delete future
  */
 public class SlaveDBAccessorNothing implements SlaveDBAccessor {
 
