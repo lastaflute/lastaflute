@@ -49,6 +49,9 @@ public class RestfulStructuredMethodVerifier {
     //                                        Basic Analyzed
     //                                        --------------
     protected final List<String> resourceNameList; // not null, not empty (having at least one element)
+
+    // may have different GET methods
+    // extract certain list from possible list after analyzing GET method 
     protected final List<ActionExecute> possibleGetExecuteList; // not null
     protected final List<ActionExecute> possibleQueryableExecuteList; // not null
     protected final List<ActionExecute> possibleBodyableExecuteList; // not null
@@ -80,7 +83,8 @@ public class RestfulStructuredMethodVerifier {
     }
 
     protected List<String> deriveResourceNameList() {
-        // #needs_fix jflute hyphenation (2021/06/13)
+        // #for_now jflute no case for top category until the request (2021/06/14)
+        // #needs_fix jflute hyphenate e.g. "sea-land" (2021/06/13)
         final String resourceOnlyName = Srl.substringLastFront(actionType.getSimpleName(), "Action");
         final String decamelizedName = Srl.decamelize(resourceOnlyName);
         return Srl.splitList(decamelizedName, "_");
@@ -98,8 +102,9 @@ public class RestfulStructuredMethodVerifier {
     //                                                                              Verify
     //                                                                              ======
     // #hope jflute pure analyzing logic is moved to under config package (2021/06/13)
+    // #for_now jflute no check for methods with event suffix, difficult and already restish (2021/06/14)
     public void verify() {
-        analyzeGetExecute();
+        analyzeGetExecute(); // should be first
         analyzeQueryableExecuute();
         analyzeBodyableExecuute();
         analyzeFullParameterExecuute();
@@ -394,40 +399,33 @@ public class RestfulStructuredMethodVerifier {
         br.addElement(" o Full parameter method: Single GET, PUT, PATCH e.g. /products/1/");
         br.addElement(" o Short parameter method: List GET, DELETE e.g. /products/");
         br.addElement("");
-        br.addElement("For example: ProductsAction");
-        br.addElement("  (x): List GET");
-        br.addElement("    get$index(Integer productId, ...Form form) { // *Bad");
-        br.addElement("  (x): Single GET");
-        br.addElement("    get$index() { // *Bad");
-        br.addElement("    get$index(Integer productId, Integer otherId) { // *Bad");
-        br.addElement("  (x): POST");
-        br.addElement("    post$index(...Body body) { // *Bad");
-        br.addElement("    post$index(Integer productId, Integer purchaseId, ...Body body) { // *Bad");
-        br.addElement("  (x): PUT");
+        br.addElement("For example: ProductsAction /products/[1]/");
+        br.addElement("  (x):");
+        br.addElement("    get$index(Integer productId, ...Form form) { // *Bad (if list)");
+        br.addElement("  (x):");
+        br.addElement("    get$index() { // *Bad (if single)");
+        br.addElement("  (x):");
+        br.addElement("    post$index(Integer productId, ...Body body) { // *Bad");
+        br.addElement("  (x):");
         br.addElement("    put$index(...Body body) { // *Bad");
-        br.addElement("    put$index(Integer productIdInteger otherId, ...Body body) { // *Bad");
         br.addElement("  (o):");
-        br.addElement("    get$index(...Form form) { // List GET");
-        br.addElement("    get$index(Integer productId) { // Single GET");
+        br.addElement("    get$index(...Form form) { // list");
+        br.addElement("    get$index(Integer productId) { // single");
         br.addElement("    post$index(...Body body) {");
         br.addElement("    put$index(Integer productId, ...Body body) {");
         br.addElement("");
-        br.addElement("For example: ProductsPurchasesAction");
-        br.addElement("  (x): List GET");
-        br.addElement("    get$index(...Form form) { // *Bad");
-        br.addElement("    get$index(Integer productId, Integer purchaseId, ...Form form) { // *Bad");
-        br.addElement("  (x): Single GET");
-        br.addElement("    get$index(Integer productId) { // *Bad");
-        br.addElement("    get$index(Integer productId, Integer purchaseId, Integer otherId) { // *Bad");
-        br.addElement("  (x): POST");
-        br.addElement("    post$index(...Body body) { // *Bad");
+        br.addElement("For example: ProductsPurchasesAction /products/1/purchases/[2]");
+        br.addElement("  (x):");
+        br.addElement("    get$index(Integer productId, Integer purchaseId, ...Form form) { // *Bad (if list)");
+        br.addElement("  (x):");
+        br.addElement("    get$index(Integer productId) { // *Bad (if single)");
+        br.addElement("  (x):");
         br.addElement("    post$index(Integer productId, Integer purchaseId, ...Body body) { // *Bad");
-        br.addElement("  (x): PUT");
+        br.addElement("  (x):");
         br.addElement("    put$index(Integer productId, ...Body body) { // *Bad");
-        br.addElement("    put$index(Integer productId, Integer purchaseId, Integer otherId, ...Body body) { // *Bad");
         br.addElement("  (o):");
-        br.addElement("    get$index(Integer productId, ...Form form) { // List GET");
-        br.addElement("    get$index(Integer productId, Integer purchaseId) { // Single GET");
+        br.addElement("    get$index(Integer productId, ...Form form) { // list");
+        br.addElement("    get$index(Integer productId, Integer purchaseId) { // single");
         br.addElement("    post$index(Integer productId, ...Body body) {");
         br.addElement("    put$index(Integer productId, Integer purchaseId, ...Body body) {");
         br.addItem("RESTful Action");
