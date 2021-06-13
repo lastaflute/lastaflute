@@ -167,6 +167,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
 
     protected boolean isOverloadAllowedExecuteSet(ActionExecute currentExecute, List<ActionExecute> existingList) {
         // pair of get$index([no-param] or Form) and get$index(ID (not optional)) is allowed
+        // more detail check is verified by structured method verifier so simple here
         return isRestfulGetPairExecute(currentExecute, existingList);
     }
 
@@ -178,53 +179,45 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         br.addElement("Same-name different-parameter methods cannot be defined as execute method.");
         br.addElement("For example:");
         br.addElement("  (x):");
-        br.addElement("    @Execute");
         br.addElement("    public HtmlResponse index() {");
-        br.addElement("    }");
-        br.addElement("    @Execute");
         br.addElement("    public HtmlResponse index(String sea) { // *Bad");
-        br.addElement("    }");
         br.addElement("  (o):");
-        br.addElement("    @Execute");
         br.addElement("    public HtmlResponse index() {");
-        br.addElement("    }");
-        br.addElement("    @Execute");
         br.addElement("    public HtmlResponse land(String sea) { // Good");
-        br.addElement("    }");
         if (currentExecute.getRestfulHttpMethod().isPresent()) { // tell about RESTful GET pair
             br.addElement("");
-            br.addElement("While RESTful GET pair methods are allowed.");
-            br.addElement("However you cannot use first optional parameter.");
-            br.addElement("For example:");
+            br.addElement("While only RESTful GET pair methods are allowed.");
+            br.addElement(" o List GET: get$index(Form) e.g. /products/ (short parameter)");
+            br.addElement(" o Single GET: get$index(ID) e.g. /products/1/ (full parameter)");
+            br.addElement("");
+            br.addElement("For example: ProductsAction /products/[1]/");
             br.addElement("  (x):");
-            br.addElement("    @Execute");
-            br.addElement("    public JsonResponse<...> get$index(no-param or Form) {");
-            br.addElement("    }");
-            br.addElement("    @Execute");
-            br.addElement("    public JsonResponse<...> get$index(OptionalThing<Integer> seaId) { // *Bad");
-            br.addElement("    }");
+            br.addElement("    get$index(no-param or Form) {");
+            br.addElement("    get$index(OptionalThing<Integer> productId) { // *Bad: cannot use optional");
+            br.addElement("  (x):");
+            br.addElement("    get$index(no-param or Form) {");
+            br.addElement("    get$index(Integer productId, Integer otherId) { // *Bad: too many parameter");
+            br.addElement("  (x):");
+            br.addElement("    get$index(Integer productId (+ Form)) { // *Bad: unneeded parameter (if list)");
+            br.addElement("    get$index(Integer productId) {");
             br.addElement("  (o):");
-            br.addElement("    @Execute");
-            br.addElement("    public JsonResponse<...> get$index(no-param or Form) {");
-            br.addElement("    }");
-            br.addElement("    @Execute");
-            br.addElement("    public JsonResponse<...> get$index(Integer seaId) { // Good");
-            br.addElement("    }");
+            br.addElement("    get$index(no-param or Form) {");
+            br.addElement("    get$index(Integer productId) {");
+            br.addElement("");
+            br.addElement("For example: ProductsPurchasesAction /products/1/purchases/[2]/");
+            br.addElement("  (x):");
+            br.addElement("    get$index(Integer productId (+ Form)) {");
+            br.addElement("    get$index(Long productId, Integer purchaseId) { // *Bad: different type");
             br.addElement("  (o):");
-            br.addElement("    @Execute");
-            br.addElement("    public JsonResponse<...> get$index(Integer seaId (+ Form)) {");
-            br.addElement("    }");
-            br.addElement("    @Execute");
-            br.addElement("    public JsonResponse<...> get$index(Integer seaId, Integer hangarId) { // Good");
-            br.addElement("    }");
+            br.addElement("    get$index(Integer productId (+ Form)) {");
+            br.addElement("    get$index(Integer productId, Integer purchaseId) {");
         }
         br.addItem("Action");
         br.addElement(actionType);
-        br.addItem("Current Execute");
-        br.addElement(currentExecute);
-        br.addItem("Existing List");
+        br.addItem("Overload Methods");
+        br.addElement(currentExecute.toSimpleMethodExp());
         for (ActionExecute existingExecute : existingList) {
-            br.addElement(existingExecute);
+            br.addElement(existingExecute.toSimpleMethodExp());
         }
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
