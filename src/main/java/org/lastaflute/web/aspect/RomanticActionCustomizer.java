@@ -32,7 +32,7 @@ import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.exception.ActionPackageHasUpperCaseException;
 import org.lastaflute.web.exception.ExecuteMethodIllegalDefinitionException;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
-import org.lastaflute.web.path.restful.verifier.RestfulStructureVerifier;
+import org.lastaflute.web.path.restful.verifier.RestfulRomanticVerifier;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.config.ExecuteOption;
@@ -57,10 +57,10 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         return new RestfulGetPairHandler();
     }
 
-    protected final RestfulStructureVerifier restfulStructureVerifier = newRestfulStructureVerifier();
+    protected final RestfulRomanticVerifier restfulRomanticVerifier = newRestfulRomanticVerifier();
 
-    protected RestfulStructureVerifier newRestfulStructureVerifier() {
-        return new RestfulStructureVerifier();
+    protected RestfulRomanticVerifier newRestfulRomanticVerifier() {
+        return new RestfulRomanticVerifier();
     }
 
     // ===================================================================================
@@ -150,6 +150,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         verifyExecuteMethodRestfulCannotAtWord(actionMapping, actionType);
         verifyExecuteMethodRestfulCannotOptional(actionMapping, actionType);
         verifyExecuteMethodRestfulCannotEventSuffix(actionMapping, actionType);
+        verifyExecuteMethodRestfulStructureMethod(actionMapping, actionType);
     }
 
     // -----------------------------------------------------
@@ -392,23 +393,27 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
     }
 
     protected void verifyExecuteMethodRestfulIndependent(ActionMapping actionMapping, Class<?> actionType) {
-        restfulStructureVerifier.verifyRestfulIndependent(actionMapping, actionType);
+        restfulRomanticVerifier.verifyRestfulIndependent(actionMapping, actionType);
     }
 
     protected void verifyExecuteMethodRestfulHttpMethodAll(ActionMapping actionMapping, Class<?> actionType) {
-        restfulStructureVerifier.verifyRestfulHttpMethodAll(actionMapping, actionType);
+        restfulRomanticVerifier.verifyRestfulHttpMethodAll(actionMapping, actionType);
     }
 
     protected void verifyExecuteMethodRestfulCannotAtWord(ActionMapping actionMapping, Class<?> actionType) {
-        restfulStructureVerifier.verifyRestfulCannotAtWord(actionMapping, actionType);
+        restfulRomanticVerifier.verifyRestfulCannotAtWord(actionMapping, actionType);
     }
 
     protected void verifyExecuteMethodRestfulCannotOptional(ActionMapping actionMapping, Class<?> actionType) {
-        restfulStructureVerifier.verifyRestfulCannotOptional(actionMapping, actionType);
+        restfulRomanticVerifier.verifyRestfulCannotOptional(actionMapping, actionType);
     }
 
     protected void verifyExecuteMethodRestfulCannotEventSuffix(ActionMapping actionMapping, Class<?> actionType) {
-        restfulStructureVerifier.verifyRestfulCannotEventSuffix(actionMapping, actionType);
+        restfulRomanticVerifier.verifyRestfulCannotEventSuffix(actionMapping, actionType);
+    }
+
+    protected void verifyExecuteMethodRestfulStructureMethod(ActionMapping actionMapping, Class<?> actionType) {
+        restfulRomanticVerifier.verifyRestfulStructuredMethod(actionMapping, actionType);
     }
 
     // ===================================================================================

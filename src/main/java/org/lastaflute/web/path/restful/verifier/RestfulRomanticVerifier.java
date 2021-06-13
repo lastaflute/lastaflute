@@ -28,7 +28,7 @@ import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer;
 /**
  * @author jflute (2021/05/19 Wednesday at roppongi japanese)
  */
-public class RestfulStructureVerifier {
+public class RestfulRomanticVerifier {
 
     // ===================================================================================
     //                                                                         Independent
@@ -238,6 +238,20 @@ public class RestfulStructureVerifier {
         br.addElement(execute);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                   Structured Method
+    //                                                                   =================
+    public void verifyRestfulStructuredMethod(ActionMapping actionMapping, Class<?> actionType) {
+        if (!hasRestfulAnnotation(actionType)) {
+            return;
+        }
+        newRestfulStructuredMethodVerifier(actionType, actionMapping.getExecuteList()).verify();
+    }
+
+    protected RestfulStructuredMethodVerifier newRestfulStructuredMethodVerifier(Class<?> actionType, List<ActionExecute> executeList) {
+        return new RestfulStructuredMethodVerifier(actionType, executeList);
     }
 
     // ===================================================================================

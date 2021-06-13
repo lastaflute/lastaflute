@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfReflectionUtil;
+import org.lastaflute.di.util.tiger.LdiGenericUtil;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
@@ -100,7 +101,14 @@ public class LaActionExecuteUtil {
             sb.append("private ");
         }
         final Class<?> returnType = executeMethod.getReturnType();
-        sb.append(returnType.getSimpleName()).append(" ");
+        sb.append(returnType.getSimpleName());
+        final Class<?> firstGeneric = LdiGenericUtil.getGenericFirstClass(executeMethod.getGenericReturnType());
+        if (firstGeneric != null) {
+            // all responses are zero or single generic only so first only here
+            // #hope jflute perfect generic expressions (2021/06/13)
+            sb.append("<").append(firstGeneric.getSimpleName()).append(">");
+        }
+        sb.append(" ");
         sb.append(executeMethod.getDeclaringClass().getSimpleName());
         sb.append("@").append(executeMethod.getName());
     }
