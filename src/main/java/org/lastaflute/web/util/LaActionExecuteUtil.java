@@ -102,11 +102,18 @@ public class LaActionExecuteUtil {
         }
         final Class<?> returnType = executeMethod.getReturnType();
         sb.append(returnType.getSimpleName());
-        final Class<?> firstGeneric = LdiGenericUtil.getGenericFirstClass(executeMethod.getGenericReturnType());
-        if (firstGeneric != null) {
-            // all responses are zero or single generic only so first only here
+        final Type genericReturnType = executeMethod.getGenericReturnType();
+        final Class<?> firstGeneric = LdiGenericUtil.getGenericFirstClass(genericReturnType);
+        final Type[] genericParameterTypes = LdiGenericUtil.getGenericParameterTypes(genericReturnType);
+        if (firstGeneric != null && genericParameterTypes.length == 1) { // e.g. JsonResponse<List<SeaResult>>
+            // all action responses are zero or single generic only so almost no problem even if first only
             // #hope jflute perfect generic expressions (2021/06/13)
-            sb.append("<").append(firstGeneric.getSimpleName()).append(">");
+            sb.append("<").append(firstGeneric.getSimpleName());
+            final Class<?> nestedGeneric = LdiGenericUtil.getGenericFirstClass(genericParameterTypes[0]); // e.g. SeaResult
+            if (nestedGeneric != null) { // basically no way, just in case
+                sb.append("<").append(nestedGeneric.getSimpleName()).append(">");
+            }
+            sb.append(">");
         }
         sb.append(" ");
         sb.append(executeMethod.getDeclaringClass().getSimpleName());
