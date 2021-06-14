@@ -27,7 +27,9 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfReflectionUtil;
+import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.di.util.tiger.LdiGenericUtil;
+import org.lastaflute.web.Execute;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
@@ -35,12 +37,23 @@ import org.lastaflute.web.ruts.config.ActionMapping;
 /**
  * @author modified by jflute (originated in Seasar)
  */
-public class LaActionExecuteUtil {
+public class LaActionExecuteUtil { // actually hope to rename (remove Util) but too late by jflute
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
     protected static final String KEY = LastaWebKey.ACTION_EXECUTE_KEY;
+
+    // ===================================================================================
+    //                                                                  Execute Annotation
+    //                                                                  ==================
+    public static boolean isExecuteMethod(Method actionMethod) {
+        return LdiModifierUtil.isPublic(actionMethod) && getExecuteAnnotation(actionMethod) != null;
+    }
+
+    public static Execute getExecuteAnnotation(Method executeMethod) {
+        return executeMethod.getAnnotation(Execute.class);
+    }
 
     // ===================================================================================
     //                                                             Access to ExecuteConfig
