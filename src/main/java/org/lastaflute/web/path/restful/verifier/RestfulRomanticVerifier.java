@@ -78,10 +78,10 @@ public class RestfulRomanticVerifier {
         br.addItem("Action");
         br.addElement(actionType);
         br.addItem("Restful Method");
-        br.addElement(restfulExecute);
+        br.addElement(restfulExecute.toSimpleMethodExp());
         br.addItem("Plain Method");
         for (ActionExecute plain : plainList) { // basically one loop
-            br.addElement(plain);
+            br.addElement(plain.toSimpleMethodExp());
         }
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
@@ -118,7 +118,7 @@ public class RestfulRomanticVerifier {
         br.addItem("Action");
         br.addElement(actionType);
         br.addItem("Execute Method");
-        br.addElement(execute);
+        br.addElement(execute.toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
@@ -157,7 +157,7 @@ public class RestfulRomanticVerifier {
         br.addItem("Action");
         br.addElement(actionType);
         br.addItem("Execute Method");
-        br.addElement(execute);
+        br.addElement(execute.toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
@@ -192,7 +192,7 @@ public class RestfulRomanticVerifier {
         br.addItem("Action");
         br.addElement(actionType);
         br.addItem("Execute Method");
-        br.addElement(execute);
+        br.addElement(execute.toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
@@ -241,7 +241,7 @@ public class RestfulRomanticVerifier {
         br.addItem("Action");
         br.addElement(actionType);
         br.addItem("Execute Method");
-        br.addElement(execute);
+        br.addElement(execute.toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
@@ -265,7 +265,7 @@ public class RestfulRomanticVerifier {
         br.addItem("Action");
         br.addElement(actionType);
         br.addItem("Execute Method");
-        br.addElement(execute);
+        br.addElement(execute.toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
