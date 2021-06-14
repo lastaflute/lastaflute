@@ -205,15 +205,45 @@ public class RestfulRomanticVerifier {
             return;
         }
         final RestfulAction restfulAnno = getRestfulAnnotation(actionType); // not null here
-        if (restfulAnno.allowEventSuffix()) {
-            return; // no check
-        }
         final Collection<ActionExecute> executeList = actionMapping.getExecuteList();
-        for (ActionExecute execute : executeList) {
-            if (!execute.isIndexMethod()) { // not (e.g. index(), get$index())
-                throwExecuteMethodRestfulCannotEventSuffixException(actionType, execute);
+        if (restfulAnno.allowEventSuffix()) { // OK but needs precondition
+            for (ActionExecute execute : executeList) {
+                if (!execute.isIndexMethod()) { // not (e.g. index(), get$index())
+                    if (execute.getRestfulHttpMethod().isPresent()) { // basically true here, just in case
+                        final String indexMethodName = execute.getRestfulHttpMethod().get() + "$index";
+                        if (actionMapping.searchByMethodName(indexMethodName).isEmpty()) {
+                            throwExecuteMethodRestfulAloneEventSuffixException(actionType, execute);
+                        }
+                    }
+                }
+            }
+        } else { // cannot use event suffix
+            for (ActionExecute execute : executeList) {
+                if (!execute.isIndexMethod()) { // not (e.g. index(), get$index())
+                    throwExecuteMethodRestfulCannotEventSuffixException(actionType, execute);
+                }
             }
         }
+    }
+
+    protected void throwExecuteMethodRestfulAloneEventSuffixException(Class<?> actionType, ActionExecute execute) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Found the alone event suffix in restful action.");
+        br.addItem("Advice");
+        br.addElement("Event suffix method needs the corresponding index method.");
+        br.addElement("(It assumes that event suffix method is only for supplemental business)");
+        br.addElement("For example:");
+        br.addElement("  (x): no index");
+        br.addElement("    get$sea(ProductsSearchForm form) { // *Bad");
+        br.addElement("  (o):");
+        br.addElement("    get$index(ProductsSearchForm form) { // Good");
+        br.addElement("    get$sea(ProductsSearchForm form) {");
+        br.addItem("Action");
+        br.addElement(actionType);
+        br.addItem("Execute Method");
+        br.addElement(execute);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
     }
 
     protected void throwExecuteMethodRestfulCannotEventSuffixException(Class<?> actionType, ActionExecute execute) {
