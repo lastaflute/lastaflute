@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
@@ -102,13 +103,18 @@ public class RestfulStructuredMethodVerifier {
     //                                                                              Verify
     //                                                                              ======
     // #hope jflute pure analyzing logic is moved to under config package (2021/06/13)
-    // #for_now jflute no check for methods with event suffix, difficult and already restish (2021/06/14)
     public void verify() {
+        // determine List GET and Single GET here
         analyzeGetExecute(); // should be first
+
+        // Form and Body
         analyzeQueryableExecuute();
         analyzeBodyableExecuute();
-        analyzeFullParameterExecuute();
-        analyzeShortParameterExecuute();
+
+        // Path Parameter
+        analyzeFullParameterExecute();
+        analyzeShortParameterExecute();
+        analyzeEventSuffixParameterExecute(); // should be after full/short parameter
     }
 
     // ===================================================================================
@@ -220,8 +226,11 @@ public class RestfulStructuredMethodVerifier {
     }
 
     // ===================================================================================
-    //                                                                           Queryable
-    //                                                                           =========
+    //                                                                       Form and Body
+    //                                                                       =============
+    // -----------------------------------------------------
+    //                                             Queryable
+    //                                             ---------
     protected void analyzeQueryableExecuute() {
         possibleQueryableExecuteList.stream().filter(ex -> ex.getFormMeta().isPresent()).forEach(execute -> {
             final ActionFormMeta formMeta = execute.getFormMeta().get();
@@ -229,58 +238,6 @@ public class RestfulStructuredMethodVerifier {
                 throwRestfulStructureQueryableButBodyException(execute);
             }
         });
-    }
-
-    protected void analyzeBodyableExecuute() {
-        possibleBodyableExecuteList.stream()
-                .filter(ex -> ex.isApiExecute()) // except HTML response, which can use form
-                .filter(ex -> ex.getFormMeta().isPresent())
-                .forEach(execute -> {
-                    final ActionFormMeta formMeta = execute.getFormMeta().get();
-                    if (!formMeta.isJsonBodyMapping()) {
-                        throwRestfulStructureBodyableButBodyException(execute);
-                    }
-                });
-    }
-
-    protected void analyzeFullParameterExecuute() {
-        final List<ActionExecute> certainList =
-                possibleFullParameterExecuteList.stream().filter(ex -> exceptsListGet(ex)).collect(Collectors.toList());
-        certainList.forEach(execute -> {
-            final Integer pathParameterCount = countPathParameter(execute);
-            if (pathParameterCount != resourceNameList.size()) {
-                throwRestfulStructureDifferentPathParameterCountException("Should be FullParameter?", execute);
-            }
-        });
-        ActionExecute previous = null;
-        for (ActionExecute current : certainList) {
-            if (previous != null && !matchesPathParameterType(previous, current)) {
-                throwRestfulStructureDifferentPathParameterTypeException(previous, current);
-            }
-            previous = current;
-        }
-    }
-
-    protected void analyzeShortParameterExecuute() {
-        final List<ActionExecute> certainList =
-                possibleShortParameterExecuteList.stream().filter(ex -> exceptsOneGet(ex)).collect(Collectors.toList());
-        certainList.forEach(execute -> {
-            final Integer pathParameterCount = countPathParameter(execute);
-            if (pathParameterCount != resourceNameList.size() - 1) {
-                throwRestfulStructureDifferentPathParameterCountException("Should be ShortParameter?", execute);
-            }
-        });
-        ActionExecute previous = null;
-        for (ActionExecute current : certainList) {
-            if (previous != null && !matchesPathParameterType(previous, current)) {
-                throwRestfulStructureDifferentPathParameterTypeException(previous, current);
-            }
-            previous = current;
-        }
-    }
-
-    protected boolean matchesPathParameterType(ActionExecute previous, ActionExecute current) {
-        return extractPathParamTypeList(previous).equals(extractPathParamTypeList(current));
     }
 
     protected void throwRestfulStructureQueryableButBodyException(ActionExecute execute) {
@@ -301,6 +258,21 @@ public class RestfulStructuredMethodVerifier {
         br.addElement(execute.toSimpleMethodExp());
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    // -----------------------------------------------------
+    //                                              Bodyable
+    //                                              --------
+    protected void analyzeBodyableExecuute() {
+        possibleBodyableExecuteList.stream()
+                .filter(ex -> ex.isApiExecute()) // except HTML response, which can use form
+                .filter(ex -> ex.getFormMeta().isPresent())
+                .forEach(execute -> {
+                    final ActionFormMeta formMeta = execute.getFormMeta().get();
+                    if (!formMeta.isJsonBodyMapping()) {
+                        throwRestfulStructureBodyableButBodyException(execute);
+                    }
+                });
     }
 
     protected void throwRestfulStructureBodyableButBodyException(ActionExecute execute) {
@@ -325,6 +297,85 @@ public class RestfulStructuredMethodVerifier {
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
 
+    // ===================================================================================
+    //                                                                      Path Parameter
+    //                                                                      ==============
+    // -----------------------------------------------------
+    //                                        Full Parameter
+    //                                        --------------
+    protected void analyzeFullParameterExecute() {
+        final List<ActionExecute> certainList =
+                possibleFullParameterExecuteList.stream().filter(ex -> exceptsListGet(ex)).collect(Collectors.toList());
+        certainList.forEach(execute -> {
+            final Integer pathParameterCount = countPathParameter(execute);
+            if (pathParameterCount != resourceNameList.size()) {
+                throwRestfulStructureDifferentPathParameterCountException("Should be FullParameter?", execute);
+            }
+        });
+        ActionExecute previous = null;
+        for (ActionExecute current : certainList) {
+            if (previous != null && !matchesPathParameterType(previous, current)) {
+                throwRestfulStructureDifferentPathParameterTypeException(previous, current);
+            }
+            previous = current;
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                       Short Parameter
+    //                                       ---------------
+    protected void analyzeShortParameterExecute() {
+        final List<ActionExecute> certainList =
+                possibleShortParameterExecuteList.stream().filter(ex -> exceptsOneGet(ex)).collect(Collectors.toList());
+        certainList.forEach(execute -> {
+            final Integer pathParameterCount = countPathParameter(execute);
+            if (pathParameterCount != resourceNameList.size() - 1) {
+                throwRestfulStructureDifferentPathParameterCountException("Should be ShortParameter?", execute);
+            }
+        });
+        ActionExecute previous = null;
+        for (ActionExecute current : certainList) {
+            if (previous != null && !matchesPathParameterType(previous, current)) {
+                throwRestfulStructureDifferentPathParameterTypeException(previous, current);
+            }
+            previous = current;
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                          Event Suffix
+    //                                          ------------
+    protected void analyzeEventSuffixParameterExecute() {
+        final List<ActionExecute> eventSuffixList = executeList.stream()
+                .filter(ex -> ex.getRestfulHttpMethod().isPresent()) // basically true here, already checked, just in case
+                .filter(ex -> !ex.isIndexMethod()) // having event suffix
+                .collect(Collectors.toList());
+        for (ActionExecute eventSuffixExecute : eventSuffixList) {
+            final String httpMethod = eventSuffixExecute.getRestfulHttpMethod().get();
+            final String indexName = httpMethod + "$index";
+
+            // parameters of index execute method are already checked here
+            // so it treats it as expected definition
+            final List<ActionExecute> indexList =
+                    executeList.stream().filter(ex -> indexName.equals(ex.getExecuteMethod().getName())).collect(Collectors.toList());
+
+            final int eventSuffixParamCount = countPathParameter(eventSuffixExecute);
+            final Optional<ActionExecute> optIndex = indexList.stream().filter(ex -> {
+                return eventSuffixParamCount == countPathParameter(ex);
+            }).findAny(); // basically zero or one here, because of RESTful definition logic
+            if (!optIndex.isPresent()) { // index whose parameter count is same is not found
+                throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+            }
+            final ActionExecute indexExecute = optIndex.get();
+            if (!matchesPathParameterType(indexExecute, eventSuffixExecute)) {
+                throwRestfulStructureDifferentPathParameterTypeException(indexExecute, eventSuffixExecute);
+            }
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                          Assist Logic
+    //                                          ------------
     protected void throwRestfulStructureDifferentPathParameterTypeException(ActionExecute previous, ActionExecute current) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Different path parameter types of RESTful action methods.");
@@ -375,8 +426,12 @@ public class RestfulStructuredMethodVerifier {
     // -----------------------------------------------------
     //                                        Path Parameter
     //                                        --------------
-    protected Integer countPathParameter(ActionExecute execute) {
+    protected int countPathParameter(ActionExecute execute) {
         return execute.getPathParamArgs().map(args -> args.getPathParamTypeList().size()).orElse(0);
+    }
+
+    protected boolean matchesPathParameterType(ActionExecute previous, ActionExecute current) {
+        return extractPathParamTypeList(previous).equals(extractPathParamTypeList(current));
     }
 
     protected List<Class<?>> extractPathParamTypeList(ActionExecute execute) {
