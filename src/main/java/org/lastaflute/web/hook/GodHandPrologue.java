@@ -16,6 +16,8 @@
 package org.lastaflute.web.hook;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import org.dbflute.bhv.proposal.callback.TraceableSqlAdditionalInfoProvider;
@@ -119,11 +121,13 @@ public class GodHandPrologue {
 
     protected AccessContextResource createAccessContextResource(ActionRuntime runtime) {
         final String classTitle = DfTypeUtil.toClassTitle(runtime.getActionType());
-        return newAccessContextResource(classTitle, runtime.getExecuteMethod());
+        final Method executeMethod = runtime.getExecuteMethod();
+        final Map<String, Object> runtimeAttributeMap = Collections.emptyMap(); // no use for now in action
+        return newAccessContextResource(classTitle, executeMethod, runtimeAttributeMap);
     }
 
-    protected AccessContextResource newAccessContextResource(String classTitle, Method method) {
-        return new AccessContextResource(classTitle, method);
+    protected AccessContextResource newAccessContextResource(String moduleName, Method method, Map<String, Object> runtimeAttributeMap) {
+        return new AccessContextResource(moduleName, method, runtimeAttributeMap);
     }
 
     /**
