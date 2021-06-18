@@ -108,6 +108,51 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     // -----------------------------------------------------
+    //                                             Hyphenate
+    //                                             ---------
+    public void test_toRestfulMappingPath_hyphenate_basic() {
+        // ## Arrange ##
+        String requestPath = "/ballet-dancers/1/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals("/ballet/dancers/1/", filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    public void test_toRestfulMappingPath_hyphenate_nested_noParam() {
+        // ## Arrange ##
+        String requestPath = "/ballet-dancers/1/favorite-studios/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals("/ballet/dancers/favorite/studios/1/", filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    public void test_toRestfulMappingPath_hyphenate_nested_withParam() {
+        // ## Arrange ##
+        String requestPath = "/ballet-dancers/1/favorite-studios/2/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals("/ballet/dancers/favorite/studios/1/2/", filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    // -----------------------------------------------------
     //                                          Top Category
     //                                          ------------
     public void test_toRestfulMappingPath_topCategory_level2_noParam_basic() {
@@ -226,6 +271,49 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     // -----------------------------------------------------
+    //                                             Hyphenate
+    //                                             ---------
+    public void test_toRestfulReversePath_hyphenate_basic() {
+        // ## Arrange ##
+        UrlChain urlChain = new UrlChain("mockballet/dancers/{}/");
+
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MockballetDancersAction.class, urlChain);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mockballet-dancers/{}/", filter.apply("/mockballet/dancers/{}/"));
+        });
+    }
+
+    public void test_toRestfulReversePath_hyphenate_nested_basic() {
+        // ## Arrange ##
+        UrlChain urlChain = new UrlChain("mockballet/dancers/favorite/studios/{}/{}/");
+
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MockballetDancersFavoriteStudiosAction.class, urlChain);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mockballet-dancers/{}/favorite-studios/{}/", filter.apply("/mockballet/dancers/favorite/studios/{}/{}/"));
+        });
+    }
+
+    public void test_toRestfulReversePath_hyphenate_nested_three() {
+        // ## Arrange ##
+        UrlChain urlChain = new UrlChain("mockballet/dancers/greatest/favorite/studios/{}/{}/");
+
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MockballetDancersGreatestFavoriteStudiosAction.class, urlChain);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mockballet-dancers/{}/greatest-favorite-studios/{}/",
+                    filter.apply("/mockballet/dancers/greatest/favorite/studios/{}/{}/"));
+        });
+    }
+
+    // -----------------------------------------------------
     //                                          Top Category
     //                                          ------------
     public void test_toRestfulReversePath_topCategory_level2_noParam_basic() {
@@ -283,6 +371,18 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
 
     @RestfulAction
     private static class MocksRestfulsAction {
+    }
+
+    @RestfulAction(hyphenate = "mockballet-dancers")
+    private static class MockballetDancersAction {
+    }
+
+    @RestfulAction(hyphenate = { "mockballet-dancers", "favorite-studios" })
+    private static class MockballetDancersFavoriteStudiosAction {
+    }
+
+    @RestfulAction(hyphenate = { "mockballet-dancers", "greatest-favorite-studios" })
+    private static class MockballetDancersGreatestFavoriteStudiosAction {
     }
 
     @RestfulAction

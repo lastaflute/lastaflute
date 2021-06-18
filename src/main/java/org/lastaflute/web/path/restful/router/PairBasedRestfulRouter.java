@@ -22,6 +22,7 @@ import java.util.List;
 import org.dbflute.util.Srl;
 import org.lastaflute.web.path.UrlMappingResource;
 
+// #for_now jflute no test for now, use numeric-based if you can (2021/06/18)
 /**
  * @author jflute
  * @since 1.2.1 (2021/05/20)
@@ -55,19 +56,23 @@ public class PairBasedRestfulRouter extends AbstractBasedRestfulRouter {
     @Override
     protected String doConvertToMappingPath(String requestPath) {
         final List<String> elementList = splitPath(requestPath);
-        final List<String> arrangedList = new ArrayList<>();
+        final List<String> resourceList = new ArrayList<>();
         final List<String> parameterList = new ArrayList<>();
         int index = 0;
         for (String element : elementList) {
             if (index % 2 == 0) { // first, third...
-                arrangedList.add(element);
+                if (element.contains("-")) { // e.g. ballet-dancers
+                    resourceList.addAll(splitResource(element, "-")); // for e.g. ballet/dancers
+                } else {
+                    resourceList.add(element);
+                }
             } else { // second, fourth
                 parameterList.add(element);
             }
             ++index;
         }
-        arrangedList.addAll(parameterList); // e.g. /products/purchases/1/2/
-        return buildPath(arrangedList);
+        resourceList.addAll(parameterList); // e.g. /products/purchases/1/2/
+        return buildPath(resourceList);
     }
 
     // ===================================================================================

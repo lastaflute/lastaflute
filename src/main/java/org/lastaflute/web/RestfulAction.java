@@ -30,7 +30,30 @@ import java.lang.annotation.Target;
 public @interface RestfulAction {
 
     /**
-     * You can define e.g. get$sea(), get$land() in RESTful action.
+     * You can define hyphenated resource names here.
+     * <pre>
+     * <span style="color: #3F7E5E">// e.g. /ballet-dancers/</span>
+     * <span style="color: #3F7E5E">//  ballet.dancers.BalletDancersAction</span>
+     * &#064;RestfulAction(hyphenate="ballet-dancers")
+     * 
+     * <span style="color: #3F7E5E">// e.g. /dancers/1/favorite-studios/</span>
+     * <span style="color: #3F7E5E">//  dancers.favorite.studios.DancersFavoriteStudiosAction</span>
+     * &#064;RestfulAction(hyphenate="favorite-studios")
+     * 
+     * <span style="color: #3F7E5E">// e.g. /ballet-dancers/1/favorite-studios/</span>
+     * <span style="color: #3F7E5E">//  ballet.dancers.favorite.studios.BalletDancersFavoriteStudiosAction</span>
+     * &#064;RestfulAction(hyphenate={"ballet-dancers", "favorite-studios"})
+     * </pre>
+     * 
+     * <p>You cannot set e.g. "sea", "-sea", "sea-", "sea--land", "sea/land", "Sea-Land".</p>
+     * 
+     * @return true if you use event suffix.
+     */
+    String[] hyphenate() default {};
+
+    /**
+     * You can define e.g. get$sea(), get$land() in RESTful action. <br>
+     * It depends on router, available if e.g. NumericBasedRestfulRouter.
      * @return true if you use event suffix.
      */
     boolean allowEventSuffix() default false;

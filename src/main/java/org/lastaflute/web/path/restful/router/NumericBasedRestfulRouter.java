@@ -74,7 +74,11 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
             if (Srl.isNumberHarfAll(element)) {
                 numberList.add(element);
             } else {
-                stringList.add(element);
+                if (element.contains("-")) { // e.g. ballet-dancers
+                    stringList.addAll(splitResource(element, "-")); // e.g. /ballet/dancers/
+                } else {
+                    stringList.add(element);
+                }
             }
         }
         final List<String> arrangedList = new ArrayList<>();
