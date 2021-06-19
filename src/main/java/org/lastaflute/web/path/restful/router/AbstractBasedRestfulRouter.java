@@ -80,13 +80,7 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         if (isExceptPath(resource, elementList)) { // for application requirement
             return false;
         }
-        final List<String> restfulList;
-        if (isTopCategorizedPath(resource.getMakingMappingPath())) { // e.g. /mockhama/products/1/purchases/
-            restfulList = elementList.subList(1, elementList.size());
-        } else { // mainly here
-            restfulList = elementList;
-        }
-        return doDetermineRestfulPath(resource, restfulList);
+        return doDetermineRestfulPath(resource, elementList);
     }
 
     protected boolean isRootAction(UrlMappingResource resource, List<String> elementList) {
@@ -107,14 +101,7 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
     //                                          Convert Path
     //                                          ------------
     protected String convertToMappingPath(String requestPath) {
-        if (isTopCategorizedPath(requestPath)) {
-            final String ltrimmedPath = Srl.ltrim(requestPath, "/");
-            final String topCategory = Srl.substringFirstFront(ltrimmedPath, "/");
-            final String restfulPath = Srl.substringFirstRear(ltrimmedPath, "/");
-            return "/" + topCategory + doConvertToMappingPath(restfulPath);
-        } else { // mainly here
-            return doConvertToMappingPath(requestPath);
-        }
+        return doConvertToMappingPath(requestPath);
     }
 
     protected abstract String doConvertToMappingPath(String requestPath);
@@ -162,26 +149,13 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
             int businessElementCount) {
         final String withoutHash = Srl.substringLastFront(actionUrl, "#");
         final String actionPath = Srl.substringFirstFront(withoutHash, "?"); // without query parameter
-        String topCategory = null;
-        final String restfulPath;
-        if (isTopCategorizedPath(actionPath)) {
-            final String ltrimmedPath = Srl.ltrim(actionPath, "/");
-            topCategory = Srl.substringFirstFront(ltrimmedPath, "/");
-            restfulPath = Srl.substringFirstRear(ltrimmedPath, "/");
-            --businessElementCount;
-        } else { // mainly here
-            restfulPath = actionPath;
-        }
-        final List<String> elementList = splitPath(restfulPath);
+        final List<String> elementList = splitPath(actionPath);
         if (elementList.size() < businessElementCount) { // basically no way, at least out of target
             return null; // no filter
         }
         final List<String> classElementList = prepareClassElementList(elementList, businessElementCount, hyphenatedNameList);
         final LinkedList<String> rearElementList = prepareRearElementList(elementList, businessElementCount);
         final List<String> restfulList = new ArrayList<>();
-        if (topCategory != null) {
-            restfulList.add(topCategory);
-        }
         final List<String> methodKeywordList = new ArrayList<>(); // lazy loaded
         boolean parameterAppeared = false;
         for (String classElement : classElementList) {
@@ -240,11 +214,14 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
     // ===================================================================================
     //                                                                        Top Category
     //                                                                        ============
-    // #thinking jflute may delete it, to keep simple and hyphenation is enough (2021/06/19)
-    @Deprecated
-    protected boolean isTopCategorizedPath(String requestPath) { // you can override
-        return false;
-    }
+    // deleted by three reason: by jflute (2021/06/19)
+    //  o to keep router logic simple
+    //  o hyphenation is similar function
+    //  o originally should be application logic
+    //@Deprecated
+    //protected boolean isTopCategorizedPath(String requestPath) { // you can override
+    //    return false;
+    //}
 
     // ===================================================================================
     //                                                                         Path Helper

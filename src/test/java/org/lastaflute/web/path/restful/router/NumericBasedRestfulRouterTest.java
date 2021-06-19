@@ -138,7 +138,7 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         assertTrue(mappingOption.isRestfulMapping());
     }
 
-    public void test_toRestfulMappingPath_hyphenate_nested_withParam() {
+    public void test_toRestfulMappingPath_hyphenate_nested_withParam_basic() {
         // ## Arrange ##
         String requestPath = "/ballet-dancers/1/favorite-studios/2/";
 
@@ -152,50 +152,16 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         assertTrue(mappingOption.isRestfulMapping());
     }
 
-    // -----------------------------------------------------
-    //                                          Top Category
-    //                                          ------------
-    public void test_toRestfulMappingPath_topCategory_level2_noParam_basic() {
+    public void test_toRestfulMappingPath_hyphenate_nested_withParam_reappeared() {
         // ## Arrange ##
-        String requestPath = "/mockhama/products/1/purchases/";
+        String requestPath = "/ballet-dancers/1/greatest/2/favorite-ballet-dancers/3/studios/4/";
 
         // ## Act ##
-        UrlMappingOption mappingOption = toRestfulMappingPath_withTopCategory(requestPath);
+        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            String filtered = filter.apply(requestPath);
-            assertEquals("/mockhama/products/purchases/1/", filtered);
-        });
-        assertTrue(mappingOption.isRestfulMapping());
-    }
-
-    public void test_toRestfulMappingPath_topCategory_level2_noParam_suffix() {
-        // ## Arrange ##
-        String requestPath = "/mockhama/products/1/purchases/sea/";
-
-        // ## Act ##
-        UrlMappingOption mappingOption = toRestfulMappingPath_withTopCategory(requestPath);
-
-        // ## Assert ##
-        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            String filtered = filter.apply(requestPath);
-            assertEquals("/mockhama/products/purchases/sea/1/", filtered);
-        });
-        assertTrue(mappingOption.isRestfulMapping());
-    }
-
-    public void test_toRestfulMappingPath_topCategory_level2_withParam() {
-        // ## Arrange ##
-        String requestPath = "/mockhama/products/1/purchases/2";
-
-        // ## Act ##
-        UrlMappingOption mappingOption = toRestfulMappingPath_withTopCategory(requestPath);
-
-        // ## Assert ##
-        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            String filtered = filter.apply(requestPath);
-            assertEquals("/mockhama/products/purchases/1/2/", filtered);
+            assertEquals("/ballet/dancers/greatest/favorite/ballet/dancers/studios/1/2/3/4/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
@@ -205,17 +171,6 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     //                                          ------------
     private UrlMappingOption toRestfulMappingPath(String requestPath) {
         NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
-        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
-        return router.toRestfulMappingPath(resource).get();
-    }
-
-    private UrlMappingOption toRestfulMappingPath_withTopCategory(String requestPath) {
-        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter() {
-            @Override
-            protected boolean isTopCategorizedPath(String requestPath) {
-                return requestPath.startsWith("/mockhama/");
-            }
-        };
         UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
         return router.toRestfulMappingPath(resource).get();
     }
@@ -275,7 +230,7 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     //                                             ---------
     public void test_toRestfulReversePath_hyphenate_basic() {
         // ## Arrange ##
-        UrlChain urlChain = new UrlChain("mockballet/dancers/{}/");
+        UrlChain urlChain = new UrlChain("{}");
 
         // ## Act ##
         UrlReverseOption reverseOption = toRestfulReversePath(MockballetDancersAction.class, urlChain);
@@ -288,7 +243,7 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
 
     public void test_toRestfulReversePath_hyphenate_nested_basic() {
         // ## Arrange ##
-        UrlChain urlChain = new UrlChain("mockballet/dancers/favorite/studios/{}/{}/");
+        UrlChain urlChain = new UrlChain("{}/{}");
 
         // ## Act ##
         UrlReverseOption reverseOption = toRestfulReversePath(MockballetDancersFavoriteStudiosAction.class, urlChain);
@@ -301,7 +256,7 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
 
     public void test_toRestfulReversePath_hyphenate_nested_three() {
         // ## Arrange ##
-        UrlChain urlChain = new UrlChain("mockballet/dancers/greatest/favorite/studios/{}/{}/");
+        UrlChain urlChain = new UrlChain("{}/{}");
 
         // ## Act ##
         UrlReverseOption reverseOption = toRestfulReversePath(MockballetDancersGreatestFavoriteStudiosAction.class, urlChain);
@@ -313,58 +268,27 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         });
     }
 
-    // -----------------------------------------------------
-    //                                          Top Category
-    //                                          ------------
-    public void test_toRestfulReversePath_topCategory_level2_noParam_basic() {
-        // ## Arrange ##
-        // ## Act ##
-        UrlReverseOption reverseOption = toRestfulReversePath_withTopCategory(MockhamaMocksRestfulsAction.class, new UrlChain("{}"));
-
-        // ## Assert ##
-        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
-            assertEquals("/mockhama/mocks/{}/restfuls/", filter.apply("/mockhama/mocks/restfuls/{}/"));
-        });
-    }
-
-    public void test_toRestfulReversePath_topCategory_level2_noParam_suffix() {
-        // ## Arrange ##
-        // ## Act ##
-        UrlReverseOption reverseOption = toRestfulReversePath_withTopCategory(MockhamaMocksRestfulsAction.class, new UrlChain("{}"));
-
-        // ## Assert ##
-        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
-            assertEquals("/mockhama/mocks/{}/restfuls/sea/", filter.apply("/mockhama/mocks/restfuls/sea/{}/"));
-        });
-    }
-
-    public void test_toRestfulReversePath_topCategory_level2_withParam_basic() {
-        // ## Arrange ##
-        // ## Act ##
-        UrlReverseOption reverseOption = toRestfulReversePath_withTopCategory(MockhamaMocksRestfulsAction.class, new UrlChain("{}"));
-
-        // ## Assert ##
-        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
-            assertEquals("/mockhama/mocks/{}/restfuls/{}/", filter.apply("/mockhama/mocks/restfuls/{}/{}/"));
-        });
-    }
+    // // #thinking jflute making now (2021/06/20)
+    //public void test_toRestfulReversePath_hyphenate_nested_reappeared() {
+    //    // ## Arrange ##
+    //    UrlChain urlChain = new UrlChain("{}/{}/{}/{}");
+    //
+    //    // ## Act ##
+    //    UrlReverseOption reverseOption =
+    //            toRestfulReversePath(MockballetDancersGreatestFavoriteMockballetDancersStudiosAction.class, urlChain);
+    //
+    //    // ## Assert ##
+    //    reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+    //        assertEquals("/mockballet-dancers/{}/greatest/{}/favorite-mockballet-dancers/{}/studios/{}/",
+    //                filter.apply("/mockballet/dancers/greatest/favorite/mockballet/dancers/studios/{}/{}/{}/{}/"));
+    //    });
+    //}
 
     // -----------------------------------------------------
     //                                          Assist Logic
     //                                          ------------
     private UrlReverseOption toRestfulReversePath(Class<?> actionType, UrlChain urlChain) {
         NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
-        UrlReverseResource resource = new UrlReverseResource(actionType, urlChain);
-        return router.toRestfulReversePath(resource).get();
-    }
-
-    private UrlReverseOption toRestfulReversePath_withTopCategory(Class<?> actionType, UrlChain urlChain) {
-        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter() {
-            @Override
-            protected boolean isTopCategorizedPath(String requestPath) {
-                return requestPath.startsWith("/mockhama/");
-            }
-        };
         UrlReverseResource resource = new UrlReverseResource(actionType, urlChain);
         return router.toRestfulReversePath(resource).get();
     }
@@ -385,7 +309,7 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     private static class MockballetDancersGreatestFavoriteStudiosAction {
     }
 
-    @RestfulAction
-    private static class MockhamaMocksRestfulsAction {
+    @RestfulAction(hyphenate = { "mockballet-dancers", "favorite-mockballet-dancers" })
+    private static class MockballetDancersGreatestFavoriteMockballetDancersStudiosAction {
     }
 }
