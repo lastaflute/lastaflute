@@ -17,6 +17,7 @@ package org.lastaflute.web.path.restful.verifier;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -26,8 +27,8 @@ import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.di.util.tiger.LdiGenericUtil;
-import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.exception.ExecuteMethodIllegalDefinitionException;
+import org.lastaflute.web.path.restful.analyzer.RestfulComponentAnalyzer;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
@@ -65,30 +66,31 @@ public class RestfulStructuredMethodVerifier {
     protected OptionalThing<ActionExecute> listGetExecute = OptionalThing.empty(); // not null
     protected OptionalThing<ActionExecute> singleGetExecute = OptionalThing.empty(); // not null
 
+    // -----------------------------------------------------
+    //                                              Analyzer
+    //                                              --------
+    protected final RestfulComponentAnalyzer restfulComponentAnalyzer = newRestfulComponentAnalyzer();
+
+    protected RestfulComponentAnalyzer newRestfulComponentAnalyzer() {
+        return new RestfulComponentAnalyzer();
+    }
+
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
     public RestfulStructuredMethodVerifier(Class<?> actionType, List<ActionExecute> executeList) {
-        if (!hasRestfulAnnotation(actionType)) {
+        if (!restfulComponentAnalyzer.hasRestfulAnnotation(actionType)) {
             throw new IllegalArgumentException("The action type should be RESTful action.");
         }
         this.actionType = actionType;
         this.executeList = executeList;
 
-        this.resourceNameList = deriveResourceNameList();
+        this.resourceNameList = restfulComponentAnalyzer.deriveResourceNameList(actionType);
         this.possibleGetExecuteList = searchByHttpMethod(executeList, "get");
         this.possibleQueryableExecuteList = searchByHttpMethod(executeList, "get", "delete");
         this.possibleBodyableExecuteList = searchByHttpMethod(executeList, "post", "put", "patch");
         this.possibleFullParameterExecuteList = searchByHttpMethod(executeList, "get", "put", "patch", "delete");
         this.possibleShortParameterExecuteList = searchByHttpMethod(executeList, "get", "post");
-    }
-
-    protected List<String> deriveResourceNameList() {
-        // #for_now jflute no case for top category until the request (2021/06/14)
-        // #needs_fix jflute hyphenate e.g. "sea-land" (2021/06/13)
-        final String resourceOnlyName = Srl.substringLastFront(actionType.getSimpleName(), "Action");
-        final String decamelizedName = Srl.decamelize(resourceOnlyName);
-        return Srl.splitList(decamelizedName, "_");
     }
 
     protected List<ActionExecute> searchByHttpMethod(List<ActionExecute> executeList, String... httpMethod) {
@@ -399,48 +401,8 @@ public class RestfulStructuredMethodVerifier {
     }
 
     // ===================================================================================
-    //                                                                        Assist Logic
-    //                                                                        ============
-    // -----------------------------------------------------
-    //                                            Annotation
-    //                                            ----------
-    protected boolean hasRestfulAnnotation(Class<?> actionType) {
-        return actionType.getAnnotation(RestfulAction.class) != null;
-    }
-
-    protected RestfulAction getRestfulAnnotation(Class<?> actionType) {
-        return actionType.getAnnotation(RestfulAction.class);
-    }
-
-    // -----------------------------------------------------
-    //                                            GET Method
-    //                                            ----------
-    protected boolean exceptsListGet(ActionExecute ex) {
-        return listGetExecute.map(one -> !one.equals(ex)).orElse(true);
-    }
-
-    protected boolean exceptsOneGet(ActionExecute ex) {
-        return singleGetExecute.map(one -> !one.equals(ex)).orElse(true);
-    }
-
-    // -----------------------------------------------------
-    //                                        Path Parameter
-    //                                        --------------
-    protected int countPathParameter(ActionExecute execute) {
-        return execute.getPathParamArgs().map(args -> args.getPathParamTypeList().size()).orElse(0);
-    }
-
-    protected boolean matchesPathParameterType(ActionExecute previous, ActionExecute current) {
-        return extractPathParamTypeList(previous).equals(extractPathParamTypeList(current));
-    }
-
-    protected List<Class<?>> extractPathParamTypeList(ActionExecute execute) {
-        return execute.getPathParamArgs().map(args -> args.getPathParamTypeList()).orElseGet(() -> Collections.emptyList());
-    }
-
-    // -----------------------------------------------------
-    //                                             Exception
-    //                                             ---------
+    //                                                             Different PathParameter
+    //                                                             =======================
     protected void throwRestfulStructureDifferentPathParameterCountException(String title, ActionExecute execute) {
         throwRestfulStructureDifferentPathParameterCountException(title, execute, null, null);
     }
@@ -484,14 +446,56 @@ public class RestfulStructuredMethodVerifier {
         br.addElement("    post$index(Integer productId, ...Body body) {");
         br.addElement("    put$index(Integer productId, Integer purchaseId, ...Body body) {");
         br.addItem("RESTful Action");
-        br.addElement(actionType);
+        br.addElement(actionType.getSimpleName());
+        restfulComponentAnalyzer.getRestfulAnnotation(actionType).ifPresent(restfulAnno -> {
+            // always here but just in case (because in exception handling)
+            final String[] hyphenate = restfulAnno.hyphenate();
+            if (hyphenate.length >= 1) {
+                br.addElement(" hyphenate: " + Arrays.asList(hyphenate));
+            }
+        });
+        br.addElement(" resource names: " + resourceNameList);
+        br.addElement(" full parameter count: " + resourceNameList.size());
+        br.addElement(" short parameter count: " + (resourceNameList.size() - 1));
         br.addItem(firstTitle);
         br.addElement(firstExecute.toSimpleMethodExp());
         if (secondTitle != null && secondExecute != null) {
             br.addItem(secondTitle);
             br.addElement(secondExecute.toSimpleMethodExp());
         }
+        br.addItem("Supplement");
+        br.addElement("This verifier judges by parameter definition.");
+        br.addElement("(not see return type because of free expression for application)");
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    // ===================================================================================
+    //                                                                        Assist Logic
+    //                                                                        ============
+    // -----------------------------------------------------
+    //                                            GET Method
+    //                                            ----------
+    protected boolean exceptsListGet(ActionExecute ex) {
+        return listGetExecute.map(one -> !one.equals(ex)).orElse(true);
+    }
+
+    protected boolean exceptsOneGet(ActionExecute ex) {
+        return singleGetExecute.map(one -> !one.equals(ex)).orElse(true);
+    }
+
+    // -----------------------------------------------------
+    //                                        Path Parameter
+    //                                        --------------
+    protected int countPathParameter(ActionExecute execute) {
+        return execute.getPathParamArgs().map(args -> args.getPathParamTypeList().size()).orElse(0);
+    }
+
+    protected boolean matchesPathParameterType(ActionExecute previous, ActionExecute current) {
+        return extractPathParamTypeList(previous).equals(extractPathParamTypeList(current));
+    }
+
+    protected List<Class<?>> extractPathParamTypeList(ActionExecute execute) {
+        return execute.getPathParamArgs().map(args -> args.getPathParamTypeList()).orElseGet(() -> Collections.emptyList());
     }
 }

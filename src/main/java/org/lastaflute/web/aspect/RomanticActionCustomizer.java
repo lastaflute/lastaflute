@@ -106,6 +106,7 @@ public class RomanticActionCustomizer implements ComponentCustomizer {
         restfulRomanticVerifier.verifyRestfulCannotAtWord(actionMapping, actionType);
         restfulRomanticVerifier.verifyRestfulCannotOptional(actionMapping, actionType);
         restfulRomanticVerifier.verifyRestfulCannotEventSuffix(actionMapping, actionType);
+        restfulRomanticVerifier.verifyRestfulCannotHyphenate(actionMapping, actionType);
         restfulRomanticVerifier.verifyRestfulStructuredMethod(actionMapping, actionType);
     }
 

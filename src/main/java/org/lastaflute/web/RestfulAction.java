@@ -45,9 +45,9 @@ public @interface RestfulAction {
      * &#064;RestfulAction(hyphenate={"ballet-dancers", "favorite-studios"})
      * </pre>
      * 
-     * <p>You cannot set e.g. "sea", "-sea", "sea-", "sea--land", "sea/land", "Sea-Land".</p>
+     * <p>Cannot set e.g. "sea", "-sea", "sea-", "sea--land", "sea/land", "Sea-Land", "sea$land-piari", "sea_land-piari".</p>
      * 
-     * @return true if you use event suffix.
+     * @return The hyphenated resource names for the action.
      */
     String[] hyphenate() default {};
 

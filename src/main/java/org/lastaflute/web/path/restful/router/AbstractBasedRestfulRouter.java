@@ -127,11 +127,11 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
             return OptionalThing.empty();
         }
         final List<String> hyphenatedNameList = extractHyphenatedNameList(resource);
-        final int classElementCount = countClassElement(resource);
+        final int businessElementCount = countActionBusinessElement(resource);
         final UrlReverseOption option = new UrlReverseOption();
         final Class<?> actionType = resource.getActionType();
         option.filterActionUrl(actionUrl -> {
-            return convertToRestfulPath(actionType, actionUrl, hyphenatedNameList, classElementCount);
+            return convertToRestfulPath(actionType, actionUrl, hyphenatedNameList, businessElementCount);
         });
         return OptionalThing.of(option);
     }
@@ -142,21 +142,24 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
     }
 
     protected List<String> extractHyphenatedNameList(UrlReverseResource resource) {
-        RestfulAction restfulAction = resource.getActionType().getAnnotation(RestfulAction.class);
+        final RestfulAction restfulAction = resource.getActionType().getAnnotation(RestfulAction.class);
         if (restfulAction == null) { // basically no way, already checked here
             return Collections.emptyList();
         }
         return Arrays.asList(restfulAction.hyphenate()); // not null, empty allowed
     }
 
-    protected int countClassElement(UrlReverseResource resource) {
+    protected int countActionBusinessElement(UrlReverseResource resource) {
+        // not use analyzer here for router indepenency
+        // (router has many router own logics so avoid harf recycle)
         final Class<?> actionType = resource.getActionType();
         final String actionName = Srl.substringLastFront(actionType.getSimpleName(), "Action");
         final String snakeCaseName = Srl.decamelize(actionName);
         return Srl.count(snakeCaseName, "_") + 1;
     }
 
-    protected String convertToRestfulPath(Class<?> actionType, String actionUrl, List<String> hyphenatedNameList, int classElementCount) {
+    protected String convertToRestfulPath(Class<?> actionType, String actionUrl, List<String> hyphenatedNameList,
+            int businessElementCount) {
         final String withoutHash = Srl.substringLastFront(actionUrl, "#");
         final String actionPath = Srl.substringFirstFront(withoutHash, "?"); // without query parameter
         String topCategory = null;
@@ -165,16 +168,16 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
             final String ltrimmedPath = Srl.ltrim(actionPath, "/");
             topCategory = Srl.substringFirstFront(ltrimmedPath, "/");
             restfulPath = Srl.substringFirstRear(ltrimmedPath, "/");
-            --classElementCount;
+            --businessElementCount;
         } else { // mainly here
             restfulPath = actionPath;
         }
         final List<String> elementList = splitPath(restfulPath);
-        if (elementList.size() < classElementCount) { // basically no way, at least out of target
+        if (elementList.size() < businessElementCount) { // basically no way, at least out of target
             return null; // no filter
         }
-        final List<String> classElementList = prepareClassElementList(elementList, classElementCount, hyphenatedNameList);
-        final LinkedList<String> rearElementList = prepareRearElementList(elementList, classElementCount);
+        final List<String> classElementList = prepareClassElementList(elementList, businessElementCount, hyphenatedNameList);
+        final LinkedList<String> rearElementList = prepareRearElementList(elementList, businessElementCount);
         final List<String> restfulList = new ArrayList<>();
         if (topCategory != null) {
             restfulList.add(topCategory);
@@ -221,6 +224,8 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         if (hyphenatedNameList.isEmpty()) {
             return classElementList;
         }
+        // not use analyzer here for router indepenency
+        // (router has many router own logics so avoid harf recycle)
         String resolvedPath = classElementList.stream().collect(Collectors.joining("/")); // e.g. ballet/dancers/studios
         for (String hyphenatedName : hyphenatedNameList) { // always contains "-", not "/" (already checked at boot)
             // always hit here because action customzer already check it so no check here
@@ -235,6 +240,8 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
     // ===================================================================================
     //                                                                        Top Category
     //                                                                        ============
+    // #thinking jflute may delete it, to keep simple and hyphenation is enough (2021/06/19)
+    @Deprecated
     protected boolean isTopCategorizedPath(String requestPath) { // you can override
         return false;
     }
