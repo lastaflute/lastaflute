@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.path.restful.analyzer;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -42,42 +43,65 @@ public class RestfulComponentAnalyzer {
         });
     }
 
+    public List<String> extractHyphenatedNameList(Class<?> actionType) {
+        return Arrays.asList(getRestfulAnnotation(actionType).get().hyphenate());
+    }
+
     // ===================================================================================
     //                                                                Action Business Name
     //                                                                ====================
-    public String extractActionBusinessDecamerizedName(Class<?> actionType) { // e.g. ballet_dancers if BalletDancersAction
+    public int countActionBusinessElement(Class<?> actionType) { // e.g. 2 if BalletDancersAction
+        return Srl.count(extractActionBusinessSnakeName(actionType), "_") + 1;
+    }
+
+    public String extractActionBusinessSnakeName(Class<?> actionType) { // lower case e.g. ballet_dancers if BalletDancersAction
         final String businessPartName = Srl.substringLastFront(actionType.getSimpleName(), "Action");
         return Srl.decamelize(businessPartName).toLowerCase();
     }
 
     public List<String> extractActionBusinessElementList(Class<?> actionType) { // e.g. [ballet, dancers] if BalletDancersAction
-        final String decamerizedName = extractActionBusinessDecamerizedName(actionType);
-        return Collections.unmodifiableList(Srl.splitList(decamerizedName, "_")); // snake case using "_"
+        final String snakeName = extractActionBusinessSnakeName(actionType);
+        return Collections.unmodifiableList(Srl.splitList(snakeName, "_")); // snake case using "_"
     }
 
     // ===================================================================================
     //                                                                Action Resource Name
     //                                                                ====================
-    public List<String> deriveResourceNameList(Class<?> actionType) { // resolves hyphenation
+    // resource name means hyphenation is resolved
+    public List<String> deriveResourceNameListByActionType(Class<?> actionType) { // called by e.g. verifier
         if (actionType == null) {
             throw new IllegalArgumentException("The argument 'actionType' should not be null.");
         }
         if (!hasRestfulAnnotation(actionType)) {
             throw new IllegalArgumentException("The action is not RESTful, it needs RESTful annotation.");
         }
-        String decamelizedName = extractActionBusinessDecamerizedName(actionType);
-        final String[] hyphenatedNameList = getRestfulAnnotation(actionType).get().hyphenate(); // not null here
-        if (hyphenatedNameList.length >= 1) {
-            for (String hyphenatedName : hyphenatedNameList) { // e.g. ballet-dancers
-                // always hit here because action customzer already check it so no check here
-                final String hyphenatedSnakeName = Srl.replace(hyphenatedName, "-", "_"); // e.g. ballet_dancers
-                decamelizedName = Srl.replace(decamelizedName, hyphenatedSnakeName, Srl.quoteAnything(hyphenatedName, "@"));
+        final String businessSnakeName = extractActionBusinessSnakeName(actionType);
+        final List<String> hyphenatedNameList = extractHyphenatedNameList(actionType);
+        return deriveResourceNameListBySnakeName(businessSnakeName, hyphenatedNameList);
+    }
+
+    public List<String> deriveResourceNameListBySnakeName(String businessSnakeName, List<String> hyphenatedNameList) { // called by e.g. router
+        if (businessSnakeName == null) {
+            throw new IllegalArgumentException("The argument 'snakeName' should not be null.");
+        }
+        if (hyphenatedNameList == null) {
+            throw new IllegalArgumentException("The argument 'hyphenatedNameList' should not be null.");
+        }
+        // a very few loop so ignore cost of string instances
+        for (String hyphenatedName : hyphenatedNameList) { // e.g. ballet-dancers
+            final String hyphenatedSnakeName = Srl.replace(hyphenatedName, "-", "_"); // e.g. ballet_dancers
+            if (businessSnakeName.contains(hyphenatedSnakeName)) { // always hit here, already checked but just in case
+                // replace first only because next same names may be connected by other names
+                // e.g. /ballet-dancers/1/favorite-ballet-dancers/2/
+                final String front = Srl.substringFirstFront(businessSnakeName, hyphenatedSnakeName);
+                final String rear = Srl.substringFirstRear(businessSnakeName, hyphenatedSnakeName);
+                businessSnakeName = front + "@" + hyphenatedName + "@" + rear;
             }
         }
         // to avoid overlapped hit
         // e.g. Action=SeaLandPiariLandPiariAction, hyphenatedNameList=[sea-land, land-piari]
         // then it should be sea-land/piari/land-piari (not hit first LandPiari)
-        decamelizedName = Srl.replace(decamelizedName, "@", "");
-        return Srl.splitList(decamelizedName, "_");
+        businessSnakeName = Srl.replace(businessSnakeName, "@", "");
+        return Srl.splitList(businessSnakeName, "_");
     }
 }

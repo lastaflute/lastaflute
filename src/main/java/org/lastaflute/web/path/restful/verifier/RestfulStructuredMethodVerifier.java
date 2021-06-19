@@ -85,7 +85,7 @@ public class RestfulStructuredMethodVerifier {
         this.actionType = actionType;
         this.executeList = executeList;
 
-        this.resourceNameList = restfulComponentAnalyzer.deriveResourceNameList(actionType);
+        this.resourceNameList = restfulComponentAnalyzer.deriveResourceNameListByActionType(actionType);
         this.possibleGetExecuteList = searchByHttpMethod(executeList, "get");
         this.possibleQueryableExecuteList = searchByHttpMethod(executeList, "get", "delete");
         this.possibleBodyableExecuteList = searchByHttpMethod(executeList, "post", "put", "patch");

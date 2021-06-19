@@ -16,25 +16,32 @@
 package org.lastaflute.web.path.restful.router;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
-import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.path.UrlMappingOption;
 import org.lastaflute.web.path.UrlMappingResource;
 import org.lastaflute.web.path.UrlReverseOption;
 import org.lastaflute.web.path.UrlReverseResource;
+import org.lastaflute.web.path.restful.analyzer.RestfulComponentAnalyzer;
 
 /**
  * @author jflute
  * @since 1.2.1 (2021/05/20)
  */
 public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
+
+    // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final RestfulComponentAnalyzer restfulComponentAnalyzer = newRestfulComponentAnalyzer();
+
+    protected RestfulComponentAnalyzer newRestfulComponentAnalyzer() {
+        return new RestfulComponentAnalyzer();
+    }
 
     // ===================================================================================
     //                                                                         URL Mapping
@@ -113,40 +120,30 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         if (!determineRestfulAction(resource)) {
             return OptionalThing.empty();
         }
-        final List<String> hyphenatedNameList = extractHyphenatedNameList(resource);
         final int businessElementCount = countActionBusinessElement(resource);
+        final List<String> hyphenatedNameList = extractHyphenatedNameList(resource);
         final UrlReverseOption option = new UrlReverseOption();
         final Class<?> actionType = resource.getActionType();
         option.filterActionUrl(actionUrl -> {
-            return convertToRestfulPath(actionType, actionUrl, hyphenatedNameList, businessElementCount);
+            return convertToRestfulPath(actionType, actionUrl, businessElementCount, hyphenatedNameList);
         });
         return OptionalThing.of(option);
     }
 
     protected boolean determineRestfulAction(UrlReverseResource resource) {
-        // restful action's method verification is at action initialization
-        return resource.getActionType().getAnnotation(RestfulAction.class) != null;
-    }
-
-    protected List<String> extractHyphenatedNameList(UrlReverseResource resource) {
-        final RestfulAction restfulAction = resource.getActionType().getAnnotation(RestfulAction.class);
-        if (restfulAction == null) { // basically no way, already checked here
-            return Collections.emptyList();
-        }
-        return Arrays.asList(restfulAction.hyphenate()); // not null, empty allowed
+        return restfulComponentAnalyzer.hasRestfulAnnotation(resource.getActionType());
     }
 
     protected int countActionBusinessElement(UrlReverseResource resource) {
-        // not use analyzer here for router indepenency
-        // (router has many router own logics so avoid harf recycle)
-        final Class<?> actionType = resource.getActionType();
-        final String actionName = Srl.substringLastFront(actionType.getSimpleName(), "Action");
-        final String snakeCaseName = Srl.decamelize(actionName);
-        return Srl.count(snakeCaseName, "_") + 1;
+        return restfulComponentAnalyzer.countActionBusinessElement(resource.getActionType());
     }
 
-    protected String convertToRestfulPath(Class<?> actionType, String actionUrl, List<String> hyphenatedNameList,
-            int businessElementCount) {
+    protected List<String> extractHyphenatedNameList(UrlReverseResource resource) { // not null, empty allowed
+        return restfulComponentAnalyzer.extractHyphenatedNameList(resource.getActionType());
+    }
+
+    protected String convertToRestfulPath(Class<?> actionType, String actionUrl, int businessElementCount,
+            List<String> hyphenatedNameList) {
         final String withoutHash = Srl.substringLastFront(actionUrl, "#");
         final String actionPath = Srl.substringFirstFront(withoutHash, "?"); // without query parameter
         final List<String> elementList = splitPath(actionPath);
@@ -190,23 +187,16 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         return resolveHyphenation(elementList.subList(0, classElementCount), hyphenatedNameList);
     }
 
-    protected LinkedList<String> prepareRearElementList(List<String> elementList, int classElementCount) {
-        return new LinkedList<>(elementList.subList(classElementCount, elementList.size()));
-    }
-
     protected List<String> resolveHyphenation(List<String> classElementList, List<String> hyphenatedNameList) {
         if (hyphenatedNameList.isEmpty()) {
             return classElementList;
         }
-        // not use analyzer here for router indepenency
-        // (router has many router own logics so avoid harf recycle)
-        String resolvedPath = classElementList.stream().collect(Collectors.joining("/")); // e.g. ballet/dancers/studios
-        for (String hyphenatedName : hyphenatedNameList) { // always contains "-", not "/" (already checked at boot)
-            // always hit here because action customzer already check it so no check here
-            final String hyphenatedSlashName = Srl.replace(hyphenatedName, "-", "/"); // e.g. ballet-dancers
-            resolvedPath = Srl.replace(resolvedPath, hyphenatedSlashName, hyphenatedName); // e.g. ballet-dancers/studios
-        }
-        return splitPath(resolvedPath);
+        final String businessSnakeName = classElementList.stream().collect(Collectors.joining("_")); // e.g. ballet_dancers_studios
+        return restfulComponentAnalyzer.deriveResourceNameListBySnakeName(businessSnakeName, hyphenatedNameList);
+    }
+
+    protected LinkedList<String> prepareRearElementList(List<String> elementList, int classElementCount) {
+        return new LinkedList<>(elementList.subList(classElementCount, elementList.size()));
     }
 
     protected abstract boolean isParameterInRearPart(Class<?> actionType, LinkedList<String> rearElementList, String first);

@@ -378,6 +378,8 @@ public class RestfulRomanticVerifier {
         if (hyphenatedElementList.size() <= 1) { // no way, already checked here, just in case because of next depp logic
             throw new IllegalArgumentException("The hyphenatedElementList should have two or more elements: " + hyphenatedElementList);
         }
+        // keeping logic structure of searching next same resource name
+        // for flexibility so a little wasteful code
         int skipIndex = -1;
         final List<Integer> certainFoundIndexList = new ArrayList<>(); // has only certain elements (not cleared)
         final List<Integer> workingFoundIndexList = new ArrayList<>(); // added per found element (and cleared if retry)
@@ -414,8 +416,11 @@ public class RestfulRomanticVerifier {
             }
             if (!workingFoundIndexList.isEmpty()) { // means found
                 certainFoundIndexList.addAll(workingFoundIndexList);
-                skipIndex = workingFoundIndexList.get(workingFoundIndexList.size() - 1); // to search next same resource name
-                workingFoundIndexList.clear();
+                return new HyphenateNameLinkageResult(/*linkageFound*/true, certainFoundIndexList);
+                // old code before changing to first-only hyphenation for e.g. /ballet-dancers/1/favorite-ballet-dancers/2/
+                // (also related to RestfulComponentAnalyzer's deriving method)
+                //skipIndex = workingFoundIndexList.get(workingFoundIndexList.size() - 1); // to search next same resource name
+                //workingFoundIndexList.clear();
             }
             // to next loop for retry
         }

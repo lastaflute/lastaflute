@@ -17,13 +17,13 @@ public class RestfulComponentAnalyzerTest extends PlainTestCase {
 
         // ## Act ##
         // ## Assert ##
-        assertEquals(Arrays.asList("mock", "ballet-dancers"), analyzer.deriveResourceNameList(MockBalletDancersAction.class));
+        assertEquals(Arrays.asList("mock", "ballet-dancers"), analyzer.deriveResourceNameListByActionType(MockBalletDancersAction.class));
         assertEquals(Arrays.asList("mock", "ballet-dancers", "greatest-favorite-studios"),
-                analyzer.deriveResourceNameList(MockBalletDancersGreatestFavoriteStudiosAction.class));
+                analyzer.deriveResourceNameListByActionType(MockBalletDancersGreatestFavoriteStudiosAction.class));
         assertEquals(Arrays.asList("mock", "ballet-dancers", "greatest", "dancers-greatest"),
-                analyzer.deriveResourceNameList(MockBalletDancersGreatestDancersGreatestAction.class));
+                analyzer.deriveResourceNameListByActionType(MockBalletDancersGreatestDancersGreatestAction.class));
         assertEquals(Arrays.asList("mock", "ballet-dancers", "greatest", "ballet-dancers", "studios"),
-                analyzer.deriveResourceNameList(MockBalletDancersGreatestBalletDancersStudiosAction.class));
+                analyzer.deriveResourceNameListByActionType(MockBalletDancersGreatestBalletDancersStudiosAction.class));
     }
 
     @RestfulAction(hyphenate = "ballet-dancers")

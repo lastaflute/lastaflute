@@ -152,7 +152,21 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         assertTrue(mappingOption.isRestfulMapping());
     }
 
-    public void test_toRestfulMappingPath_hyphenate_nested_withParam_reappeared() {
+    public void test_toRestfulMappingPath_hyphenate_nested_withParam_reappeared_basic() {
+        // ## Arrange ##
+        String requestPath = "/ballet-dancers/1/favorite-ballet-dancers/2/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals("/ballet/dancers/favorite/ballet/dancers/1/2/", filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    public void test_toRestfulMappingPath_hyphenate_nested_withParam_reappeared_complex() {
         // ## Arrange ##
         String requestPath = "/ballet-dancers/1/greatest/2/favorite-ballet-dancers/3/studios/4/";
 
@@ -254,7 +268,7 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         });
     }
 
-    public void test_toRestfulReversePath_hyphenate_nested_three() {
+    public void test_toRestfulReversePath_hyphenate_nested_threeElements() {
         // ## Arrange ##
         UrlChain urlChain = new UrlChain("{}/{}");
 
@@ -268,21 +282,64 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         });
     }
 
-    // // #thinking jflute making now (2021/06/20)
-    //public void test_toRestfulReversePath_hyphenate_nested_reappeared() {
-    //    // ## Arrange ##
-    //    UrlChain urlChain = new UrlChain("{}/{}/{}/{}");
-    //
-    //    // ## Act ##
-    //    UrlReverseOption reverseOption =
-    //            toRestfulReversePath(MockballetDancersGreatestFavoriteMockballetDancersStudiosAction.class, urlChain);
-    //
-    //    // ## Assert ##
-    //    reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
-    //        assertEquals("/mockballet-dancers/{}/greatest/{}/favorite-mockballet-dancers/{}/studios/{}/",
-    //                filter.apply("/mockballet/dancers/greatest/favorite/mockballet/dancers/studios/{}/{}/{}/{}/"));
-    //    });
-    //}
+    public void test_toRestfulReversePath_hyphenate_nested_threeResources() {
+        // ## Arrange ##
+        UrlChain urlChain = new UrlChain("{}/{}/{}");
+
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MockballetDancersGreatestFavoriteSuperStudiosAction.class, urlChain);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mockballet-dancers/{}/greatest-favorite/{}/super-studios/{}/",
+                    filter.apply("/mockballet/dancers/greatest/favorite/super/studios/{}/{}/{}/"));
+        });
+    }
+
+    // #thinking jflute making now (2021/06/20)
+    public void test_toRestfulReversePath_hyphenate_nested_reappeared_basic() {
+        // ## Arrange ##
+        UrlChain urlChain = new UrlChain("{}/{}");
+
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MockballetDancersFavoriteMockballetDancersAction.class, urlChain);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mockballet-dancers/{}/favorite-mockballet-dancers/{}/",
+                    filter.apply("/mockballet/dancers/favorite/mockballet/dancers/{}/{}/"));
+        });
+    }
+
+    public void test_toRestfulReversePath_hyphenate_nested_reappeared_complex() {
+        // ## Arrange ##
+        UrlChain urlChain = new UrlChain("{}/{}/{}/{}");
+
+        // ## Act ##
+        UrlReverseOption reverseOption =
+                toRestfulReversePath(MockballetDancersGreatestFavoriteMockballetDancersStudiosAction.class, urlChain);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mockballet-dancers/{}/greatest/{}/favorite-mockballet-dancers/{}/studios/{}/",
+                    filter.apply("/mockballet/dancers/greatest/favorite/mockballet/dancers/studios/{}/{}/{}/{}/"));
+        });
+    }
+
+    public void test_toRestfulReversePath_hyphenate_nested_reappeared_reversed() {
+        // ## Arrange ##
+        UrlChain urlChain = new UrlChain("{}/{}/{}/{}");
+
+        // ## Act ##
+        UrlReverseOption reverseOption =
+                toRestfulReversePath(MockballetDancersGreatestFavoriteMockballetDancersStudiosReversedAction.class, urlChain);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mockballet-dancers/{}/greatest/{}/favorite-mockballet-dancers/{}/studios/{}/",
+                    filter.apply("/mockballet/dancers/greatest/favorite/mockballet/dancers/studios/{}/{}/{}/{}/"));
+        });
+    }
 
     // -----------------------------------------------------
     //                                          Assist Logic
@@ -293,23 +350,38 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         return router.toRestfulReversePath(resource).get();
     }
 
+    // -----------------------------------------------------
+    //                                           Mock Action
+    //                                           -----------
     @RestfulAction
-    private static class MocksRestfulsAction {
+    private static class MocksRestfulsAction { // simple
     }
 
     @RestfulAction(hyphenate = "mockballet-dancers")
-    private static class MockballetDancersAction {
+    private static class MockballetDancersAction { // simple hyphenate
     }
 
     @RestfulAction(hyphenate = { "mockballet-dancers", "favorite-studios" })
-    private static class MockballetDancersFavoriteStudiosAction {
+    private static class MockballetDancersFavoriteStudiosAction { // multiple hyphenate
     }
 
     @RestfulAction(hyphenate = { "mockballet-dancers", "greatest-favorite-studios" })
-    private static class MockballetDancersGreatestFavoriteStudiosAction {
+    private static class MockballetDancersGreatestFavoriteStudiosAction { // multiple hyphenate
+    }
+
+    @RestfulAction(hyphenate = { "mockballet-dancers", "greatest-favorite", "super-studios" })
+    private static class MockballetDancersGreatestFavoriteSuperStudiosAction { // many hyphenate
     }
 
     @RestfulAction(hyphenate = { "mockballet-dancers", "favorite-mockballet-dancers" })
-    private static class MockballetDancersGreatestFavoriteMockballetDancersStudiosAction {
+    private static class MockballetDancersFavoriteMockballetDancersAction { // hyphenate reappeared
+    }
+
+    @RestfulAction(hyphenate = { "mockballet-dancers", "favorite-mockballet-dancers" })
+    private static class MockballetDancersGreatestFavoriteMockballetDancersStudiosAction { // hyphenate reappeared
+    }
+
+    @RestfulAction(hyphenate = { "favorite-mockballet-dancers", "mockballet-dancers" })
+    private static class MockballetDancersGreatestFavoriteMockballetDancersStudiosReversedAction { // hyphenate reappeared
     }
 }

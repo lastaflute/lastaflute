@@ -80,15 +80,17 @@ public class RestfulRomanticVerifierTest extends PlainTestCase {
         {
             Class<?> actionType = MockBalletDancersGreatestBalletDancersStudiosAction.class;
             verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers" });
-            assertException(ExecuteMethodIllegalDefinitionException.class, () -> {
-                verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "greatest-ballet" });
-            });
-            assertException(ExecuteMethodIllegalDefinitionException.class, () -> {
-                verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "dancers-studios" });
-            });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "ballet-dancers" });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "greatest-ballet" });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "dancers-studios" });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "greatest-ballet-dancers" });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "ballet-dancers-studios" });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "greatest-ballet-dancers-studios" });
             assertException(ExecuteMethodIllegalDefinitionException.class, () -> {
                 verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "greatest-studios" });
             });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers-studios" });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers-studios", "ballet-dancers" });
         }
     }
 
