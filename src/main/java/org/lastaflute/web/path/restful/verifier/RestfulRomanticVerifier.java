@@ -458,7 +458,7 @@ public class RestfulRomanticVerifier {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Found the unknown hyphenated name in restful action.");
         br.addItem("Advice");
-        br.addElement("The action name should have linkage with the hyphenated name.");
+        br.addElement("The hyphenated name should have linkage with the action name.");
         br.addElement("For example: BalletDancersAction");
         br.addElement("  (x): 'bal-let'");
         br.addElement("  (x): 'jazz-dancers'");
