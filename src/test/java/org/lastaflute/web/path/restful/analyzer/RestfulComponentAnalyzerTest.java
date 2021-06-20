@@ -22,7 +22,7 @@ public class RestfulComponentAnalyzerTest extends PlainTestCase {
                 analyzer.deriveResourceNameListByActionType(MockBalletDancersGreatestFavoriteStudiosAction.class));
         assertEquals(Arrays.asList("mock", "ballet-dancers", "greatest", "dancers-greatest"),
                 analyzer.deriveResourceNameListByActionType(MockBalletDancersGreatestDancersGreatestAction.class));
-        assertEquals(Arrays.asList("mock", "ballet-dancers", "greatest", "ballet-dancers", "studios"),
+        assertEquals(Arrays.asList("mock", "ballet-dancers", "greatest", "ballet", "dancers", "studios"),
                 analyzer.deriveResourceNameListByActionType(MockBalletDancersGreatestBalletDancersStudiosAction.class));
     }
 
