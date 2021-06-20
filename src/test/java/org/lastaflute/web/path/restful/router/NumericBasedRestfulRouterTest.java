@@ -124,6 +124,20 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         assertTrue(mappingOption.isRestfulMapping());
     }
 
+    public void test_toRestfulMappingPath_hyphenate_oneCharacter() {
+        // ## Arrange ##
+        String requestPath = "/a-dancers/1/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals("/a/dancers/1/", filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
     public void test_toRestfulMappingPath_hyphenate_nested_noParam() {
         // ## Arrange ##
         String requestPath = "/ballet-dancers/1/favorite-studios/";
@@ -255,6 +269,19 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         });
     }
 
+    public void test_toRestfulReversePath_hyphenate_oneCharacter() {
+        // ## Arrange ##
+        UrlChain urlChain = new UrlChain("{}/{}");
+
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MockballetADancersAction.class, urlChain);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mockballet/{}/a-dancers/{}/", filter.apply("/mockballet/a/dancers/{}/{}/"));
+        });
+    }
+
     public void test_toRestfulReversePath_hyphenate_nested_basic() {
         // ## Arrange ##
         UrlChain urlChain = new UrlChain("{}/{}");
@@ -359,6 +386,10 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
 
     @RestfulAction(hyphenate = "mockballet-dancers")
     private static class MockballetDancersAction { // simple hyphenate
+    }
+
+    @RestfulAction(hyphenate = "a-dancers")
+    private static class MockballetADancersAction { // one character hyphenate
     }
 
     @RestfulAction(hyphenate = { "mockballet-dancers", "favorite-studios" })

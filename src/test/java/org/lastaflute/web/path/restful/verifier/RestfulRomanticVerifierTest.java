@@ -59,6 +59,15 @@ public class RestfulRomanticVerifierTest extends PlainTestCase {
             });
         }
         {
+            Class<?> actionType = MockBalletADancersAction.class;
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "a-dancers" });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-a-dancers" });
+            verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "mock-ballet-a-dancers" });
+            assertException(ExecuteMethodIllegalDefinitionException.class, () -> {
+                verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-adancers" });
+            });
+        }
+        {
             Class<?> actionType = MockBalletDancersGreatestFavoriteStudiosAction.class;
             verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "ballet-dancers", "greatest-favorite-studios" });
             verifier.doVerifyRestfulHyphenateLinkage(actionType, new String[] { "mock-ballet", "greatest-favorite-studios" });
@@ -96,6 +105,10 @@ public class RestfulRomanticVerifierTest extends PlainTestCase {
 
     @RestfulAction(hyphenate = "dummy-dummy")
     private static class MockBalletDancersAction {
+    }
+
+    @RestfulAction(hyphenate = "dummy-dummy")
+    private static class MockBalletADancersAction {
     }
 
     @RestfulAction(hyphenate = "dummy-dummy")
