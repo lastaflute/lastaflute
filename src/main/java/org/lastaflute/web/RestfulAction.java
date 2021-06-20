@@ -43,6 +43,14 @@ public @interface RestfulAction {
      * <span style="color: #3F7E5E">// e.g. /ballet-dancers/1/favorite-studios/</span>
      * <span style="color: #3F7E5E">//  ballet.dancers.favorite.studios.BalletDancersFavoriteStudiosAction</span>
      * &#064;RestfulAction(hyphenate={"ballet-dancers", "favorite-studios"})
+     * 
+     * <span style="color: #3F7E5E">// e.g. /ballet-dancers/1/favorite-ballet-dancers/</span>
+     * <span style="color: #3F7E5E">//  ballet.dancers.favorite.ballet.dancers.BalletDancersFavoriteBalletDancersAction</span>
+     * &#064;RestfulAction(hyphenate={"ballet-dancers", "favorite-ballet-dancers"})
+     * 
+     * <span style="color: #3F7E5E">// e.g. /a-dancers/1/b-dancers/</span>
+     * <span style="color: #3F7E5E">//  a.dancers.b.dancers.ADancersBDancersAction</span>
+     * &#064;RestfulAction(hyphenate={"a-dancers", "b-dancers"})
      * </pre>
      * 
      * <p>Cannot set e.g. "sea", "-sea", "sea-", "sea--land", "sea/land", "Sea-Land", "sea$land-piari", "sea_land-piari".</p>
