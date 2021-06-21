@@ -29,6 +29,7 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.di.core.LaContainer;
 import org.lastaflute.di.naming.NamingConvention;
+import org.lastaflute.di.util.LdiSrl;
 import org.lastaflute.di.util.LdiStringUtil;
 import org.lastaflute.web.UrlChain;
 import org.lastaflute.web.direction.FwWebDirection;
@@ -398,7 +399,9 @@ public class ActionPathResolver {
     }
 
     protected String decamelize(String simpleName, String delimiter) {
-        return Srl.decamelize(simpleName, delimiter).toLowerCase(); // seaLand => SEA/LAND => sea/land
+        // Srl.decamelize() at DBFlute old version has rare-case bug e.g. FooDName => FOOD_NAME (hope FOO_D_NAME)
+        // so copy fixed logic to Lasta Di' one and use it here not to depend on DBFlute version 
+        return LdiSrl.decamelize(simpleName, delimiter).toLowerCase(); // seaLand => SEA/LAND => sea/land
     }
 
     // -----------------------------------------------------

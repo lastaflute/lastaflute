@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
+import org.lastaflute.di.util.LdiSrl;
 import org.lastaflute.web.RestfulAction;
 
 /**
@@ -55,8 +56,10 @@ public class RestfulComponentAnalyzer {
     }
 
     public String extractActionBusinessSnakeName(Class<?> actionType) { // lower case e.g. ballet_dancers if BalletDancersAction
+        // Srl.decamelize() at DBFlute old version has rare-case bug e.g. FooDName => FOOD_NAME (hope FOO_D_NAME)
+        // so copy fixed logic to Lasta Di' one and use it here not to depend on DBFlute version 
         final String businessPartName = Srl.substringLastFront(actionType.getSimpleName(), "Action");
-        return Srl.decamelize(businessPartName).toLowerCase();
+        return LdiSrl.decamelize(businessPartName).toLowerCase();
     }
 
     public List<String> extractActionBusinessElementList(Class<?> actionType) { // e.g. [ballet, dancers] if BalletDancersAction
