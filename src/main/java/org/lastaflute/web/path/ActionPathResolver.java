@@ -384,7 +384,8 @@ public class ActionPathResolver {
 
     public String resolveActionPath(Class<?> actionType, UrlReverseOption option) {
         final String simpleActionName = toSimpleActionName(actionType, option); // productList (from ProductListAction.class)
-        return URL_DELIMITER + decamelize(simpleActionName, URL_DELIMITER) + URL_DELIMITER; // e.g. '/product/list/'
+        final String pureActionPath = URL_DELIMITER + decamelize(simpleActionName, URL_DELIMITER) + URL_DELIMITER; // e.g. '/product/list/'
+        return resolveRootAction(actionType, option, pureActionPath); // e.g. '/' (if rootAction)
     }
 
     protected String toSimpleActionName(Class<?> actionType, UrlReverseOption option) {
@@ -402,6 +403,14 @@ public class ActionPathResolver {
         // Srl.decamelize() at DBFlute old version has rare-case bug e.g. FooDName => FOOD_NAME (hope FOO_D_NAME)
         // so copy fixed logic to Lasta Di' one and use it here not to depend on DBFlute version 
         return LdiSrl.decamelize(simpleName, delimiter).toLowerCase(); // seaLand => SEA/LAND => sea/land
+    }
+
+    public String resolveRootAction(Class<?> actionType, UrlReverseOption option, String pureActionPath) {
+        if ("RootAction".equals(actionType.getSimpleName()) && "/root/".equals(pureActionPath)) {
+            return "/"; // since 1.2.5 (for e.g. SwaggerDiff, originally it should be slash)
+        } else {
+            return pureActionPath;
+        }
     }
 
     // -----------------------------------------------------
