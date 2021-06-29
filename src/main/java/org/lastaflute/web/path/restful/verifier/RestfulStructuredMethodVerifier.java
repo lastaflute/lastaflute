@@ -86,14 +86,14 @@ public class RestfulStructuredMethodVerifier {
         this.executeList = executeList;
 
         this.resourceNameList = restfulComponentAnalyzer.deriveResourceNameListByActionType(actionType);
-        this.possibleGetExecuteList = searchByHttpMethod(executeList, "get");
-        this.possibleQueryableExecuteList = searchByHttpMethod(executeList, "get", "delete");
-        this.possibleBodyableExecuteList = searchByHttpMethod(executeList, "post", "put", "patch");
-        this.possibleFullParameterExecuteList = searchByHttpMethod(executeList, "get", "put", "patch", "delete");
-        this.possibleShortParameterExecuteList = searchByHttpMethod(executeList, "get", "post");
+        this.possibleGetExecuteList = searchIndexByHttpMethod(executeList, "get");
+        this.possibleQueryableExecuteList = searchIndexByHttpMethod(executeList, "get", "delete");
+        this.possibleBodyableExecuteList = searchIndexByHttpMethod(executeList, "post", "put", "patch");
+        this.possibleFullParameterExecuteList = searchIndexByHttpMethod(executeList, "get", "put", "patch", "delete");
+        this.possibleShortParameterExecuteList = searchIndexByHttpMethod(executeList, "get", "post");
     }
 
-    protected List<ActionExecute> searchByHttpMethod(List<ActionExecute> executeList, String... httpMethod) {
+    protected List<ActionExecute> searchIndexByHttpMethod(List<ActionExecute> executeList, String... httpMethod) {
         return executeList.stream()
                 .filter(ex -> ex.getRestfulHttpMethod().isPresent()) // always true here, but just in case
                 .filter(ex -> Srl.equalsPlain(ex.getRestfulHttpMethod().get(), httpMethod))
@@ -348,31 +348,126 @@ public class RestfulStructuredMethodVerifier {
     //                                          Event Suffix
     //                                          ------------
     protected void analyzeEventSuffixParameterExecute() {
+        // #for_now jflute wants to be independent from starndard logic so hard coding style here (2021/06/29)
         final List<ActionExecute> eventSuffixList = executeList.stream()
                 .filter(ex -> ex.getRestfulHttpMethod().isPresent()) // basically true here, already checked, just in case
                 .filter(ex -> !ex.isIndexMethod()) // having event suffix
                 .collect(Collectors.toList());
         for (ActionExecute eventSuffixExecute : eventSuffixList) {
             final String httpMethod = eventSuffixExecute.getRestfulHttpMethod().get();
-            final String indexName = httpMethod + "$index";
+            final int eventSuffixParamCount = countPathParameter(eventSuffixExecute);
 
+            // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
             // parameters of index execute method are already checked here
             // so it treats it as expected definition
-            final List<ActionExecute> indexList =
-                    executeList.stream().filter(ex -> indexName.equals(ex.getExecuteMethod().getName())).collect(Collectors.toList());
+            // _/_/_/_/_/_/_/_/_/_/
 
-            final int eventSuffixParamCount = countPathParameter(eventSuffixExecute);
-            final Optional<ActionExecute> optIndex = indexList.stream().filter(ex -> {
-                return eventSuffixParamCount == countPathParameter(ex);
-            }).findAny(); // basically zero or one here, because of RESTful definition logic
-            if (!optIndex.isPresent()) { // index whose parameter count is same is not found
-                throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
-            }
-            final ActionExecute indexExecute = optIndex.get();
-            if (!matchesPathParameterType(indexExecute, eventSuffixExecute)) {
-                throwRestfulStructureDifferentPathParameterTypeException(indexExecute, eventSuffixExecute);
+            if (Srl.equalsPlain(httpMethod, "get")) {
+                if (listGetExecute.isPresent() || singleGetExecute.isPresent()) { // either get$index() exists
+                    if (listGetExecute.filter(listGet -> eventSuffixParamCount == countPathParameter(listGet)).isPresent()) {
+                        final ActionExecute sameParamCountGet = listGetExecute.get();
+                        if (!matchesPathParameterType(sameParamCountGet, eventSuffixExecute)) {
+                            throwRestfulStructureDifferentPathParameterTypeException(sameParamCountGet, eventSuffixExecute);
+                        }
+                    } else if (singleGetExecute.filter(singleGet -> eventSuffixParamCount == countPathParameter(singleGet)).isPresent()) {
+                        final ActionExecute sameParamCountGet = singleGetExecute.get();
+                        if (!matchesPathParameterType(sameParamCountGet, eventSuffixExecute)) {
+                            throwRestfulStructureDifferentPathParameterTypeException(sameParamCountGet, eventSuffixExecute);
+                        }
+                    } else { // same parameter-count GET does not exist
+                        if (listGetExecute.isPresent() && !singleGetExecute.isPresent()) { // means it can be treated as single
+                            if (eventSuffixParamCount != resourceNameList.size()) { // should be full parameter but...
+                                throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+                            }
+                            assertEventSuffixFullParameterTypeMatchesWithUpdateMethod(eventSuffixExecute);
+                        } else if (!listGetExecute.isPresent() && singleGetExecute.isPresent()) { // means it can be treated as list
+                            if (eventSuffixParamCount != resourceNameList.size() - 1) { // should be short parameter but...
+                                throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+                            }
+                            assertEventSuffixShortParameterTypeMatchesWithUpdateMethod(eventSuffixExecute);
+                        } else { // both exist here and but different parameter-count with both
+                            throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+                        }
+                    }
+                } else { // both get$index() not defined, so use update methods
+                    if (searchIndexByHttpMethod(executeList, "put", "patch", "delete").stream()
+                            .filter(ex -> eventSuffixParamCount == countPathParameter(ex))
+                            .findAny()
+                            .isPresent()) { // the event-suffix GET can be treated as Single GET
+                        if (eventSuffixParamCount != resourceNameList.size()) {
+                            throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+                        }
+                        assertEventSuffixFullParameterTypeMatchesWithUpdateMethod(eventSuffixExecute);
+                    } else if (searchIndexByHttpMethod(executeList, "post").stream()
+                            .filter(ex -> eventSuffixParamCount == countPathParameter(ex))
+                            .findAny()
+                            .isPresent()) { // the event-suffix GET can be treated as List GET
+                        if (eventSuffixParamCount != resourceNameList.size() - 1) {
+                            throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+                        }
+                        assertEventSuffixShortParameterTypeMatchesWithUpdateMethod(eventSuffixExecute);
+                    } else { // unfortunately no standard method, but unknown event-suffix GET
+                        // minimum check here, parameter count should be full or short
+                        if (eventSuffixParamCount != resourceNameList.size() && eventSuffixParamCount != resourceNameList.size() - 1) {
+                            throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+                        }
+                        // so cannot assert parameter types here
+                    }
+                }
+            } else { // update method e.g. POST, PUT (none GET)
+                final String myIndexName = httpMethod + "$index";
+                final List<ActionExecute> myIndexList =
+                        executeList.stream().filter(ex -> myIndexName.equals(ex.getExecuteMethod().getName())).collect(Collectors.toList());
+                if (!myIndexList.isEmpty()) { // my HTTP Method index exists, compare with it
+                    final Optional<ActionExecute> optMyIndex = myIndexList.stream().filter(ex -> {
+                        return eventSuffixParamCount == countPathParameter(ex);
+                    }).findAny(); // basically zero or one here, because of RESTful definition logic
+                    if (!optMyIndex.isPresent()) { // same HTTP Method index whose parameter count is same is not found
+                        throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+                    }
+                    final ActionExecute myIndexExecute = optMyIndex.get();
+                    if (!matchesPathParameterType(myIndexExecute, eventSuffixExecute)) {
+                        throwRestfulStructureDifferentPathParameterTypeException(myIndexExecute, eventSuffixExecute);
+                    }
+                } else { // no my HTTP Method index, search other standard method
+                    if (Srl.equalsPlain(httpMethod, "put", "patch", "delete")) { // full parameter
+                        if (eventSuffixParamCount != resourceNameList.size()) {
+                            throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+                        }
+                        assertEventSuffixFullParameterTypeMatchesWithUpdateMethod(eventSuffixExecute);
+                    } else if (Srl.equalsPlain(httpMethod, "post")) { // short parameter
+                        if (eventSuffixParamCount != resourceNameList.size() - 1) {
+                            throwRestfulStructureDifferentPathParameterCountException("EventSuffix Method", eventSuffixExecute);
+                        }
+                        assertEventSuffixShortParameterTypeMatchesWithUpdateMethod(eventSuffixExecute);
+                    } else { // unsupported HTTP method
+                        // no check here (checked by other process)
+                    }
+                }
             }
         }
+    }
+
+    protected void assertEventSuffixFullParameterTypeMatchesWithUpdateMethod(ActionExecute eventSuffixExecute) {
+        possibleFullParameterExecuteList.stream()
+                .filter(ex -> !"get".equals(ex.getRestfulHttpMethod().get()))
+                .findAny()
+                .ifPresent(fullParamExecute -> {
+                    if (!matchesPathParameterType(fullParamExecute, eventSuffixExecute)) {
+                        throwRestfulStructureDifferentPathParameterTypeException(fullParamExecute, eventSuffixExecute);
+                    }
+                });
+    }
+
+    protected void assertEventSuffixShortParameterTypeMatchesWithUpdateMethod(ActionExecute eventSuffixExecute) {
+        possibleShortParameterExecuteList.stream()
+                .filter(ex -> !"get".equals(ex.getRestfulHttpMethod().get()))
+                .findAny()
+                .ifPresent(shortParamExecute -> {
+                    if (!matchesPathParameterType(shortParamExecute, eventSuffixExecute)) {
+                        throwRestfulStructureDifferentPathParameterTypeException(shortParamExecute, eventSuffixExecute);
+                    }
+                });
     }
 
     // -----------------------------------------------------
@@ -413,8 +508,8 @@ public class RestfulStructuredMethodVerifier {
         br.addNotice("Different path parameter count of RESTful action method.");
         br.addItem("Advice");
         br.addElement("Make sure your parameter definition of RESTful action methods.");
-        br.addElement(" o Full parameter method: Single GET, PUT, PATCH e.g. /products/1/");
-        br.addElement(" o Short parameter method: List GET, DELETE e.g. /products/");
+        br.addElement(" o Full parameter method: Single GET, PUT, PATCH, DELETE e.g. /products/1/");
+        br.addElement(" o Short parameter method: List GET, POST e.g. /products/");
         br.addElement("");
         br.addElement("For example: ProductsAction /products/[1]/");
         br.addElement("  (x):");
