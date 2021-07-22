@@ -38,7 +38,7 @@ public class PairBasedRestfulRouter extends AbstractBasedRestfulRouter {
     protected boolean doDetermineRestfulPath(UrlMappingResource resource, List<String> elementList) {
         int index = 0;
         for (String element : elementList) {
-            if (Srl.isNumberHarfAll(element)) { // e.g. 1
+            if (isIdElement(element)) { // e.g. 1
                 if (index % 2 == 0) { // first, third... e.g. /[1]/products/, /products/1/[2]/purchases
                     return false;
                 }
@@ -47,6 +47,10 @@ public class PairBasedRestfulRouter extends AbstractBasedRestfulRouter {
             ++index;
         }
         return true;
+    }
+
+    protected boolean isIdElement(String element) { // used by determination only
+        return Srl.isNumberHarfAll(element);
     }
 
     // -----------------------------------------------------
