@@ -37,18 +37,18 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
     @Override
     protected boolean doDetermineRestfulPath(UrlMappingResource resource, List<String> elementList) {
         int index = 0;
-        boolean numberAppeared = false;
+        boolean idAppeared = false;
         for (String element : elementList) {
-            if (Srl.isNumberHarfAll(element)) { // e.g. 1
+            if (isIdElement(element)) { // e.g. 1
                 if (index % 2 == 0) { // first, third... e.g. /[1]/products/, /products/1/[2]/purchases
                     return false;
                 }
-                numberAppeared = true;
+                idAppeared = true;
             } else { // e.g. products
                 if (index % 2 == 1) { // second, fourth... e.g. /products/[purchases]/
                     // allows e.g. /products/1/purchases/[sea]
                     // one crossed number parameter is enough to judge RESTful
-                    if (!numberAppeared) {
+                    if (!idAppeared) {
                         return false;
                     }
                 }
@@ -67,23 +67,23 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
         //  /products/1/purchases/
         //  /products/1/purchases/2/
         //  /products/1/purchases/2/payments/
-        final List<String> stringList = new ArrayList<>();
-        final List<String> numberList = new ArrayList<>();
+        final List<String> resourceList = new ArrayList<>();
+        final List<String> idList = new ArrayList<>();
         final List<String> elementList = splitPath(requestPath);
         for (String element : elementList) {
-            if (Srl.isNumberHarfAll(element)) {
-                numberList.add(element);
+            if (isIdElement(element)) {
+                idList.add(element);
             } else {
                 if (element.contains("-")) { // e.g. ballet-dancers
-                    stringList.addAll(splitResource(element, "-")); // e.g. /ballet/dancers/
+                    resourceList.addAll(splitResource(element, "-")); // e.g. /ballet/dancers/
                 } else {
-                    stringList.add(element);
+                    resourceList.add(element);
                 }
             }
         }
         final List<String> arrangedList = new ArrayList<>();
-        arrangedList.addAll(stringList); // e.g. /products/purchases/
-        arrangedList.addAll(numberList); // e.g. /products/purchases/1/2/
+        arrangedList.addAll(resourceList); // e.g. /products/purchases/
+        arrangedList.addAll(idList); // e.g. /products/purchases/1/2/
         return buildPath(arrangedList);
     }
 
@@ -92,6 +92,13 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
     //                                                                         ===========
     @Override
     protected boolean isParameterInRearPart(Class<?> actionType, LinkedList<String> rearElementList, String first) {
-        return Srl.isNumberHarfAll(first) || "{}".equals(first);
+        return isIdElement(first) || "{}".equals(first);
+    }
+
+    // ===================================================================================
+    //                                                                          ID Element
+    //                                                                          ==========
+    protected boolean isIdElement(String element) { // you can override
+        return Srl.isNumberHarfAll(element);
     }
 }
