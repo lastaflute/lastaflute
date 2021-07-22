@@ -22,7 +22,6 @@ import java.util.List;
 import org.dbflute.util.Srl;
 import org.lastaflute.web.path.UrlMappingResource;
 
-// #for_now jflute no test for now, use numeric-based if you can (2021/06/18)
 /**
  * @author jflute
  * @since 1.2.1 (2021/05/20)
