@@ -41,6 +41,7 @@ public class InvertibleCryptographer {
     public static final String ALGORITHM_BLOWFISH = "Blowfish";
     public static final String ALGORITHM_DES = "DES";
     public static final String ALGORITHM_RSA = "RSA";
+    public static final String ALGORITHM_UNSUPPORTED = "UNSUPPORTED";
     public static final String ENCODING_UTF8 = "UTF-8";
 
     // ===================================================================================
@@ -85,6 +86,25 @@ public class InvertibleCryptographer {
 
     public static InvertibleCryptographer createRsaCipher(String skey) {
         return new InvertibleCryptographer(ALGORITHM_RSA, skey, ENCODING_UTF8);
+    }
+
+    public static InvertibleCryptographer createUnsupportedCipher(String appMessage) {
+        return new InvertibleCryptographer(ALGORITHM_UNSUPPORTED, "dummy", ENCODING_UTF8) {
+            @Override
+            protected synchronized void initialize() {
+                final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+                br.addNotice("Unsupported cipher so you cannot call it now.");
+                br.addItem("Advice");
+                br.addElement("The cipher is not unsupported as your settings.");
+                br.addElement("If you need, set up your cipher at FwAssistantDirector.");
+                br.addElement("The director is located at...");
+                br.addElement(" e.g. [your-service-package].mylasta.direction.[App]FwAssistantirector");
+                br.addItem("Application Message");
+                br.addElement(appMessage);
+                final String msg = br.buildExceptionMessage();
+                throw new UnsupportedOperationException(msg);
+            }
+        };
     }
 
     // ===================================================================================

@@ -35,4 +35,14 @@ public class InvertibleCryptographerTest extends PlainTestCase {
         log(encrypted, decrypted);
         assertEquals("abc", decrypted);
     }
+
+    public void test_UNSUPPORTED() throws Exception {
+        // ## Arrange ##
+        InvertibleCryptographer cipher = InvertibleCryptographer.createUnsupportedCipher("sea");
+
+        // ## Act ##
+        // ## Assert ##
+        assertException(UnsupportedOperationException.class, () -> cipher.encrypt("hangar"));
+        assertException(UnsupportedOperationException.class, () -> cipher.decrypt("hangar"));
+    }
 }
