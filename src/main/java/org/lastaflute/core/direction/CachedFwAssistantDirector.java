@@ -72,6 +72,9 @@ public abstract class CachedFwAssistantDirector implements FwAssistantDirector {
             if (coreDirection != null) {
                 return coreDirection;
             }
+            // #for_now jflute may be recursively called, originally setting instance variable should be first (2021/07/30)
+            // but it is possible to initialize managers by harf direction so keep compatible and keep safety
+            // (actually example mail creator has recursive call...fixed it)
             final FwCoreDirection direction = createCoreDirection();
             prepareCoreDirection(direction);
             coreDirection = direction;
