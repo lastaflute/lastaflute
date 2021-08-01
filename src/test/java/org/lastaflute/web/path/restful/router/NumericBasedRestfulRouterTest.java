@@ -196,9 +196,42 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     // -----------------------------------------------------
+    //                                            URL Prefix
+    //                                            ----------
+    public void test_toRestfulMappingPath_urlPrefix_basic() {
+        // ## Arrange ##
+        String makingMappingPath = "/products/";
+        String requestPath = "/api/products/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath_filtering(makingMappingPath, requestPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals(makingMappingPath, filter.apply(makingMappingPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    public void test_toRestfulMappingPath_urlPrefix_nested() {
+        // ## Arrange ##
+        String makingMappingPath = "/products/1/purchases/";
+        String requestPath = "/api/products/1/purchases/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath_filtering(makingMappingPath, requestPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals("/products/purchases/1/", filter.apply(makingMappingPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    // -----------------------------------------------------
     //                                           Non Restful
     //                                           -----------
-    public void test_toRestfulMappingPath_levelx_root() {
+    public void test_toRestfulMappingPath_nonRestful_root() {
         // ## Arrange ##
         String requestPath = "/";
 
@@ -211,7 +244,7 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         assertFalse(optOption.isPresent());
     }
 
-    public void test_toRestfulMappingPath_levelx_various() {
+    public void test_toRestfulMappingPath_nonRestful_various() {
         // ## Arrange ##
         String requestPath = "/sea/land/piari/";
 
@@ -230,6 +263,12 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     private UrlMappingOption toRestfulMappingPath(String requestPath) {
         NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
         UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
+        return router.toRestfulMappingPath(resource).get();
+    }
+
+    private UrlMappingOption toRestfulMappingPath_filtering(String makingMappingPath, String requestPath) {
+        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
+        UrlMappingResource resource = new UrlMappingResource(makingMappingPath, requestPath);
         return router.toRestfulMappingPath(resource).get();
     }
 
