@@ -15,6 +15,7 @@
  */
 package org.lastaflute.web.path.restful.router;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.unit.UnitLastaFluteTestCase;
 import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.UrlChain;
@@ -192,6 +193,35 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
             assertEquals("/ballet/dancers/greatest/favorite/ballet/dancers/studios/1/2/3/4/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    // -----------------------------------------------------
+    //                                           Non Restful
+    //                                           -----------
+    public void test_toRestfulMappingPath_levelx_root() {
+        // ## Arrange ##
+        String requestPath = "/";
+
+        // ## Act ##
+        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
+        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
+        OptionalThing<UrlMappingOption> optOption = router.toRestfulMappingPath(resource);
+
+        // ## Assert ##
+        assertFalse(optOption.isPresent());
+    }
+
+    public void test_toRestfulMappingPath_levelx_various() {
+        // ## Arrange ##
+        String requestPath = "/sea/land/piari/";
+
+        // ## Act ##
+        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
+        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
+        OptionalThing<UrlMappingOption> optOption = router.toRestfulMappingPath(resource);
+
+        // ## Assert ##
+        assertFalse(optOption.isPresent());
     }
 
     // -----------------------------------------------------
