@@ -21,21 +21,12 @@ package org.lastaflute.web.path;
  */
 public class UrlMappingResource {
 
-    protected final String makingMappingPath; // not null, e.g. /product/list/ (may be filtered before)
     protected final String requestPath; // not null, e.g. /product/list/ (from HTTP client)
+    protected final String workingMappingPath; // not null, e.g. /product/list/ (may be filtered before)
 
-    public UrlMappingResource(String makingMappingPath, String requestPath) {
-        this.makingMappingPath = makingMappingPath;
+    public UrlMappingResource(String requestPath, String workingMappingPath) {
         this.requestPath = requestPath;
-    }
-
-    /**
-     * Get the currently-making mapping path, which may be already filtered just now. <br>
-     * Basically use this to determine new filter instead of requestPath. 
-     * @return the path string for mapping, may be same as requestPath if no filter (NotNull)
-     */
-    public String getMakingMappingPath() {
-        return makingMappingPath;
+        this.workingMappingPath = workingMappingPath;
     }
 
     /**
@@ -43,7 +34,16 @@ public class UrlMappingResource {
      * Basically use makingMappingPath to determine new filter instead of this. 
      * @return The path string requested from HTTP client. (NotNull)
      */
-    public String getRequestPath() {
+    public String getPureRequestPath() {
         return requestPath;
+    }
+
+    /**
+     * Get the currently-working mapping path, which may be already filtered just now. <br>
+     * Basically use this to determine new filter instead of requestPath. 
+     * @return the path string for mapping, may be same as requestPath if no filter (NotNull)
+     */
+    public String getWorkingMappingPath() {
+        return workingMappingPath;
     }
 }

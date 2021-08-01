@@ -118,18 +118,18 @@ public class ActionPathResolver {
     // -----------------------------------------------------
     //                                 Customization Process
     //                                 ---------------------
-    protected MappingPathResource customizeActionMapping(String requestPath) {
-        final String simplyFiltered = simplyCustomizeActionMappingRequestPath(requestPath);
-        return deeplyCustomizeUrlMapping(requestPath, simplyFiltered);
+    protected MappingPathResource customizeActionMapping(String pureRequestPath) {
+        final String simplyFiltered = simplyCustomizeActionMappingRequestPath(pureRequestPath);
+        return deeplyCustomizeUrlMapping(pureRequestPath, simplyFiltered);
     }
 
-    protected String simplyCustomizeActionMappingRequestPath(String requestPath) {
-        final String customized = actionAdjustmentProvider.customizeActionMappingRequestPath(requestPath);
-        return customized != null ? customized : requestPath;
+    protected String simplyCustomizeActionMappingRequestPath(String pureRequestPath) {
+        final String customized = actionAdjustmentProvider.customizeActionMappingRequestPath(pureRequestPath);
+        return customized != null ? customized : pureRequestPath;
     }
 
-    protected MappingPathResource deeplyCustomizeUrlMapping(String requestPath, String simplyFiltered) {
-        final UrlMappingResource urlMappingResource = createUrlMappingResource(requestPath, simplyFiltered);
+    protected MappingPathResource deeplyCustomizeUrlMapping(String pureRequestPath, String simplyFiltered) {
+        final UrlMappingResource urlMappingResource = createUrlMappingResource(pureRequestPath, simplyFiltered);
         final UrlMappingOption option = actionAdjustmentProvider.customizeActionUrlMapping(urlMappingResource);
         final String mappingPath;
         final String actionNameSuffix;
@@ -141,7 +141,7 @@ public class ActionPathResolver {
             actionNameSuffix = null;
         }
         final boolean restfulMapping = option != null && option.isRestfulMapping();
-        return createaMappingPathResource(requestPath, mappingPath, actionNameSuffix, restfulMapping);
+        return createaMappingPathResource(pureRequestPath, mappingPath, actionNameSuffix, restfulMapping);
     }
 
     protected UrlMappingResource createUrlMappingResource(String requestPath, String simplyFiltered) {

@@ -200,30 +200,30 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     //                                            ----------
     public void test_toRestfulMappingPath_urlPrefix_basic() {
         // ## Arrange ##
-        String makingMappingPath = "/products/";
-        String requestPath = "/api/products/";
+        String pureRequestPath = "/api/products/";
+        String workingMappingPath = "/products/";
 
         // ## Act ##
-        UrlMappingOption mappingOption = toRestfulMappingPath_filtering(makingMappingPath, requestPath);
+        UrlMappingOption mappingOption = toRestfulMappingPath_filtering(pureRequestPath, workingMappingPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals(makingMappingPath, filter.apply(makingMappingPath));
+            assertEquals(workingMappingPath, filter.apply(workingMappingPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
 
     public void test_toRestfulMappingPath_urlPrefix_nested() {
         // ## Arrange ##
-        String makingMappingPath = "/products/1/purchases/";
-        String requestPath = "/api/products/1/purchases/";
+        String pureRequestPath = "/api/products/1/purchases/";
+        String workingMappingPath = "/products/1/purchases/";
 
         // ## Act ##
-        UrlMappingOption mappingOption = toRestfulMappingPath_filtering(makingMappingPath, requestPath);
+        UrlMappingOption mappingOption = toRestfulMappingPath_filtering(pureRequestPath, workingMappingPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/products/purchases/1/", filter.apply(makingMappingPath));
+            assertEquals("/products/purchases/1/", filter.apply(workingMappingPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
@@ -266,9 +266,9 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         return router.toRestfulMappingPath(resource).get();
     }
 
-    private UrlMappingOption toRestfulMappingPath_filtering(String makingMappingPath, String requestPath) {
+    private UrlMappingOption toRestfulMappingPath_filtering(String pureRequestPath, String makingMappingPath) {
         NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
-        UrlMappingResource resource = new UrlMappingResource(makingMappingPath, requestPath);
+        UrlMappingResource resource = new UrlMappingResource(pureRequestPath, makingMappingPath);
         return router.toRestfulMappingPath(resource).get();
     }
 

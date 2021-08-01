@@ -47,8 +47,8 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
     //                                                                         URL Mapping
     //                                                                         ===========
     public OptionalThing<UrlMappingOption> toRestfulMappingPath(UrlMappingResource resource) {
-        final String makingMappingPath = resource.getMakingMappingPath(); // may be filtered before
-        final List<String> elementList = splitPath(makingMappingPath); // only for determination
+        final String workingMappingPath = resource.getWorkingMappingPath(); // may be filtered before
+        final List<String> elementList = splitPath(workingMappingPath); // only for determination
 
         if (!determineRestfulPath(resource, elementList)) { // e.g. /, /1/products/, /products/purchases/
             return OptionalThing.empty(); // no filter
