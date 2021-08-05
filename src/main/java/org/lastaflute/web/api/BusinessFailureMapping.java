@@ -16,7 +16,7 @@
 package org.lastaflute.web.api;
 
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -35,7 +35,8 @@ public class BusinessFailureMapping<VALUE> {
      * @param oneArgLambda The callback to initialize failure map keyed by type. (NotNull)
      */
     public BusinessFailureMapping(Consumer<Map<Class<?>, VALUE>> oneArgLambda) {
-        final Map<Class<?>, VALUE> failureMap = new HashMap<Class<?>, VALUE>();
+        // ordered map for e.g. documents and swagger.json
+        final Map<Class<?>, VALUE> failureMap = new LinkedHashMap<Class<?>, VALUE>();
         oneArgLambda.accept(failureMap);
         this.failureMap = Collections.unmodifiableMap(failureMap);
     }
