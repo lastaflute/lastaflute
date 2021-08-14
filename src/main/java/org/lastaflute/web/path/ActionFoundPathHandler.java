@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,13 @@ public interface ActionFoundPathHandler {
      * This is called back when the action execution is found. <br>
      * If the paramPath is empty, the configByParam is null. <br>
      * And if the paramPath is not empty, the configByParam is not null. <br>
-     * @param requestPath The path of request. (NotNull)
+     * @param pathResource The resource path having plain requestPath and customized mappingPath. (NotNull)
      * @param actionName The component name of found action. (NotNull)
      * @param paramPath The path for parameters. (NotNull, EmptyAllowed)
      * @param methodByParam The method of action execute found by parameters. (NullAllowed: when the path of parameter is empty)
      * @return Is it handled? (true if the action was found by the path)
      * @throws Exception When the handling process throws something.
      */
-    boolean handleActionPath(String requestPath, String actionName, String paramPath, ActionExecute methodByParam) throws Exception;
+    boolean handleActionPath(MappingPathResource pathResource, String actionName, String paramPath, ActionExecute methodByParam)
+            throws Exception;
 }

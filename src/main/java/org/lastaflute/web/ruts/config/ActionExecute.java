@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,8 @@ import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternRege
 import org.lastaflute.web.ruts.config.checker.ExecuteMethodChecker;
 import org.lastaflute.web.ruts.config.routing.ActionRoutingByPathParamDeterminer;
 import org.lastaflute.web.ruts.config.routing.ActionRoutingByRequestParamDeterminer;
+import org.lastaflute.web.ruts.config.specifed.SpecifiedHttpStatus;
+import org.lastaflute.web.ruts.config.specifed.SpecifiedUrlPattern;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
@@ -59,20 +61,29 @@ public class ActionExecute implements Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // -----------------------------------------------------
+    //                                           Basic Given
+    //                                           -----------
     protected final ActionMapping actionMapping; // not null
     protected final Method executeMethod; // not null
-    protected final String mappingMethodName; // not null
+    protected final ExecuteOption executeOption; // not null, basically keep for verifier
+
+    // -----------------------------------------------------
+    //                                         Basic Derived
+    //                                         -------------
+    protected final String mappingMethodName; // not null, e.g. index (even if get$index())
     protected final OptionalThing<String> restfulHttpMethod; // not null, empty allowed
     protected final boolean indexMethod;
     protected final TransactionGenre transactionGenre; // not null
     protected final boolean suppressValidatorCallCheck;
     protected final OptionalThing<Integer> sqlExecutionCountLimit; // not null, empty allowed
+    protected final OptionalThing<SpecifiedHttpStatus> successHttpStatus; // not null, empty allowed if e.g. minus
 
     // -----------------------------------------------------
     //                                     Defined Parameter
     //                                     -----------------
     protected final ExecuteArgAnalyzer executeArgAnalyzer; // not null, keep for general use
-    protected final OptionalThing<PathParamArgs> pathParamArgs; // not null, empty allowed
+    protected final OptionalThing<PathParamArgs> pathParamArgs; // not null, empty allowed (at least has one if present)
     protected final OptionalThing<ActionFormMeta> formMeta; // not null, empty allowed
 
     // -----------------------------------------------------
@@ -102,8 +113,12 @@ public class ActionExecute implements Serializable {
      * @param executeOption The user option of action execute. (NotNull)
      */
     public ActionExecute(ActionMapping actionMapping, Method executeMethod, ExecuteOption executeOption) {
+        // basic given
         this.actionMapping = actionMapping;
         this.executeMethod = executeMethod;
+        this.executeOption = executeOption;
+
+        // basic derived
         final MethodNameAnalyzer methodNameAnalyzer = newMethodNameAnalyzer();
         this.mappingMethodName = methodNameAnalyzer.analyzeMappingMethodName(executeMethod);
         this.restfulHttpMethod = methodNameAnalyzer.analyzeRestfulHttpMethod(executeMethod);
@@ -111,24 +126,18 @@ public class ActionExecute implements Serializable {
         this.transactionGenre = chooseTransactionGenre(executeOption);
         this.suppressValidatorCallCheck = executeOption.isSuppressValidatorCallCheck();
         this.sqlExecutionCountLimit = createOptionalSqlExecutionCountLimit(executeOption);
+        this.successHttpStatus = executeOption.getSuccessHttpStatus();
 
         // defined parameter (needed in URL pattern analyzing)
         this.executeArgAnalyzer = newExecuteArgAnalyzer();
         final ExecuteArgBox executeArgBox = newExecuteArgBox();
         this.executeArgAnalyzer.analyzeExecuteArg(executeMethod, executeArgBox);
         this.formMeta = analyzeFormMeta(executeMethod, executeArgBox);
-
-        // URL pattern (using pathParamTypeList)
         final List<Class<?>> pathParamTypeList = executeArgBox.getPathParamTypeList(); // not null, empty allowed
         final Map<Integer, Class<?>> optionalGenericTypeMap = executeArgBox.getOptionalGenericTypeMap();
-        final String specifiedUrlPattern = executeOption.getSpecifiedUrlPattern(); // null allowed
-        final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
-        final UrlPatternChosenBox chosenBox =
-                urlPatternAnalyzer.choose(executeMethod, this.mappingMethodName, specifiedUrlPattern, pathParamTypeList);
-        final UrlPatternRegexpBox regexpBox =
-                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getResolvedUrlPattern(), pathParamTypeList, optionalGenericTypeMap);
-        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), pathParamTypeList);
-        this.preparedUrlPattern = newPreparedUrlPattern(chosenBox, regexpBox);
+
+        // URL pattern (using pathParamTypeList)
+        this.preparedUrlPattern = prepareUrlPattern(executeMethod, executeOption, pathParamTypeList, optionalGenericTypeMap);
 
         // defined parameter again (uses URL pattern result)
         this.pathParamArgs = preparePathParamArgs(pathParamTypeList, optionalGenericTypeMap);
@@ -139,15 +148,6 @@ public class ActionExecute implements Serializable {
         // routing determiner (should be last in constructor because of dependencies to instance variables)
         this.routingByPathParamDeterminer = createRoutingByPathParamDeterminer();
         this.routingByRequestParamDeterminer = createRoutingByRequestParamDeterminer();
-    }
-
-    protected ActionRoutingByPathParamDeterminer createRoutingByPathParamDeterminer() {
-        return new ActionRoutingByPathParamDeterminer(mappingMethodName, restfulHttpMethod, indexMethod, pathParamArgs, preparedUrlPattern,
-                () -> getRequestManager(), () -> toSimpleMethodExp());
-    }
-
-    protected ActionRoutingByRequestParamDeterminer createRoutingByRequestParamDeterminer() {
-        return new ActionRoutingByRequestParamDeterminer(mappingMethodName);
     }
 
     // -----------------------------------------------------
@@ -165,33 +165,10 @@ public class ActionExecute implements Serializable {
     //                                       SQL Count Limit
     //                                       ---------------
     protected OptionalThing<Integer> createOptionalSqlExecutionCountLimit(ExecuteOption executeOption) {
-        final int specifiedLimit = executeOption.getSqlExecutionCountLimit();
+        final int specifiedLimit = executeOption.getSqlExecutionCountLimit(); // may be minus (means no setting)
         return OptionalThing.ofNullable(specifiedLimit >= 0 ? specifiedLimit : null, () -> {
             throw new IllegalStateException("Not found the specified SQL execution count limit: " + toSimpleMethodExp());
         });
-    }
-
-    // -----------------------------------------------------
-    //                                              Analyzer
-    //                                              --------
-    protected MethodNameAnalyzer newMethodNameAnalyzer() {
-        return new MethodNameAnalyzer();
-    }
-
-    protected ExecuteArgAnalyzer newExecuteArgAnalyzer() {
-        return new ExecuteArgAnalyzer();
-    }
-
-    protected ExecuteArgBox newExecuteArgBox() {
-        return new ExecuteArgBox();
-    }
-
-    protected UrlPatternAnalyzer newUrlPatternAnalyzer() {
-        return new UrlPatternAnalyzer();
-    }
-
-    protected PreparedUrlPattern newPreparedUrlPattern(UrlPatternChosenBox chosenBox, UrlPatternRegexpBox regexpBox) {
-        return new PreparedUrlPattern(chosenBox, regexpBox);
     }
 
     // -----------------------------------------------------
@@ -253,6 +230,21 @@ public class ActionExecute implements Serializable {
     }
 
     // -----------------------------------------------------
+    //                                           URL Pattern
+    //                                           -----------
+    protected PreparedUrlPattern prepareUrlPattern(Method executeMethod, ExecuteOption executeOption, List<Class<?>> pathParamTypeList,
+            Map<Integer, Class<?>> optionalGenericTypeMap) {
+        final OptionalThing<SpecifiedUrlPattern> specifiedUrlPattern = executeOption.getSpecifiedUrlPattern();
+        final UrlPatternAnalyzer urlPatternAnalyzer = newUrlPatternAnalyzer();
+        final UrlPatternChosenBox chosenBox =
+                urlPatternAnalyzer.choose(executeMethod, this.mappingMethodName, specifiedUrlPattern, pathParamTypeList);
+        final UrlPatternRegexpBox regexpBox =
+                urlPatternAnalyzer.toRegexp(executeMethod, chosenBox.getResolvedUrlPattern(), pathParamTypeList, optionalGenericTypeMap);
+        urlPatternAnalyzer.checkUrlPatternVariableCount(executeMethod, regexpBox.getVarList(), pathParamTypeList);
+        return newPreparedUrlPattern(chosenBox, regexpBox);
+    }
+
+    // -----------------------------------------------------
     //                               URL Parameter Arguments
     //                               -----------------------
     protected OptionalThing<PathParamArgs> preparePathParamArgs(List<Class<?>> pathParamTypeList,
@@ -279,6 +271,41 @@ public class ActionExecute implements Serializable {
     //                                      ----------------
     protected void checkExecuteMethod() {
         new ExecuteMethodChecker(executeMethod, formMeta).checkAll(executeArgAnalyzer);
+    }
+
+    // -----------------------------------------------------
+    //                                    Routing Determiner
+    //                                    ------------------
+    protected ActionRoutingByPathParamDeterminer createRoutingByPathParamDeterminer() {
+        return new ActionRoutingByPathParamDeterminer(mappingMethodName, restfulHttpMethod, indexMethod, pathParamArgs, preparedUrlPattern,
+                () -> getRequestManager(), () -> toSimpleMethodExp());
+    }
+
+    protected ActionRoutingByRequestParamDeterminer createRoutingByRequestParamDeterminer() {
+        return new ActionRoutingByRequestParamDeterminer(mappingMethodName);
+    }
+
+    // -----------------------------------------------------
+    //                                              Analyzer
+    //                                              --------
+    protected MethodNameAnalyzer newMethodNameAnalyzer() {
+        return new MethodNameAnalyzer();
+    }
+
+    protected ExecuteArgAnalyzer newExecuteArgAnalyzer() {
+        return new ExecuteArgAnalyzer();
+    }
+
+    protected ExecuteArgBox newExecuteArgBox() {
+        return new ExecuteArgBox();
+    }
+
+    protected UrlPatternAnalyzer newUrlPatternAnalyzer() {
+        return new UrlPatternAnalyzer();
+    }
+
+    protected PreparedUrlPattern newPreparedUrlPattern(UrlPatternChosenBox chosenBox, UrlPatternRegexpBox regexpBox) {
+        return new PreparedUrlPattern(chosenBox, regexpBox);
     }
 
     // ===================================================================================
@@ -344,6 +371,9 @@ public class ActionExecute implements Serializable {
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
+    // -----------------------------------------------------
+    //                                           Basic Given
+    //                                           -----------
     /**
      * @return The action mapping for the execute method. (NotNull)
      */
@@ -365,6 +395,16 @@ public class ActionExecute implements Serializable {
         return executeMethod;
     }
 
+    /**
+     * @return The user option of action execute. (NotNull)
+     */
+    public ExecuteOption getExecuteOption() {
+        return executeOption;
+    }
+
+    // -----------------------------------------------------
+    //                                         Basic Derived
+    //                                         -------------
     public String getMappingMethodName() {
         return mappingMethodName;
     }
@@ -389,14 +429,18 @@ public class ActionExecute implements Serializable {
         return sqlExecutionCountLimit;
     }
 
+    public OptionalThing<SpecifiedHttpStatus> getSuccessHttpStatus() {
+        return successHttpStatus;
+    }
+
     // -----------------------------------------------------
     //                                     Defined Parameter
     //                                     -----------------
     /**
-     * @return The optional arguments of path parameter for the method. (NotNull, EmptyAllowed: when no path parameter)
+     * @return The optional arguments of path parameter for the method. (NotNull, EmptyAllowed: no parameter)
      */
     public OptionalThing<PathParamArgs> getPathParamArgs() {
-        return pathParamArgs;
+        return pathParamArgs; // at least has one if present
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,12 +114,15 @@ public class GodHandableAction implements VirtualAction {
             if (before.isDefined()) { // e.g. login required
                 return reflect(before);
             } else { // mainly here
-                return transactionalExecute(form, hook); // #to_action
+                final NextJourney successJourney = transactionalExecute(form, hook); // #to_action
+                tellSuccessStory(successJourney);
+                return successJourney;
             }
         } catch (RuntimeException e) {
             final ActionResponse monologue = tellExceptionMonologue(hook, e);
             return reflect(monologue);
         } catch (Error e) {
+            runtime.manageSeriousAbnormalError(e); // keep pure error
             redCardableAssist.translateToHotdeployErrorIfPossible(e);
             throw e;
         } finally {
@@ -132,6 +135,9 @@ public class GodHandableAction implements VirtualAction {
         return action instanceof ActionHook ? (ActionHook) action : null;
     }
 
+    // -----------------------------------------------------
+    //                                          Main Execute
+    //                                          ------------
     protected NextJourney transactionalExecute(OptionalThing<VirtualForm> form, ActionHook hook) {
         final ExecuteTransactionResult result = (ExecuteTransactionResult) stage.selectable(tx -> {
             doExecute(form, hook, tx); // #to_action
@@ -194,10 +200,20 @@ public class GodHandableAction implements VirtualAction {
     }
 
     // -----------------------------------------------------
-    //                                      Reflect Response
-    //                                      ----------------
-    protected NextJourney reflect(ActionResponse response) {
-        return reflector.reflect(response);
+    //                                         Success Story
+    //                                         -------------
+    protected void tellSuccessStory(NextJourney successJourney) {
+        final ActionResponse response = runtime.getActionResponse(); // not null here
+        if (response == null) { // no way
+            return; // but just in case
+        }
+        if (runtime.withoutFailureAndError()) { // also just in case
+            if (!response.getHttpStatus().isPresent()) { // application setting is prior
+                execute.getSuccessHttpStatus().ifPresent(httpStatus -> {
+                    response.httpStatus(httpStatus.getStatusValue());
+                });
+            }
+        }
     }
 
     // -----------------------------------------------------
@@ -214,6 +230,13 @@ public class GodHandableAction implements VirtualAction {
             final WholeShowAttribute attribute = new WholeShowAttribute(sb.toString().trim());
             requestManager.setAttribute(LastaWebKey.DBFLUTE_TRANSACTION_MEMORIES_KEY, attribute);
         }
+    }
+
+    // -----------------------------------------------------
+    //                                      Reflect Response
+    //                                      ----------------
+    protected NextJourney reflect(ActionResponse response) {
+        return reflector.reflect(response);
     }
 
     // ===================================================================================

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.di.core.LaContainer;
 import org.lastaflute.di.naming.NamingConvention;
+import org.lastaflute.di.util.LdiSrl;
 import org.lastaflute.di.util.LdiStringUtil;
 import org.lastaflute.web.UrlChain;
 import org.lastaflute.web.direction.FwWebDirection;
@@ -103,58 +104,33 @@ public class ActionPathResolver {
      * Handle the action path from the specified request path.
      * @param requestPath The request path to be analyzed. (NotNull)
      * @param handler The handler of the action path when the action is found. (NotNull)
-     * @return Is it actually handled? (false if not found)
+     * @return The result of the resolution having whether is it actually handled? (false if not found)
      * @throws Exception When the handler throws or internal process throws.
      */
-    public boolean handleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
+    public MappingResolutionResult handleActionPath(String requestPath, ActionFoundPathHandler handler) throws Exception {
         assertArgumentNotNull("requestPath", requestPath);
         assertArgumentNotNull("handler", handler);
         final MappingPathResource pathResource = customizeActionMapping(requestPath);
-        return mappingActionPath(pathResource, handler);
-    }
-
-    protected static class MappingPathResource {
-
-        protected final String requestPath; // not null, means plain path
-        protected final String mappingPath; // not null, same value as requestPath if no customization
-        protected final OptionalThing<String> actionNameSuffix; // not null, empty allowed
-
-        public MappingPathResource(String requestPath, String mappingPath, String actionNameSuffix) {
-            this.requestPath = requestPath;
-            this.mappingPath = mappingPath;
-            this.actionNameSuffix = OptionalThing.ofNullable(actionNameSuffix, () -> { // avoid several instances by getter
-                throw new IllegalStateException("Not found the actionNameSuffix.");
-            });
-        }
-
-        public String getRequestPath() {
-            return requestPath;
-        }
-
-        public String getMappingPath() {
-            return mappingPath;
-        }
-
-        public OptionalThing<String> getActionNameSuffix() {
-            return actionNameSuffix;
-        }
+        final boolean pathHandled = mappingActionPath(pathResource, handler);
+        return new MappingResolutionResult(pathResource, pathHandled);
     }
 
     // -----------------------------------------------------
     //                                 Customization Process
     //                                 ---------------------
-    protected MappingPathResource customizeActionMapping(String requestPath) {
-        final String simplyFiltered = simplyCustomizeActionMappingRequestPath(requestPath);
-        return deeplyCustomizeUrlMapping(requestPath, simplyFiltered);
+    protected MappingPathResource customizeActionMapping(String pureRequestPath) {
+        final String simplyFiltered = simplyCustomizeActionMappingRequestPath(pureRequestPath);
+        return deeplyCustomizeUrlMapping(pureRequestPath, simplyFiltered);
     }
 
-    protected String simplyCustomizeActionMappingRequestPath(String requestPath) {
-        final String customized = actionAdjustmentProvider.customizeActionMappingRequestPath(requestPath);
-        return customized != null ? customized : requestPath;
+    protected String simplyCustomizeActionMappingRequestPath(String pureRequestPath) {
+        final String customized = actionAdjustmentProvider.customizeActionMappingRequestPath(pureRequestPath);
+        return customized != null ? customized : pureRequestPath;
     }
 
-    protected MappingPathResource deeplyCustomizeUrlMapping(String requestPath, String simplyFiltered) {
-        final UrlMappingOption option = actionAdjustmentProvider.customizeActionUrlMapping(createUrlMappingResource(requestPath));
+    protected MappingPathResource deeplyCustomizeUrlMapping(String pureRequestPath, String simplyFiltered) {
+        final UrlMappingResource urlMappingResource = createUrlMappingResource(pureRequestPath, simplyFiltered);
+        final UrlMappingOption option = actionAdjustmentProvider.customizeActionUrlMapping(urlMappingResource);
         final String mappingPath;
         final String actionNameSuffix;
         if (option != null) {
@@ -164,11 +140,17 @@ public class ActionPathResolver {
             mappingPath = simplyFiltered;
             actionNameSuffix = null;
         }
-        return new MappingPathResource(requestPath, mappingPath, actionNameSuffix);
+        final boolean restfulMapping = option != null && option.isRestfulMapping();
+        return createaMappingPathResource(pureRequestPath, mappingPath, actionNameSuffix, restfulMapping);
     }
 
-    protected UrlMappingResource createUrlMappingResource(String requestPath) {
-        return new UrlMappingResource(requestPath);
+    protected UrlMappingResource createUrlMappingResource(String requestPath, String simplyFiltered) {
+        return new UrlMappingResource(requestPath, simplyFiltered);
+    }
+
+    protected MappingPathResource createaMappingPathResource(String requestPath, String mappingPath, String actionNameSuffix,
+            boolean restfulMapping) {
+        return new MappingPathResource(requestPath, mappingPath, actionNameSuffix, restfulMapping);
     }
 
     // -----------------------------------------------------
@@ -336,15 +318,14 @@ public class ActionPathResolver {
     protected boolean executeHandlerIfFound(MappingPathResource pathResource, ActionFoundPathHandler handler, String actionName,
             String paramPath) throws Exception {
         final boolean emptyParam = paramPath == null || paramPath.isEmpty();
-        final ActionExecute execByParam = !emptyParam ? findExecuteConfig(actionName, paramPath).orElse(null) : null;
+        final ActionExecute execByParam = !emptyParam ? findActionExecute(actionName, paramPath).orElse(null) : null;
         if (emptyParam || execByParam != null) { // certainly hit
-            final String requestPath = pathResource.getRequestPath(); // no mapping, plain path here (for e.g. redirect)
-            return handler.handleActionPath(requestPath, actionName, paramPath, execByParam);
+            return handler.handleActionPath(pathResource, actionName, paramPath, execByParam);
         }
         return false;
     }
 
-    protected OptionalThing<ActionExecute> findExecuteConfig(String actionName, String paramPath) {
+    protected OptionalThing<ActionExecute> findActionExecute(String actionName, String paramPath) {
         return LaActionExecuteUtil.findActionExecute(actionName, paramPath);
     }
 
@@ -380,11 +361,13 @@ public class ActionPathResolver {
         buildUrlParts(sb, chain);
         buildGetParam(sb, chain);
         buildHashOnUrl(sb, chain);
-        return sb.toString();
+        final String actionUrl = sb.toString();
+        return filterActionUrl(actionUrl, option);
     }
 
     protected UrlReverseOption customizeActionUrlReverse(Class<?> actionType, UrlChain chain) {
-        final UrlReverseOption option = actionAdjustmentProvider.customizeActionUrlReverse(createUrlReverseResource(actionType, chain));
+        final UrlReverseResource resource = createUrlReverseResource(actionType, chain);
+        final UrlReverseOption option = actionAdjustmentProvider.customizeActionUrlReverse(resource);
         return option != null ? option : EMPTY_URL_REVERSE_OPTION;
     }
 
@@ -401,7 +384,8 @@ public class ActionPathResolver {
 
     public String resolveActionPath(Class<?> actionType, UrlReverseOption option) {
         final String simpleActionName = toSimpleActionName(actionType, option); // productList (from ProductListAction.class)
-        return URL_DELIMITER + decamelize(simpleActionName, URL_DELIMITER) + URL_DELIMITER; // e.g. '/product/list/'
+        final String pureActionPath = URL_DELIMITER + decamelize(simpleActionName, URL_DELIMITER) + URL_DELIMITER; // e.g. '/product/list/'
+        return resolveRootAction(actionType, option, pureActionPath); // e.g. '/' (if rootAction)
     }
 
     protected String toSimpleActionName(Class<?> actionType, UrlReverseOption option) {
@@ -416,7 +400,17 @@ public class ActionPathResolver {
     }
 
     protected String decamelize(String simpleName, String delimiter) {
-        return Srl.decamelize(simpleName, delimiter).toLowerCase(); // seaLand => SEA/LAND => sea/land
+        // Srl.decamelize() at DBFlute old version has rare-case bug e.g. FooDName => FOOD_NAME (hope FOO_D_NAME)
+        // so copy fixed logic to Lasta Di' one and use it here not to depend on DBFlute version 
+        return LdiSrl.decamelize(simpleName, delimiter).toLowerCase(); // seaLand => SEA/LAND => sea/land
+    }
+
+    public String resolveRootAction(Class<?> actionType, UrlReverseOption option, String pureActionPath) {
+        if ("RootAction".equals(actionType.getSimpleName()) && "/root/".equals(pureActionPath)) {
+            return "/"; // since 1.2.5 (for e.g. SwaggerDiff, originally it should be slash)
+        } else {
+            return pureActionPath;
+        }
     }
 
     // -----------------------------------------------------
@@ -434,7 +428,7 @@ public class ActionPathResolver {
             }
         }
         if (existsParts) {
-            sb.delete(sb.length() - 1, sb.length()); // e.g. member/edit/3/ to member/edit/3
+            sb.delete(sb.length() - URL_DELIMITER.length(), sb.length()); // e.g. member/edit/3/ to member/edit/3
         }
     }
 
@@ -475,6 +469,13 @@ public class ActionPathResolver {
         if (hash != null) {
             sb.append("#").append(hash);
         }
+    }
+
+    // -----------------------------------------------------
+    //                                          Final Filter
+    //                                          ------------
+    protected String filterActionUrl(String actionUrl, UrlReverseOption option) {
+        return option.getActionUrlFilter().map(filter -> filter.apply(actionUrl)).orElse(actionUrl);
     }
 
     // ===================================================================================
@@ -540,15 +541,19 @@ public class ActionPathResolver {
     }
 
     // ===================================================================================
-    //                                                                    Expected Routing
-    //                                                                    ================
-    public String prepareExpectedRoutingMessage(String requestPath) { // for debug
+    //                                                                  No Routing Message
+    //                                                                  ==================
+    public String prepareNoRoutingMessage(MappingPathResource pathResource) { // for debug
+        final String requestPath = pathResource.getRequestPath();
+        final String mappingPath = pathResource.getMappingPath();
         final StringBuilder sb = new StringBuilder();
         sb.append("\n");
         sb.append("/= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = *No routing action:\n");
         sb.append("e.g. expected actions for ").append(requestPath).append("\n");
-        final MappingPathResource pathResource = customizeActionMapping(requestPath);
-        final List<String> nameList = buildExpectedRoutingActionList(pathResource.getMappingPath());
+        if (!requestPath.equals(mappingPath)) {
+            sb.append("(the request path was filtered for mapping: ").append(mappingPath).append(")\n");
+        }
+        final List<String> nameList = buildExpectedRoutingActionList(mappingPath);
         boolean exists = false;
         for (String name : nameList) {
             if (name.endsWith("@index()") && containsNotAllowedCharacterAsActionPath(requestPath)) { // e.g. /product/List/

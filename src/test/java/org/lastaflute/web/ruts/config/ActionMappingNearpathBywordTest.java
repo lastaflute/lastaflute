@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,7 +125,7 @@ public class ActionMappingNearpathBywordTest extends UnitLastaFluteTestCase {
     // ===================================================================================
     //                                                                     Second Optional
     //                                                                     ===============
-    // TODO jflute pending, after resolving near-path headache (2020/10/06)
+    // #needs_fix jflute pending, after resolving near-path headache (2020/10/06)
     //    public void test_paramPath_byword10_optional_string_for_string_to_number() {
     //        ActionMapping mapping = prepareMapping(NearpathByword10Optstr4str2numAction.class);
     //        assertExecute(mapping, index, "sea");
@@ -157,7 +157,7 @@ public class ActionMappingNearpathBywordTest extends UnitLastaFluteTestCase {
         }
     }
 
-    // TODO jflute pending, after resolving near-path headache (2020/10/06)
+    // #needs_fix jflute pending, after resolving near-path headache (2020/10/06)
     //    public void test_paramPath_byword11_optional_string_for_number_to_string() {
     //        ActionMapping mapping = prepareMapping(NearpathByword11Optstr4num2strAction.class);
     //        assertExecute(mapping, nonno, "sea"); // index before
@@ -191,7 +191,7 @@ public class ActionMappingNearpathBywordTest extends UnitLastaFluteTestCase {
         }
     }
 
-    // TODO jflute pending, after resolving near-path headache (2020/10/06)
+    // #needs_fix jflute pending, after resolving near-path headache (2020/10/06)
     //    public void test_paramPath_byword12_optional_string_on_cls_to_string() {
     //        ActionMapping mapping = prepareMapping(NearpathByword12Optstr4cls2strAction.class);
     //        assertExecute(mapping, nonno, "sea"); // index before
@@ -330,7 +330,7 @@ public class ActionMappingNearpathBywordTest extends UnitLastaFluteTestCase {
         }
     }
 
-    // TODO jflute pending, after resolving near-path headache (2020/10/06)
+    // #needs_fix jflute pending, after resolving near-path headache (2020/10/06)
     //    public void test_paramPath_byword19_optional_string_for_optional_to_string() {
     //        ActionMapping mapping = prepareMapping(NearpathByword19Optstr4optstr2strAction.class);
     //        assertExecute(mapping, index, "sea");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,4 +73,24 @@ public @interface Execute {
      * @return The integer for limit of SQL execution count in one request. (MinusAllowed: use default limit)
      */
     int sqlExecutionCountLimit() default -1;
+
+    /**
+     * The HTTP status for success story of this execute method. <br>
+     * This is ignored if returned response already has HTTP status.
+     * @return The annotation of HTTP status for success story. (NotNull)
+     */
+    HttpStatus successHttpStatus() default @HttpStatus(value = -1, desc = ""); // since 1.2.1
+
+    @interface HttpStatus {
+
+        /**
+         * @return The integer of HTTP status for success story. (MinusAllowed: use default status)
+         */
+        int value();
+
+        /**
+         * @return The string of description about HTTP status for e.g. client developer. (NotEmpty: empty allowed only if -1 value, however...)
+         */
+        String desc();
+    }
 }

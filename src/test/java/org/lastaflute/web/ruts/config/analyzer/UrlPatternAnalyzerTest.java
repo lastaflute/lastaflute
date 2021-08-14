@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,38 +26,91 @@ import org.lastaflute.web.ruts.config.analyzer.UrlPatternAnalyzer.UrlPatternChos
  */
 public class UrlPatternAnalyzerTest extends UnitLastaFluteTestCase {
 
-    public void test_pattern_basic() throws Exception {
+    // ===================================================================================
+    //                                                                       Basic Pattern
+    //                                                                       =============
+    public void test_basicPattern_basic() throws Exception {
         // ## Arrange ##
-        String pattern = "^" + UrlPatternAnalyzer.ELEMENT_BASIC_PATTERN + "$";
+        UrlPatternAnalyzer analyzer = new UrlPatternAnalyzer();
+        Pattern pattern = analyzer.buildRegexpPattern(UrlPatternAnalyzer.ELEMENT_BASIC_PATTERN);
 
         // ## Act ##
         // ## Assert ##
-        assertTrue(Pattern.compile(pattern).matcher("sea").find());
-        assertTrue(Pattern.compile(pattern).matcher("$sea").find());
-        assertFalse(Pattern.compile(pattern).matcher("/sea").find());
-        assertTrue(Pattern.compile(pattern).matcher("123").find());
-        assertFalse(Pattern.compile(pattern).matcher("/123").find());
-        assertTrue(Pattern.compile(pattern).matcher("1.3").find());
-        assertTrue(Pattern.compile(pattern).matcher("-13").find());
-        assertTrue(Pattern.compile(pattern).matcher("+13").find());
+        assertTrue(pattern.matcher("sea").find());
+        assertTrue(pattern.matcher("$sea").find());
+        assertFalse(pattern.matcher("/sea").find());
+        assertTrue(pattern.matcher("123").find());
+        assertFalse(pattern.matcher("/123").find());
+        assertTrue(pattern.matcher("1.3").find());
+        assertTrue(pattern.matcher("-13").find());
+        assertTrue(pattern.matcher("+13").find());
     }
 
-    public void test_pattern_number() throws Exception {
+    // ===================================================================================
+    //                                                                      Number Pattern
+    //                                                                      ==============
+    public void test_numberPattern_number() throws Exception {
         // ## Arrange ##
-        String pattern = "^" + UrlPatternAnalyzer.ELEMENT_NUMBER_PATTERN + "$";
+        UrlPatternAnalyzer analyzer = new UrlPatternAnalyzer();
+        Pattern pattern = analyzer.buildRegexpPattern(UrlPatternAnalyzer.ELEMENT_NUMBER_PATTERN);
 
         // ## Act ##
         // ## Assert ##
-        assertFalse(Pattern.compile(pattern).matcher("sea").find());
-        assertFalse(Pattern.compile(pattern).matcher("$sea").find());
-        assertFalse(Pattern.compile(pattern).matcher("/sea").find());
-        assertTrue(Pattern.compile(pattern).matcher("123").find());
-        assertFalse(Pattern.compile(pattern).matcher("/123").find());
-        assertTrue(Pattern.compile(pattern).matcher("1.3").find());
-        assertTrue(Pattern.compile(pattern).matcher("-13").find());
-        assertFalse(Pattern.compile(pattern).matcher("+13").find());
+        assertFalse(pattern.matcher("sea").find());
+        assertFalse(pattern.matcher("$sea").find());
+        assertFalse(pattern.matcher("/sea").find());
+        assertTrue(pattern.matcher("123").find());
+        assertFalse(pattern.matcher("/123").find());
+        assertTrue(pattern.matcher("1.3").find());
+        assertTrue(pattern.matcher("-13").find());
+        assertFalse(pattern.matcher("+13").find());
     }
 
+    public void test_numberPattern_keepCompatible() throws Exception {
+        // wrote before fixing regular expression, and expect green after fix
+        assertFalse(evaluate("sea/1/2"));
+        assertFalse(evaluate("sea/1/2/"));
+        assertFalse(evaluate("/sea/1/2"));
+        assertFalse(evaluate("/sea/1/2/"));
+        assertFalse(evaluate("1/2/sea"));
+        assertFalse(evaluate("sea/1"));
+        assertFalse(evaluate("1/sea"));
+        assertFalse(evaluate("sea"));
+        assertFalse(evaluate("/sea"));
+        assertFalse(evaluate("/sea/"));
+        assertFalse(evaluate("sea1"));
+        assertFalse(evaluate("1sea"));
+        assertFalse(evaluate("1sea1"));
+        assertFalse(evaluate("+1"));
+        assertFalse(evaluate("+1.1"));
+
+        assertTrue(evaluate("0"));
+        assertTrue(evaluate("1"));
+        assertTrue(evaluate("11111111111111111111111111"));
+        assertTrue(evaluate("-0"));
+        assertTrue(evaluate("-1"));
+        assertTrue(evaluate("-11111111111111111111111111"));
+        assertTrue(evaluate("012"));
+        assertTrue(evaluate("123"));
+        assertTrue(evaluate("1.23"));
+        assertTrue(evaluate("1.23"));
+        assertTrue(evaluate("12.3"));
+        assertTrue(evaluate("12222222222222222222.333333333333333333333333"));
+        assertTrue(evaluate(".123"));
+        assertTrue(evaluate("123."));
+        assertTrue(evaluate(".123."));
+        assertTrue(evaluate("1.1.1")); // ? but compatible
+    }
+
+    private boolean evaluate(String regex) {
+        UrlPatternAnalyzer analyzer = new UrlPatternAnalyzer();
+        Pattern pattern = analyzer.buildRegexpPattern(UrlPatternAnalyzer.ELEMENT_NUMBER_PATTERN);
+        return pattern.matcher(regex).find();
+    }
+
+    // ===================================================================================
+    //                                                                       Method Prefix
+    //                                                                       =============
     public void test_adjustUrlPatternMethodPrefix_methodKeyword_twoWord() throws Exception {
         // ## Arrange ##
         UrlPatternAnalyzer analyzer = new UrlPatternAnalyzer();

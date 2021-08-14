@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package org.lastaflute.web.api;
 
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -35,7 +35,8 @@ public class BusinessFailureMapping<VALUE> {
      * @param oneArgLambda The callback to initialize failure map keyed by type. (NotNull)
      */
     public BusinessFailureMapping(Consumer<Map<Class<?>, VALUE>> oneArgLambda) {
-        final Map<Class<?>, VALUE> failureMap = new HashMap<Class<?>, VALUE>();
+        // ordered map for e.g. documents and swagger.json
+        final Map<Class<?>, VALUE> failureMap = new LinkedHashMap<Class<?>, VALUE>();
         oneArgLambda.accept(failureMap);
         this.failureMap = Collections.unmodifiableMap(failureMap);
     }
@@ -56,5 +57,9 @@ public class BusinessFailureMapping<VALUE> {
                 throw new IllegalStateException("Not found the exception type in the map: " + failureMap.keySet());
             });
         }
+    }
+
+    public Map<Class<?>, VALUE> getFailureMap() { // read only
+        return Collections.unmodifiableMap(failureMap);
     }
 }

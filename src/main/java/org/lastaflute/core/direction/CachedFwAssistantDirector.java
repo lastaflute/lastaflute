@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,9 @@ public abstract class CachedFwAssistantDirector implements FwAssistantDirector {
             if (coreDirection != null) {
                 return coreDirection;
             }
+            // #for_now jflute may be recursively called, originally setting instance variable should be first (2021/07/30)
+            // but it is possible to initialize managers by harf direction so keep compatible and keep safety
+            // (actually example mail creator has recursive call...fixed it)
             final FwCoreDirection direction = createCoreDirection();
             prepareCoreDirection(direction);
             coreDirection = direction;

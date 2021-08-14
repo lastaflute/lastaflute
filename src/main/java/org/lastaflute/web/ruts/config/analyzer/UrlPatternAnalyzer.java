@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import org.lastaflute.web.exception.UrlPatternEndBraceNotFoundException;
 import org.lastaflute.web.exception.UrlPatternFrontOrRearSlashUnneededException;
 import org.lastaflute.web.exception.UrlPatternMethodKeywordWithOptionalArgException;
 import org.lastaflute.web.exception.UrlPatternNonsenseSettingException;
+import org.lastaflute.web.ruts.config.specifed.SpecifiedUrlPattern;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 
 /**
@@ -43,7 +44,32 @@ public class UrlPatternAnalyzer {
     //                                                                          Definition
     //                                                                          ==========
     public static final String ELEMENT_BASIC_PATTERN = "([^/]+)";
-    public static final String ELEMENT_NUMBER_PATTERN = "([^/&&\\-\\.\\d]+)";
+
+    // [RegularExpression and JDK Version Story] by jflute (2021/06/09)
+    // e.g.
+    //  ProductsAction@get$index()
+    //  ProductsPurchasesAction@get$index()
+    //
+    // GET /products/1/purchases2/ was ProductsAction hit (then NumberFormatException 404)
+    //
+    // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+    // // JDK 8: false
+    // // JDK 11: true
+    // // JDK 16: true
+    // log(Pattern.compile("^([^/&&\\-\\.\\d]+)$").matcher("purchases/1/2").find());
+    //
+    // // JDK 8: false
+    // // JDK 11: false
+    // // JDK 16: false
+    // log(Pattern.compile("^([[^/]&&\\-\\.\\d]+)$").matcher("purchases/1/2").find());
+    // _/_/_/_/_/_/_/_/_/_/
+    //
+    // it works well by quoting "^/" (means not slach) with "[]"
+    // so first I wrote test deeply to keep matching result and after that I fixed it
+    //
+    //public static final String ELEMENT_NUMBER_PATTERN = "([^/&&\\-\\.\\d]+)";
+    public static final String ELEMENT_NUMBER_PATTERN = "([[^/]&&\\-\\.\\d]+)";
+
     public static final String METHOD_KEYWORD_MARK = "@word";
     public static final String REST_DELIMITER = "$";
 
@@ -61,16 +87,19 @@ public class UrlPatternAnalyzer {
     // ===================================================================================
     //                                                                              Choose
     //                                                                              ======
-    public UrlPatternChosenBox choose(Method executeMethod, String mappingMethodName, String specifiedUrlPattern,
-            List<Class<?>> pathParamTypeList) {
-        checkSpecifiedUrlPattern(executeMethod, specifiedUrlPattern, pathParamTypeList);
+    public UrlPatternChosenBox choose(Method executeMethod, String mappingMethodName,
+            OptionalThing<SpecifiedUrlPattern> specifiedUrlPattern, List<Class<?>> pathParamTypeList) {
+        specifiedUrlPattern.ifPresent(pattern -> {
+            checkSpecifiedUrlPattern(executeMethod, pattern, pathParamTypeList);
+        });
         final UrlPatternChosenBox chosenBox;
-        if (specifiedUrlPattern != null && !specifiedUrlPattern.isEmpty()) { // e.g. urlPattern="{}"
-            chosenBox = adjustUrlPatternMethodPrefix(executeMethod, specifiedUrlPattern, mappingMethodName, /*specified*/true);
+        if (specifiedUrlPattern.isPresent()) { // e.g. urlPattern="{}"
+            final String patternValue = specifiedUrlPattern.get().getPatternValue();
+            chosenBox = adjustUrlPatternMethodPrefix(executeMethod, patternValue, mappingMethodName, /*specified*/true);
         } else { // urlPattern=[no definition]
             if (!pathParamTypeList.isEmpty()) { // e.g. sea(int pageNumber)
                 final String derivedUrlPattern = buildDerivedUrlPattern(pathParamTypeList);
-                chosenBox = adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, mappingMethodName, /*non-specified*/false);
+                chosenBox = adjustUrlPatternMethodPrefix(executeMethod, derivedUrlPattern, mappingMethodName, /*specified*/false);
             } else { // e.g. index(), sea() *no parameter
                 chosenBox = adjustUrlPatternByMethodNameWithoutParam(mappingMethodName);
             }
@@ -135,17 +164,17 @@ public class UrlPatternAnalyzer {
     // -----------------------------------------------------
     //                                       Check Specified
     //                                       ---------------
-    protected void checkSpecifiedUrlPattern(Method executeMethod, String specifiedUrlPattern, List<Class<?>> pathParamTypeList) {
-        if (specifiedUrlPattern != null) {
-            if (canBeAbbreviatedUrlPattern(specifiedUrlPattern)) {
-                throwUrlPatternNonsenseSettingException(executeMethod, specifiedUrlPattern);
-            }
-            if (hasFrontOrRearSlashUrlPattern(specifiedUrlPattern)) {
-                throwUrlPatternFrontOrRearSlashUnneededException(executeMethod, specifiedUrlPattern);
-            }
-            if (hasMethodKeywordWithOptionalArg(specifiedUrlPattern, pathParamTypeList)) {
-                throwUrlPatternMethodKeywordWithOptionalArgException(executeMethod, specifiedUrlPattern);
-            }
+    protected void checkSpecifiedUrlPattern(Method executeMethod, SpecifiedUrlPattern specifiedUrlPattern,
+            List<Class<?>> pathParamTypeList) {
+        final String patternStr = specifiedUrlPattern.getPatternValue();
+        if (canBeAbbreviatedUrlPattern(patternStr)) {
+            throwUrlPatternNonsenseSettingException(executeMethod, patternStr);
+        }
+        if (hasFrontOrRearSlashUrlPattern(patternStr)) {
+            throwUrlPatternFrontOrRearSlashUnneededException(executeMethod, patternStr);
+        }
+        if (hasMethodKeywordWithOptionalArg(patternStr, pathParamTypeList)) {
+            throwUrlPatternMethodKeywordWithOptionalArgException(executeMethod, patternStr);
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,11 +54,13 @@ public class ActionRuntime {
     // -----------------------------------------------------
     //                                         Runtime State
     //                                         -------------
-    protected OptionalThing<VirtualForm> form;
-    protected ActionResponse actionResponse;
-    protected RuntimeException failureCause;
-    protected UserMessages validationErrors;
-    protected Map<String, Object> displayDataMap; // lazy loaded
+    // these are null allowed, until managed
+    protected OptionalThing<VirtualForm> form; // accepting type is already optional
+    protected ActionResponse actionResponse; // from e.g. before, execute
+    protected RuntimeException failureCause; // thrown by execute method
+    protected Error seriousAbnormalError; // thrown by execute method
+    protected UserMessages validationErrors; // when validation error
+    protected Map<String, Object> displayDataMap; // lazy loaded, for HTML response
     protected DisplayDataValidator displayDataValidator; // is set when html responce reflecting
 
     @FunctionalInterface
@@ -109,6 +111,14 @@ public class ActionRuntime {
     // -----------------------------------------------------
     //                                              Response
     //                                              --------
+    /**
+     * Does it have action response?
+     * @return The determination, true or false.
+     */
+    public boolean hasActionResponse() {
+        return actionResponse != null;
+    }
+
     /**
      * Is the result of the action execute, forward to HTML template?
      * @return The determination, true or false.
@@ -173,11 +183,29 @@ public class ActionRuntime {
     }
 
     /**
+     * Does it have {@link Error} from action?
+     * @return The determination, true or false.
+     */
+    public boolean hasSeriousAbnormalError() {
+        return seriousAbnormalError != null;
+    }
+
+    /**
      * Does it have any validation errors?
      * @return The determination, true or false.
      */
     public boolean hasValidationError() {
         return validationErrors != null && !validationErrors.isEmpty();
+    }
+
+    /**
+     * Is this runtime without failure cause and {@link Error}? <br>
+     * Basically it means success if true in after execution unless the application isn't tricky.
+     * @return The determination, true or false.
+     */
+    public boolean withoutFailureAndError() {
+        // validation error's exception is contained in failure cause
+        return !hasFailureCause() && !hasSeriousAbnormalError();
     }
 
     // ===================================================================================
@@ -275,6 +303,9 @@ public class ActionRuntime {
         if (failureCause != null) {
             sb.append(", *").append(DfTypeUtil.toClassTitle(failureCause)); // e.g. *SeaException
         }
+        if (seriousAbnormalError != null) {
+            sb.append(", *").append(DfTypeUtil.toClassTitle(seriousAbnormalError)); // e.g. *NoSuchMethodError
+        }
         if (validationErrors != null) {
             sb.append(", errors=").append(validationErrors.toPropertySet());
         }
@@ -356,6 +387,19 @@ public class ActionRuntime {
     public void manageFailureCause(RuntimeException failureCause) {
         assertArgumentNotNull("failureCause", failureCause);
         this.failureCause = failureCause;
+    }
+
+    /**
+     * Get the {@link Error} thrown by action execute.
+     * @return The {@link Error} as failure cause. (NullAllowed: when before execute or on success)
+     */
+    public Error getSeriousAbnormalError() {
+        return seriousAbnormalError;
+    }
+
+    public void manageSeriousAbnormalError(Error seriousAbnormalError) {
+        assertArgumentNotNull("seriousAbnormalError", seriousAbnormalError);
+        this.seriousAbnormalError = seriousAbnormalError;
     }
 
     /**

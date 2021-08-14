@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.api.ApiFailureResource;
+import org.lastaflute.web.api.BusinessFailureMapping;
 import org.lastaflute.web.api.theme.FaihyUnifiedFailureResult.FaihyFailureErrorPart;
 import org.lastaflute.web.api.theme.FaihyUnifiedFailureResult.FaihyUnifiedFailureType;
 import org.lastaflute.web.login.exception.LoginRequiredException;
@@ -58,6 +59,34 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
     protected static final String LF = "\n";
 
     // ===================================================================================
+    //                                                                           Attribute
+    //                                                                           =========
+    protected final BusinessFailureMapping<Integer> businessHttpStatusMapping; // for business failure
+
+    // ===================================================================================
+    //                                                                         Constructor
+    //                                                                         ===========
+    public TypicalFaihyApiFailureHook() {
+        businessHttpStatusMapping = createBusinessHttpStatusMapping();
+    }
+
+    // -----------------------------------------------------
+    //                                   Failure HTTP Status
+    //                                   -------------------
+    protected BusinessFailureMapping<Integer> createBusinessHttpStatusMapping() {
+        return new BusinessFailureMapping<Integer>(failureMap -> {
+            setupBusinessHttpStatusMap(failureMap);
+        });
+    }
+
+    protected void setupBusinessHttpStatusMap(Map<Class<?>, Integer> failureMap) { // you can override
+        // you can add mapping of failure status with exception here
+        //  e.g.
+        //   failureMap.put(AccessTokenUnauthorizedException.class, HttpServletResponse.SC_UNAUTHORIZED);
+        //   failureMap.put(AccessUnderstoodButRefusedException.class, HttpServletResponse.SC_FORBIDDEN);
+    }
+
+    // ===================================================================================
     //                                                                    Business Failure
     //                                                                    ================
     // -----------------------------------------------------
@@ -67,7 +96,8 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
     public ApiResponse handleValidationError(ApiFailureResource resource) {
         final FaihyUnifiedFailureType failureType = FaihyUnifiedFailureType.VALIDATION_ERROR;
         final FaihyUnifiedFailureResult result = createFailureResult(failureType, resource, null);
-        return asJson(result).httpStatus(prepareBusinessFailureStatus());
+        final int failureStatus = prepareBusinessFailureStatus(result, resource, OptionalThing.empty());
+        return asJson(result).httpStatus(failureStatus);
     }
 
     // -----------------------------------------------------
@@ -77,14 +107,24 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
     public ApiResponse handleApplicationException(ApiFailureResource resource, RuntimeException cause) {
         final FaihyUnifiedFailureType failureType = FaihyUnifiedFailureType.BUSINESS_ERROR;
         final FaihyUnifiedFailureResult result = createFailureResult(failureType, resource, cause);
-        return asJson(result).httpStatus(prepareBusinessFailureStatus());
+        final int failureStatus = prepareBusinessFailureStatus(result, resource, OptionalThing.of(cause));
+        return asJson(result).httpStatus(failureStatus);
     }
 
     // -----------------------------------------------------
     //                                        Failure Status
     //                                        --------------
-    protected int prepareBusinessFailureStatus() {
-        return BUSINESS_FAILURE_STATUS;
+    protected int prepareBusinessFailureStatus(FaihyUnifiedFailureResult result, ApiFailureResource resource,
+            OptionalThing<RuntimeException> optCause) {
+        return optCause.flatMap(cause -> {
+            return businessHttpStatusMapping.findAssignable(cause);
+        }).orElseGet(() -> {
+            return getDefaultBusinessFailureStatus();
+        });
+    }
+
+    protected int getDefaultBusinessFailureStatus() {
+        return BUSINESS_FAILURE_STATUS; // as default
     }
 
     // ===================================================================================
@@ -414,5 +454,12 @@ public abstract class TypicalFaihyApiFailureHook implements ApiFailureHook {
         if (nested != null && nested != cause) {
             buildSmartStackTrace(sb, nested, nestLevel + 1);
         }
+    }
+
+    // ===================================================================================
+    //                                                                            Accessor
+    //                                                                            ========
+    public BusinessFailureMapping<Integer> getBusinessHttpStatusMapping() { // for e.g. swagger
+        return businessHttpStatusMapping;
     }
 }

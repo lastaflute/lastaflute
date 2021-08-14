@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,19 @@ public class UrlMappingOption {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected Function<String, String> requestPathFilter; // null allowed, convert requestPath e.g. '/product/list/' to mappingPath
+    protected Function<String, String> requestPathFilter; // null allowed
     protected String actionNameSuffix; // null allowed, basically initial upper case, e.g. if 'Sp', search as productListSpAction
+    protected boolean restfulMapping; // if customized by RESTful router
 
     // ===================================================================================
     //                                                                              Facade
     //                                                                              ======
+    /**
+     * Set filter function to convert requestPath (makingMappingPath) to mappingPath. <br>
+     * Returning null in the funtion means no filter. 
+     * @param filter the function argument is requestPath (makingMappingPath). (NotNull, CanNullReturn: no filter)
+     * @return this. (NotNull)
+     */
     public UrlMappingOption filterRequestPath(Function<String, String> filter) {
         if (filter == null) {
             throw new IllegalArgumentException("The argument 'filter' should not be null.");
@@ -50,6 +57,11 @@ public class UrlMappingOption {
         return this;
     }
 
+    public UrlMappingOption tellRestfulMapping() { // called by e.g. RESTful router
+        restfulMapping = true;
+        return this;
+    }
+
     // ===================================================================================
     //                                                                            Accessor
     //                                                                            ========
@@ -63,5 +75,9 @@ public class UrlMappingOption {
         return OptionalThing.ofNullable(actionNameSuffix, () -> {
             throw new IllegalStateException("Not found the actionNameSuffix.");
         });
+    }
+
+    public boolean isRestfulMapping() {
+        return restfulMapping;
     }
 }

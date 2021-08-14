@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,29 @@ package org.lastaflute.web.path;
  */
 public class UrlMappingResource {
 
-    protected final String requestPath; // not null
+    protected final String requestPath; // not null, e.g. /product/list/ (from HTTP client)
+    protected final String workingMappingPath; // not null, e.g. /product/list/ (may be filtered before)
 
-    public UrlMappingResource(String requestPath) {
+    public UrlMappingResource(String requestPath, String workingMappingPath) {
         this.requestPath = requestPath;
+        this.workingMappingPath = workingMappingPath;
     }
 
-    public String getRequestPath() {
+    /**
+     * Get the pure request path, which is not filtered. <br>
+     * Basically use makingMappingPath to determine new filter instead of this. 
+     * @return The path string requested from HTTP client. (NotNull)
+     */
+    public String getPureRequestPath() {
         return requestPath;
+    }
+
+    /**
+     * Get the currently-working mapping path, which may be already filtered just now. <br>
+     * Basically use this to determine new filter instead of requestPath. 
+     * @return the path string for mapping, may be same as requestPath if no filter (NotNull)
+     */
+    public String getWorkingMappingPath() {
+        return workingMappingPath;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package org.lastaflute.db.replication.slavedb;
 
+// once made this deprecated, but feedback from user who uses this by jflute (2021/06/10)
 /**
  * @author jflute
- * @deprecated unneeded so delete future
  */
 public class SlaveDBAccessorNothing implements SlaveDBAccessor {
 

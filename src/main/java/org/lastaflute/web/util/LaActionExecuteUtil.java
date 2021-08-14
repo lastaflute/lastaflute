@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 the original author or authors.
+ * Copyright 2015-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,9 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfReflectionUtil;
+import org.lastaflute.di.util.LdiModifierUtil;
+import org.lastaflute.di.util.tiger.LdiGenericUtil;
+import org.lastaflute.web.Execute;
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
@@ -34,12 +37,23 @@ import org.lastaflute.web.ruts.config.ActionMapping;
 /**
  * @author modified by jflute (originated in Seasar)
  */
-public class LaActionExecuteUtil {
+public class LaActionExecuteUtil { // actually hope to rename (remove Util) but too late by jflute
 
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
     protected static final String KEY = LastaWebKey.ACTION_EXECUTE_KEY;
+
+    // ===================================================================================
+    //                                                                  Execute Annotation
+    //                                                                  ==================
+    public static boolean isExecuteMethod(Method actionMethod) {
+        return LdiModifierUtil.isPublic(actionMethod) && getExecuteAnnotation(actionMethod) != null;
+    }
+
+    public static Execute getExecuteAnnotation(Method executeMethod) {
+        return executeMethod.getAnnotation(Execute.class);
+    }
 
     // ===================================================================================
     //                                                             Access to ExecuteConfig
@@ -100,7 +114,21 @@ public class LaActionExecuteUtil {
             sb.append("private ");
         }
         final Class<?> returnType = executeMethod.getReturnType();
-        sb.append(returnType.getSimpleName()).append(" ");
+        sb.append(returnType.getSimpleName());
+        final Type genericReturnType = executeMethod.getGenericReturnType();
+        final Class<?> firstGeneric = LdiGenericUtil.getGenericFirstClass(genericReturnType);
+        final Type[] genericParameterTypes = LdiGenericUtil.getGenericParameterTypes(genericReturnType);
+        if (firstGeneric != null && genericParameterTypes.length == 1) { // e.g. JsonResponse<List<SeaResult>>
+            // all action responses are zero or single generic only so almost no problem even if first only
+            // #hope jflute perfect generic expressions (2021/06/13)
+            sb.append("<").append(firstGeneric.getSimpleName());
+            final Class<?> nestedGeneric = LdiGenericUtil.getGenericFirstClass(genericParameterTypes[0]); // e.g. SeaResult
+            if (nestedGeneric != null) { // basically no way, just in case
+                sb.append("<").append(nestedGeneric.getSimpleName()).append(">");
+            }
+            sb.append(">");
+        }
+        sb.append(" ");
         sb.append(executeMethod.getDeclaringClass().getSimpleName());
         sb.append("@").append(executeMethod.getName());
     }
