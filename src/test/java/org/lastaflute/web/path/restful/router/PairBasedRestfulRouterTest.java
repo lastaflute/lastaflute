@@ -65,7 +65,7 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         assertTrue(mappingOption.isRestfulMapping());
     }
 
-    public void test_toRestfulMappingPath_level2_noParam_suffix() {
+    public void test_toRestfulMappingPath_level2_noParam_suffix_basic() {
         // ## Arrange ##
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
         // #pair_based the price is treated as path parameter
@@ -185,6 +185,127 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     // -----------------------------------------------------
+    //                                             String ID
+    //                                             ---------
+    public void test_toRestfulMappingPath_stringIdFitting_basic() {
+        // ## Arrange ##
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // #pair_based stringId fitting using conventional ID
+        // _/_/_/_/_/_/_/_/_/_/
+        String requestPath = "/products/sea:one/purchases/sea:two/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath_stringIdFitting(requestPath, "sea:");
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals("/products/purchases/sea:one/sea:two/", filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    public void test_toRestfulMappingPath_stringIdFitting_suffix() {
+        // ## Arrange ##
+        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+        // #pair_based stringId fitting with EventSuffix
+        // _/_/_/_/_/_/_/_/_/_/
+        String requestPath = "/products/sea:one/purchases/sea:two/price";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath_stringIdFitting(requestPath, "sea:");
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals("/products/purchases/price/sea:one/sea:two/", filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    // -----------------------------------------------------
+    //                                          Assist Logic
+    //                                          ------------
+    private UrlMappingOption toRestfulMappingPath(String requestPath) {
+        PairBasedRestfulRouter router = new PairBasedRestfulRouter();
+        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
+        return router.toRestfulMappingPath(resource).get();
+    }
+
+    private UrlMappingOption toRestfulMappingPath_stringIdFitting(String requestPath, String idPrefix) {
+        PairBasedRestfulRouter router = new PairBasedRestfulRouter() {
+            @Override
+            protected boolean isIdElement(String element) {
+                return element.startsWith(idPrefix);
+            }
+        };
+        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
+        return router.toRestfulMappingPath(resource).get();
+    }
+
+    // ===================================================================================
+    //                                                                        Reverse Path
+    //                                                                        ============
+    // -----------------------------------------------------
+    //                                               Level 2
+    //                                               -------
+    public void test_toRestfulReversePath_level2_noParam_basic() {
+        // ## Arrange ##
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("{}"));
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mocks/{}/restfuls/", filter.apply("/mocks/restfuls/{}/"));
+        });
+    }
+
+    public void test_toRestfulReversePath_level2_noParam_suffix() {
+        // ## Arrange ##
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("sea/{}"));
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mocks/{}/restfuls/sea/", filter.apply("/mocks/restfuls/sea/{}/"));
+        });
+    }
+
+    public void test_toRestfulReversePath_level2_withParam_basic() {
+        // ## Arrange ##
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("{}/{}/"));
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mocks/{}/restfuls/{}/", filter.apply("/mocks/restfuls/{}/{}/"));
+        });
+    }
+
+    public void test_toRestfulReversePath_level2_withParam_suffix() {
+        // ## Arrange ##
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("sea/{}/{}/"));
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mocks/{}/restfuls/{}/sea/", filter.apply("/mocks/restfuls/sea/{}/{}/"));
+        });
+    }
+
+    // -----------------------------------------------------
+    //                                             String ID
+    //                                             ---------
+    public void test_toRestfulReversePath_stringId_patched_suffix() { // #pair_based actually patch uneeded
+        // ## Arrange ##
+        // ## Act ##
+        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("sea/{}/{}/"));
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/mocks/{}/restfuls/{}/sea/", filter.apply("/mocks/restfuls/sea/{}/{}/"));
+        });
+    }
+
+    // -----------------------------------------------------
     //                                             Hyphenate
     //                                             ---------
     public void test_toRestfulReversePath_hyphenate_basic() {
@@ -296,65 +417,6 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
             assertEquals("/mockballet-dancers/{}/greatest/{}/favorite-mockballet-dancers/{}/studios/{}/",
                     filter.apply("/mockballet/dancers/greatest/favorite/mockballet/dancers/studios/{}/{}/{}/{}/"));
-        });
-    }
-
-    // -----------------------------------------------------
-    //                                          Assist Logic
-    //                                          ------------
-    private UrlMappingOption toRestfulMappingPath(String requestPath) {
-        PairBasedRestfulRouter router = new PairBasedRestfulRouter();
-        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
-        return router.toRestfulMappingPath(resource).get();
-    }
-
-    // ===================================================================================
-    //                                                                        Reverse Path
-    //                                                                        ============
-    // -----------------------------------------------------
-    //                                               Level 2
-    //                                               -------
-    public void test_toRestfulReversePath_level2_noParam_basic() {
-        // ## Arrange ##
-        // ## Act ##
-        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("{}"));
-
-        // ## Assert ##
-        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
-            assertEquals("/mocks/{}/restfuls/", filter.apply("/mocks/restfuls/{}/"));
-        });
-    }
-
-    public void test_toRestfulReversePath_level2_noParam_suffix() {
-        // ## Arrange ##
-        // ## Act ##
-        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("sea/{}"));
-
-        // ## Assert ##
-        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
-            assertEquals("/mocks/{}/restfuls/sea/", filter.apply("/mocks/restfuls/sea/{}/"));
-        });
-    }
-
-    public void test_toRestfulReversePath_level2_withParam_basic() {
-        // ## Arrange ##
-        // ## Act ##
-        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("{}/{}/"));
-
-        // ## Assert ##
-        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
-            assertEquals("/mocks/{}/restfuls/{}/", filter.apply("/mocks/restfuls/{}/{}/"));
-        });
-    }
-
-    public void test_toRestfulReversePath_level2_withParam_suffix() {
-        // ## Arrange ##
-        // ## Act ##
-        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("sea/{}/{}/"));
-
-        // ## Assert ##
-        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
-            assertEquals("/mocks/{}/restfuls/{}/sea/", filter.apply("/mocks/restfuls/sea/{}/{}/"));
         });
     }
 
