@@ -295,13 +295,27 @@ public class RestfulRomanticVerifier {
         if (!hasRestfulAnnotation(actionType)) {
             return;
         }
-        final String[] specifiedHyphenate = getRestfulAnnotation(actionType).get().hyphenate();
-        if (specifiedHyphenate.length == 0) {
-            return;
+        final RestfulAction restfulAction = getRestfulAnnotation(actionType).get();
+        doVerifyRestfulCannotHyphenate(actionMapping, actionType, restfulAction);
+        doVerifyRestfulCannotEventSuffixHyphenate(actionMapping, actionType, restfulAction);
+    }
+
+    protected void doVerifyRestfulCannotHyphenate(ActionMapping actionMapping, Class<?> actionType, RestfulAction restfulAction) {
+        final String[] specifiedHyphenate = restfulAction.hyphenate();
+        if (specifiedHyphenate.length >= 1) {
+            // split loop to readable because of deep logic of linkage
+            doVerifyRestfulHyphenateFormat(actionType, specifiedHyphenate);
+            doVerifyRestfulHyphenateLinkage(actionType, specifiedHyphenate);
         }
-        // split loop to readable because of deep logic of linkage
-        doVerifyRestfulHyphenateFormat(actionType, specifiedHyphenate);
-        doVerifyRestfulHyphenateLinkage(actionType, specifiedHyphenate);
+    }
+
+    protected void doVerifyRestfulCannotEventSuffixHyphenate(ActionMapping actionMapping, Class<?> actionType,
+            RestfulAction restfulAction) {
+        final String[] specifiedHyphenate = restfulAction.eventSuffixHyphenate();
+        if (specifiedHyphenate.length >= 1) {
+            doVerifyRestfulHyphenateFormat(actionType, specifiedHyphenate); // can use same logic 
+            doVerifyRestfulEventSuffixHyphenateLinkage(actionMapping, actionType, specifiedHyphenate);
+        }
     }
 
     // -----------------------------------------------------
@@ -480,6 +494,54 @@ public class RestfulRomanticVerifier {
         br.addElement(hyphenateDefExp);
         br.addItem("No Linkage Hyphenated Name");
         br.addElement(hyphenatedName);
+        final String msg = br.buildExceptionMessage();
+        throw new ExecuteMethodIllegalDefinitionException(msg);
+    }
+
+    // -----------------------------------------------------
+    //                   EventSuffix Hyphenated Name Linkage
+    //                   -----------------------------------
+    protected void doVerifyRestfulEventSuffixHyphenateLinkage(ActionMapping actionMapping, Class<?> actionType,
+            String[] specifiedHyphenate) {
+        final List<ActionExecute> executeList = actionMapping.getExecuteList();
+        for (String hyphenatedName : specifiedHyphenate) {
+            final String expectedEventSuffix = Srl.initUncap(Srl.camelize(hyphenatedName, "-"));
+            final boolean found = executeList.stream()
+                    .filter(ex -> !ex.isIndexMethod())
+                    .anyMatch(ex -> ex.getMappingMethodName().equals(expectedEventSuffix));
+            if (!found) {
+                throwExecuteMethodRestfulEventSuffixHyphenateLinkageNotFoundException(actionType, specifiedHyphenate, hyphenatedName,
+                        executeList, expectedEventSuffix);
+            }
+        }
+    }
+
+    protected void throwExecuteMethodRestfulEventSuffixHyphenateLinkageNotFoundException(Class<?> actionType, String[] specifiedHyphenate,
+            String hyphenatedName, List<ActionExecute> executeList, String expectedEventSuffix) {
+        final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
+        br.addNotice("Found the unknown hyphenated name of event-suffix in restful action.");
+        br.addItem("Advice");
+        br.addElement("The hyphenated name should have linkage with event suffix of execute method.");
+        br.addElement("For example: having get$hangarMystic() in restful action");
+        br.addElement("  (x): 'han-mystic'");
+        br.addElement("  (x): 'hangar-mys'");
+        br.addElement("  (x): 'showbase-oneman'");
+        br.addElement("  (o): 'hangar-mystic'");
+        br.addItem("Action");
+        br.addElement(actionType);
+        br.addItem("Specified Hyphenate");
+        final String hyphenateDefExp = Arrays.asList(specifiedHyphenate).stream().map(hyp -> {
+            return Srl.quoteDouble(hyp);
+        }).collect(Collectors.joining(", "));
+        br.addElement(hyphenateDefExp);
+        br.addItem("No Linkage Hyphenated Name");
+        br.addElement(hyphenatedName);
+        br.addItem("Existing Execute Method");
+        for (ActionExecute execute : executeList) {
+            br.addElement(execute.getExecuteMethod().getName() + "()");
+        }
+        br.addItem("Expected EventSuffix");
+        br.addElement(expectedEventSuffix);
         final String msg = br.buildExceptionMessage();
         throw new ExecuteMethodIllegalDefinitionException(msg);
     }
