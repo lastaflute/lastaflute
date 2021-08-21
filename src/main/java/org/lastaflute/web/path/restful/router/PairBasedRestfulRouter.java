@@ -36,6 +36,7 @@ public class PairBasedRestfulRouter extends AbstractBasedRestfulRouter {
     //                                 ---------------------
     @Override
     protected boolean doDetermineRestfulPath(UrlMappingResource resource, List<String> elementList) {
+        // best effort logic and RESTful is prior in the application when using restful router
         int index = 0;
         for (String element : elementList) {
             if (isIdElement(element)) { // e.g. 1
@@ -49,8 +50,9 @@ public class PairBasedRestfulRouter extends AbstractBasedRestfulRouter {
         return true;
     }
 
-    protected boolean isIdElement(String element) { // used by determination only
-        return Srl.isNumberHarfAll(element);
+    // used by determination only
+    protected boolean isIdElement(String element) { // you can override for conventional string ID
+        return Srl.isNumberHarfAll(element); // numeric ID as default
     }
 
     // -----------------------------------------------------

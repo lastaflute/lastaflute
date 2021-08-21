@@ -18,7 +18,6 @@ package org.lastaflute.web.path.restful.verifier;
 import java.util.List;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
-import org.dbflute.util.Srl;
 import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.exception.RestfulMappingNonRestfulActionException;
 import org.lastaflute.web.exception.RestfulMappingPlainPathRestfulActionException;
@@ -45,9 +44,9 @@ public class RestfulMappingVerifier {
         } else {
             final RestfulAction anno = execute.getActionType().getAnnotation(RestfulAction.class);
             if (anno != null) { // don't use RestfulAction annotation for plain action
-                if (!isRootResourceEventSuffix(execute)) { // cannot detect restful mapping so except it
-                    throwRestfulMappingPlainPathRestfulActionException(pathResource, execute, paramPath, anno);
-                }
+                // immediately unneeded because of fixing router by jflute (2021/08/22)
+                //if (!isRootResourceEventSuffix(execute)) { // cannot detect restful mapping so except it
+                throwRestfulMappingPlainPathRestfulActionException(pathResource, execute, paramPath, anno);
             }
         }
     }
@@ -110,15 +109,16 @@ public class RestfulMappingVerifier {
     // ===================================================================================
     //                                                                       RestfulAction
     //                                                                       =============
-    protected boolean isRootResourceEventSuffix(ActionExecute execute) {
-        // #for_now jflute cannot detect restful mapping in case of event-suffix of root resource without ID (2021/08/22)
-        //  e.g. ProductsAction@get$sea(as list), ProductsAction@post$sea()
-        if (!execute.isIndexMethod()) { // means event-suffix
-            final String resourceCamel = Srl.substringLastFront(execute.getActionType().getSimpleName(), "Action");
-            return Srl.count(Srl.decamelize(resourceCamel, "_"), "_") == 0;
-        }
-        return false;
-    }
+    // immediately unneeded because of fixing router by jflute (2021/08/22)
+    //protected boolean isRootResourceEventSuffix(ActionExecute execute) {
+    //    // #for_now jflute cannot detect restful mapping in case of event-suffix of root resource without ID (2021/08/22)
+    //    //  e.g. ProductsAction@get$sea(as list), ProductsAction@post$sea()
+    //    if (!execute.isIndexMethod()) { // means event-suffix
+    //        final String resourceCamel = Srl.substringLastFront(execute.getActionType().getSimpleName(), "Action");
+    //        return Srl.count(Srl.decamelize(resourceCamel, "_"), "_") == 0;
+    //    }
+    //    return false;
+    //}
 
     protected void throwRestfulMappingPlainPathRestfulActionException(MappingPathResource pathResource, ActionExecute execute,
             RoutingParamPath paramPath, RestfulAction anno) {

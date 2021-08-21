@@ -36,8 +36,10 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
     //                                 ---------------------
     @Override
     protected boolean doDetermineRestfulPath(UrlMappingResource resource, List<String> elementList) {
+        // best effort logic and RESTful is prior in the application when using restful router
         int index = 0;
         boolean idAppeared = false;
+        boolean secondString = false;
         for (String element : elementList) {
             if (isIdElement(element)) { // e.g. 1
                 if (index % 2 == 0) { // first, third... e.g. /[1]/products/, /products/1/[2]/purchases
@@ -46,16 +48,26 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
                 idAppeared = true;
             } else { // e.g. products
                 if (index % 2 == 1) { // second, fourth... e.g. /products/[purchases]/
-                    // allows e.g. /products/1/purchases/[sea]
-                    // one crossed number parameter is enough to judge RESTful
-                    if (!idAppeared) {
+                    secondString = true;
+                    if (isIdLocationStringElementNonRestful(index, idAppeared)) {
+                        return false;
+                    }
+                } else { // first, third... e.g. /[products]/..., /products/1/[purchases], /products/sea/[purchases]
+                    if (secondString && index == 2) { // e.g. /products/sea/[purchases]
                         return false;
                     }
                 }
             }
             ++index;
         }
-        return true;
+        return true; // also contains /products/
+    }
+
+    protected boolean isIdLocationStringElementNonRestful(int index, boolean idAppeared) { // best effort logic
+        // allows /products/[sea]/ for event-suffix of root resource (RESTful is prior when using router)
+        // and allows e.g. /products/1/purchases/[sea]
+        // (while /products/1/purchases/[sea]/[land] is allowed, but enough to judge RESTful)
+        return index >= 2 && !idAppeared; // e.g. /products/sea/land/
     }
 
     // -----------------------------------------------------

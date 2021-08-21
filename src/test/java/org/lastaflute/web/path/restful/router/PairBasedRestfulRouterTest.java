@@ -1,5 +1,6 @@
 package org.lastaflute.web.path.restful.router;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.unit.UnitLastaFluteTestCase;
 import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.UrlChain;
@@ -222,12 +223,34 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     // -----------------------------------------------------
+    //                                           Non Restful
+    //                                           -----------
+    public void test_toRestfulMappingPath_nonRestful_basic() {
+        assertFalse(toRestfulMappingPath_option("/").isPresent());
+        assertTrue(toRestfulMappingPath_option("/sea/").isPresent());
+        assertTrue(toRestfulMappingPath_option("/sea/land/").isPresent());
+        assertTrue(toRestfulMappingPath_option("/sea/land/piari/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/1/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/1/sea/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/sea/1/2/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/sea/1/2/land/").isPresent());
+        assertTrue(toRestfulMappingPath_option("/sea/1/land/piari/").isPresent());
+        assertTrue(toRestfulMappingPath_option("/sea/1/land/piari/dstore/").isPresent()); // cannot detect
+    }
+
+    // -----------------------------------------------------
     //                                          Assist Logic
     //                                          ------------
     private UrlMappingOption toRestfulMappingPath(String requestPath) {
         PairBasedRestfulRouter router = new PairBasedRestfulRouter();
         UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
         return router.toRestfulMappingPath(resource).get();
+    }
+
+    private OptionalThing<UrlMappingOption> toRestfulMappingPath_option(String requestPath) {
+        PairBasedRestfulRouter router = new PairBasedRestfulRouter();
+        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
+        return router.toRestfulMappingPath(resource);
     }
 
     private UrlMappingOption toRestfulMappingPath_stringIdFitting(String requestPath, String idPrefix) {

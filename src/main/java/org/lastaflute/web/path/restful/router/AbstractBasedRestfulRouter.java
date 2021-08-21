@@ -78,7 +78,7 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
     //                                 RESTful Determination
     //                                 ---------------------
     protected boolean determineRestfulPath(UrlMappingResource resource, List<String> elementList) {
-        if (isRootAction(resource, elementList)) { // e.g. "/" (RootAction)
+        if (isRootAction(resource, elementList)) { // e.g. "/" (RootAction@index())
             return false;
         }
         if (isSwaggerPath(resource, elementList)) { // e.g. /swagger/ (not business request)

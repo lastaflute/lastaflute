@@ -86,7 +86,7 @@ public class ActionRoutingByPathParamDeterminer {
         if (starndardDetermine(paramPath.getRequestParamPath())) {
             return true;
         }
-        if (retryDetermineRestishEvent(paramPath)) {
+        if (retryAsRestishEvent(paramPath)) {
             return true;
         }
         return false;
@@ -250,7 +250,7 @@ public class ActionRoutingByPathParamDeterminer {
     // ===================================================================================
     //                                                                 RESTish Event Retry
     //                                                                 ===================
-    protected boolean retryDetermineRestishEvent(RoutingParamPath paramPath) {
+    protected boolean retryAsRestishEvent(RoutingParamPath paramPath) {
         if (isOutOfRestishEvent(paramPath)) {
             return false;
         }
@@ -259,17 +259,17 @@ public class ActionRoutingByPathParamDeterminer {
         if (eventSuffixHyphenatedNameList.isEmpty()) {
             return false; // hyphenation of event-suffix is explicit option
         }
-        final String requestParamPath = paramPath.getRequestParamPath();
+        final String requestParamPath = paramPath.getRequestParamPath(); // e.g. mystic/hangar/1
         for (String hyphenatedName : eventSuffixHyphenatedNameList) {
-            final String slashedEvent = Srl.replace(hyphenatedName, "-", "/");
+            final String slashedEvent = Srl.replace(hyphenatedName, "-", "/"); // e.g. mystic/hangar
             if (requestParamPath.startsWith(slashedEvent)) { // e.g. mystic/hangar/1
-                final String newParamPath = buildRestishEventParamPath(requestParamPath, hyphenatedName, slashedEvent);
-                logger.debug("...Retrying routing by path parameter as RESTish event: request={}, new={}", requestParamPath, newParamPath);
+                final String newParamPath = buildRestishEventParamPath(requestParamPath, hyphenatedName, slashedEvent); // e.g. mysticHangar/1
+                logger.debug("...Retrying routing as RESTish event: method={}@{}, request={}, new={}", restfulHttpMethod, mappingMethodName,
+                        requestParamPath, newParamPath);
                 final boolean retryDetermination = starndardDetermine(newParamPath); // *retry here
                 if (retryDetermination) {
-                    paramPath.acceptMappingParamPath(newParamPath);
-                    logger.debug(" -> retry success so mappingParamPath is available from here: paramPath={}", paramPath);
-                    return true;
+                    paramPath.acceptMappingParamPath(newParamPath); // e.g. mysticHangar/1
+                    return true; // found!
                 }
             }
         }
@@ -288,7 +288,7 @@ public class ActionRoutingByPathParamDeterminer {
 
     protected String buildRestishEventParamPath(String requestParamPath, String hyphenatedName, String slashedEvent) {
         final String camelizedEventSuffix = Srl.initUncap(Srl.camelize(hyphenatedName, "-")); // e.g. mysticHangar
-        return camelizedEventSuffix + Srl.substringFirstRear(requestParamPath, slashedEvent); // mysticHangar/1
+        return camelizedEventSuffix + Srl.substringFirstRear(requestParamPath, slashedEvent); // e.g. mysticHangar/1
     }
 
     // ===================================================================================
