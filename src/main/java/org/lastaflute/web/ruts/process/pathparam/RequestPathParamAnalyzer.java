@@ -167,7 +167,8 @@ public class RequestPathParamAnalyzer {
             return paramPath;
         } else {
             if (execute.getPreparedUrlPattern().isMethodNamePrefix()) { // e.g. sea()
-                return execute.getExecuteMethod().getName() + "/" + paramPath;
+                // urlPattern does not contain HTTP Method so use mapping method name
+                return execute.getMappingMethodName() + "/" + paramPath;
             } else { // e.g. @word/{}/@word
                 return paramPath;
             }
