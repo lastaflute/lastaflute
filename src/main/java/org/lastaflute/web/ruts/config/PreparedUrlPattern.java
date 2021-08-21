@@ -33,6 +33,7 @@ public class PreparedUrlPattern implements Serializable {
     // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
+    // [method] on urlPattern does not contain HTTP Method
     protected final String resolvedUrlPattern; // not null, empty allowed e.g. [method] or [method]/{} or "" (when index())
     protected final String sourceUrlPattern; // not null, empty allowed, might be derived
     protected final boolean specified; // true if urlPattern is defined by annotation

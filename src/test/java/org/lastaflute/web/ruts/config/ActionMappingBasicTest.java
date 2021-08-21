@@ -26,6 +26,7 @@ import org.lastaflute.web.Execute;
 import org.lastaflute.web.LastaAction;
 import org.lastaflute.web.aspect.RomanticActionCustomizer;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.path.RoutingParamPath;
 import org.lastaflute.web.response.HtmlResponse;
 
 /**
@@ -409,7 +410,7 @@ public class ActionMappingBasicTest extends UnitLastaFluteTestCase {
     }
 
     public static void assertExecute(ActionMapping mapping, String methodName, String paramPath) {
-        ActionExecute execute = mapping.findActionExecute(paramPath);
+        ActionExecute execute = mapping.findActionExecute(new RoutingParamPath(paramPath));
         if (nonno.equals(methodName)) {
             assertNull("The execute method exists: paramPath=" + paramPath + ", execute=" + execute, execute);
         } else {

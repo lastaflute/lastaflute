@@ -22,6 +22,7 @@ import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.exception.RestfulMappingNonRestfulActionException;
 import org.lastaflute.web.exception.RestfulMappingPlainPathRestfulActionException;
 import org.lastaflute.web.path.MappingPathResource;
+import org.lastaflute.web.path.RoutingParamPath;
 import org.lastaflute.web.ruts.config.ActionExecute;
 
 /**
@@ -29,7 +30,7 @@ import org.lastaflute.web.ruts.config.ActionExecute;
  */
 public class RestfulMappingVerifier {
 
-    public void verifyRestfulMapping(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
+    public void verifyRestfulMapping(MappingPathResource pathResource, ActionExecute execute, RoutingParamPath paramPath) {
         if (pathResource.isRestfulMapping()) {
             final RestfulAction anno = execute.getActionType().getAnnotation(RestfulAction.class);
             if (anno == null) { // don't forget RestfulAction annotation
@@ -45,7 +46,7 @@ public class RestfulMappingVerifier {
         }
     }
 
-    protected boolean shouldBeRestful(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
+    protected boolean shouldBeRestful(MappingPathResource pathResource, ActionExecute execute, RoutingParamPath paramPath) {
         // router treats /normal/ as restful by limitted logic
         // however non-restful actions in same application are allowed as possible
         // while restful actions without annotation should be checked here
@@ -56,7 +57,8 @@ public class RestfulMappingVerifier {
         return groupedList.stream().anyMatch(colleague -> colleague.getRestfulHttpMethod().isPresent());
     }
 
-    protected void throwRestfulMappingNonRestfulActionException(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
+    protected void throwRestfulMappingNonRestfulActionException(MappingPathResource pathResource, ActionExecute execute,
+            RoutingParamPath paramPath) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Restful mapping but non-restful action");
         br.addItem("Advice");
@@ -97,7 +99,7 @@ public class RestfulMappingVerifier {
     }
 
     protected void throwRestfulMappingPlainPathRestfulActionException(MappingPathResource pathResource, ActionExecute execute,
-            String paramPath, RestfulAction anno) {
+            RoutingParamPath paramPath, RestfulAction anno) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Restful action but non-restful mapping");
         br.addItem("Advice");

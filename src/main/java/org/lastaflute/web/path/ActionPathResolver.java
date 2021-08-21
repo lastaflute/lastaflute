@@ -163,7 +163,7 @@ public class ActionPathResolver {
         final String rootAction = buildActionName(pathResource, null, "root");
         if (names.length == 0) { // root action, / => rootAction
             if (hasActionDef(root, rootAction)) {
-                if (executeHandlerIfFound(pathResource, handler, rootAction, null)) {
+                if (executeHandlerIfFound(pathResource, handler, rootAction, RoutingParamPath.EMPTY)) {
                     return true;
                 }
             }
@@ -297,10 +297,10 @@ public class ActionPathResolver {
         return (pkg != null ? pkg : "") + classPrefix + actionNameSuffix + actionSuffix; // e.g. sea_seaLandAction, sea_seaLandSpAction
     }
 
-    protected String buildParamPath(String[] names, int index) {
+    protected RoutingParamPath buildParamPath(String[] names, int index) {
         final int length = names.length;
         if (index >= length) {
-            return "";
+            return RoutingParamPath.EMPTY;
         }
         final StringBuilder sb = new StringBuilder();
         for (int i = index; i < length; i++) {
@@ -309,15 +309,16 @@ public class ActionPathResolver {
             }
             sb.append(names[i]);
         }
-        return sb.toString(); // e.g. 3 when /member/list/3/
+        final String paramPath = sb.toString(); // e.g. 3 when /member/list/3/
+        return new RoutingParamPath(paramPath);
     }
 
     // -----------------------------------------------------
     //                                       Execute Handler
     //                                       ---------------
     protected boolean executeHandlerIfFound(MappingPathResource pathResource, ActionFoundPathHandler handler, String actionName,
-            String paramPath) throws Exception {
-        final boolean emptyParam = paramPath == null || paramPath.isEmpty();
+            RoutingParamPath paramPath) throws Exception {
+        final boolean emptyParam = paramPath == null || paramPath.isEmpty(); // basically not null, empty allowed
         final ActionExecute execByParam = !emptyParam ? findActionExecute(actionName, paramPath).orElse(null) : null;
         if (emptyParam || execByParam != null) { // certainly hit
             return handler.handleActionPath(pathResource, actionName, paramPath, execByParam);
@@ -325,7 +326,7 @@ public class ActionPathResolver {
         return false;
     }
 
-    protected OptionalThing<ActionExecute> findActionExecute(String actionName, String paramPath) {
+    protected OptionalThing<ActionExecute> findActionExecute(String actionName, RoutingParamPath paramPath) {
         return LaActionExecuteUtil.findActionExecute(actionName, paramPath);
     }
 

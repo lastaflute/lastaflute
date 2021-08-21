@@ -65,4 +65,7 @@ public @interface RestfulAction {
      * @return true if you use event suffix.
      */
     boolean allowEventSuffix() default false;
+
+    // TODO jflute rest xxxxxxxxxxxxx (2021/08/21)
+    String[] eventSuffixHyphenate() default {};
 }
