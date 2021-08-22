@@ -66,6 +66,10 @@ public @interface RestfulAction {
      */
     boolean allowEventSuffix() default false;
 
-    // TODO jflute rest xxxxxxxxxxxxx (2021/08/21)
+    /**
+     * You can define hyphenated event-suffixes here. <br>
+     * For example, eventSuffixHyphenate="hangar-mystic" then get$hangarMystic().
+     * @return The hyphenated event-suffixes for the event-suffix of execute method.
+     */
     String[] eventSuffixHyphenate() default {};
 }
