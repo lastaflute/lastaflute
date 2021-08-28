@@ -23,6 +23,11 @@ import org.dbflute.util.Srl;
 import org.lastaflute.web.path.UrlMappingResource;
 
 /**
+ * The RESTful router on numeric ID basis.
+ * <pre>
+ * o you can use conventional string ID with your overriding
+ * o you can use event-suffix e.g. get$sea() as default
+ * </pre>
  * @author jflute
  * @since 1.2.1 (2021/05/18 Tuesday at roppongi japanese)
  */
@@ -42,7 +47,7 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
         boolean secondString = false;
         for (String element : elementList) {
             if (isIdElement(element)) { // e.g. 1
-                if (index % 2 == 0) { // first, third... e.g. /[1]/products/, /products/1/[2]/purchases
+                if (index % 2 == 0) { // first, third... e.g. /[1]/products/, /products/1/[2]/purchases/
                     return false;
                 }
                 idAppeared = true;
@@ -52,8 +57,8 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
                     if (isIdLocationStringElementNonRestful(index, idAppeared)) {
                         return false;
                     }
-                } else { // first, third... e.g. /[products]/..., /products/1/[purchases], /products/sea/[purchases]
-                    if (secondString && index == 2) { // e.g. /products/sea/[purchases]
+                } else { // first, third... e.g. /[products]/..., /products/1/[purchases]/, /products/sea/[purchases]/
+                    if (secondString && index == 2) { // e.g. /products/sea/[purchases]/
                         return false;
                     }
                 }
@@ -93,10 +98,15 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
                 }
             }
         }
-        final List<String> arrangedList = new ArrayList<>();
-        arrangedList.addAll(resourceList); // e.g. /products/purchases/
-        arrangedList.addAll(idList); // e.g. /products/purchases/1/2/
-        return buildPath(arrangedList);
+        final List<String> pathElementList = arrangePathElementList(resourceList, idList);
+        return buildPath(pathElementList);
+    }
+
+    protected List<String> arrangePathElementList(List<String> resourceList, List<String> idList) {
+        final List<String> pathElementList = new ArrayList<>();
+        pathElementList.addAll(resourceList); // e.g. /products/purchases/
+        pathElementList.addAll(idList); // e.g. /products/purchases/1/2/
+        return pathElementList;
     }
 
     // ===================================================================================
