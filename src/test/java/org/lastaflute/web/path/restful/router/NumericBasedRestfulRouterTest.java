@@ -35,9 +35,23 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     // -----------------------------------------------------
     //                                               Level 1
     //                                               -------
-    public void test_toRestfulMappingPath_level1_noParam() {
+    public void test_toRestfulMappingPath_level1_noParam_basic() {
         // ## Arrange ##
         String requestPath = "/products/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals(requestPath, filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    public void test_toRestfulMappingPath_level1_noParam_suffix() {
+        // ## Arrange ##
+        String requestPath = "/products/price/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
