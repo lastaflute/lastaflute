@@ -284,7 +284,8 @@ public class SimpleCookieManager implements CookieManager {
     // ===================================================================================
     //                                                                       Default Value
     //                                                                       =============
-    protected String getDefaultPath() {
+    @Override
+    public String getDefaultPath() {
         if (defaultPath == null) {
             final String msg = "Not found the default path of cookie.";
             throw new IllegalStateException(msg);
@@ -292,7 +293,8 @@ public class SimpleCookieManager implements CookieManager {
         return defaultPath;
     }
 
-    protected Integer getDefaultExpire() {
+    @Override
+    public Integer getDefaultExpire() {
         if (defaultExpire == null) {
             final String msg = "Not found the default expire of cookie.";
             throw new IllegalStateException(msg);

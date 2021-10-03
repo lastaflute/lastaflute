@@ -31,6 +31,7 @@ import org.lastaflute.di.util.LdiModifierUtil;
 import org.lastaflute.di.util.tiger.LdiGenericUtil;
 import org.lastaflute.web.Execute;
 import org.lastaflute.web.LastaWebKey;
+import org.lastaflute.web.path.RoutingParamPath;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 
@@ -82,7 +83,7 @@ public class LaActionExecuteUtil { // actually hope to rename (remove Util) but 
     // ===================================================================================
     //                                                                  Find ActionExecute
     //                                                                  ==================
-    public static OptionalThing<ActionExecute> findActionExecute(String actionName, String paramPath) {
+    public static OptionalThing<ActionExecute> findActionExecute(String actionName, RoutingParamPath paramPath) {
         return findActionMapping(actionName).map(mapping -> mapping.findActionExecute(paramPath));
     }
 

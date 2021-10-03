@@ -36,6 +36,7 @@ import org.lastaflute.di.helper.beans.BeanDesc;
 import org.lastaflute.di.helper.beans.factory.BeanDescFactory;
 import org.lastaflute.di.util.ArrayMap;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
+import org.lastaflute.web.path.RoutingParamPath;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.NextJourney;
 import org.lastaflute.web.ruts.NextJourney.PlannedJourneyProvider;
@@ -174,7 +175,7 @@ public class ActionMapping { // created per action
     //                                                              Find Execute (Mapping)
     //                                                              ======================
     // optional unused for performance
-    public ActionExecute findActionExecute(String paramPath) { // null allowed when not found
+    public ActionExecute findActionExecute(RoutingParamPath paramPath) { // null allowed when not found
         for (ActionExecute execute : executeMap.values()) {
             if (execute.determineTargetByPathParameter(paramPath)) {
                 return execute;

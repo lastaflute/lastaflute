@@ -78,7 +78,7 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
     //                                 RESTful Determination
     //                                 ---------------------
     protected boolean determineRestfulPath(UrlMappingResource resource, List<String> elementList) {
-        if (isRootAction(resource, elementList)) { // e.g. "/" (RootAction)
+        if (isRootAction(resource, elementList)) { // e.g. "/" (RootAction@index())
             return false;
         }
         if (isSwaggerPath(resource, elementList)) { // e.g. /swagger/ (not business request)
@@ -120,14 +120,28 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         if (!determineRestfulAction(resource)) {
             return OptionalThing.empty();
         }
-        final int businessElementCount = countActionBusinessElement(resource);
-        final List<String> hyphenatedNameList = extractHyphenatedNameList(resource);
+        final RestfulPathConvertingParam convertingParam = createRestfulPathConvertingParam(resource);
+        final UrlReverseOption option = createUrlReverseOption(resource, convertingParam);
+        return OptionalThing.of(option);
+    }
+
+    protected UrlReverseOption createUrlReverseOption(UrlReverseResource resource, RestfulPathConvertingParam convertingParam) {
         final UrlReverseOption option = new UrlReverseOption();
         final Class<?> actionType = resource.getActionType();
         option.filterActionUrl(actionUrl -> {
-            return convertToRestfulPath(actionType, actionUrl, businessElementCount, hyphenatedNameList);
+            return convertToRestfulPath(actionType, actionUrl, convertingParam);
         });
-        return OptionalThing.of(option);
+        return option;
+    }
+
+    // -----------------------------------------------------
+    //                                  Converting Parameter
+    //                                  --------------------
+    protected RestfulPathConvertingParam createRestfulPathConvertingParam(UrlReverseResource resource) {
+        final int businessElementCount = countActionBusinessElement(resource);
+        final List<String> hyphenatedNameList = extractHyphenatedNameList(resource);
+        final List<String> eventSuffixHyphenatedNameList = extractEventSuffixHyphenatedNameList(resource);
+        return new RestfulPathConvertingParam(businessElementCount, hyphenatedNameList, eventSuffixHyphenatedNameList);
     }
 
     protected boolean determineRestfulAction(UrlReverseResource resource) {
@@ -142,14 +156,22 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         return restfulComponentAnalyzer.extractHyphenatedNameList(resource.getActionType());
     }
 
-    protected String convertToRestfulPath(Class<?> actionType, String actionUrl, int businessElementCount,
-            List<String> hyphenatedNameList) {
+    protected List<String> extractEventSuffixHyphenatedNameList(UrlReverseResource resource) { // not null, empty allowed
+        return restfulComponentAnalyzer.extractEventSuffixHyphenatedNameList(resource.getActionType());
+    }
+
+    // -----------------------------------------------------
+    //                                            Convert to
+    //                                            ----------
+    protected String convertToRestfulPath(Class<?> actionType, String actionUrl, RestfulPathConvertingParam convertingParam) {
         final String withoutHash = Srl.substringLastFront(actionUrl, "#");
         final String actionPath = Srl.substringFirstFront(withoutHash, "?"); // without query parameter
         final List<String> elementList = splitPath(actionPath);
+        final int businessElementCount = convertingParam.getBusinessElementCount();
         if (elementList.size() < businessElementCount) { // basically no way, at least out of target
             return null; // no filter
         }
+        final List<String> hyphenatedNameList = convertingParam.getHyphenatedNameList();
         final List<String> classElementList = prepareClassElementList(elementList, businessElementCount, hyphenatedNameList);
         final LinkedList<String> rearElementList = prepareRearElementList(elementList, businessElementCount);
         final List<String> restfulList = new ArrayList<>();
@@ -169,7 +191,8 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
                     restfulList.add(first);
                     break;
                 } else { // before number parameter
-                    methodKeywordList.add(first); // e.g. sea (method keyword)
+                    final List<String> eventSuffixHyphenatedNameList = convertingParam.getEventSuffixHyphenatedNameList();
+                    handleMethodKeyword(methodKeywordList, first, eventSuffixHyphenatedNameList); // e.g. sea (method keyword)
                     // no break, continue for next parts element
                 }
             }
@@ -183,6 +206,9 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         return buildPath(restfulList);
     }
 
+    // -----------------------------------------------------
+    //                                         Class Element
+    //                                         -------------
     protected List<String> prepareClassElementList(List<String> elementList, int classElementCount, List<String> hyphenatedNameList) {
         return resolveHyphenation(elementList.subList(0, classElementCount), hyphenatedNameList);
     }
@@ -195,11 +221,63 @@ public abstract class AbstractBasedRestfulRouter implements RestfulRouter {
         return restfulComponentAnalyzer.deriveResourceNameListBySnakeName(businessSnakeName, hyphenatedNameList);
     }
 
+    // -----------------------------------------------------
+    //                                         Rear Handling
+    //                                         -------------
     protected LinkedList<String> prepareRearElementList(List<String> elementList, int classElementCount) {
         return new LinkedList<>(elementList.subList(classElementCount, elementList.size()));
     }
 
     protected abstract boolean isParameterInRearPart(Class<?> actionType, LinkedList<String> rearElementList, String first);
+
+    // -----------------------------------------------------
+    //                                        Method Keyword
+    //                                        --------------
+    protected void handleMethodKeyword(List<String> methodKeywordList, String first, List<String> eventSuffixHyphenatedNameList) {
+        final String resolved = resolveEventSuffixHyphenation(first, eventSuffixHyphenatedNameList);
+        methodKeywordList.add(resolved); // event-suffix e.g. sea (method keyword)
+    }
+
+    protected String resolveEventSuffixHyphenation(String first, List<String> eventSuffixHyphenatedNameList) {
+        if (!eventSuffixHyphenatedNameList.isEmpty()) { // e.g. eventSuffixHyphenate="mystic-hangar"
+            if (Srl.isUpperCaseAny(first)) { // e.g. get$mysticHangar()
+                final String demecaliedFirst = Srl.decamelize(first, "-").toLowerCase(); // e.g. mystic-hangar
+                if (eventSuffixHyphenatedNameList.contains(demecaliedFirst)) {
+                    return demecaliedFirst; // switched to hyphenated name
+                }
+            }
+        }
+        return first; // mainly here, no hyphenation
+    }
+
+    // -----------------------------------------------------
+    //                                       Parameter Class
+    //                                       ---------------
+    protected static class RestfulPathConvertingParam {
+
+        protected final int businessElementCount;
+        protected final List<String> hyphenatedNameList; // basically immutable
+        protected final List<String> eventSuffixHyphenatedNameList; // me too
+
+        public RestfulPathConvertingParam(int businessElementCount, List<String> hyphenatedNameList,
+                List<String> eventSuffixHyphenatedNameList) {
+            this.businessElementCount = businessElementCount;
+            this.hyphenatedNameList = hyphenatedNameList;
+            this.eventSuffixHyphenatedNameList = eventSuffixHyphenatedNameList;
+        }
+
+        public int getBusinessElementCount() {
+            return businessElementCount;
+        }
+
+        public List<String> getHyphenatedNameList() {
+            return hyphenatedNameList;
+        }
+
+        public List<String> getEventSuffixHyphenatedNameList() {
+            return eventSuffixHyphenatedNameList;
+        }
+    }
 
     // ===================================================================================
     //                                                                        Top Category

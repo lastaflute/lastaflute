@@ -40,6 +40,7 @@ import org.lastaflute.core.util.LaClassificationUtil.ClassificationUnknownCodeEx
 import org.lastaflute.web.exception.Forced404NotFoundException;
 import org.lastaflute.web.exception.PathParamArgsDifferentCountException;
 import org.lastaflute.web.exception.PathParamOptionalParameterEmptyAccessException;
+import org.lastaflute.web.path.RoutingParamPath;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
@@ -69,32 +70,36 @@ public class RequestPathParamAnalyzer {
     // paramPath means string of path for parameter from part of URL
     /**
      * @param execute The definition of action execute. (NotNull)
-     * @param paramPath The path for parameter from part of URL. (NullAllowed)
+     * @param routingParamPath The routing path for parameter from part of URL. (NotNull, EmptyAllowed)
      * @return The object for path parameter value that has e.g. map:{index = value} (NotNull)
      */
-    public RequestPathParam analyzePathParam(ActionExecute execute, String paramPath) {
-        return doAnalyzePathParam(execute, extractRealParamPath(execute, paramPath));
+    public RequestPathParam analyzePathParam(ActionExecute execute, RoutingParamPath routingParamPath) {
+        final String pathParamExp = extractPathParamExp(execute, routingParamPath); // null allowed
+        return doAnalyzePathParam(execute, pathParamExp, routingParamPath);
     }
 
-    protected String extractRealParamPath(ActionExecute execute, String paramPath) {
-        if (paramPath == null) {
+    protected String extractPathParamExp(ActionExecute execute, RoutingParamPath routingParamPath) {
+        final String paramPathStr = routingParamPath.getMappingParamPath().orElseGet(() -> {
+            return routingParamPath.getRequestParamPath();
+        });
+        if (paramPathStr.isEmpty()) {
             return null;
         }
         final String real;
         if (execute.isIndexMethod()) {
-            real = paramPath;
+            real = paramPathStr;
         } else { // sea()
-            final String methodName = execute.getMappingMethodName();
-            if (paramPath.equals(methodName) || paramPath.startsWith(methodName + "/")) { // e.g. sea or sea/3/
-                real = Srl.ltrim(Srl.substringFirstRear(paramPath, methodName), "/");
+            final String methodName = execute.getMappingMethodName(); // without get$
+            if (paramPathStr.equals(methodName) || paramPathStr.startsWith(methodName + "/")) { // e.g. sea or sea/3/
+                real = Srl.ltrim(Srl.substringFirstRear(paramPathStr, methodName), "/");
             } else {
-                real = paramPath;
+                real = paramPathStr;
             }
         }
         return real;
     }
 
-    protected RequestPathParam doAnalyzePathParam(ActionExecute execute, String paramPath) {
+    protected RequestPathParam doAnalyzePathParam(ActionExecute execute, String pathParamExp, RoutingParamPath routingParamPath) {
         final List<Class<?>> pathParamTypeList = execute.getPathParamArgs().map(args -> {
             return args.getPathParamTypeList();
         }).orElse(Collections.emptyList());
@@ -102,13 +107,13 @@ public class RequestPathParamAnalyzer {
             return args.getOptionalGenericTypeMap();
         }).orElse(Collections.emptyMap());
         final Map<Integer, Object> pathParamValueMap;
-        if (paramPath != null && paramPath.length() > 0) {
-            pathParamValueMap = fromParamPath(execute, paramPath, pathParamTypeList, optGenTypeMap);
+        if (pathParamExp != null && pathParamExp.length() > 0) {
+            pathParamValueMap = fromPathParamExp(execute, pathParamExp, routingParamPath, pathParamTypeList, optGenTypeMap);
         } else {
-            pathParamValueMap = withoutParamPath(execute, pathParamTypeList);
+            pathParamValueMap = withoutPathParamExp(execute, pathParamTypeList);
         }
-        assertPathParamArgsCountMatches(execute, paramPath, pathParamTypeList, pathParamValueMap);
-        checkRequiredParameter(execute, paramPath, pathParamValueMap, optGenTypeMap);
+        assertPathParamArgsCountMatches(execute, pathParamExp, pathParamTypeList, pathParamValueMap);
+        checkRequiredParameter(execute, pathParamExp, pathParamValueMap, optGenTypeMap);
         return newRequestPathParam(pathParamTypeList, pathParamValueMap);
     }
 
@@ -117,10 +122,10 @@ public class RequestPathParamAnalyzer {
     }
 
     // -----------------------------------------------------
-    //                                        from ParamPath
-    //                                        --------------
-    protected Map<Integer, Object> fromParamPath(ActionExecute execute, String paramPath, List<Class<?>> pathParamTypeList,
-            Map<Integer, Class<?>> optGenTypeMap) {
+    //           PathParameter Map from ParamPath Expression
+    //           -------------------------------------------
+    protected Map<Integer, Object> fromPathParamExp(ActionExecute execute, String pathParamExp, RoutingParamPath routingParamPath,
+            List<Class<?>> pathParamTypeList, Map<Integer, Class<?>> optGenTypeMap) {
         // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
         // e.g. index(String first) /product/list/2/
         //  => urlPatternRegexp=^([^/]+)$, paramPath=2, pathParamTypeList=[String]
@@ -131,7 +136,7 @@ public class RequestPathParamAnalyzer {
         // e.g. land(String first, String second) /product/list/sea/2/3/
         //  => urlPatternRegexp=^land/([^/]+)/([^/]+)$, paramPath=2/3, pathParamTypeList=[String, String]
         // _/_/_/_/_/_/_/_/_/_/
-        final List<String> paramList = prepareParamList(execute, paramPath, pathParamTypeList);
+        final List<String> paramList = prepareParamList(execute, pathParamExp, routingParamPath, pathParamTypeList);
         final Map<Integer, Object> valueMap = new LinkedHashMap<Integer, Object>(pathParamTypeList.size());
         int index = 0;
         for (Class<?> paramType : pathParamTypeList) {
@@ -142,15 +147,16 @@ public class RequestPathParamAnalyzer {
         return Collections.unmodifiableMap(valueMap);
     }
 
-    protected List<String> prepareParamList(ActionExecute execute, String paramPath, List<Class<?>> pathParamTypeList) {
+    protected List<String> prepareParamList(ActionExecute execute, String pathParamExp, RoutingParamPath routingParamPath,
+            List<Class<?>> pathParamTypeList) {
         final List<String> paramList = new ArrayList<String>(pathParamTypeList.size());
-        final Matcher matcher = execute.getPreparedUrlPattern().matcher(adjustParamPathPrefix(execute, paramPath));
+        final Matcher matcher = prepareUrlPatternMatcher(execute, pathParamExp, routingParamPath);
         if (matcher.find()) {
             for (int i = 0; i < pathParamTypeList.size(); i++) {
                 paramList.add(matcher.group(i + 1)); // group 1 origin (0 provides all string)
             }
         } else { // e.g. optional parameter and actually no set it
-            final List<String> elementList = Srl.splitList(paramPath, "/"); // if contains pure slash, %2F here
+            final List<String> elementList = Srl.splitList(pathParamExp, "/"); // if contains pure slash, %2F here
             for (String element : elementList) {
                 paramList.add(element); // group 1 origin (0 provides all string)
             }
@@ -162,22 +168,30 @@ public class RequestPathParamAnalyzer {
         return paramList;
     }
 
-    protected String adjustParamPathPrefix(ActionExecute execute, String paramPath) {
+    protected Matcher prepareUrlPatternMatcher(ActionExecute execute, String pathParamExp, RoutingParamPath routingParamPath) {
+        final String adjustedParamPathPrefix = adjustParamPathPrefix(execute, pathParamExp, routingParamPath);
+        return execute.getPreparedUrlPattern().matcher(adjustedParamPathPrefix);
+    }
+
+    protected String adjustParamPathPrefix(ActionExecute execute, String pathParamExp, RoutingParamPath routingParamPath) {
         if (execute.isIndexMethod()) {
-            return paramPath;
+            return pathParamExp;
         } else {
             if (execute.getPreparedUrlPattern().isMethodNamePrefix()) { // e.g. sea()
-                return execute.getExecuteMethod().getName() + "/" + paramPath;
+                // #for_now jflute narrowing fix for now, does it work in other if-else statements? (2021/08/21)
+                return routingParamPath.getMappingParamPath().orElseGet(() -> { // contains method name
+                    return routingParamPath.getRequestParamPath();
+                });
             } else { // e.g. @word/{}/@word
-                return paramPath;
+                return pathParamExp;
             }
         }
     }
 
     // -----------------------------------------------------
-    //                                     without ParamPath
-    //                                     -----------------
-    protected Map<Integer, Object> withoutParamPath(ActionExecute execute, List<Class<?>> pathParamTypeList) {
+    //        PathParameter Map without ParamPath Expression
+    //        ----------------------------------------------
+    protected Map<Integer, Object> withoutPathParamExp(ActionExecute execute, List<Class<?>> pathParamTypeList) {
         final Map<Integer, Object> pathParamValueMap;
         if (!pathParamTypeList.isEmpty()) { // e.g. /sea/land/3/ but /sea/land/
             final Map<Integer, Object> valueMap = new LinkedHashMap<Integer, Object>(pathParamTypeList.size());
@@ -358,14 +372,14 @@ public class RequestPathParamAnalyzer {
     // ===================================================================================
     //                                                                Assert URL Parameter
     //                                                                ====================
-    protected void assertPathParamArgsCountMatches(ActionExecute execute, String paramPath, List<Class<?>> pathParamTypeList,
+    protected void assertPathParamArgsCountMatches(ActionExecute execute, String pathParamExp, List<Class<?>> pathParamTypeList,
             Map<Integer, Object> pathParamValueMap) {
         if (pathParamTypeList.size() != pathParamValueMap.size()) {
-            throwPathParamArgsDifferentCountException(execute, paramPath, pathParamTypeList, pathParamValueMap);
+            throwPathParamArgsDifferentCountException(execute, pathParamExp, pathParamTypeList, pathParamValueMap);
         }
     }
 
-    protected void throwPathParamArgsDifferentCountException(ActionExecute execute, String paramPath, List<Class<?>> pathParamTypeList,
+    protected void throwPathParamArgsDifferentCountException(ActionExecute execute, String pathParamExp, List<Class<?>> pathParamTypeList,
             Map<Integer, Object> pathParamValueMap) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Different count of path parameters from URL pattern.");
@@ -384,7 +398,7 @@ public class RequestPathParamAnalyzer {
         br.addItem("Action Execute");
         br.addElement(execute);
         br.addItem("Parameter Path");
-        br.addElement(paramPath);
+        br.addElement(pathParamExp);
         br.addItem("Defined Args");
         br.addElement(pathParamTypeList);
         br.addItem("Value Map");
@@ -393,34 +407,34 @@ public class RequestPathParamAnalyzer {
         throw new PathParamArgsDifferentCountException(msg);
     }
 
-    protected void checkRequiredParameter(ActionExecute execute, String paramPath, Map<Integer, Object> pathParamValueMap,
+    protected void checkRequiredParameter(ActionExecute execute, String pathParamExp, Map<Integer, Object> pathParamValueMap,
             Map<Integer, Class<?>> optGenTypeMap) {
         for (Entry<Integer, Object> entry : pathParamValueMap.entrySet()) {
             final Integer index = entry.getKey();
             final Object value = entry.getValue();
             if (optGenTypeMap.containsKey(index)) { // not required
                 if (value == null || !(value instanceof OptionalThing)) { // no way
-                    throwIllegalOptionalHandlingException(execute, paramPath, pathParamValueMap, optGenTypeMap, index, value);
+                    throwIllegalOptionalHandlingException(execute, pathParamExp, pathParamValueMap, optGenTypeMap, index, value);
                 }
                 continue;
             } else { // required
                 if (value == null) { // already filtered, e.g. empty string to null
-                    throwExecuteParameterMismatchException(buildRequiredPropertyNotFoundMessage(execute, paramPath, index));
+                    throwExecuteParameterMismatchException(buildRequiredPropertyNotFoundMessage(execute, pathParamExp, index));
                 } else if (value instanceof OptionalThing) { // no way
-                    throwIllegalOptionalHandlingException(execute, paramPath, pathParamValueMap, optGenTypeMap, index, value);
+                    throwIllegalOptionalHandlingException(execute, pathParamExp, pathParamValueMap, optGenTypeMap, index, value);
                 }
             }
         }
     }
 
-    protected void throwIllegalOptionalHandlingException(ActionExecute execute, String paramPath, Map<Integer, Object> pathParamValueMap,
+    protected void throwIllegalOptionalHandlingException(ActionExecute execute, String pathParamExp, Map<Integer, Object> pathParamValueMap,
             Map<Integer, Class<?>> optGenTypeMap, int index, Object value) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Illegal optional handling. (Framework Exception)");
         br.addItem("Action Execute");
         br.addElement(execute);
-        br.addItem("Parameter Path");
-        br.addElement(paramPath);
+        br.addItem("Path Parameter Expression");
+        br.addElement(pathParamExp);
         br.addItem("Path Parameter Value Map");
         br.addElement(pathParamValueMap);
         br.addItem("Optional GenericType Map");
@@ -434,13 +448,13 @@ public class RequestPathParamAnalyzer {
         throw new IllegalStateException(msg);
     }
 
-    protected String buildRequiredPropertyNotFoundMessage(ActionExecute execute, String paramPath, int index) {
+    protected String buildRequiredPropertyNotFoundMessage(ActionExecute execute, String pathParamExp, int index) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Not found the value of required property.");
         br.addItem("Action Execute");
         br.addElement(execute);
-        br.addItem("Parameter Path");
-        br.addElement(paramPath);
+        br.addItem("Path Parameter Expression");
+        br.addElement(pathParamExp);
         br.addItem("Parameter Index");
         br.addElement(index);
         return br.buildExceptionMessage();

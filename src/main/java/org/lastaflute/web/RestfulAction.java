@@ -65,4 +65,11 @@ public @interface RestfulAction {
      * @return true if you use event suffix.
      */
     boolean allowEventSuffix() default false;
+
+    /**
+     * You can define hyphenated event-suffixes here. <br>
+     * For example, eventSuffixHyphenate="hangar-mystic" then get$hangarMystic().
+     * @return The hyphenated event-suffixes for the event-suffix of execute method.
+     */
+    String[] eventSuffixHyphenate() default {};
 }

@@ -50,7 +50,7 @@ public class UrlPatternAnalyzer {
     //  ProductsAction@get$index()
     //  ProductsPurchasesAction@get$index()
     //
-    // GET /products/1/purchases2/ was ProductsAction hit (then NumberFormatException 404)
+    // GET /products/1/purchases/2 was ProductsAction hit (then NumberFormatException 404)
     //
     // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
     // // JDK 8: false

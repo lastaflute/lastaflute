@@ -23,10 +23,14 @@ import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.util.LaClassificationUtil;
+import org.lastaflute.web.path.RoutingParamPath;
+import org.lastaflute.web.path.restful.analyzer.RestfulComponentAnalyzer;
 import org.lastaflute.web.ruts.config.PathParamArgs;
 import org.lastaflute.web.ruts.config.PreparedUrlPattern;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.util.LaActionExecuteUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author jflute
@@ -35,22 +39,31 @@ import org.lastaflute.web.util.LaActionExecuteUtil;
 public class ActionRoutingByPathParamDeterminer {
 
     // ===================================================================================
+    //                                                                          Definition
+    //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(ActionRoutingByPathParamDeterminer.class);
+
+    // ===================================================================================
     //                                                                           Attribute
     //                                                                           =========
-    protected final String mappingMethodName; // not null
+    protected final Class<?> actionType; // not null, non-enhanced type
+    protected final String mappingMethodName; // not null, e.g. index (even if get$index())
     protected final OptionalThing<String> restfulHttpMethod; // not null, empty allowed
-    protected final boolean indexMethod;
+    protected final boolean indexMethod; // e.g. index(), get$index()
     protected final OptionalThing<PathParamArgs> pathParamArgs; // not null, empty allowed
     protected final PreparedUrlPattern preparedUrlPattern; // not null
     protected final Supplier<RequestManager> requestManagerProvider; // not null
     protected final Supplier<String> callerExpProvider; // for debug, not null
 
+    protected final RestfulComponentAnalyzer restfulComponentAnalyzer; // not null
+
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionRoutingByPathParamDeterminer(String mappingMethodName, OptionalThing<String> restfulHttpMethod, boolean indexMethod,
-            OptionalThing<PathParamArgs> pathParamArgs, PreparedUrlPattern preparedUrlPattern,
+    public ActionRoutingByPathParamDeterminer(Class<?> actionType, String mappingMethodName, OptionalThing<String> restfulHttpMethod,
+            boolean indexMethod, OptionalThing<PathParamArgs> pathParamArgs, PreparedUrlPattern preparedUrlPattern,
             Supplier<RequestManager> requestManagerProvider, Supplier<String> callerExpProvider) {
+        this.actionType = actionType;
         this.mappingMethodName = mappingMethodName;
         this.restfulHttpMethod = restfulHttpMethod;
         this.indexMethod = indexMethod;
@@ -58,12 +71,31 @@ public class ActionRoutingByPathParamDeterminer {
         this.preparedUrlPattern = preparedUrlPattern;
         this.requestManagerProvider = requestManagerProvider;
         this.callerExpProvider = callerExpProvider;
+
+        this.restfulComponentAnalyzer = newRestfulComponentAnalyzer();
+    }
+
+    protected RestfulComponentAnalyzer newRestfulComponentAnalyzer() {
+        return new RestfulComponentAnalyzer();
     }
 
     // ===================================================================================
     //                                                                           Determine
     //                                                                           =========
-    public boolean determine(String paramPath) {
+    public boolean determine(RoutingParamPath paramPath) {
+        if (starndardDetermine(paramPath.getRequestParamPath())) {
+            return true;
+        }
+        if (retryAsRestishEvent(paramPath)) {
+            return true;
+        }
+        return false;
+    }
+
+    // ===================================================================================
+    //                                                              Standard Determination
+    //                                                              ======================
+    protected boolean starndardDetermine(String paramPath) {
         if (restfulHttpMethod.filter(httpMethod -> {
             final RequestManager requestManager = requestManagerProvider.get();
             return !matchesWithRequestedHttpMethod(requestManager, httpMethod);
@@ -213,6 +245,50 @@ public class ActionRoutingByPathParamDeterminer {
                 return !isOptionalParameterType(tp);
             }).count();
         }).orElse(0L).intValue();
+    }
+
+    // ===================================================================================
+    //                                                                 RESTish Event Retry
+    //                                                                 ===================
+    protected boolean retryAsRestishEvent(RoutingParamPath paramPath) {
+        if (isOutOfRestishEvent(paramPath)) {
+            return false;
+        }
+        // here e.g. get$mysticHangar(), mystic/hangar/1
+        final List<String> eventSuffixHyphenatedNameList = restfulComponentAnalyzer.extractEventSuffixHyphenatedNameList(actionType);
+        if (eventSuffixHyphenatedNameList.isEmpty()) {
+            return false; // hyphenation of event-suffix is explicit option
+        }
+        final String requestParamPath = paramPath.getRequestParamPath(); // e.g. mystic/hangar/1
+        for (String hyphenatedName : eventSuffixHyphenatedNameList) {
+            final String slashedEvent = Srl.replace(hyphenatedName, "-", "/"); // e.g. mystic/hangar
+            if (requestParamPath.startsWith(slashedEvent)) { // e.g. mystic/hangar/1
+                final String newParamPath = buildRestishEventParamPath(requestParamPath, hyphenatedName, slashedEvent); // e.g. mysticHangar/1
+                logger.debug("...Retrying routing as RESTish event: method={}@{}, request={}, new={}", restfulHttpMethod, mappingMethodName,
+                        requestParamPath, newParamPath);
+                final boolean retryDetermination = starndardDetermine(newParamPath); // *retry here
+                if (retryDetermination) {
+                    paramPath.acceptMappingParamPath(newParamPath); // e.g. mysticHangar/1
+                    return true; // found!
+                }
+            }
+        }
+        return false;
+    }
+
+    protected boolean isOutOfRestishEvent(RoutingParamPath paramPath) {
+        // fast determination as possible for non-related mapping performance
+        return indexMethod // index()|get$index()
+                || !restfulHttpMethod.isPresent() // no HTTP method
+                || !restfulComponentAnalyzer.hasRestfulAnnotation(actionType) // no RESTful Action
+                || Srl.isLowerCaseAll(mappingMethodName) // e.g. get$index() or get$sea()
+                || !paramPath.getRequestParamPath().contains("/") // e.g. sea (simple paramPath)
+        ;
+    }
+
+    protected String buildRestishEventParamPath(String requestParamPath, String hyphenatedName, String slashedEvent) {
+        final String camelizedEventSuffix = Srl.initUncap(Srl.camelize(hyphenatedName, "-")); // e.g. mysticHangar
+        return camelizedEventSuffix + Srl.substringFirstRear(requestParamPath, slashedEvent); // e.g. mysticHangar/1
     }
 
     // ===================================================================================

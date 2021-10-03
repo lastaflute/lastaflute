@@ -142,4 +142,19 @@ public interface CookieManager {
      * @param path The path of the cookie. (NotNull)
      */
     void removeCookie(String key, String path);
+
+    // ===================================================================================
+    //                                                                       Default Value
+    //                                                                       =============
+    /**
+     * Get the default path for the cookie created by this manager.
+     * @return The string of path for cookie path. (NotNull: exception if no default)
+     */
+    String getDefaultPath();
+
+    /**
+     * Get the default expire (max age) for the cookie created by this manager.
+     * @return The value of expire for cookie max age. (NotNull: exception if no default)
+     */
+    Integer getDefaultExpire();
 }

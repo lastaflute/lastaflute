@@ -36,6 +36,7 @@ import org.lastaflute.web.path.ActionFoundPathHandler;
 import org.lastaflute.web.path.ActionPathResolver;
 import org.lastaflute.web.path.MappingPathResource;
 import org.lastaflute.web.path.MappingResolutionResult;
+import org.lastaflute.web.path.RoutingParamPath;
 import org.lastaflute.web.path.restful.verifier.RestfulMappingVerifier;
 import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.ActionRequestProcessor;
@@ -220,7 +221,7 @@ public class RequestRoutingFilter implements Filter {
     //                                                                   Routing to Action
     //                                                                   =================
     protected boolean routingToAction(HttpServletRequest request, HttpServletResponse response, String contextPath,
-            MappingPathResource pathResource, String actionName, String paramPath, ActionExecute execByParam)
+            MappingPathResource pathResource, String actionName, RoutingParamPath paramPath, ActionExecute execByParam)
             throws IOException, ServletException {
         if (execByParam != null) { // already found
             processAction(pathResource, request, response, execByParam, paramPath); // #to_action
@@ -233,7 +234,7 @@ public class RequestRoutingFilter implements Filter {
             if (needsTrailingSlashRedirect(request, requestPath, execute)) { // index() or by request parameter
                 redirectWithTrailingSlash(request, response, contextPath, requestPath);
             } else {
-                processAction(pathResource, request, response, execute, null); // #to_action
+                processAction(pathResource, request, response, execute, RoutingParamPath.EMPTY); // #to_action
             }
             return true;
         } else { // e.g. not found index()
@@ -278,7 +279,7 @@ public class RequestRoutingFilter implements Filter {
     //                                                                      Process Action
     //                                                                      ==============
     protected void processAction(MappingPathResource pathResource, HttpServletRequest request, HttpServletResponse response,
-            ActionExecute execute, String paramPath) throws IOException, ServletException {
+            ActionExecute execute, RoutingParamPath paramPath) throws IOException, ServletException {
         if (logger.isDebugEnabled()) {
             logger.debug("...Routing to action: name={} params={}", execute.getActionMapping().getActionName(), paramPath);
             logger.debug(" by the mapping path: {}", pathResource.getMappingPath());
@@ -288,14 +289,14 @@ public class RequestRoutingFilter implements Filter {
         getRequestProcessor().process(execute, analyzePathParam(execute, paramPath)); // #to_action
     }
 
-    protected void verifyRestfulMapping(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
+    protected void verifyRestfulMapping(MappingPathResource pathResource, ActionExecute execute, RoutingParamPath paramPath) {
         restfulMappingVerifier.verifyRestfulMapping(pathResource, execute, paramPath);
     }
 
     // -----------------------------------------------------
     //                                     Request PathParam
     //                                     -----------------
-    protected RequestPathParam analyzePathParam(ActionExecute execute, String paramPath) {
+    protected RequestPathParam analyzePathParam(ActionExecute execute, RoutingParamPath paramPath) {
         return getPathParamAnalyzer().analyzePathParam(execute, paramPath);
     }
 

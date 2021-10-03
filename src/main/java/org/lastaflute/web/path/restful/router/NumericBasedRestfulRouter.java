@@ -23,6 +23,11 @@ import org.dbflute.util.Srl;
 import org.lastaflute.web.path.UrlMappingResource;
 
 /**
+ * The RESTful router on numeric ID basis.
+ * <pre>
+ * o you can use conventional string ID with your overriding
+ * o you can use event-suffix e.g. get$sea() as default
+ * </pre>
  * @author jflute
  * @since 1.2.1 (2021/05/18 Tuesday at roppongi japanese)
  */
@@ -36,26 +41,38 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
     //                                 ---------------------
     @Override
     protected boolean doDetermineRestfulPath(UrlMappingResource resource, List<String> elementList) {
+        // best effort logic and RESTful is prior in the application when using restful router
         int index = 0;
         boolean idAppeared = false;
+        boolean secondString = false;
         for (String element : elementList) {
             if (isIdElement(element)) { // e.g. 1
-                if (index % 2 == 0) { // first, third... e.g. /[1]/products/, /products/1/[2]/purchases
+                if (index % 2 == 0) { // first, third... e.g. /[1]/products/, /products/1/[2]/purchases/
                     return false;
                 }
                 idAppeared = true;
             } else { // e.g. products
                 if (index % 2 == 1) { // second, fourth... e.g. /products/[purchases]/
-                    // allows e.g. /products/1/purchases/[sea]
-                    // one crossed number parameter is enough to judge RESTful
-                    if (!idAppeared) {
+                    secondString = true;
+                    if (isIdLocationStringElementNonRestful(index, idAppeared)) {
+                        return false;
+                    }
+                } else { // first, third... e.g. /[products]/..., /products/1/[purchases]/, /products/sea/[purchases]/
+                    if (secondString && index == 2) { // e.g. /products/sea/[purchases]/
                         return false;
                     }
                 }
             }
             ++index;
         }
-        return true;
+        return true; // also contains /products/
+    }
+
+    protected boolean isIdLocationStringElementNonRestful(int index, boolean idAppeared) { // best effort logic
+        // allows /products/[sea]/ for event-suffix of root resource (RESTful is prior when using router)
+        // and allows e.g. /products/1/purchases/[sea]
+        // (while /products/1/purchases/[sea]/[land] is allowed, but enough to judge RESTful)
+        return index >= 2 && !idAppeared; // e.g. /products/sea/land/
     }
 
     // -----------------------------------------------------
@@ -81,10 +98,15 @@ public class NumericBasedRestfulRouter extends AbstractBasedRestfulRouter {
                 }
             }
         }
-        final List<String> arrangedList = new ArrayList<>();
-        arrangedList.addAll(resourceList); // e.g. /products/purchases/
-        arrangedList.addAll(idList); // e.g. /products/purchases/1/2/
-        return buildPath(arrangedList);
+        final List<String> pathElementList = arrangePathElementList(resourceList, idList);
+        return buildPath(pathElementList);
+    }
+
+    protected List<String> arrangePathElementList(List<String> resourceList, List<String> idList) {
+        final List<String> pathElementList = new ArrayList<>();
+        pathElementList.addAll(resourceList); // e.g. /products/purchases/
+        pathElementList.addAll(idList); // e.g. /products/purchases/1/2/
+        return pathElementList;
     }
 
     // ===================================================================================

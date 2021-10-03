@@ -32,6 +32,8 @@ import org.lastaflute.db.jta.stage.TransactionGenre;
 import org.lastaflute.web.api.ApiAction;
 import org.lastaflute.web.exception.ActionFormNotFoundException;
 import org.lastaflute.web.exception.PathParamArgsNotFoundException;
+import org.lastaflute.web.path.RoutingParamPath;
+import org.lastaflute.web.path.restful.analyzer.RestfulComponentAnalyzer;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.analyzer.ExecuteArgAnalyzer;
@@ -277,12 +279,19 @@ public class ActionExecute implements Serializable {
     //                                    Routing Determiner
     //                                    ------------------
     protected ActionRoutingByPathParamDeterminer createRoutingByPathParamDeterminer() {
-        return new ActionRoutingByPathParamDeterminer(mappingMethodName, restfulHttpMethod, indexMethod, pathParamArgs, preparedUrlPattern,
-                () -> getRequestManager(), () -> toSimpleMethodExp());
+        return new ActionRoutingByPathParamDeterminer(getActionType(), mappingMethodName, restfulHttpMethod, indexMethod, pathParamArgs,
+                preparedUrlPattern, () -> getRequestManager(), () -> toSimpleMethodExp());
     }
 
     protected ActionRoutingByRequestParamDeterminer createRoutingByRequestParamDeterminer() {
         return new ActionRoutingByRequestParamDeterminer(mappingMethodName);
+    }
+
+    // -----------------------------------------------------
+    //                                        RESTful Action
+    //                                        --------------
+    protected RestfulComponentAnalyzer createRestfulComponentAnalyzer() {
+        return new RestfulComponentAnalyzer();
     }
 
     // -----------------------------------------------------
@@ -314,7 +323,7 @@ public class ActionExecute implements Serializable {
     // -----------------------------------------------------
     //                                      by URL Parameter
     //                                      ----------------
-    public boolean determineTargetByPathParameter(String paramPath) {
+    public boolean determineTargetByPathParameter(RoutingParamPath paramPath) {
         return routingByPathParamDeterminer.determine(paramPath);
     }
 

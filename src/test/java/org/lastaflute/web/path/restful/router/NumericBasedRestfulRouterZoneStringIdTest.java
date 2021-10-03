@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015-2021 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
 package org.lastaflute.web.path.restful.router;
 
 import org.dbflute.optional.OptionalThing;
@@ -11,9 +26,8 @@ import org.lastaflute.web.path.UrlReverseResource;
 
 /**
  * @author jflute
- * @since 1.2.1 (2021/07/20 Tuesday at roppongi japanese)
  */
-public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
+public class NumericBasedRestfulRouterZoneStringIdTest extends UnitLastaFluteTestCase {
 
     // ===================================================================================
     //                                                                        Mapping Path
@@ -49,9 +63,9 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         assertTrue(mappingOption.isRestfulMapping());
     }
 
-    public void test_toRestfulMappingPath_level1_withParam_basic() {
+    public void test_toRestfulMappingPath_level1_withParam() {
         // ## Arrange ##
-        String requestPath = "/products/1/";
+        String requestPath = "/products/sea:mystic/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
@@ -63,79 +77,47 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         assertTrue(mappingOption.isRestfulMapping());
     }
 
-    public void test_toRestfulMappingPath_level1_withParam_suffix() {
-        // ## Arrange ##
-        String requestPath = "/products/1/price/";
-
-        // ## Act ##
-        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
-
-        // ## Assert ##
-        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/products/price/1/", filter.apply(requestPath));
-        });
-        assertTrue(mappingOption.isRestfulMapping());
-    }
-
     // -----------------------------------------------------
     //                                               Level 2
     //                                               -------
     public void test_toRestfulMappingPath_level2_noParam_basic() {
         // ## Arrange ##
-        String requestPath = "/products/1/purchases/";
+        String requestPath = "/products/sea:mystic/purchases/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/products/purchases/1/", filter.apply(requestPath));
+            assertEquals("/products/purchases/sea:mystic/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
 
     public void test_toRestfulMappingPath_level2_noParam_suffix() {
         // ## Arrange ##
-        // _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-        // #pair_based the price is treated as path parameter
-        // so filtered to "/products/purchases/1/price/", which cannot be mapped
-        // _/_/_/_/_/_/_/_/_/_/
-        String requestPath = "/products/1/purchases/price/";
+        String requestPath = "/products/sea:mystic/purchases/price/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/products/purchases/1/price/", filter.apply(requestPath));
+            assertEquals("/products/purchases/price/sea:mystic/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
 
-    public void test_toRestfulMappingPath_level2_withParam_basic() {
+    public void test_toRestfulMappingPath_level2_withParam() {
         // ## Arrange ##
-        String requestPath = "/products/1/purchases/2/";
+        String requestPath = "/products/sea:mystic/purchases/sea:rhythms/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/products/purchases/1/2/", filter.apply(requestPath));
-        });
-        assertTrue(mappingOption.isRestfulMapping());
-    }
-
-    public void test_toRestfulMappingPath_level2_withParam_suffix() {
-        // ## Arrange ##
-        String requestPath = "/products/1/purchases/2/price/";
-
-        // ## Act ##
-        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
-
-        // ## Assert ##
-        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/products/purchases/price/1/2/", filter.apply(requestPath));
+            assertEquals("/products/purchases/sea:mystic/sea:rhythms/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
@@ -145,84 +127,117 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     //                                             ---------
     public void test_toRestfulMappingPath_hyphenate_basic() {
         // ## Arrange ##
-        String requestPath = "/ballet-dancers/1/";
+        String requestPath = "/ballet-dancers/sea:mystic/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/ballet/dancers/1/", filter.apply(requestPath));
+            assertEquals("/ballet/dancers/sea:mystic/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
 
     public void test_toRestfulMappingPath_hyphenate_oneCharacter() {
         // ## Arrange ##
-        String requestPath = "/a-dancers/1/";
+        String requestPath = "/a-dancers/sea:mystic/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/a/dancers/1/", filter.apply(requestPath));
+            assertEquals("/a/dancers/sea:mystic/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
 
     public void test_toRestfulMappingPath_hyphenate_nested_noParam() {
         // ## Arrange ##
-        String requestPath = "/ballet-dancers/1/favorite-studios/";
+        String requestPath = "/ballet-dancers/sea:mystic/favorite-studios/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/ballet/dancers/favorite/studios/1/", filter.apply(requestPath));
+            assertEquals("/ballet/dancers/favorite/studios/sea:mystic/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
 
     public void test_toRestfulMappingPath_hyphenate_nested_withParam_basic() {
         // ## Arrange ##
-        String requestPath = "/ballet-dancers/1/favorite-studios/2/";
+        String requestPath = "/ballet-dancers/sea:mystic/favorite-studios/sea:rhythms/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/ballet/dancers/favorite/studios/1/2/", filter.apply(requestPath));
+            assertEquals("/ballet/dancers/favorite/studios/sea:mystic/sea:rhythms/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
 
     public void test_toRestfulMappingPath_hyphenate_nested_withParam_reappeared_basic() {
         // ## Arrange ##
-        String requestPath = "/ballet-dancers/1/favorite-ballet-dancers/2/";
+        String requestPath = "/ballet-dancers/sea:mystic/favorite-ballet-dancers/sea:rhythms/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/ballet/dancers/favorite/ballet/dancers/1/2/", filter.apply(requestPath));
+            assertEquals("/ballet/dancers/favorite/ballet/dancers/sea:mystic/sea:rhythms/", filter.apply(requestPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
 
     public void test_toRestfulMappingPath_hyphenate_nested_withParam_reappeared_complex() {
         // ## Arrange ##
-        String requestPath = "/ballet-dancers/1/greatest/2/favorite-ballet-dancers/3/studios/4/";
+        String requestPath = "/ballet-dancers/1/greatest/sea:mystic/favorite-ballet-dancers/sea:rhythms/studios/4/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
 
         // ## Assert ##
         mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/ballet/dancers/greatest/favorite/ballet/dancers/studios/1/2/3/4/", filter.apply(requestPath));
+            assertEquals("/ballet/dancers/greatest/favorite/ballet/dancers/studios/1/sea:mystic/sea:rhythms/4/", filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    // -----------------------------------------------------
+    //                                            URL Prefix
+    //                                            ----------
+    public void test_toRestfulMappingPath_urlPrefix_basic() {
+        // ## Arrange ##
+        String pureRequestPath = "/api/products/";
+        String workingMappingPath = "/products/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath_filtering(pureRequestPath, workingMappingPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals(workingMappingPath, filter.apply(workingMappingPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    public void test_toRestfulMappingPath_urlPrefix_nested() {
+        // ## Arrange ##
+        String pureRequestPath = "/api/products/sea:mystic/purchases/";
+        String workingMappingPath = "/products/sea:mystic/purchases/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath_filtering(pureRequestPath, workingMappingPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals("/products/purchases/sea:mystic/", filter.apply(workingMappingPath));
         });
         assertTrue(mappingOption.isRestfulMapping());
     }
@@ -234,7 +249,7 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         assertFalse(toRestfulMappingPath_option("/").isPresent());
         assertTrue(toRestfulMappingPath_option("/sea/").isPresent());
         assertTrue(toRestfulMappingPath_option("/sea/land/").isPresent());
-        assertTrue(toRestfulMappingPath_option("/sea/land/piari/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/sea/land/piari/").isPresent());
         assertFalse(toRestfulMappingPath_option("/1/").isPresent());
         assertFalse(toRestfulMappingPath_option("/1/sea/").isPresent());
         assertFalse(toRestfulMappingPath_option("/sea/1/2/").isPresent());
@@ -244,33 +259,22 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     // -----------------------------------------------------
-    //                                             String ID
-    //                                             ---------
-    public void test_toRestfulMappingPath_stringId_level2_withParam_basic() {
-        // ## Arrange ##
-        String requestPath = "/products/sea/purchases/mystic/";
-
-        // ## Act ##
-        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
-
-        // ## Assert ##
-        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
-            assertEquals("/products/purchases/sea/mystic/", filter.apply(requestPath));
-        });
-        assertTrue(mappingOption.isRestfulMapping());
-    }
-
-    // -----------------------------------------------------
     //                                          Assist Logic
     //                                          ------------
     private UrlMappingOption toRestfulMappingPath(String requestPath) {
-        PairBasedRestfulRouter router = new PairBasedRestfulRouter();
+        NumericBasedRestfulRouter router = newNumericBasedRestfulRouter();
         UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
         return router.toRestfulMappingPath(resource).get();
     }
 
+    private UrlMappingOption toRestfulMappingPath_filtering(String pureRequestPath, String makingMappingPath) {
+        NumericBasedRestfulRouter router = newNumericBasedRestfulRouter();
+        UrlMappingResource resource = new UrlMappingResource(pureRequestPath, makingMappingPath);
+        return router.toRestfulMappingPath(resource).get();
+    }
+
     private OptionalThing<UrlMappingOption> toRestfulMappingPath_option(String requestPath) {
-        PairBasedRestfulRouter router = new PairBasedRestfulRouter();
+        NumericBasedRestfulRouter router = newNumericBasedRestfulRouter();
         UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
         return router.toRestfulMappingPath(resource);
     }
@@ -315,20 +319,6 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     public void test_toRestfulReversePath_level2_withParam_suffix() {
-        // ## Arrange ##
-        // ## Act ##
-        UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("sea/{}/{}/"));
-
-        // ## Assert ##
-        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
-            assertEquals("/mocks/{}/restfuls/{}/sea/", filter.apply("/mocks/restfuls/sea/{}/{}/"));
-        });
-    }
-
-    // -----------------------------------------------------
-    //                                             String ID
-    //                                             ---------
-    public void test_toRestfulReversePath_stringId_patched_suffix() { // #pair_based actually patch uneeded
         // ## Arrange ##
         // ## Act ##
         UrlReverseOption reverseOption = toRestfulReversePath(MocksRestfulsAction.class, new UrlChain("sea/{}/{}/"));
@@ -458,7 +448,7 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     //                                          Assist Logic
     //                                          ------------
     private UrlReverseOption toRestfulReversePath(Class<?> actionType, UrlChain urlChain) {
-        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
+        NumericBasedRestfulRouter router = newNumericBasedRestfulRouter();
         UrlReverseResource resource = new UrlReverseResource(actionType, urlChain);
         return router.toRestfulReversePath(resource).get();
     }
@@ -500,5 +490,17 @@ public class PairBasedRestfulRouterTest extends UnitLastaFluteTestCase {
 
     @RestfulAction(hyphenate = { "favorite-mockballet-dancers", "mockballet-dancers" })
     private static class MockballetDancersGreatestFavoriteMockballetDancersStudiosReversedAction { // hyphenate reappeared
+    }
+
+    // ===================================================================================
+    //                                                                     Target Instance
+    //                                                                     ===============
+    private NumericBasedRestfulRouter newNumericBasedRestfulRouter() {
+        return new NumericBasedRestfulRouter() {
+            @Override
+            protected boolean isIdElement(String element) {
+                return super.isIdElement(element) || element.startsWith("sea:");
+            }
+        };
     }
 }

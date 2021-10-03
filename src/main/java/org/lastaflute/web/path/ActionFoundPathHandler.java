@@ -30,11 +30,11 @@ public interface ActionFoundPathHandler {
      * And if the paramPath is not empty, the configByParam is not null. <br>
      * @param pathResource The resource path having plain requestPath and customized mappingPath. (NotNull)
      * @param actionName The component name of found action. (NotNull)
-     * @param paramPath The path for parameters. (NotNull, EmptyAllowed)
+     * @param paramPath The routing path for parameters. (NotNull, EmptyAllowed)
      * @param methodByParam The method of action execute found by parameters. (NullAllowed: when the path of parameter is empty)
      * @return Is it handled? (true if the action was found by the path)
      * @throws Exception When the handling process throws something.
      */
-    boolean handleActionPath(MappingPathResource pathResource, String actionName, String paramPath, ActionExecute methodByParam)
+    boolean handleActionPath(MappingPathResource pathResource, String actionName, RoutingParamPath paramPath, ActionExecute methodByParam)
             throws Exception;
 }

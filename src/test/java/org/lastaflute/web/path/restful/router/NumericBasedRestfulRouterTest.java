@@ -35,9 +35,23 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     // -----------------------------------------------------
     //                                               Level 1
     //                                               -------
-    public void test_toRestfulMappingPath_level1_noParam() {
+    public void test_toRestfulMappingPath_level1_noParam_basic() {
         // ## Arrange ##
         String requestPath = "/products/";
+
+        // ## Act ##
+        UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
+
+        // ## Assert ##
+        mappingOption.getRequestPathFilter().alwaysPresent(filter -> {
+            assertEquals(requestPath, filter.apply(requestPath));
+        });
+        assertTrue(mappingOption.isRestfulMapping());
+    }
+
+    public void test_toRestfulMappingPath_level1_noParam_suffix() {
+        // ## Arrange ##
+        String requestPath = "/products/price/";
 
         // ## Act ##
         UrlMappingOption mappingOption = toRestfulMappingPath(requestPath);
@@ -196,6 +210,22 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     // -----------------------------------------------------
+    //                                           Non Restful
+    //                                           -----------
+    public void test_toRestfulMappingPath_nonRestful_basic() {
+        assertFalse(toRestfulMappingPath_option("/").isPresent());
+        assertTrue(toRestfulMappingPath_option("/sea/").isPresent());
+        assertTrue(toRestfulMappingPath_option("/sea/land/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/sea/land/piari/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/1/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/1/sea/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/sea/1/2/").isPresent());
+        assertFalse(toRestfulMappingPath_option("/sea/1/2/land/").isPresent());
+        assertTrue(toRestfulMappingPath_option("/sea/1/land/piari/").isPresent());
+        assertTrue(toRestfulMappingPath_option("/sea/1/land/piari/dstore/").isPresent()); // cannot detect
+    }
+
+    // -----------------------------------------------------
     //                                            URL Prefix
     //                                            ----------
     public void test_toRestfulMappingPath_urlPrefix_basic() {
@@ -229,35 +259,6 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     // -----------------------------------------------------
-    //                                           Non Restful
-    //                                           -----------
-    public void test_toRestfulMappingPath_nonRestful_root() {
-        // ## Arrange ##
-        String requestPath = "/";
-
-        // ## Act ##
-        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
-        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
-        OptionalThing<UrlMappingOption> optOption = router.toRestfulMappingPath(resource);
-
-        // ## Assert ##
-        assertFalse(optOption.isPresent());
-    }
-
-    public void test_toRestfulMappingPath_nonRestful_various() {
-        // ## Arrange ##
-        String requestPath = "/sea/land/piari/";
-
-        // ## Act ##
-        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
-        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
-        OptionalThing<UrlMappingOption> optOption = router.toRestfulMappingPath(resource);
-
-        // ## Assert ##
-        assertFalse(optOption.isPresent());
-    }
-
-    // -----------------------------------------------------
     //                                          Assist Logic
     //                                          ------------
     private UrlMappingOption toRestfulMappingPath(String requestPath) {
@@ -270,6 +271,12 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
         NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
         UrlMappingResource resource = new UrlMappingResource(pureRequestPath, makingMappingPath);
         return router.toRestfulMappingPath(resource).get();
+    }
+
+    private OptionalThing<UrlMappingOption> toRestfulMappingPath_option(String requestPath) {
+        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
+        UrlMappingResource resource = new UrlMappingResource(requestPath, requestPath);
+        return router.toRestfulMappingPath(resource);
     }
 
     // ===================================================================================
@@ -438,10 +445,52 @@ public class NumericBasedRestfulRouterTest extends UnitLastaFluteTestCase {
     }
 
     // -----------------------------------------------------
+    //                                            URL Prefix
+    //                                            ----------
+    public void test_toRestfulReversePath_urlPrefix_level2_withParam_basic() {
+        // ## Arrange ##
+        // ## Act ##
+        Class<MocksRestfulsAction> actionType = MocksRestfulsAction.class;
+        String urlPrefix = "/api";
+        UrlChain urlChain = new UrlChain("{}/{}/");
+        UrlReverseOption reverseOption = toRestfulReversePath_urlPrefix(actionType, urlChain, urlPrefix);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/api/mocks/{}/restfuls/{}/", filter.apply("/mocks/restfuls/{}/{}/"));
+        });
+    }
+
+    public void test_toRestfulReversePath_urlPrefix_level2_withParam_suffix() {
+        // ## Arrange ##
+        // ## Act ##
+        Class<MocksRestfulsAction> actionType = MocksRestfulsAction.class;
+        String urlPrefix = "/api";
+        UrlChain urlChain = new UrlChain("sea/{}/{}/");
+        UrlReverseOption reverseOption = toRestfulReversePath_urlPrefix(actionType, urlChain, urlPrefix);
+
+        // ## Assert ##
+        reverseOption.getActionUrlFilter().alwaysPresent(filter -> {
+            assertEquals("/api/mocks/{}/restfuls/{}/sea/", filter.apply("/mocks/restfuls/sea/{}/{}/"));
+        });
+    }
+
+    // -----------------------------------------------------
     //                                          Assist Logic
     //                                          ------------
     private UrlReverseOption toRestfulReversePath(Class<?> actionType, UrlChain urlChain) {
         NumericBasedRestfulRouter router = new NumericBasedRestfulRouter();
+        UrlReverseResource resource = new UrlReverseResource(actionType, urlChain);
+        return router.toRestfulReversePath(resource).get();
+    }
+
+    private UrlReverseOption toRestfulReversePath_urlPrefix(Class<?> actionType, UrlChain urlChain, String urlPrefix) {
+        NumericBasedRestfulRouter router = new NumericBasedRestfulRouter() {
+            @Override
+            protected String convertToRestfulPath(Class<?> actionType, String actionUrl, RestfulPathConvertingParam convertingParam) {
+                return urlPrefix + super.convertToRestfulPath(actionType, actionUrl, convertingParam);
+            }
+        };
         UrlReverseResource resource = new UrlReverseResource(actionType, urlChain);
         return router.toRestfulReversePath(resource).get();
     }

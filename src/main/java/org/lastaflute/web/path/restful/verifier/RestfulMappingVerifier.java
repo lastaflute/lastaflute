@@ -22,6 +22,7 @@ import org.lastaflute.web.RestfulAction;
 import org.lastaflute.web.exception.RestfulMappingNonRestfulActionException;
 import org.lastaflute.web.exception.RestfulMappingPlainPathRestfulActionException;
 import org.lastaflute.web.path.MappingPathResource;
+import org.lastaflute.web.path.RoutingParamPath;
 import org.lastaflute.web.ruts.config.ActionExecute;
 
 /**
@@ -29,7 +30,10 @@ import org.lastaflute.web.ruts.config.ActionExecute;
  */
 public class RestfulMappingVerifier {
 
-    public void verifyRestfulMapping(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
+    // ===================================================================================
+    //                                                                     Restful Mapping
+    //                                                                     ===============
+    public void verifyRestfulMapping(MappingPathResource pathResource, ActionExecute execute, RoutingParamPath paramPath) {
         if (pathResource.isRestfulMapping()) {
             final RestfulAction anno = execute.getActionType().getAnnotation(RestfulAction.class);
             if (anno == null) { // don't forget RestfulAction annotation
@@ -40,12 +44,17 @@ public class RestfulMappingVerifier {
         } else {
             final RestfulAction anno = execute.getActionType().getAnnotation(RestfulAction.class);
             if (anno != null) { // don't use RestfulAction annotation for plain action
+                // immediately unneeded because of fixing router by jflute (2021/08/22)
+                //if (!isRootResourceEventSuffix(execute)) { // cannot detect restful mapping so except it
                 throwRestfulMappingPlainPathRestfulActionException(pathResource, execute, paramPath, anno);
             }
         }
     }
 
-    protected boolean shouldBeRestful(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
+    // ===================================================================================
+    //                                                                   Non RestfulAction
+    //                                                                   =================
+    protected boolean shouldBeRestful(MappingPathResource pathResource, ActionExecute execute, RoutingParamPath paramPath) {
         // router treats /normal/ as restful by limitted logic
         // however non-restful actions in same application are allowed as possible
         // while restful actions without annotation should be checked here
@@ -56,7 +65,8 @@ public class RestfulMappingVerifier {
         return groupedList.stream().anyMatch(colleague -> colleague.getRestfulHttpMethod().isPresent());
     }
 
-    protected void throwRestfulMappingNonRestfulActionException(MappingPathResource pathResource, ActionExecute execute, String paramPath) {
+    protected void throwRestfulMappingNonRestfulActionException(MappingPathResource pathResource, ActionExecute execute,
+            RoutingParamPath paramPath) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Restful mapping but non-restful action");
         br.addItem("Advice");
@@ -96,8 +106,22 @@ public class RestfulMappingVerifier {
         throw new RestfulMappingNonRestfulActionException(msg);
     }
 
+    // ===================================================================================
+    //                                                                       RestfulAction
+    //                                                                       =============
+    // immediately unneeded because of fixing router by jflute (2021/08/22)
+    //protected boolean isRootResourceEventSuffix(ActionExecute execute) {
+    //    // #for_now jflute cannot detect restful mapping in case of event-suffix of root resource without ID (2021/08/22)
+    //    //  e.g. ProductsAction@get$sea(as list), ProductsAction@post$sea()
+    //    if (!execute.isIndexMethod()) { // means event-suffix
+    //        final String resourceCamel = Srl.substringLastFront(execute.getActionType().getSimpleName(), "Action");
+    //        return Srl.count(Srl.decamelize(resourceCamel, "_"), "_") == 0;
+    //    }
+    //    return false;
+    //}
+
     protected void throwRestfulMappingPlainPathRestfulActionException(MappingPathResource pathResource, ActionExecute execute,
-            String paramPath, RestfulAction anno) {
+            RoutingParamPath paramPath, RestfulAction anno) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Restful action but non-restful mapping");
         br.addItem("Advice");

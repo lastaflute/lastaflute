@@ -48,6 +48,10 @@ public class RestfulComponentAnalyzer {
         return Arrays.asList(getRestfulAnnotation(actionType).get().hyphenate());
     }
 
+    public List<String> extractEventSuffixHyphenatedNameList(Class<?> actionType) {
+        return Arrays.asList(getRestfulAnnotation(actionType).get().eventSuffixHyphenate());
+    }
+
     // ===================================================================================
     //                                                                Action Business Name
     //                                                                ====================
