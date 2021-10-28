@@ -311,7 +311,9 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
             });
             orderIndexedOnly(variableScopeList); // e.g. {2}-{sea}-{0}-{land}-{1} to {0}-{sea}-{1}-{land}-{2}
 
-            // #thinking jflute ordering named variables needed? for special named order? (2021/10/29)
+            // done jflute ordering named variables needed? for special named order? (2021/10/29)
+            // order to keep same-value mapping between languages (except e.g. min, max)
+            // so use MessageNamedParameter, basically don't resolve named parameter by index
             orderNamedOnly(variableScopeList); // e.g. {2}-{sea}-{0}-{land}-{1} to {0}-{land}-{1}-{sea}-{2}
         }
 
@@ -361,7 +363,8 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
                 } else if (isSpecialNamedOrder(v2, v1)) {
                     return 1;
                 }
-                // #thinking jflute need to sort? how about "return 0;" here? (2021/10/29)
+                // done jflute need to sort? how about "return 0;" here? (2021/10/29)
+                // see the comment at method call for the detail
                 return v1.compareTo(v2);
             }).collect(Collectors.toList());
             indexedMap.forEach((key, value) -> {
