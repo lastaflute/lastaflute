@@ -313,6 +313,7 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
 
             // done jflute ordering named variables needed? for special named order? (2021/10/29)
             // order to keep same-value mapping between languages (except e.g. min, max)
+            // and already auto-generated UserMessages class depends on it in type-safe method
             // so use MessageNamedParameter, basically don't resolve named parameter by index
             orderNamedOnly(variableScopeList); // e.g. {2}-{sea}-{0}-{land}-{1} to {0}-{land}-{1}-{sea}-{2}
         }
