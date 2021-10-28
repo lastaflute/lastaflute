@@ -310,6 +310,8 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
                 return Srl.isNumberHarfAll(o1.getContent()) ? -1 : 0;
             });
             orderIndexedOnly(variableScopeList); // e.g. {2}-{sea}-{0}-{land}-{1} to {0}-{sea}-{1}-{land}-{2}
+
+            // #thinking jflute ordering named variables needed? for special named order? (2021/10/29)
             orderNamedOnly(variableScopeList); // e.g. {2}-{sea}-{0}-{land}-{1} to {0}-{land}-{1}-{sea}-{2}
         }
 
@@ -359,6 +361,7 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
                 } else if (isSpecialNamedOrder(v2, v1)) {
                     return 1;
                 }
+                // #thinking jflute need to sort? how about "return 0;" here? (2021/10/29)
                 return v1.compareTo(v2);
             }).collect(Collectors.toList());
             indexedMap.forEach((key, value) -> {
