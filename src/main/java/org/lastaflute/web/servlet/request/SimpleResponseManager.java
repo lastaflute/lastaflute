@@ -126,6 +126,9 @@ public class SimpleResponseManager implements ResponseManager {
     // ===================================================================================
     //                                                                   Redirect Response
     //                                                                   =================
+    // -----------------------------------------------------
+    //                                          302 Redirect
+    //                                          ------------
     @Override
     public void redirect(Redirectable redirectable) throws IOException {
         assertArgumentNotNull("redirectable", redirectable);
@@ -152,6 +155,9 @@ public class SimpleResponseManager implements ResponseManager {
         return !asIs && redirectPath.startsWith("/");
     }
 
+    // -----------------------------------------------------
+    //                                          301 Redirect
+    //                                          ------------
     @Override
     public void movedPermanently(Redirectable redirectable) {
         assertArgumentNotNull("redirectable", redirectable);
@@ -167,6 +173,25 @@ public class SimpleResponseManager implements ResponseManager {
         setLocationPermanently("https://" + host + delimiter + redirectUrl); // set up headers for 301
     }
 
+    // -----------------------------------------------------
+    //                                          307 Redirect
+    //                                          ------------
+    @Override
+    public void temporaryRedirect(Redirectable redirectable) {
+        assertArgumentNotNull("redirectable", redirectable);
+        setLocationTemporaryRedirect(buildRedirectUrl(getResponse(), redirectable)); // set up headers for 307
+    }
+
+    protected void setLocationTemporaryRedirect(String url) { // non public as rare case for now
+        assertArgumentNotNull("url", url);
+        getResponse().setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
+        getResponse().setHeader("Location", url);
+    }
+    // no SSL method as rare case for now
+
+    // -----------------------------------------------------
+    //                                               Forward
+    //                                               -------
     @Override
     public void forward(Forwardable forwardable) throws ServletException, IOException {
         assertArgumentNotNull("forwardable", forwardable);

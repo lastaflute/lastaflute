@@ -58,6 +58,9 @@ public interface ResponseManager {
     // ===================================================================================
     //                                                                    Routing Response
     //                                                                    ================
+    // -----------------------------------------------------
+    //                                          302 Redirect
+    //                                          ------------
     /**
      * Redirect to the path.
      * @param redirectable The redirect-able object that can provides e.g. redirect path. (NotNull)
@@ -65,6 +68,9 @@ public interface ResponseManager {
      */
     void redirect(Redirectable redirectable) throws IOException;
 
+    // -----------------------------------------------------
+    //                                          301 Redirect
+    //                                          ------------
     /**
      * Set status as MOVED_PERMANENTLY and add the URL to location.
      * @param redirectable The redirect-able object that can provides e.g. redirect path. (NotNull)
@@ -78,6 +84,18 @@ public interface ResponseManager {
      */
     void movedPermanentlySsl(Redirectable redirectable, String host);
 
+    // -----------------------------------------------------
+    //                                          307 Redirect
+    //                                          ------------
+    /**
+     * Set status as TEMPORARY_REDIRECT and add the URL to location.
+     * @param redirectable The redirect-able object that can provides e.g. redirect path. (NotNull)
+     */
+    void temporaryRedirect(Redirectable redirectable);
+
+    // -----------------------------------------------------
+    //                                               Forward
+    //                                               -------
     /**
      * Forward to the path.
      * @param forwardable The forward-able object that can provide e.g. forward path without context path. (NotNull)
