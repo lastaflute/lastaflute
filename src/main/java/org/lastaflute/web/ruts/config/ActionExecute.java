@@ -284,7 +284,7 @@ public class ActionExecute implements Serializable {
     }
 
     protected ActionRoutingByRequestParamDeterminer createRoutingByRequestParamDeterminer() {
-        return new ActionRoutingByRequestParamDeterminer(mappingMethodName);
+        return new ActionRoutingByRequestParamDeterminer(mappingMethodName, restfulHttpMethod, () -> getRequestManager());
     }
 
     // -----------------------------------------------------

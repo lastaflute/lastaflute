@@ -15,7 +15,12 @@
  */
 package org.lastaflute.web.ruts.config.routing;
 
+import java.util.function.Supplier;
+
 import javax.servlet.http.HttpServletRequest;
+
+import org.dbflute.optional.OptionalThing;
+import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
  * @author jflute
@@ -27,22 +32,41 @@ public class ActionRoutingByRequestParamDeterminer {
     //                                                                           Attribute
     //                                                                           =========
     protected final String mappingMethodName; // not null
+    protected final OptionalThing<String> restfulHttpMethod; // not null, empty allowed
+    protected final Supplier<RequestManager> requestManagerProvider; // not null
 
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
-    public ActionRoutingByRequestParamDeterminer(String mappingMethodName) {
+    public ActionRoutingByRequestParamDeterminer(String mappingMethodName, OptionalThing<String> restfulHttpMethod,
+            Supplier<RequestManager> requestManagerProvider) {
         this.mappingMethodName = mappingMethodName;
+        this.restfulHttpMethod = restfulHttpMethod;
+        this.requestManagerProvider = requestManagerProvider;
     }
 
     // ===================================================================================
     //                                                                           Determine
     //                                                                           =========
     public boolean determine(HttpServletRequest request) {
+        // also needs to check HTTP method here by jflute (2021/11/18)
+        // (while, conflict trouble is rare case if normal naming)
+        if (restfulHttpMethod.filter(httpMethod -> { // copied from by-path-param determiner
+            final RequestManager requestManager = requestManagerProvider.get();
+            return !matchesWithRequestedHttpMethod(requestManager, httpMethod);
+        }).isPresent()) {
+            return false;
+        }
+        // basically for HTML form button request
+        // e.g. name="sea" value="mystic" => ...?sea=mystic => mapping to sea()
         final String methodName = mappingMethodName;
         return !isParameterEmpty(request.getParameter(methodName)) // e.g. doUpdate=update
                 || !isParameterEmpty(request.getParameter(methodName + ".x")) // e.g. doUpdate.x=update
                 || !isParameterEmpty(request.getParameter(methodName + ".y")); // e.g. doUpdate.y=update
+    }
+
+    protected boolean matchesWithRequestedHttpMethod(RequestManager requestManager, String httpMethod) {
+        return requestManager.isHttpMethod(httpMethod);
     }
 
     // ===================================================================================
