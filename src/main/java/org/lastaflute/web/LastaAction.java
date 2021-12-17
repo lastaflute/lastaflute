@@ -256,6 +256,9 @@ public abstract class LastaAction {
      * <span style="color: #3F7E5E">// e.g. /member/</span>
      * return redirect(MemberAction.class);
      * </pre>
+     * 
+     * <p>While, if you want 301 redirect, also use movedPermanently()</p>
+     * 
      * @param actionType The class type of action that it redirects to. (NotNull)
      * @return The HTML response for redirect. (NotNull)
      */
@@ -361,6 +364,9 @@ public abstract class LastaAction {
      * <span style="color: #3F7E5E">// e.g. /member/edit/</span>
      * return <span style="color: #FD4747">movedPermanently</span>(redirect(MemberEditAction.class));
      * </pre>
+     * 
+     * <p>While, if you want SSL redirect, use responseManager's method.</p>
+     * 
      * @param response The action response of HTML to redirect. (NotNull)
      * @return The empty HTML response because of response already written. (NotNull)
      */
@@ -370,7 +376,9 @@ public abstract class LastaAction {
             throw new IllegalStateException("Not redirect response: " + response);
         }
         responseManager.movedPermanently(response);
-        return HtmlResponse.undefined(); // because of already done about response process
+        // Not allowed to return undefined() in @Execute method (didn't notice it) by jflute (2021/11/11)
+        //return HtmlResponse.undefined();
+        return HtmlResponse.asEmptyBody(); // because of already done about response process
     }
 
     // -----------------------------------------------------

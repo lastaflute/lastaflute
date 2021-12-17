@@ -25,6 +25,9 @@ import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
 
 /**
+ * The application exception with user messaging. <br>
+ * You can specify messages by UserMessages related to message resource. <br>
+ * (Not allowed the non-resource message)
  * @author jflute
  */
 public class MessagingApplicationException extends LaApplicationException {

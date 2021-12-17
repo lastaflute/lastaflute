@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.util.DfCollectionUtil;
@@ -40,6 +41,7 @@ import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
 import org.dbflute.util.Srl.ScopeInfo;
 import org.lastaflute.core.direction.FwAssistantDirector;
+import org.lastaflute.core.message.resources.MessageNamedParameter;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.Disposable;
 import org.lastaflute.di.DisposableUtil;
@@ -89,7 +91,7 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
     //                                                                           =========
     protected boolean returnNull = true; // as default
     protected boolean escape = true; // as default
-    protected final Map<String, MessageFormat> formatMap = new HashMap<String, MessageFormat>();
+    protected final Map<String, MessageFormat> formatMap = new HashMap<String, MessageFormat>(); // as cache
 
     /**
      * The cache of assistant director, which can be lazy-loaded when you get it.
@@ -216,7 +218,45 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
         return resolveLabelVariableMessage(locale, key, message, callerKeySet);
     }
 
+    protected HashSet<String> createCallerKeySet() {
+        return new LinkedHashSet<String>(4); // order for exception message
+    }
+
+    // ===================================================================================
+    //                                                                      Format Message
+    //                                                                      ==============
     protected String formatMessage(Locale locale, String key, Object[] args) {
+        if (canHandleNamedParameter(args)) { // e.g. remote api error handling
+            return doFormatMessageByNamedParameter(locale, key, args);
+        } else { // mainly here
+            return doFormatMessageByMessageFormat(locale, key, args);
+        }
+    }
+
+    // -----------------------------------------------------
+    //                                     by NamedParameter
+    //                                     -----------------
+    protected boolean canHandleNamedParameter(Object[] args) {
+        // #for_now jflute named parameter can work if all elements are the object (2021/10/29)
+        return args.length >= 1 && Stream.of(args).allMatch(el -> el instanceof MessageNamedParameter);
+    }
+
+    protected String doFormatMessageByNamedParameter(Locale locale, String key, Object[] args) {
+        final String plainMessage = getMessage(locale, key);
+        final Map<String, String> namedParameterMap = new LinkedHashMap<>();
+        for (Object element : args) {
+            final MessageNamedParameter namedParameter = (MessageNamedParameter) element; // already checked
+            final String variableExp = "{" + namedParameter.getName() + "}";
+            final String parameterExp = namedParameter.getValue().map(vl -> vl.toString()).orElse("");
+            namedParameterMap.put(variableExp, parameterExp);
+        }
+        return Srl.replaceBy(plainMessage, namedParameterMap);
+    }
+
+    // -----------------------------------------------------
+    //                                      by MessageFormat
+    //                                      ----------------
+    protected String doFormatMessageByMessageFormat(Locale locale, String key, Object[] args) {
         MessageFormat format = null;
         final String formatKey = messageKey(locale, key);
         synchronized (formatMap) {
@@ -232,10 +272,6 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
             }
         }
         return format.format(args);
-    }
-
-    protected HashSet<String> createCallerKeySet() {
-        return new LinkedHashSet<String>(4); // order for exception message
     }
 
     // -----------------------------------------------------
@@ -274,6 +310,11 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
                 return Srl.isNumberHarfAll(o1.getContent()) ? -1 : 0;
             });
             orderIndexedOnly(variableScopeList); // e.g. {2}-{sea}-{0}-{land}-{1} to {0}-{sea}-{1}-{land}-{2}
+
+            // done jflute ordering named variables needed? for special named order? (2021/10/29)
+            // order to keep same-value mapping between languages (except e.g. min, max)
+            // and already auto-generated UserMessages class depends on it in type-safe method
+            // so use MessageNamedParameter, basically don't resolve named parameter by index
             orderNamedOnly(variableScopeList); // e.g. {2}-{sea}-{0}-{land}-{1} to {0}-{land}-{1}-{sea}-{2}
         }
 
@@ -323,6 +364,8 @@ public class ObjectiveMessageResources implements MessageResources, Disposable, 
                 } else if (isSpecialNamedOrder(v2, v1)) {
                     return 1;
                 }
+                // done jflute need to sort? how about "return 0;" here? (2021/10/29)
+                // see the comment at method call for the detail
                 return v1.compareTo(v2);
             }).collect(Collectors.toList());
             indexedMap.forEach((key, value) -> {

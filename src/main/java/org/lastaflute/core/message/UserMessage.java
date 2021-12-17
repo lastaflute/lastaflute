@@ -51,6 +51,33 @@ public class UserMessage implements Serializable {
     // ===================================================================================
     //                                                                         Constructor
     //                                                                         ===========
+    /**
+     * Construct as resource-related instance. <br>
+     * Specify message key for message resource. e.g. [app]_message.properties <br>
+     * And you can choose message parameter style, indexed parameter or named parameter.
+     * 
+     * <p>If your message has indexed parameters...</p>
+     * <pre>
+     * // e.g. errors.sea.hangar = the show is {0}, {1}
+     * //  => "the show is mystic, great"
+     * new UserMessage("errors.sea.hangar", "mystic", "great");
+     * </pre>
+     * 
+     * <p>If your message has named parameters...</p>
+     * <pre>
+     * // e.g. errors.sea.hangar = the show is {showName}, {impression}
+     * //  => "the show is mystic, great"
+     * List&lt;MessageNamedParameter&gt; parameterList = new ArrayList&lt;&gt;();
+     * parameterList.add(new MessageNamedParameter("showName", "mystic"));
+     * parameterList.add(new MessageNamedParameter("impression", "great"));
+     * new UserMessage("errors.sea.hangar", parameterList.toArray());
+     * </pre>
+     * 
+     * <p>Or if you use direct message, use asDirectMessage() instead of this constructor.</p>
+     * 
+     * @param messageKey The key of user message for message resource. (NotNull)
+     * @param values The varying array for message parameters. (NotNull, EmptyAllowed)
+     */
     public UserMessage(String messageKey, Object... values) { // for e.g. typesafe messages
         assertArgumentNotNull("messageKey", messageKey);
         assertArgumentNotNull("values", values);
