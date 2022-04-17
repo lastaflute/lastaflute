@@ -64,7 +64,11 @@ public interface CollectionGsonAdaptable { // to show property path in exception
         }
 
         protected ConstructorConstructor createConstructorConstructor(Map<Type, InstanceCreator<?>> instanceCreators) {
-            return new ConstructorConstructor(instanceCreators);
+            return new ConstructorConstructor(instanceCreators, isGsonUseJdkUnsafe());
+        }
+
+        protected boolean isGsonUseJdkUnsafe() {
+            return false; // #thinking jflute Gson's useJdkUnsafe, which is better? (only for collection here) (2022/04/18)
         }
 
         protected CollectionTypeAdapterFactory newCollectionTypeAdapterFactory(ConstructorConstructor constructor) {

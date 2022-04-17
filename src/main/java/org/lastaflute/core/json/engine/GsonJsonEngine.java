@@ -260,6 +260,8 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         final ConstructorConstructor constructorConstructor = getConstructorConstructor(factory);
         final JsonAdapterAnnotationTypeAdapterFactory jsonAdapterFactory = getJsonAdapterFactory(factory);
         final FieldNamingStrategy fieldNamingStrategy = newGson.fieldNamingStrategy();
+        // #thinking jflute Excluder is needed for customization so hope to resolve this problem (2022/04/17)
+        @SuppressWarnings("deprecation")
         final Excluder excluder = newGson.excluder();
         return new LaReflectiveTypeAdapterFactory(constructorConstructor, fieldNamingStrategy, excluder, jsonAdapterFactory);
     }
