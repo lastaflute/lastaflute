@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015-2021 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
 package org.lastaflute.core.util;
 
 import org.dbflute.utflute.core.PlainTestCase;
@@ -32,19 +47,14 @@ public class LaClassificationUtilTest extends PlainTestCase {
     //                                                                   to Classification
     //                                                                   =================
     public void test_toCls() throws Exception {
-        try {
-            assertEquals(MockCDef.MemberStatus.Formalized, LaClassificationUtil.toCls(MockCDef.MemberStatus.class, "FML"));
-            fail();
-        } catch (ClassificationCodeOfMethodNotFoundException e) {
-            log(e);
-        }
+        assertEquals(MockCDef.MemberStatus.Formalized, LaClassificationUtil.toCls(MockCDef.MemberStatus.class, "FML"));
         assertEquals(MockDepCDef.MemberStatus.Formalized, LaClassificationUtil.toCls(MockDepCDef.MemberStatus.class, "FML"));
         assertEquals(MockOldCDef.MemberStatus.Formalized, LaClassificationUtil.toCls(MockOldCDef.MemberStatus.class, "FML"));
 
         try {
-            assertEquals(MockCDef.MemberStatus.Formalized, LaClassificationUtil.toCls(MockCDef.MemberStatus.class, "none"));
+            LaClassificationUtil.toCls(MockCDef.MemberStatus.class, "none");
             fail();
-        } catch (ClassificationCodeOfMethodNotFoundException e) {
+        } catch (ClassificationUnknownCodeException e) {
             log(e);
         }
         try {
@@ -62,12 +72,10 @@ public class LaClassificationUtilTest extends PlainTestCase {
     }
 
     public void test_findByCode() {
-        assertException(ClassificationCodeOfMethodNotFoundException.class,
-                () -> LaClassificationUtil.findByCode(MockCDef.MemberStatus.class, "FML"));
+        assertEquals(MockCDef.MemberStatus.Formalized, LaClassificationUtil.findByCode(MockCDef.MemberStatus.class, "FML").get());
         assertEquals(MockDepCDef.MemberStatus.Formalized, LaClassificationUtil.findByCode(MockDepCDef.MemberStatus.class, "FML").get());
         assertEquals(MockOldCDef.MemberStatus.Formalized, LaClassificationUtil.findByCode(MockOldCDef.MemberStatus.class, "FML").get());
-        assertException(ClassificationCodeOfMethodNotFoundException.class,
-                () -> LaClassificationUtil.findByCode(MockCDef.MemberStatus.class, "none"));
+        assertFalse(LaClassificationUtil.findByCode(MockCDef.MemberStatus.class, "none").isPresent());
         assertFalse(LaClassificationUtil.findByCode(MockDepCDef.MemberStatus.class, "none").isPresent());
         assertFalse(LaClassificationUtil.findByCode(MockOldCDef.MemberStatus.class, "none").isPresent());
     }
@@ -112,6 +120,7 @@ public class LaClassificationUtilTest extends PlainTestCase {
         });
     }
 
+    @SuppressWarnings("deprecation")
     public void test_nativeCodeOf() {
         assertException(ClassificationCodeOfMethodNotFoundException.class, () -> {
             LaClassificationUtil.nativeCodeOf(MockCDef.MemberStatus.class, "FML");
@@ -125,6 +134,7 @@ public class LaClassificationUtilTest extends PlainTestCase {
         assertNull(LaClassificationUtil.nativeCodeOf(MockOldCDef.MemberStatus.class, "none"));
     }
 
+    @SuppressWarnings("deprecation")
     public void test_nativeMetaOf() {
         assertEquals(MockCDef.DefMeta.MemberStatus, LaClassificationUtil.nativeMetaOf(MockCDef.DefMeta.class, "MemberStatus"));
         assertEquals(MockDepCDef.DefMeta.MemberStatus, LaClassificationUtil.nativeMetaOf(MockDepCDef.DefMeta.class, "MemberStatus"));

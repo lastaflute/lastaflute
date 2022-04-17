@@ -16,7 +16,6 @@
 package org.lastaflute.core.util;
 
 import java.lang.reflect.Method;
-import java.util.Optional;
 
 import org.dbflute.jdbc.Classification;
 import org.dbflute.jdbc.ClassificationMeta;
@@ -52,29 +51,23 @@ public class LaClassificationUtil {
         if (code == null || (code instanceof String && ((String) code).isEmpty())) {
             return null;
         }
-        final Object result = nativeCodeOf(cdefType, code); // use native for performance
-        if (result == null) { // means not found
-            handleClassificationUnknownCode(cdefType, code);
-        }
-        if (result instanceof OptionalThing<?>) { // handling for future
-            @SuppressWarnings("unchecked")
-            final OptionalThing<Classification> cast = (OptionalThing<Classification>) result;
-            try {
-                return cast.get();
-            } catch (RuntimeException e) {
-                handleClassificationUnknownCode(cdefType, code, e);
+        try {
+            final OptionalThing<Classification> optCls = nativeFindByCode(cdefType, code);
+            if (optCls.isPresent()) {
+                return optCls.get();
+            } else {
+                handleClassificationUnknownCode(cdefType, code);
                 return null; // unreachable
             }
-        } else if (result instanceof Optional<?>) {
-            @SuppressWarnings("unchecked")
-            final Optional<Classification> cast = (Optional<Classification>) result;
-            try {
-                return cast.get();
-            } catch (RuntimeException e) {
+        } catch (ClassificationFindByCodeMethodNotFoundException e) { // e.g. until DBFlute-1.1.1
+            // basically no way as too old DBFlute version but just in case
+            final Object result = nativeCodeOf(cdefType, code); // retry for old version
+            if (result == null) { // means not found
                 handleClassificationUnknownCode(cdefType, code, e);
-                return null; // unreachable
             }
-        } else {
+            if (!(result instanceof Classification)) {
+                throw new IllegalStateException("Not classification type returned from codeOf().", e);
+            }
             return (Classification) result;
         }
     }
@@ -112,23 +105,17 @@ public class LaClassificationUtil {
     public static OptionalThing<Classification> findByCode(Class<?> cdefType, Object code) {
         assertArgumentNotNull("cdefType", cdefType);
         assertArgumentNotNull("code", code);
-
-        // #hope switch to nativeFindByCode() in future (can be over DBFlute-1.1.1) by jflute
-        final Object result = nativeCodeOf(cdefType, code);
-        if (result == null) {
-            return OptionalThing.empty();
-        }
-        if (result instanceof OptionalThing<?>) { // handling for future
-            @SuppressWarnings("unchecked")
-            final OptionalThing<Classification> cast = (OptionalThing<Classification>) result;
-            return cast;
-        } else if (result instanceof Optional<?>) {
-            @SuppressWarnings("unchecked")
-            final Optional<Classification> cast = (Optional<Classification>) result;
-            return OptionalThing.ofNullable(cast.orElse(null), () -> {
-                throw new IllegalStateException("Not found the classification code: " + cdefType.getName() + "@" + code);
-            });
-        } else {
+        try {
+            return nativeFindByCode(cdefType, code);
+        } catch (ClassificationFindByCodeMethodNotFoundException e) { // e.g. until DBFlute-1.1.1
+            // basically no way as too old DBFlute version but just in case
+            final Object result = nativeCodeOf(cdefType, code);
+            if (result == null) {
+                return OptionalThing.empty();
+            }
+            if (!(result instanceof Classification)) {
+                throw new IllegalStateException("Not classification type returned from codeOf().", e);
+            }
             return OptionalThing.of((Classification) result);
         }
     }
@@ -139,28 +126,19 @@ public class LaClassificationUtil {
     public static OptionalThing<ClassificationMeta> findMeta(Class<?> defmetaType, String classificationName) {
         assertArgumentNotNull("defmetaType", defmetaType);
         assertArgumentNotNull("classificationName", classificationName);
-
-        // #hope switch to nativeFindMeta() in future (can be over DBFlute-1.1.1) by jflute
-        final Object result;
         try {
-            result = nativeMetaOf(defmetaType, classificationName);
-        } catch (RuntimeException ignored) { // means not found, not use conrete type because might be changed later 
-            return OptionalThing.empty();
-        }
-        if (result == null) {
-            return OptionalThing.empty();
-        }
-        if (result instanceof OptionalThing<?>) { // handling for future
-            @SuppressWarnings("unchecked")
-            final OptionalThing<ClassificationMeta> cast = (OptionalThing<ClassificationMeta>) result;
-            return cast;
-        } else if (result instanceof Optional<?>) {
-            @SuppressWarnings("unchecked")
-            final Optional<ClassificationMeta> cast = (Optional<ClassificationMeta>) result;
-            return OptionalThing.ofNullable(cast.orElse(null), () -> {
-                throw new IllegalStateException("Not found the classification code: " + defmetaType.getName() + "@" + classificationName);
-            });
-        } else {
+            return nativeFindMeta(defmetaType, classificationName);
+        } catch (ClassificationMetaFindMethodNotFoundException e) { // e.g. until DBFlute-1.1.1
+            // basically no way as too old DBFlute version but just in case
+            final Object result;
+            try {
+                result = nativeMetaOf(defmetaType, classificationName);
+            } catch (RuntimeException ignored) { // means not found, not use conrete type because might be changed later 
+                return OptionalThing.empty();
+            }
+            if (!(result instanceof ClassificationMeta)) {
+                throw new IllegalStateException("Not classification meta type returned from meta().", e);
+            }
             return OptionalThing.of((ClassificationMeta) result);
         }
     }
@@ -231,6 +209,7 @@ public class LaClassificationUtil {
     // -----------------------------------------------------
     //                                               Code-of
     //                                               -------
+    @Deprecated // will be protected since 1.2.5
     public static Object nativeCodeOf(Class<?> cdefType, Object code) { // old method
         assertArgumentNotNull("cdefType", cdefType);
         assertArgumentNotNull("code", code);
@@ -258,6 +237,7 @@ public class LaClassificationUtil {
     // -----------------------------------------------------
     //                                               Meta of
     //                                               -------
+    @Deprecated // will be protected since 1.2.5
     public static Object nativeMetaOf(Class<?> defmetaType, String classificationName) { // old method
         assertArgumentNotNull("defmetaType", defmetaType);
         assertArgumentNotNull("classificationName", classificationName);

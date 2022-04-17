@@ -29,6 +29,8 @@ import org.dbflute.utflute.core.cannonball.CannonballOption;
 import org.dbflute.utflute.core.cannonball.CannonballRun;
 import org.lastaflute.core.json.bind.JsonYourScalarResource;
 import org.lastaflute.core.json.exception.JsonPropertyNumberParseFailureException;
+import org.lastaflute.unit.mock.db.MockCDef;
+import org.lastaflute.unit.mock.db.MockDepCDef;
 import org.lastaflute.unit.mock.db.MockOldCDef;
 
 import com.google.gson.GsonBuilder;
@@ -260,14 +262,16 @@ public class GsonJsonEngineTest extends PlainTestCase {
     }
 
     // ===================================================================================
-    //                                                                               CDef
-    //                                                                              ======
+    //                                                               CDef (Classification)
+    //                                                               =====================
     public void test_CDef_toJson_fromJson() throws Exception {
         // ## Arrange ##
         GsonJsonEngine engine = new GsonJsonEngine(builder -> {}, op -> {});
         MockUser mockUser = new MockUser();
         mockUser.id = 2;
         mockUser.name = "land";
+        mockUser.memberStatus = MockCDef.MemberStatus.Formalized;
+        mockUser.serviceRank = MockDepCDef.ServiceRank.Bronze;
         mockUser.validFlg = MockOldCDef.Flg.True;
 
         // ## Act ##
@@ -283,6 +287,8 @@ public class GsonJsonEngineTest extends PlainTestCase {
         // ## Assert ##
         log(fromJson);
         assertEquals("land", fromJson.name);
+        assertEquals(MockCDef.MemberStatus.Formalized, fromJson.memberStatus);
+        assertEquals(MockDepCDef.ServiceRank.Bronze, fromJson.serviceRank);
         assertEquals(MockOldCDef.Flg.True, fromJson.validFlg);
     }
 
@@ -305,6 +311,8 @@ public class GsonJsonEngineTest extends PlainTestCase {
         assertNull(user.birthdate);
         assertFalse(user.primitiveFlg);
         assertNull(user.wrapperFlg);
+        assertNull(user.memberStatus);
+        assertNull(user.serviceRank);
         assertNull(user.validFlg);
     }
 
@@ -324,6 +332,8 @@ public class GsonJsonEngineTest extends PlainTestCase {
         assertNull(user.birthdate);
         assertFalse(user.primitiveFlg);
         assertNull(user.wrapperFlg);
+        assertNull(user.memberStatus);
+        assertNull(user.serviceRank);
         assertNull(user.validFlg);
     }
 
@@ -356,6 +366,8 @@ public class GsonJsonEngineTest extends PlainTestCase {
         assertNull(user.id);
         assertNull(user.name);
         assertNull(user.birthdate);
+        assertNull(user.memberStatus);
+        assertNull(user.serviceRank);
         assertNull(user.validFlg);
     }
 
@@ -439,7 +451,7 @@ public class GsonJsonEngineTest extends PlainTestCase {
         log(user);
         assertEquals(1, user.id);
         assertEquals("sea", user.name);
-        assertNull(user.status);
+        assertNull(user.userStatus);
         assertEquals(LocalDate.of(2015, 12, 15), user.birthdate);
         assertNull(user.formalizedDatetime);
         assertEquals(MockOldCDef.Flg.True, user.validFlg);
@@ -632,7 +644,7 @@ public class GsonJsonEngineTest extends PlainTestCase {
                 MockUser second = new MockUser();
                 second.id = 2;
                 second.name = "land";
-                second.status = new MockUserStatus("fml");
+                second.userStatus = new MockUserStatus("fml");
                 String toJson1 = engine.toJson(first);
                 String toJson2 = engine.toJson(second);
                 MockUser fromJson1 = engine.fromJson(toJson1, MockUser.class);
@@ -650,12 +662,14 @@ public class GsonJsonEngineTest extends PlainTestCase {
     public static class MockUser {
         public Integer id;
         public String name;
-        public MockUserStatus status;
+        public MockUserStatus userStatus;
         public LocalDate birthdate;
         public LocalDateTime formalizedDatetime;
         public LocalTime morningCallTime;
         public YearMonth schoolBeginningMonth;
-        public MockOldCDef.Flg validFlg;
+        public MockCDef.MemberStatus memberStatus; // old style methods removed
+        public MockDepCDef.ServiceRank serviceRank; // old style methods included
+        public MockOldCDef.Flg validFlg; // old style methods only (for DBFlute-1.1.1)
         public boolean primitiveFlg;
         public Boolean wrapperFlg;
         public List<String> stringList;
@@ -665,24 +679,25 @@ public class GsonJsonEngineTest extends PlainTestCase {
 
         @Override
         public String toString() {
-            return "{" + id + ", " + name + ", " + status + ", " + birthdate + ", " + formalizedDatetime + ", " + morningCallTime + ", "
-                    + schoolBeginningMonth + ", " + validFlg + ", " + primitiveFlg + ", " + wrapperFlg + ", " + stringList + "}";
+            return "{" + id + ", " + name + ", " + userStatus + ", " + birthdate + ", " + formalizedDatetime + ", " + morningCallTime + ", "
+                    + schoolBeginningMonth + ", " + memberStatus + ", " + validFlg + ", " + serviceRank + ", " + primitiveFlg + ", "
+                    + wrapperFlg + ", " + stringList + "}";
         }
     }
 
     public static class MockUserStatus {
-        public String status;
+        public String statusCode;
 
         public MockUserStatus() {
         }
 
-        public MockUserStatus(String status) {
-            this.status = status;
+        public MockUserStatus(String statusCode) {
+            this.statusCode = statusCode;
         }
 
         @Override
         public String toString() {
-            return "{" + status + "}";
+            return "{" + statusCode + "}";
         }
     }
 }
