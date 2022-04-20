@@ -17,16 +17,91 @@ package org.lastaflute.web.ruts.process;
 
 import java.util.Map;
 
+import org.dbflute.optional.OptionalThing;
 import org.lastaflute.unit.UnitLastaFluteTestCase;
+import org.lastaflute.unit.mock.web.MockRequestManager;
 import org.lastaflute.web.path.FormMappingOption;
 import org.lastaflute.web.ruts.VirtualForm;
 import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.process.formcoins.FormCoinsHelper;
+import org.lastaflute.web.servlet.request.RequestManager;
 
 /**
  * @author jflute
  */
 public class ActionFormMapperTest extends UnitLastaFluteTestCase {
+
+    // ===================================================================================
+    //                                                                           Multipart
+    //                                                                           =========
+    public void test_multipart_different_contentType() throws Exception {
+        // ## Arrange ##
+        ActionFormMapper mapper = createRequestedMapper(new MockRequestManager() {
+            public OptionalThing<String> getContentType() {
+                return OptionalThing.of("text/html");
+            }
+
+            public OptionalThing<String> getHttpMethod() {
+                return OptionalThing.of("post");
+            }
+
+            public boolean isHttpMethodPost() {
+                return true;
+            }
+        });
+
+        // ## Act ##
+        boolean result = mapper.determineMultipartRequest();
+
+        // ## Assert ##
+        assertFalse(result);
+    }
+
+    public void test_multipart_different_httpMethod() throws Exception {
+        // ## Arrange ##
+        ActionFormMapper mapper = createRequestedMapper(new MockRequestManager() {
+            public OptionalThing<String> getContentType() {
+                return OptionalThing.of(ActionFormMapper.MULTIPART_CONTENT_TYPE);
+            }
+
+            public OptionalThing<String> getHttpMethod() {
+                return OptionalThing.of("put");
+            }
+
+            public boolean isHttpMethodPost() {
+                return false;
+            }
+        });
+
+        // ## Act ##
+        boolean result = mapper.determineMultipartRequest();
+
+        // ## Assert ##
+        assertFalse(result); // and watch debug log by visual check
+    }
+
+    public void test_multipart_target_httpMethod() throws Exception {
+        // ## Arrange ##
+        ActionFormMapper mapper = createRequestedMapper(new MockRequestManager() {
+            public OptionalThing<String> getContentType() {
+                return OptionalThing.of(ActionFormMapper.MULTIPART_CONTENT_TYPE);
+            }
+
+            public OptionalThing<String> getHttpMethod() {
+                return OptionalThing.of("post");
+            }
+
+            public boolean isHttpMethodPost() {
+                return true;
+            }
+        });
+
+        // ## Act ##
+        boolean result = mapper.determineMultipartRequest();
+
+        // ## Assert ##
+        assertTrue(result);
+    }
 
     // ===================================================================================
     //                                                                       setProperty()
@@ -117,9 +192,23 @@ public class ActionFormMapperTest extends UnitLastaFluteTestCase {
     // ===================================================================================
     //                                                                         Test Helper
     //                                                                         ===========
-    protected ActionFormMapper createMapper() {
+    protected ActionFormMapper createMapper() { // simple mock
         VirtualForm virtualForm = new VirtualForm(() -> "", (ActionFormMeta) null); // dummy
         return new ActionFormMapper(null, null, null, virtualForm) { // to avoid required components
+
+            protected FormMappingOption adjustFormMapping() {
+                return new FormMappingOption();
+            };
+
+            protected FormCoinsHelper createFormCoinsHelper() {
+                return new FormCoinsHelper(null, requestManager);
+            };
+        };
+    }
+
+    protected ActionFormMapper createRequestedMapper(RequestManager requestManager) {
+        VirtualForm virtualForm = new VirtualForm(() -> "", (ActionFormMeta) null); // dummy
+        return new ActionFormMapper(null, requestManager, null, virtualForm) { // to avoid required components
 
             protected FormMappingOption adjustFormMapping() {
                 return new FormMappingOption();
