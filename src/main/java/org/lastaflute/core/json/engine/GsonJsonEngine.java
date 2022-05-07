@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -260,6 +260,8 @@ public class GsonJsonEngine implements RealJsonEngine // adapters here
         final ConstructorConstructor constructorConstructor = getConstructorConstructor(factory);
         final JsonAdapterAnnotationTypeAdapterFactory jsonAdapterFactory = getJsonAdapterFactory(factory);
         final FieldNamingStrategy fieldNamingStrategy = newGson.fieldNamingStrategy();
+        // #thinking jflute Excluder is needed for customization so hope to resolve this problem (2022/04/17)
+        @SuppressWarnings("deprecation")
         final Excluder excluder = newGson.excluder();
         return new LaReflectiveTypeAdapterFactory(constructorConstructor, fieldNamingStrategy, excluder, jsonAdapterFactory);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.dbflute.jdbc.Classification;
 import org.dbflute.jdbc.ClassificationCodeType;
 import org.dbflute.jdbc.ClassificationMeta;
 import org.dbflute.jdbc.ClassificationUndefinedHandlingType;
+import org.dbflute.optional.OptionalThing;
 
 /**
  * @author jflute
@@ -43,6 +44,7 @@ public interface MockOldCDef extends Classification { // for DBFlute-1.1.1
 
     public enum Flg implements MockOldCDef {
         True("1", "Yes", new String[] { "true" }), False("0", "No", new String[] { "false" });
+
         private static final Map<String, Flg> _codeValueMap = new HashMap<String, Flg>();
 
         static {
@@ -145,6 +147,7 @@ public interface MockOldCDef extends Classification { // for DBFlute-1.1.1
     public enum MemberStatus implements MockOldCDef {
         Formalized("FML", "Formalized", EMPTY_SISTERS), Withdrawal("WDL", "Withdrawal", EMPTY_SISTERS), Provisional("PRV", "Provisional",
                 EMPTY_SISTERS);
+
         private static final Map<String, MemberStatus> _codeValueMap = new HashMap<String, MemberStatus>();
 
         static {
@@ -298,8 +301,25 @@ public interface MockOldCDef extends Classification { // for DBFlute-1.1.1
 
     public enum DefMeta implements ClassificationMeta {
         Flg, MemberStatus, ServiceRank, Region, WithdrawalReason, ProductCategory, ProductStatus;
+
         public String classificationName() {
             return name(); // same as definition name
+        }
+
+        public OptionalThing<? extends Classification> of(Object code) { // since DBFlute-1.2.6
+            return OptionalThing.ofNullable(codeOf(code), () -> { // simple implementation
+                throw new IllegalStateException("Not found the type by the code: " + code);
+            });
+        }
+
+        public OptionalThing<? extends Classification> byName(String name) { // since DBFlute-1.2.6
+            return OptionalThing.ofNullable(nameOf(name), () -> { // simple implementation
+                throw new IllegalStateException("Not found the type by the name: " + name);
+            });
+        }
+
+        public List<Classification> listByGroup(String groupName) { // since DBFlute-1.2.6
+            return groupOf(groupName); // simple implementation
         }
 
         public Classification codeOf(Object code) {
@@ -365,6 +385,19 @@ public interface MockOldCDef extends Classification { // for DBFlute-1.1.1
                 return ClassificationUndefinedHandlingType.EXCEPTION;
             }
             return ClassificationUndefinedHandlingType.LOGGING; // as default
+        }
+
+        public static DefMeta meta(String classificationName) { // old style so use find(name)
+            if (classificationName == null) {
+                throw new IllegalArgumentException("The argument 'classificationName' should not be null.");
+            }
+            if ("Flg".equals(classificationName)) {
+                return DefMeta.Flg;
+            }
+            if ("MemberStatus".equals(classificationName)) {
+                return DefMeta.MemberStatus;
+            }
+            throw new IllegalStateException("Unknown classificationName: " + classificationName);
         }
     }
 }

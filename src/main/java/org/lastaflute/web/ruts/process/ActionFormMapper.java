@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 the original author or authors.
+ * Copyright 2015-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,7 +150,7 @@ public class ActionFormMapper { // created per request (since 1.1.2)
             return;
         }
         MultipartRequestHandler multipartHandler = null;
-        if (isMultipartRequest()) {
+        if (determineMultipartRequest()) {
             final MultipartRequestWrapper wrapper = newMultipartRequestWrapper(requestManager.getRequest());
             ContainerUtil.overrideExternalRequest(wrapper);
             multipartHandler = createMultipartRequestHandler();
@@ -176,10 +176,33 @@ public class ActionFormMapper { // created per request (since 1.1.2)
         }
     }
 
-    protected boolean isMultipartRequest() {
-        return requestManager.getContentType().map(contentType -> {
-            return contentType.startsWith(MULTIPART_CONTENT_TYPE) && requestManager.isHttpMethodPost();
-        }).orElse(false);
+    // -----------------------------------------------------
+    //                                             Multipart
+    //                                             ---------
+    protected boolean determineMultipartRequest() {
+        if (isMultipartContentType()) {
+            if (isMultipartTargetHttpMethod()) {
+                return true;
+            } else {
+                showMultipartDifferentHttpMethod();
+                return false; // multipart content type but different HTTP method
+            }
+        }
+        return false; // normal request
+    }
+
+    protected boolean isMultipartContentType() {
+        return requestManager.getContentType().filter(tp -> tp.startsWith(MULTIPART_CONTENT_TYPE)).isPresent();
+    }
+
+    protected boolean isMultipartTargetHttpMethod() {
+        return requestManager.isHttpMethodPost(); // same logic from old days
+    }
+
+    protected void showMultipartDifferentHttpMethod() {
+        if (logger.isDebugEnabled()) { // developer may be unaware so notice here
+            logger.debug("*Non-POST Multipart so cannot handle as multipart: {}", requestManager.getHttpMethod());
+        }
     }
 
     protected MultipartRequestWrapper newMultipartRequestWrapper(HttpServletRequest request) {
@@ -202,10 +225,16 @@ public class ActionFormMapper { // created per request (since 1.1.2)
         return coinsHelper.prepareRequestParameterMap(multipartHandler, option);
     }
 
+    // -----------------------------------------------------
+    //                                    Populate Exception
+    //                                    ------------------
     protected void handleIllegalPropertyPopulateException(Object form, String name, Object value, Throwable cause) throws ServletException {
         coinsHelper.handleIllegalPropertyPopulateException(form, name, value, runtime, cause);
     }
 
+    // -----------------------------------------------------
+    //                                         InOut Logging
+    //                                         -------------
     protected void keepParameterForInOutLoggingIfNeeds(Map<String, Object> parameterMap) {
         InOutLogKeeper.prepare(requestManager).ifPresent(keeper -> keeper.keepRequestParameter(parameterMap));
     }
