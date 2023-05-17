@@ -19,12 +19,15 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
+import org.dbflute.util.DfCollectionUtil;
 import org.lastaflute.core.json.JsonMappingOption;
 
 import com.google.gson.Gson;
 import com.google.gson.InstanceCreator;
+import com.google.gson.ReflectionAccessFilter;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
 import com.google.gson.internal.ConstructorConstructor;
@@ -64,11 +67,17 @@ public interface CollectionGsonAdaptable { // to show property path in exception
         }
 
         protected ConstructorConstructor createConstructorConstructor(Map<Type, InstanceCreator<?>> instanceCreators) {
-            return new ConstructorConstructor(instanceCreators, isGsonUseJdkUnsafe());
+            return new ConstructorConstructor(instanceCreators, isGsonUseJdkUnsafe(), getGsonReflectionAccessFilterList());
         }
 
-        protected boolean isGsonUseJdkUnsafe() {
-            return false; // #thinking jflute Gson's useJdkUnsafe, which is better? (only for collection here) (2022/04/18)
+        protected boolean isGsonUseJdkUnsafe() { // for Gson-2.9.x
+            // #thinking jflute Gson's useJdkUnsafe, which is better? (only for collection here) (2022/04/18)
+            return false; // as default
+        }
+
+        protected List<ReflectionAccessFilter> getGsonReflectionAccessFilterList() { // for Gson-2.10.x
+            // requires filter list as third argument since Gson-2.10.x by jflute (2023/05/10)
+            return DfCollectionUtil.emptyList(); // as default
         }
 
         protected CollectionTypeAdapterFactory newCollectionTypeAdapterFactory(ConstructorConstructor constructor) {
