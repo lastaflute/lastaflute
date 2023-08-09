@@ -181,7 +181,13 @@ public class SlaveDBAccessorImpl implements SlaveDBAccessor {
     }
 
     protected void clearForcedMasterCallback() {
-        CallbackContext.clearBehaviorCommandHookOnThread();
+        // #hope jflute BehaviorCommandHook closing way, delete by same instance (2023/08/09)
+        // latest only (latest must be this master hook, depends on inner process set/close)
+        CallbackContext.terminateLastBehaviorCommandHookOnThread();
+        // old code until 1.2.5, this code destroy all hooks by jflute (2023/08/09)
+        // however almost no problem because many hooks don't have important process in finally
+        // nonetheless it is not good behavior so fixed
+        //CallbackContext.clearBehaviorCommandHookOnThread();
     }
 
     // ===================================================================================
