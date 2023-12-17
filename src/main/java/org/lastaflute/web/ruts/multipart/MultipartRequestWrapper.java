@@ -29,23 +29,24 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.servlet.AsyncContext;
-import javax.servlet.DispatcherType;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpUpgradeHandler;
-import javax.servlet.http.Part;
-
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
+
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpUpgradeHandler;
+import jakarta.servlet.http.Part;
 
 /**
  * @author modified by jflute (originated in Struts)
@@ -181,11 +182,6 @@ public class MultipartRequestWrapper implements HttpServletRequest {
         return wrapped.getRequestDispatcher(path);
     }
 
-    @SuppressWarnings("deprecation")
-    public String getRealPath(String path) {
-        return wrapped.getRealPath(path);
-    }
-
     //WRAPPER IMPLEMENTATIONS OF HTTPSERVLETREQUEST METHODS
     public String getAuthType() {
         return wrapped.getAuthType();
@@ -273,11 +269,6 @@ public class MultipartRequestWrapper implements HttpServletRequest {
 
     public boolean isRequestedSessionIdFromURL() {
         return wrapped.isRequestedSessionIdFromURL();
-    }
-
-    @SuppressWarnings("deprecation")
-    public boolean isRequestedSessionIdFromUrl() {
-        return wrapped.isRequestedSessionIdFromUrl();
     }
 
     // ===================================================================================
@@ -401,6 +392,21 @@ public class MultipartRequestWrapper implements HttpServletRequest {
         final String plain = wrapped.toString();
         final String firstLine = plain.contains("\n") ? Srl.substringFirstFront(plain, "\n") + "..." : plain; // might contain line so...
         return DfTypeUtil.toClassTitle(this) + ":{" + firstLine + "}@" + Integer.toHexString(hashCode());
+    }
+
+    @Override
+    public String getRequestId() {
+        return wrapped.getRequestId();
+    }
+
+    @Override
+    public String getProtocolRequestId() {
+        return wrapped.getProtocolRequestId();
+    }
+
+    @Override
+    public ServletConnection getServletConnection() {
+        return wrapped.getServletConnection();
     }
 
     // ===================================================================================

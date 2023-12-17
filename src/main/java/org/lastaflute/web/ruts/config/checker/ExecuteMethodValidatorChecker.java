@@ -34,10 +34,6 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.util.DfReflectionUtil;
@@ -50,6 +46,10 @@ import org.lastaflute.web.exception.ExecuteMethodValidatorAnnotationMismatchedEx
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.lastaflute.web.validation.ActionValidator;
 import org.lastaflute.web.validation.Required;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * @author modified by jflute (originated in Sessar) at Miguel's El Dorado Cantina in Lost River

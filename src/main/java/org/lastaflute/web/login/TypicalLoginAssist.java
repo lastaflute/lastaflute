@@ -20,9 +20,6 @@ import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.function.Consumer;
 
-import javax.annotation.Resource;
-import javax.servlet.http.Cookie;
-
 import org.dbflute.helper.HandyDate;
 import org.dbflute.optional.OptionalEntity;
 import org.dbflute.optional.OptionalThing;
@@ -47,6 +44,9 @@ import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.Cookie;
 
 /**
  * @param <ID> The type of user ID.

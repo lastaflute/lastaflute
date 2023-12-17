@@ -15,7 +15,7 @@
  */
 package org.lastaflute.web.validation;
 
-import javax.validation.Configuration;
+import jakarta.validation.Configuration;
 
 /**
  * @author jflute

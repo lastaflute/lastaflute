@@ -17,10 +17,10 @@ package org.lastaflute.web.servlet.external;
 
 import java.util.Iterator;
 
-import javax.servlet.ServletRequest;
-
 import org.lastaflute.di.core.external.AbstractExternalContextMap;
 import org.lastaflute.di.util.EnumerationIterator;
+
+import jakarta.servlet.ServletRequest;
 
 /**
  * @author modified by jflute (originated in Seasar)

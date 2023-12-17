@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.dbflute.exception.AccessContextNotFoundException;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.web.exception.ResponseClientAbortIOException;
@@ -38,6 +36,8 @@ import org.lastaflute.web.servlet.request.stream.WritternZipStreamCall;
 import org.lastaflute.web.servlet.request.stream.WritternZipStreamWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author jflute

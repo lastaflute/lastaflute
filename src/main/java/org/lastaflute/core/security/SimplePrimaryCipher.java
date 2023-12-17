@@ -15,14 +15,14 @@
  */
 package org.lastaflute.core.security;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.FwCoreDirection;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

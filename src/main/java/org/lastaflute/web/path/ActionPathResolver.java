@@ -18,9 +18,6 @@ package org.lastaflute.web.path;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
@@ -38,6 +35,9 @@ import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.util.LaActionExecuteUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * The resolver of action.

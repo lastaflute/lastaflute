@@ -25,9 +25,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.dbflute.helper.jprop.JavaPropertiesReader;
 import org.dbflute.helper.jprop.JavaPropertiesStreamProvider;
 import org.dbflute.helper.jprop.ObjectiveProperties;
@@ -38,6 +35,9 @@ import org.lastaflute.di.DisposableUtil;
 import org.lastaflute.di.core.LastaDiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * The configuration that can be objective.

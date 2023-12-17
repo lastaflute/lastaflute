@@ -17,10 +17,10 @@ package org.lastaflute.web.servlet.external;
 
 import java.util.Iterator;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-
 import org.lastaflute.di.core.external.AbstractUnmodifiableExternalContextMap;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author modified by jflute (originated in Seasar)

@@ -18,12 +18,12 @@ package org.lastaflute.web.servlet.request;
 import java.io.IOException;
 import java.util.List;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletResponse;
-
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.web.servlet.request.stream.WrittenStreamCall;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * The manager of response. (response facade)

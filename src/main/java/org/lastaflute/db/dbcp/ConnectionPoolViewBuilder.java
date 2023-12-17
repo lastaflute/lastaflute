@@ -21,8 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.transaction.Transaction;
-
 import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.db.jta.RomanticTransaction;
@@ -30,6 +28,8 @@ import org.lastaflute.jta.dbcp.ConnectionPool;
 import org.lastaflute.jta.dbcp.ConnectionWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.transaction.Transaction;
 
 /**
  * @author jflute

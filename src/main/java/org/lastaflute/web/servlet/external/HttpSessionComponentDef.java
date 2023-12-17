@@ -15,10 +15,10 @@
  */
 package org.lastaflute.web.servlet.external;
 
-import javax.servlet.http.HttpSession;
-
 import org.lastaflute.di.core.ContainerConstants;
 import org.lastaflute.di.core.meta.impl.SimpleComponentDef;
+
+import jakarta.servlet.http.HttpSession;
 
 /**
  * @author modified by jflute (originated in Seasar)

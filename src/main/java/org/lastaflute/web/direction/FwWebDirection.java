@@ -21,8 +21,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
-import javax.servlet.Filter;
-
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.web.api.ApiFailureHook;
 import org.lastaflute.web.path.ActionAdjustmentProvider;
@@ -40,6 +38,8 @@ import org.lastaflute.web.servlet.request.UserTimeZoneProcessProvider;
 import org.lastaflute.web.servlet.session.SessionResourceProvider;
 import org.lastaflute.web.token.CsrfResourceProvider;
 import org.lastaflute.web.token.DoubleSubmitResourceProvider;
+
+import jakarta.servlet.Filter;
 
 /**
  * @author jflute

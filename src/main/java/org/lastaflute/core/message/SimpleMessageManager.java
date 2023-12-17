@@ -25,15 +25,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
 import org.lastaflute.core.message.resources.MessageResourcesGateway;
 import org.lastaflute.core.message.resources.MessageResourcesHolder;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute
