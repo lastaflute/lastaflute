@@ -19,7 +19,7 @@
 		<servlet.version>6.0.0</servlet.version>
 		<jta.version>2.0.1</jta.version>
 		<gson.version>2.10.1</gson.version>
-		<mailflute.version>0.6.4</mailflute.version>
+		<mailflute.version>0.7.0-SNAPSHOT</mailflute.version>
 		<utflute.version>0.9.4</utflute.version>
 	</properties>
 
