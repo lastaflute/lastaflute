@@ -72,8 +72,8 @@ public class RequestLoggingFilter implements Filter {
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(RequestLoggingFilter.class);
 
-    public static final String ERROR_EXCEPTION_ATTRIBUTE_KEY = "javax.servlet.error.exception";
-    public static final String ERROR_MESSAGE_ATTRIBUTE_KEY = "javax.servlet.error.message";
+    public static final String ERROR_EXCEPTION_ATTRIBUTE_KEY = "jakarta.servlet.error.exception";
+    public static final String ERROR_MESSAGE_ATTRIBUTE_KEY = "jakarta.servlet.error.message";
     protected static final String LF = "\n";
     protected static final String IND = "  ";
     protected static final ThreadLocal<String> begunLocal = new ThreadLocal<String>();

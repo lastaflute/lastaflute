@@ -65,7 +65,7 @@ public class JspHtmlRenderer implements HtmlRenderer {
     }
 
     protected boolean isExportableProperty(PropertyDesc pd) {
-        return !pd.getPropertyType().getName().startsWith("javax.servlet");
+        return !pd.getPropertyType().getName().startsWith("jakarta.servlet");
     }
 
     protected void doForward(RequestManager requestManager, ActionRuntime runtime, NextJourney journey)

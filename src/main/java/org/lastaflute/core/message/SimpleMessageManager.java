@@ -158,12 +158,12 @@ public class SimpleMessageManager implements MessageManager {
     }
 
     protected String filterEmbeddedDomain(String key) {
-        final String javaxPackage = "javax.validation.";
+        final String jakartaPackage = "jakarta.validation.";
         final String hibernatePackage = "org.hibernate.validator.";
         final String lastaflutePackage = "org.lastaflute.validator.";
         final String realKey;
-        if (key.startsWith(javaxPackage)) {
-            realKey = Srl.substringFirstRear(key, javaxPackage);
+        if (key.startsWith(jakartaPackage)) {
+            realKey = Srl.substringFirstRear(key, jakartaPackage);
         } else if (key.startsWith(hibernatePackage)) {
             realKey = Srl.substringFirstRear(key, hibernatePackage);
         } else if (key.startsWith(lastaflutePackage)) {
