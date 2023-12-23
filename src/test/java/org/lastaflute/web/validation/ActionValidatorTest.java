@@ -21,10 +21,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
-
 import org.lastaflute.core.message.UserMessage;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.unit.UnitLastaFluteTestCase;
@@ -35,6 +31,10 @@ import org.lastaflute.web.validation.theme.typed.TypeDouble;
 import org.lastaflute.web.validation.theme.typed.TypeFloat;
 import org.lastaflute.web.validation.theme.typed.TypeInteger;
 import org.lastaflute.web.validation.theme.typed.TypeLong;
+
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * @author jflute

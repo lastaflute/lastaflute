@@ -15,13 +15,13 @@
  */
 package org.lastaflute.web.servlet.filter.hotdeploy;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpSession;
-
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
+
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * @author modified by jflute (originated in Seasar)

@@ -25,15 +25,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.Srl;
 import org.lastaflute.core.message.exception.MessageKeyNotFoundException;
 import org.lastaflute.core.message.resources.MessageResourcesGateway;
 import org.lastaflute.core.message.resources.MessageResourcesHolder;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute
@@ -158,12 +158,12 @@ public class SimpleMessageManager implements MessageManager {
     }
 
     protected String filterEmbeddedDomain(String key) {
-        final String javaxPackage = "javax.validation.";
+        final String jakartaPackage = "jakarta.validation.";
         final String hibernatePackage = "org.hibernate.validator.";
         final String lastaflutePackage = "org.lastaflute.validator.";
         final String realKey;
-        if (key.startsWith(javaxPackage)) {
-            realKey = Srl.substringFirstRear(key, javaxPackage);
+        if (key.startsWith(jakartaPackage)) {
+            realKey = Srl.substringFirstRear(key, jakartaPackage);
         } else if (key.startsWith(hibernatePackage)) {
             realKey = Srl.substringFirstRear(key, hibernatePackage);
         } else if (key.startsWith(lastaflutePackage)) {

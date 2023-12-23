@@ -17,9 +17,9 @@ package org.lastaflute.web.servlet.cookie;
 
 import java.util.function.Consumer;
 
-import javax.servlet.http.Cookie;
-
 import org.dbflute.optional.OptionalThing;
+
+import jakarta.servlet.http.Cookie;
 
 /**
  * @author jflute

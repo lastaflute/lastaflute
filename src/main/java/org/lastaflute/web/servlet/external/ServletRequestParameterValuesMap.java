@@ -18,9 +18,9 @@ package org.lastaflute.web.servlet.external;
 import java.util.Iterator;
 import java.util.Set;
 
-import javax.servlet.ServletRequest;
-
 import org.lastaflute.di.core.external.AbstractUnmodifiableExternalContextMap;
+
+import jakarta.servlet.ServletRequest;
 
 /**
  * @author modified by jflute (originated in Seasar)

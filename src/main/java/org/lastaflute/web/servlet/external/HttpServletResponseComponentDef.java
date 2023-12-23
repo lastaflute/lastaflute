@@ -15,11 +15,11 @@
  */
 package org.lastaflute.web.servlet.external;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.core.ContainerConstants;
 import org.lastaflute.di.core.meta.impl.SimpleComponentDef;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * {@link HttpServletResponse}用の {@link ComponentDef}です。

@@ -15,11 +15,11 @@
  */
 package org.lastaflute.web.util;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.di.core.ExternalContext;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author modified by jflute (originated in Seasar)

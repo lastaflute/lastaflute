@@ -15,10 +15,10 @@
  */
 package org.lastaflute.web.util;
 
-import javax.servlet.ServletRequest;
-
 import org.lastaflute.web.LastaWebKey;
 import org.lastaflute.web.ruts.config.ModuleConfig;
+
+import jakarta.servlet.ServletRequest;
 
 /**
  * @author modified by jflute (originated in Seasar)

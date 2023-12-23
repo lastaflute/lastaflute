@@ -17,10 +17,10 @@ package org.lastaflute.web.ruts.config.routing;
 
 import java.util.function.Supplier;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.web.servlet.request.RequestManager;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author jflute

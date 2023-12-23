@@ -21,10 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.web.LastaAction;
@@ -32,6 +28,10 @@ import org.lastaflute.web.servlet.cookie.CookieManager;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * @author jflute

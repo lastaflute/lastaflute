@@ -17,8 +17,6 @@ package org.lastaflute.web;
 
 import java.util.function.Supplier;
 
-import javax.annotation.Resource;
-
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.exception.ExceptionTranslator;
@@ -52,6 +50,8 @@ import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.token.DoubleSubmitManager;
 import org.lastaflute.web.token.TokenErrorHook;
 import org.lastaflute.web.token.exception.DoubleSubmittedRequestException;
+
+import jakarta.annotation.Resource;
 
 /**
  * The typical action for your project. <br>

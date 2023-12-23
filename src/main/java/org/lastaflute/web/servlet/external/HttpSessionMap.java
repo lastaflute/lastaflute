@@ -17,12 +17,12 @@ package org.lastaflute.web.servlet.external;
 
 import java.util.Iterator;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-
 import org.lastaflute.di.core.external.AbstractExternalContextMap;
 import org.lastaflute.di.util.EmptyIterator;
 import org.lastaflute.di.util.EnumerationIterator;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * @author modified by jflute (originated in Seasar)

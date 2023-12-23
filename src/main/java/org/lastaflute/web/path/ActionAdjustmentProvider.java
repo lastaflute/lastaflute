@@ -17,14 +17,14 @@ package org.lastaflute.web.path;
 
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.config.ActionMapping;
 import org.lastaflute.web.ruts.inoutlogging.InOutLogOption;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.validation.VaConfigSetupper;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 // package is a little strange (path adjustment from the beginning...)
 // but no change for compatible

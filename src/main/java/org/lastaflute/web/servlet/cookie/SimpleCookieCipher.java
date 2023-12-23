@@ -15,15 +15,15 @@
  */
 package org.lastaflute.web.servlet.cookie;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException;
 import org.lastaflute.core.security.InvertibleCryptographer;
 import org.lastaflute.core.security.exception.CipherFailureException;
 import org.lastaflute.web.direction.FwWebDirection;
 import org.lastaflute.web.servlet.cookie.exception.CookieCipherDecryptFailureException;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

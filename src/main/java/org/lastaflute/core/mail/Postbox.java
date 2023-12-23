@@ -15,9 +15,6 @@
  */
 package org.lastaflute.core.mail;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.dbflute.mail.PostOffice;
 import org.dbflute.mail.Postcard;
 import org.dbflute.mail.send.SMailDeliveryDepartment;
@@ -27,6 +24,9 @@ import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.di.DisposableUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

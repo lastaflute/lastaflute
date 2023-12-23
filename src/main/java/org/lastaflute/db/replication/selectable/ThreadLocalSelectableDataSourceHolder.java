@@ -15,11 +15,12 @@
  */
 package org.lastaflute.db.replication.selectable;
 
-import javax.annotation.Resource;
 import javax.sql.DataSource;
 
 import org.lastaflute.di.core.LaContainer;
 import org.lastaflute.di.util.LdiStringUtil;
+
+import jakarta.annotation.Resource;
 
 /**
  * @author modified by jflute (originated in Seasar)

@@ -21,9 +21,6 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.TimeZone;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.dbflute.helper.HandyDate;
 import org.dbflute.system.DBFluteSystem;
 import org.dbflute.util.DfTypeUtil;
@@ -33,6 +30,9 @@ import org.lastaflute.core.direction.exception.FwRequiredAssistNotFoundException
 import org.lastaflute.core.magic.TransactionTimeContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

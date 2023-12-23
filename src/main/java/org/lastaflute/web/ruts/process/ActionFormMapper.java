@@ -35,9 +35,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-
 import org.dbflute.jdbc.Classification;
 import org.dbflute.util.DfCollectionUtil;
 import org.dbflute.util.DfTypeUtil;
@@ -74,6 +71,9 @@ import org.lastaflute.web.validation.theme.conversion.TypeFailureElement;
 import org.lastaflute.web.validation.theme.conversion.ValidateTypeFailure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)

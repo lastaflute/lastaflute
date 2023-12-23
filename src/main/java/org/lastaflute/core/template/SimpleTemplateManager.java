@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.PostConstruct;
-
 import org.dbflute.helper.filesystem.FileTextIO;
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.twowaysql.SqlAnalyzer;
@@ -41,6 +39,8 @@ import org.dbflute.util.DfResourceUtil;
 import org.dbflute.util.Srl;
 import org.dbflute.util.Srl.ScopeInfo;
 import org.lastaflute.core.template.exception.TemplateFileParseFailureException;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * @author jflute

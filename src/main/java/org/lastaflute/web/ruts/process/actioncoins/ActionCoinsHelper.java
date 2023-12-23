@@ -16,8 +16,6 @@
  */
 package org.lastaflute.web.ruts.process.actioncoins;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.dbflute.hook.AccessContext;
 import org.dbflute.hook.CallbackContext;
 import org.dbflute.optional.OptionalThing;
@@ -36,6 +34,8 @@ import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientError
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.util.LaActionRuntimeUtil;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author jflute

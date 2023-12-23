@@ -15,11 +15,11 @@
  */
 package org.lastaflute.web.validation.theme.typed;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
-
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.DfTypeUtil.ParseBooleanException;
+
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
 /**
  * @author jflute

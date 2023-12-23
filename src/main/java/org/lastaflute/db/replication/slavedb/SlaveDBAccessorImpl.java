@@ -15,8 +15,6 @@
  */
 package org.lastaflute.db.replication.slavedb;
 
-import javax.annotation.Resource;
-
 import org.dbflute.bhv.core.BehaviorCommandHook;
 import org.dbflute.bhv.core.BehaviorCommandMeta;
 import org.dbflute.hook.CallbackContext;
@@ -24,6 +22,8 @@ import org.lastaflute.db.replication.selectable.SelectableDataSourceHolder;
 import org.lastaflute.di.util.LdiSrl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

@@ -26,14 +26,13 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpSessionContext;
-
 import org.lastaflute.core.smartdeploy.ManagedHotdeploy;
 import org.lastaflute.di.exception.SessionObjectNotSerializableRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * @author modified by jflute (originated in Seasar)
@@ -151,16 +150,8 @@ public class HotdeployHttpSession implements HttpSession {
         return originalSession.getServletContext();
     }
 
-    public HttpSessionContext getSessionContext() {
-        return originalSession.getSessionContext();
-    }
-
     public Object getValue(final String name) {
         return getAttribute(name);
-    }
-
-    public String[] getValueNames() {
-        return originalSession.getValueNames();
     }
 
     public void invalidate() {

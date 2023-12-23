@@ -21,18 +21,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.validation.ConstraintTarget;
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintViolation;
-import javax.validation.Path;
-import javax.validation.Payload;
-import javax.validation.metadata.ConstraintDescriptor;
-import javax.validation.metadata.ValidateUnwrappedValue;
-
 import org.dbflute.util.DfCollectionUtil;
 import org.hibernate.validator.internal.engine.path.PathImpl;
 import org.lastaflute.web.validation.ClientError;
 import org.lastaflute.web.validation.Required;
+
+import jakarta.validation.ConstraintTarget;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Path;
+import jakarta.validation.Payload;
+import jakarta.validation.metadata.ConstraintDescriptor;
+import jakarta.validation.metadata.ValidateUnwrappedValue;
 
 /**
  * @author jflute

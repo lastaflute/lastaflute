@@ -17,10 +17,10 @@ package org.lastaflute.web.ruts.multipart;
 
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-
 import org.lastaflute.web.ruts.multipart.exception.MultipartExceededException;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author modified by jflute (originated in Struts)

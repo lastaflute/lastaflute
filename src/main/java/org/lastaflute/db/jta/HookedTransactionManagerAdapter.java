@@ -15,10 +15,10 @@
  */
 package org.lastaflute.db.jta;
 
-import javax.transaction.TransactionManager;
-import javax.transaction.UserTransaction;
-
 import org.lastaflute.di.tx.adapter.JTATransactionManagerAdapter;
+
+import jakarta.transaction.TransactionManager;
+import jakarta.transaction.UserTransaction;
 
 /**
  * @author jflute

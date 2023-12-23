@@ -15,9 +15,9 @@
  */
 package org.lastaflute.web.exception;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.lastaflute.core.message.UserMessages;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author jflute

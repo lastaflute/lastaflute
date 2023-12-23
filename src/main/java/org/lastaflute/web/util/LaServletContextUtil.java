@@ -15,9 +15,9 @@
  */
 package org.lastaflute.web.util;
 
-import javax.servlet.ServletContext;
-
 import org.lastaflute.core.util.ContainerUtil;
+
+import jakarta.servlet.ServletContext;
 
 /**
  * @author modified by jflute (originated in Seasar)

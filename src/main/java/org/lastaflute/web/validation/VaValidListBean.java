@@ -17,8 +17,8 @@ package org.lastaflute.web.validation;
 
 import java.util.List;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * @param <ELEMENT> The type of list element.

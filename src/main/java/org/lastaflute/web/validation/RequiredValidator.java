@@ -19,8 +19,8 @@ import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Map;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
 /**
  * @author jflute

@@ -17,8 +17,8 @@ package org.lastaflute.web.validation;
 
 import java.util.Map;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * @param <KEY> The type of map key.

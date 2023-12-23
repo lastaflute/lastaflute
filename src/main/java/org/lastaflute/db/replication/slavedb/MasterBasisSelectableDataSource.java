@@ -15,11 +15,12 @@
  */
 package org.lastaflute.db.replication.slavedb;
 
-import javax.annotation.Resource;
 import javax.sql.DataSource;
 
 import org.lastaflute.db.replication.selectable.SelectableDataSourceHolder;
 import org.lastaflute.db.replication.selectable.SelectableDataSourceProxy;
+
+import jakarta.annotation.Resource;
 
 /**
  * The proxy for selectable data-source that is on master basis.

@@ -15,11 +15,11 @@
  */
 package org.lastaflute.db.jta.stage;
 
-import javax.annotation.Resource;
-
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.core.magic.destructive.BowgunDestructiveAdjuster;
 import org.lastaflute.di.tx.TransactionManagerAdapter;
+
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

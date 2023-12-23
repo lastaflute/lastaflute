@@ -20,7 +20,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import javax.sql.XAConnection;
-import javax.transaction.Transaction;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.system.DBFluteSystem;
@@ -28,6 +27,8 @@ import org.lastaflute.core.magic.ThreadCacheContext;
 import org.lastaflute.jta.dbcp.ConnectionPool;
 import org.lastaflute.jta.dbcp.ConnectionWrapper;
 import org.lastaflute.jta.dbcp.impl.ConnectionWrapperImpl;
+
+import jakarta.transaction.Transaction;
 
 /**
  * @author jflute (originated in Seasar)

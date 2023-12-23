@@ -20,8 +20,6 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.validation.Valid;
-
 import org.dbflute.utflute.core.PlainTestCase;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrAmbaPart;
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrBonvoPart;
@@ -31,6 +29,8 @@ import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrLandPart.ToStrShowBas
 import org.lastaflute.core.util.LatoTest.ToStrSeaBean.ToStrPiaryPart;
 import org.lastaflute.unit.mock.db.MockOldCDef;
 import org.lastaflute.web.validation.Required;
+
+import jakarta.validation.Valid;
 
 /**
  * @author jflute

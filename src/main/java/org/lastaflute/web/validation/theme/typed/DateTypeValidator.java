@@ -17,10 +17,10 @@ package org.lastaflute.web.validation.theme.typed;
 
 import java.lang.annotation.Annotation;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
-
 import org.dbflute.util.DfTypeUtil.ParseDateException;
+
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
 /**
  * @param <DATE> The type of date annotation.
