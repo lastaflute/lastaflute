@@ -448,9 +448,17 @@ public class ActionFormMapper { // created per request (since 1.1.2)
     }
 
     protected void handleUndefinedParameter(Object bean, String name, Object value, BeanDesc beanDesc) {
-        if (option.isUndefinedParameterError() && !option.getIndefinableParameterSet().contains(name)) {
+        // actually error or warning but simple step call here not to depend on option behavior
+        if (option.isUndefinedParameterError() && !isIndefinableParameter(name)) {
             throwRequestUndefinedParameterInFormException(bean, name, value, beanDesc);
         }
+        if (option.isUndefinedParameterWarning() && !isIndefinableParameter(name)) { // since 1.2.6
+            warnRequestUndefinedParameterInFormException(bean, name, value, beanDesc);
+        }
+    }
+
+    protected boolean isIndefinableParameter(String name) {
+        return option.getIndefinableParameterSet().contains(name);
     }
 
     // -----------------------------------------------------
@@ -1234,6 +1242,10 @@ public class ActionFormMapper { // created per request (since 1.1.2)
 
     protected void throwRequestUndefinedParameterInFormException(Object bean, String name, Object value, BeanDesc beanDesc) {
         coinsHelper.throwRequestUndefinedParameterInFormException(bean, name, value, option, beanDesc);
+    }
+
+    protected void warnRequestUndefinedParameterInFormException(Object bean, String name, Object value, BeanDesc beanDesc) {
+        coinsHelper.warnRequestUndefinedParameterInFormException(bean, name, value, option, beanDesc);
     }
 
     // ===================================================================================
