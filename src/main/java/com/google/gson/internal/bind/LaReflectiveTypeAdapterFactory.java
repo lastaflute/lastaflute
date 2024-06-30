@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2022 the original author or authors.
+ * Copyright 2015-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -155,7 +155,8 @@ public class LaReflectiveTypeAdapterFactory implements TypeAdapterFactory {
         JsonAdapter annotation = field.getAnnotation(JsonAdapter.class);
         TypeAdapter<?> mapped = null;
         if (annotation != null) {
-            mapped = jsonAdapterFactory.getTypeAdapter(constructorConstructor, context, fieldType, annotation);
+            final boolean isClassAnnotation = false; // no, for field here (fitting with gson-2.11.0)
+            mapped = jsonAdapterFactory.getTypeAdapter(constructorConstructor, context, fieldType, annotation, isClassAnnotation);
         }
         final boolean jsonAdapterPresent = mapped != null;
         if (mapped == null)
