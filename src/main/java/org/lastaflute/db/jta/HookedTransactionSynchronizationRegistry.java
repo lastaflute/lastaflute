@@ -15,9 +15,9 @@
  */
 package org.lastaflute.db.jta;
 
-import javax.transaction.TransactionManager;
-
 import org.lastaflute.jta.core.LaTransactionSynchronizationRegistry;
+
+import jakarta.transaction.TransactionManager;
 
 /**
  * @author jflute

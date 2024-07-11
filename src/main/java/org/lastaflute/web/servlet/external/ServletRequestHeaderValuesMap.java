@@ -20,10 +20,10 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.lastaflute.di.core.external.AbstractUnmodifiableExternalContextMap;
 import org.lastaflute.di.util.EnumerationIterator;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author modified by jflute (originated in Seasar)

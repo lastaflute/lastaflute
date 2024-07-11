@@ -15,9 +15,6 @@
  */
 package org.lastaflute.core.exception;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.dbflute.exception.AccessContextNotFoundException;
 import org.dbflute.exception.EntityAlreadyExistsException;
 import org.dbflute.exception.SQLFailureException;
@@ -28,6 +25,9 @@ import org.lastaflute.db.dbcp.ConnectionPoolViewBuilder;
 import org.lastaflute.db.dbflute.exception.NonTransactionalUpdateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

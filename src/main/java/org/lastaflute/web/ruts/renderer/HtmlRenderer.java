@@ -17,11 +17,11 @@ package org.lastaflute.web.ruts.renderer;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-
 import org.lastaflute.web.ruts.NextJourney;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
+
+import jakarta.servlet.ServletException;
 
 /**
  * @author jflute

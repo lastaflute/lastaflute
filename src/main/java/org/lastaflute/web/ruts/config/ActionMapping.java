@@ -26,8 +26,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.dbflute.util.Srl;
@@ -41,6 +39,8 @@ import org.lastaflute.web.response.HtmlResponse;
 import org.lastaflute.web.ruts.NextJourney;
 import org.lastaflute.web.ruts.NextJourney.PlannedJourneyProvider;
 import org.lastaflute.web.util.LaServletContextUtil;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author modified by jflute (originated in Seasar and Struts)

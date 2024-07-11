@@ -15,12 +15,12 @@
  */
 package org.lastaflute.db.jta.lazytx;
 
-import javax.transaction.TransactionManager;
-
 import org.lastaflute.db.jta.HookedTransactionManagerAdapter;
 import org.lastaflute.di.tx.TransactionCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.transaction.TransactionManager;
 
 /**
  * @author jflute

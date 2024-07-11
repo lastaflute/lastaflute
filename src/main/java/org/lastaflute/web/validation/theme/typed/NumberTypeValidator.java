@@ -17,8 +17,8 @@ package org.lastaflute.web.validation.theme.typed;
 
 import java.lang.annotation.Annotation;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
 /**
  * @param <NUMBER> The type of number annotation.

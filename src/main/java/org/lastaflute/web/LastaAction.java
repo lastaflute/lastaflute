@@ -15,8 +15,6 @@
  */
 package org.lastaflute.web;
 
-import javax.annotation.Resource;
-
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.magic.async.AsyncManager;
 import org.lastaflute.core.message.MessageManager;
@@ -35,6 +33,8 @@ import org.lastaflute.web.servlet.request.RequestManager;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.lastaflute.web.servlet.session.SessionManager;
 import org.lastaflute.web.validation.ActionValidator;
+
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

@@ -18,14 +18,14 @@ package org.lastaflute.web.ruts.config.restful.httpstatus;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.dbflute.optional.OptionalThing;
 import org.lastaflute.di.util.tiger.LdiGenericUtil;
 import org.lastaflute.web.response.ActionResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.ruts.config.ActionExecute;
 import org.lastaflute.web.ruts.process.ActionRuntime;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author jflute

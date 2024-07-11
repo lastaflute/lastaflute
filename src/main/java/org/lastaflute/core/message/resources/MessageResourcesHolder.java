@@ -15,10 +15,10 @@
  */
 package org.lastaflute.core.message.resources;
 
-import javax.annotation.PostConstruct;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * @author jflute

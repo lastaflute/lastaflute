@@ -19,8 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import javax.sql.XAConnection;
 
 import org.dbflute.util.DfResourceUtil;
@@ -32,6 +30,9 @@ import org.lastaflute.di.util.LdiClassUtil;
 import org.lastaflute.jta.dbcp.SimpleXADataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

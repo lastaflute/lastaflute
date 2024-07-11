@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfCollectionUtil;
@@ -40,6 +38,8 @@ import org.lastaflute.web.login.exception.LoginRequiredException;
 import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.response.JsonResponse;
 import org.lastaflute.web.servlet.request.RequestManager;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author jflute

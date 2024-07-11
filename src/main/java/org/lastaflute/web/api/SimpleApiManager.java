@@ -15,9 +15,6 @@
  */
 package org.lastaflute.web.api;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
 import org.dbflute.optional.OptionalThing;
 import org.dbflute.util.DfTypeUtil;
 import org.lastaflute.core.direction.FwAssistantDirector;
@@ -27,6 +24,9 @@ import org.lastaflute.web.response.ApiResponse;
 import org.lastaflute.web.servlet.request.ResponseManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 
 /**
  * @author jflute

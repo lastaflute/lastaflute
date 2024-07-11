@@ -21,8 +21,9 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.logging.Logger;
 
-import javax.annotation.Resource;
 import javax.sql.DataSource;
+
+import jakarta.annotation.Resource;
 
 /**
  * @author modified by jflute (originated in Seasar)

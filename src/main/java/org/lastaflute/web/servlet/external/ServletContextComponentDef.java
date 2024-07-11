@@ -15,11 +15,11 @@
  */
 package org.lastaflute.web.servlet.external;
 
-import javax.servlet.ServletContext;
-
 import org.lastaflute.di.core.ComponentDef;
 import org.lastaflute.di.core.ContainerConstants;
 import org.lastaflute.di.core.meta.impl.SimpleComponentDef;
+
+import jakarta.servlet.ServletContext;
 
 /**
  * {@link ServletContext}用の {@link ComponentDef}です。

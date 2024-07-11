@@ -24,12 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.transaction.HeuristicMixedException;
-import javax.transaction.HeuristicRollbackException;
-import javax.transaction.NotSupportedException;
-import javax.transaction.RollbackException;
-import javax.transaction.SystemException;
-
 import org.dbflute.bhv.core.BehaviorCommandMeta;
 import org.dbflute.util.DfTraceViewUtil;
 import org.lastaflute.core.magic.ThreadCacheContext;
@@ -41,6 +35,12 @@ import org.lastaflute.db.jta.romanticist.TransactionRomanticSnapshotBuilder;
 import org.lastaflute.db.jta.romanticist.TransactionSavedRecentResult;
 import org.lastaflute.jta.core.LaTransaction;
 import org.lastaflute.jta.dbcp.ConnectionWrapper;
+
+import jakarta.transaction.HeuristicMixedException;
+import jakarta.transaction.HeuristicRollbackException;
+import jakarta.transaction.NotSupportedException;
+import jakarta.transaction.RollbackException;
+import jakarta.transaction.SystemException;
 
 /**
  * @author jflute

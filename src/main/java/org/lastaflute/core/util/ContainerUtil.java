@@ -17,9 +17,6 @@ package org.lastaflute.core.util;
 
 import java.lang.reflect.Field;
 
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
-
 import org.dbflute.util.DfReflectionUtil;
 import org.lastaflute.di.core.ExternalContext;
 import org.lastaflute.di.core.SingletonLaContainer;
@@ -28,6 +25,9 @@ import org.lastaflute.di.core.exception.ComponentNotFoundException;
 import org.lastaflute.di.core.exception.CyclicReferenceComponentException;
 import org.lastaflute.di.core.exception.TooManyRegistrationComponentException;
 import org.lastaflute.di.core.factory.SingletonLaContainerFactory;
+
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author jflute

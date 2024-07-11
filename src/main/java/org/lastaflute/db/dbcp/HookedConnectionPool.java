@@ -18,9 +18,7 @@ package org.lastaflute.db.dbcp;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import javax.annotation.PostConstruct;
 import javax.sql.XAConnection;
-import javax.transaction.Transaction;
 
 import org.lastaflute.db.jta.RomanticTransaction;
 import org.lastaflute.jta.dbcp.ConnectionPool;
@@ -28,6 +26,9 @@ import org.lastaflute.jta.dbcp.ConnectionWrapper;
 import org.lastaflute.jta.dbcp.SimpleConnectionPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transaction;
 
 /**
  * @author jflute

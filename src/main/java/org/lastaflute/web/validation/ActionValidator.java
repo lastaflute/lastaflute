@@ -38,19 +38,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.validation.Configuration;
-import javax.validation.ConstraintViolation;
-import javax.validation.ElementKind;
-import javax.validation.Path;
-import javax.validation.Valid;
-import javax.validation.Validation;
-import javax.validation.Validator;
-import javax.validation.ValidatorFactory;
-import javax.validation.bootstrap.GenericBootstrap;
-import javax.validation.constraints.NotNull;
-import javax.validation.groups.Default;
-import javax.validation.metadata.ConstraintDescriptor;
-
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.dbflute.jdbc.Classification;
 import org.dbflute.optional.OptionalThing;
@@ -89,6 +76,19 @@ import org.lastaflute.web.validation.theme.typed.TypeLocalDate;
 import org.lastaflute.web.validation.theme.typed.TypeLocalDateTime;
 import org.lastaflute.web.validation.theme.typed.TypeLocalTime;
 import org.lastaflute.web.validation.theme.typed.TypeLong;
+
+import jakarta.validation.Configuration;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ElementKind;
+import jakarta.validation.Path;
+import jakarta.validation.Valid;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+import jakarta.validation.bootstrap.GenericBootstrap;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.groups.Default;
+import jakarta.validation.metadata.ConstraintDescriptor;
 
 /**
  * @param <MESSAGES> The type of user messages.

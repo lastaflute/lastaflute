@@ -18,8 +18,6 @@ package org.lastaflute.web.ruts.renderer;
 import java.io.IOException;
 import java.util.Collection;
 
-import javax.servlet.ServletException;
-
 import org.dbflute.helper.message.ExceptionMessageBuilder;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.web.exception.RequestForwardFailureException;
@@ -28,6 +26,8 @@ import org.lastaflute.web.ruts.config.ActionFormMeta;
 import org.lastaflute.web.ruts.config.ActionFormProperty;
 import org.lastaflute.web.ruts.process.ActionRuntime;
 import org.lastaflute.web.servlet.request.RequestManager;
+
+import jakarta.servlet.ServletException;
 
 /**
  * @author jflute
@@ -65,7 +65,7 @@ public class JspHtmlRenderer implements HtmlRenderer {
     }
 
     protected boolean isExportableProperty(PropertyDesc pd) {
-        return !pd.getPropertyType().getName().startsWith("javax.servlet");
+        return !pd.getPropertyType().getName().startsWith("jakarta.servlet");
     }
 
     protected void doForward(RequestManager requestManager, ActionRuntime runtime, NextJourney journey)

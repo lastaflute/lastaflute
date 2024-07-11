@@ -17,7 +17,7 @@ package org.lastaflute.core.direction;
 
 import java.io.Serializable;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * The unified provider for any components. <br>
