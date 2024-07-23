@@ -41,7 +41,7 @@ public interface LaActionDocs {
      * <span style="font-size: 130%; color: #553000">[Action Form]</span> <span style="color: #3F7E5E">// for POST, GET parameter or JSON body</span>
      * <span style="color: #70226C">public</span> HtmlResponse signin(<span style="color: #994747">SinginForm form</span>) { <span style="color: #3F7E5E">// POST (or also GET)</span>
      * 
-     * <span style="color: #3F7E5E">// e.g. /.../list/3?favoriteCode=sea&nextName=land</span>
+     * <span style="color: #3F7E5E">// e.g. /.../list/3?favoriteCode=sea&amp;nextName=land</span>
      * <span style="color: #70226C">public</span> HtmlResponse list(<span style="color: #994747">Integer pageNumber, SinginForm form</span>) { <span style="color: #3F7E5E">// GET</span>
      * 
      * <span style="color: #3F7E5E">// e.g. /.../list/3 (with JSON in request body)</span>
