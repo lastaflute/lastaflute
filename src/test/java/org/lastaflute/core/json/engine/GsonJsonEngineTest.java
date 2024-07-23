@@ -49,21 +49,19 @@ public class GsonJsonEngineTest extends PlainTestCase {
         LocalDate date = toLocalDate("2015/05/18");
         LocalDateTime dateTime = toLocalDateTime("2015/05/25 12:34:56.789");
         LocalTime time = toLocalTime("23:15:47.731");
-        YearMonth yearMonth = YearMonth.from(toLocalDate("2017/04/01"));
         MockUser mockUser = new MockUser();
         mockUser.id = 2;
         mockUser.name = "land";
         mockUser.birthdate = date;
         mockUser.formalizedDatetime = dateTime;
         mockUser.morningCallTime = time;
-        mockUser.schoolBeginningMonth = yearMonth;
 
         // ## Act ##
         String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
-        assertContainsAll(json, "2015-05-18", "2015-05-25T12:34:56.789", "23:15:47.731", "{\"year\":2017,\"month\":4}");
+        assertContainsAll(json, "2015-05-18", "2015-05-25T12:34:56.789", "23:15:47.731");
 
         // ## Act ##
         MockUser fromJson = engine.fromJson(json, MockUser.class);
@@ -74,7 +72,6 @@ public class GsonJsonEngineTest extends PlainTestCase {
         assertEquals(toString(fromJson.birthdate, "yyyy-MM-dd"), "2015-05-18");
         assertEquals(toString(fromJson.formalizedDatetime, "yyyy-MM-dd HH:mm:ss.SSS"), "2015-05-25 12:34:56.789");
         assertEquals(toString(fromJson.morningCallTime, "HH:mm:ss.SSS"), "23:15:47.731");
-        assertEquals(toString(fromJson.schoolBeginningMonth, "yyyy-MM"), "2017-04");
     }
 
     public void test_java8time_toJson_fromJson_yourScalar() throws Exception {
@@ -85,21 +82,19 @@ public class GsonJsonEngineTest extends PlainTestCase {
         LocalDate date = toLocalDate("2015/05/18");
         LocalDateTime dateTime = toLocalDateTime("2015/05/25 12:34:56.789");
         LocalTime time = toLocalTime("23:15:47.731");
-        YearMonth yearMonth = YearMonth.from(toLocalDate("2017/04/01"));
         MockUser mockUser = new MockUser();
         mockUser.id = 2;
         mockUser.name = "land";
         mockUser.birthdate = date;
         mockUser.formalizedDatetime = dateTime;
         mockUser.morningCallTime = time;
-        mockUser.schoolBeginningMonth = yearMonth;
 
         // ## Act ##
         String json = engine.toJson(mockUser);
 
         // ## Assert ##
         log(json);
-        assertContainsAll(json, "2015-05-18", "2015-05-25T12:34:56.789", "23:15:47.731", "\"2017-04\"");
+        assertContainsAll(json, "2015-05-18", "2015-05-25T12:34:56.789", "23:15:47.731");
 
         // ## Act ##
         MockUser fromJson = engine.fromJson(json, MockUser.class);
@@ -110,7 +105,6 @@ public class GsonJsonEngineTest extends PlainTestCase {
         assertEquals(toString(fromJson.birthdate, "yyyy-MM-dd"), "2015-05-18");
         assertEquals(toString(fromJson.formalizedDatetime, "yyyy-MM-dd HH:mm:ss.SSS"), "2015-05-25 12:34:56.789");
         assertEquals(toString(fromJson.morningCallTime, "HH:mm:ss.SSS"), "23:15:47.731");
-        assertEquals(fromJson.schoolBeginningMonth.toString(), "2017-04");
     }
 
     protected JsonYourScalarResource prepareYearMonthResource() {
@@ -666,7 +660,8 @@ public class GsonJsonEngineTest extends PlainTestCase {
         public LocalDate birthdate;
         public LocalDateTime formalizedDatetime;
         public LocalTime morningCallTime;
-        public YearMonth schoolBeginningMonth;
+        // #for_now jflute YearMonth is unsupported (depends on Gson), no test here to avoid access error (2024/07/23)
+        //public YearMonth schoolBeginningMonth;
         public MockCDef.MemberStatus memberStatus; // old style methods removed
         public MockDepCDef.ServiceRank serviceRank; // old style methods included
         public MockOldCDef.Flg validFlg; // old style methods only (for DBFlute-1.1.1)
@@ -680,8 +675,8 @@ public class GsonJsonEngineTest extends PlainTestCase {
         @Override
         public String toString() {
             return "{" + id + ", " + name + ", " + userStatus + ", " + birthdate + ", " + formalizedDatetime + ", " + morningCallTime + ", "
-                    + schoolBeginningMonth + ", " + memberStatus + ", " + validFlg + ", " + serviceRank + ", " + primitiveFlg + ", "
-                    + wrapperFlg + ", " + stringList + "}";
+                    + memberStatus + ", " + validFlg + ", " + serviceRank + ", " + primitiveFlg + ", " + wrapperFlg + ", " + stringList
+                    + "}";
         }
     }
 
