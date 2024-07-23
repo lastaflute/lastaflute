@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.lastaflute</groupId>
 	<artifactId>lastaflute</artifactId>
-	<version>2.0.0-SNAPSHOT</version>
+	<version>2.0.0-A-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>LastaFlute</name>
@@ -13,14 +13,14 @@
 	<inceptionYear>2015</inceptionYear>
 
 	<properties>
-		<dbflute.version>1.2.3</dbflute.version> <!-- about one year old (from now) -->
-		<lasta.di.version>2.0.0-SNAPSHOT</lasta.di.version>
+		<dbflute.version>1.2.8</dbflute.version> <!-- about one year old (from now) -->
+		<lasta.di.version>2.0.0-A-SNAPSHOT</lasta.di.version>
 		<hibernate.version>8.0.1.Final</hibernate.version>
 		<servlet.version>6.0.0</servlet.version>
 		<jta.version>2.0.1</jta.version>
-		<gson.version>2.10.1</gson.version>
-		<mailflute.version>2.0.0-SNAPSHOT</mailflute.version>
-		<utflute.version>0.9.6-A-SNAPSHOT</utflute.version>
+		<gson.version>2.11.0</gson.version>
+		<mailflute.version>2.0.0-A-SNAPSHOT</mailflute.version>
+		<utflute.version>0.9.6</utflute.version>
 	</properties>
 
 	<licenses>
@@ -74,7 +74,18 @@
 		<pluginManagement>
 			<plugins>
 				<plugin>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<configuration>
+						<source>21</source>
+						<target>21</target>
+						<encoding>UTF-8</encoding>
+						<showDeprecation>true</showDeprecation>
+						<showWarnings>true</showWarnings>
+					</configuration>
+				</plugin>
+				<plugin>
 					<artifactId>maven-deploy-plugin</artifactId>
+					<version>2.8.2</version> <!-- to avoid (nonsense?) warning of updateReleaseInfo -->
 					<configuration>
 						<updateReleaseInfo>true</updateReleaseInfo>
 					</configuration>
@@ -109,18 +120,8 @@
 		</pluginManagement>
 		<plugins>
 			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.11.0</version>
-				<configuration>
-					<release>11</release>
-					<encoding>UTF-8</encoding>
-					<showDeprecation>true</showDeprecation>
-					<showWarnings>true</showWarnings>
-				</configuration>
-			</plugin>
-			<plugin>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.3.0</version>
+				<version>2.1.2</version>
 				<executions>
 					<execution>
 						<id>source-jar</id>
@@ -133,14 +134,14 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>3.6.0</version>
+				<version>2.10.1</version>
 				<configuration>
 					<encoding>UTF-8</encoding>
 					<docencoding>UTF-8</docencoding>
 					<charset>UTF-8</charset>
 					<!-- you can avoid self-closing check e.g. br-tag (checked since java8) -->
 					<!-- fixed but comment-out for emergency deploy -->
-					<doclint>none</doclint>
+					<additionalparam>-Xdoclint:none</additionalparam>
 				</configuration>
 				<executions>
 					<execution>
@@ -163,7 +164,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>3.1.0</version>
+				<version>1.5</version>
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
@@ -263,7 +264,7 @@
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>4.13.2</version> <!-- is latest version without hamcrest -->
+			<version>4.8.2</version> <!-- is latest version without hamcrest -->
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -276,7 +277,7 @@
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
-			<version>1.4.14</version>
+			<version>1.2.13</version>
 			<scope>test</scope>
 		</dependency>
 		<!-- el -->

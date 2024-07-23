@@ -1,6 +1,6 @@
 LastaFlute
 =======================
-Typesafe Web Framework for LeAn STArtup with DBFlute and Java8
+Typesafe Web Framework for LeAn STArtup with DBFlute and Java21
 
 - for Lean Startup and Incremental Development
 - making the fullest possible use of Java8
@@ -72,7 +72,7 @@ public class HarborBoot {
 <dependency>
     <groupId>org.lastaflute</groupId>
     <artifactId>lastaflute</artifactId>
-    <version>1.2.5</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 

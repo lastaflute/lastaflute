@@ -1,6 +1,6 @@
 /*
- * Copyright 2015-2022 the original author or authors.
- * Copyright 2015-2022 the original author or authors.
+ * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,8 @@ import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureExcept
 import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
 import org.lastaflute.web.servlet.request.RequestManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -82,6 +84,8 @@ public class FormCoinsHelper { // keep singleton-able to be simple
     // ===================================================================================
     //                                                                          Definition
     //                                                                          ==========
+    private static final Logger logger = LoggerFactory.getLogger(FormCoinsHelper.class);
+
     protected static final String LF = "\n";
 
     // ===================================================================================
@@ -662,6 +666,18 @@ public class FormCoinsHelper { // keep singleton-able to be simple
 
     public void throwRequestUndefinedParameterInFormException(Object bean, String name, Object value, FormMappingOption option,
             BeanDesc beanDesc) {
+        final String msg = buildRequestUndefinedParameterInFormException(bean, name, value, option, beanDesc);
+        throw new RequestUndefinedParameterInFormException(msg, getRequestUndefinedParameterInFormMessages());
+    }
+
+    public void warnRequestUndefinedParameterInFormException(Object bean, String name, Object value, FormMappingOption option,
+            BeanDesc beanDesc) { // since 1.2.6
+        final String msg = buildRequestUndefinedParameterInFormException(bean, name, value, option, beanDesc);
+        logger.warn(msg);
+    }
+
+    protected String buildRequestUndefinedParameterInFormException(Object bean, String name, Object value, FormMappingOption option,
+            BeanDesc beanDesc) {
         final ExceptionMessageBuilder br = new ExceptionMessageBuilder();
         br.addNotice("Undefined parameter in the form.");
         br.addItem("Advice");
@@ -693,8 +709,7 @@ public class FormCoinsHelper { // keep singleton-able to be simple
         br.addElement(name + "=" + (value instanceof Object[] ? Arrays.asList((Object[]) value) : value));
         br.addItem("Mapping Option");
         br.addElement(option);
-        final String msg = br.buildExceptionMessage();
-        throw new RequestUndefinedParameterInFormException(msg, getRequestUndefinedParameterInFormMessages());
+        return br.buildExceptionMessage();
     }
 
     protected UserMessages getRequestUndefinedParameterInFormMessages() {

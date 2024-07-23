@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2022 the original author or authors.
+ * Copyright 2015-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,8 +45,12 @@ public class FormMappingOption {
     //                                                                           =========
     protected boolean keepEmptyStringParameter;
     protected OptionalThing<FormSimpleTextParameterFilter> simpleTextParameterFilter = OptionalThing.empty();
+
+    // error or warning, you cannot set both true
     protected boolean undefinedParameterError;
+    protected boolean undefinedParameterWarning; // since 1.2.6
     protected Set<String> indefinableParameterSet; // null allowed
+
     protected List<FormYourCollectionResource> yourCollectionResourceList; // null allowed
     protected OptionalThing<DateTimeFormatter> zonedDateTimeFormatter = OptionalThing.empty();
     protected OptionalThing<Function<Map<String, Object>, Map<String, Object>>> requestParameterMapFilter = OptionalThing.empty();
@@ -78,7 +82,16 @@ public class FormMappingOption {
     //                                   Undefined Parameter
     //                                   -------------------
     public FormMappingOption asUndefinedParameterError() {
-        undefinedParameterError = true;
+        undefinedParameterError = true; // here
+        undefinedParameterWarning = false; // override
+        return this;
+    }
+
+    // user feedback: want to make strict but want to allow application release timing gap
+    // overridding way here because merely small option so simple
+    public FormMappingOption asUndefinedParameterWarning() { // since 1.2.6
+        undefinedParameterError = false; // override
+        undefinedParameterWarning = true; // here
         return this;
     }
 
@@ -177,6 +190,10 @@ public class FormMappingOption {
     //                                   -------------------
     public boolean isUndefinedParameterError() {
         return undefinedParameterError;
+    }
+
+    public boolean isUndefinedParameterWarning() {
+        return undefinedParameterWarning;
     }
 
     public Set<String> getIndefinableParameterSet() { // not null
