@@ -72,10 +72,27 @@ public class RequestLoggingFilter implements Filter {
     //                                                                          ==========
     private static final Logger logger = LoggerFactory.getLogger(RequestLoggingFilter.class);
 
-    public static final String ERROR_EXCEPTION_ATTRIBUTE_KEY = "javax.servlet.error.exception";
-    public static final String ERROR_MESSAGE_ATTRIBUTE_KEY = "javax.servlet.error.message";
+    // -----------------------------------------------------
+    //                                           Servlet Key
+    //                                           -----------
+    public static final String JAVAX_ERROR_EXCEPTION_ATTRIBUTE_KEY = "javax.servlet.error.exception";
+    public static final String JAVAX_ERROR_MESSAGE_ATTRIBUTE_KEY = "javax.servlet.error.message";
+    public static final String JAKARTA_ERROR_EXCEPTION_ATTRIBUTE_KEY = "jakarta.servlet.error.exception";
+    public static final String JAKARTA_ERROR_MESSAGE_ATTRIBUTE_KEY = "jakarta.servlet.error.message";
+    @Deprecated
+    public static final String ERROR_EXCEPTION_ATTRIBUTE_KEY = JAVAX_ERROR_EXCEPTION_ATTRIBUTE_KEY;
+    @Deprecated
+    public static final String ERROR_MESSAGE_ATTRIBUTE_KEY = JAVAX_ERROR_MESSAGE_ATTRIBUTE_KEY;
+
+    // -----------------------------------------------------
+    //                                           Coin String
+    //                                           -----------
     protected static final String LF = "\n";
     protected static final String IND = "  ";
+
+    // -----------------------------------------------------
+    //                                          Thread Local
+    //                                          ------------
     protected static final ThreadLocal<String> begunLocal = new ThreadLocal<String>();
     protected static final ThreadLocal<RequestClientErrorHandler> clientErrorHandlerLocal = new ThreadLocal<>();
     protected static final ThreadLocal<RequestServerErrorHandler> serverErrorHandlerLocal = new ThreadLocal<>();
@@ -587,7 +604,10 @@ public class RequestLoggingFilter implements Filter {
     }
 
     protected boolean isIgnoreRequestAttributeShow(String name) { // because the error is handled in this filter
-        return ERROR_EXCEPTION_ATTRIBUTE_KEY.equals(name) || ERROR_MESSAGE_ATTRIBUTE_KEY.equals(name);
+        return JAVAX_ERROR_EXCEPTION_ATTRIBUTE_KEY.equals(name) //
+                || JAVAX_ERROR_MESSAGE_ATTRIBUTE_KEY.equals(name) //
+                || JAKARTA_ERROR_EXCEPTION_ATTRIBUTE_KEY.equals(name) //
+                || JAKARTA_ERROR_MESSAGE_ATTRIBUTE_KEY.equals(name);
     }
 
     protected void buildSessionAttributes(StringBuilder sb, HttpServletRequest request, boolean showErrorFlush) {
@@ -715,7 +735,17 @@ public class RequestLoggingFilter implements Filter {
     //                                                                     Error Attribute
     //                                                                     ===============
     protected boolean handleErrorAttribute(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        final String attributeKey = ERROR_EXCEPTION_ATTRIBUTE_KEY;
+        if (doHandleErrorAttribute(request, response, JAVAX_ERROR_EXCEPTION_ATTRIBUTE_KEY)) {
+            return true;
+        }
+        if (doHandleErrorAttribute(request, response, JAKARTA_ERROR_EXCEPTION_ATTRIBUTE_KEY)) {
+            return true;
+        }
+        return false;
+    }
+
+    protected boolean doHandleErrorAttribute(HttpServletRequest request, HttpServletResponse response, String attributeKey)
+            throws ServletException, IOException {
         final Object errorObj = request.getAttribute(attributeKey);
         if (errorObj != null && errorObj instanceof Throwable) {
             if (errorObj instanceof RuntimeException) {
