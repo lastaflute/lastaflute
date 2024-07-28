@@ -141,14 +141,14 @@ public interface RequestManager extends ScopedAttributeHolder {
     String getRequestPath();
 
     /**
-     * Get the request path and query. e.g. /member/list/?keyword=foo&status=FOO <br>
+     * Get the request path and query. e.g. /member/list/?keyword=foo&amp;status=FOO <br>
      * This uses getRequestPath() and HttpServletRequest#getQueryString().
      * @return The path and query as string. (NotNull)
      */
     String getRequestPathAndQuery();
 
     /**
-     * Get the query string of the current request. e.g. keyword=foo&status=FOO <br>
+     * Get the query string of the current request. e.g. keyword=foo&amp;status=FOO <br>
      * This uses {@link HttpServletRequest#getQueryString()}.
      * @return The optional query string. (NotNull, EmptyAllowed: when null query, empty query, so wrapped value cannot be empty)
      */

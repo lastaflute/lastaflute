@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.Collection;
 
 import org.dbflute.helper.message.ExceptionMessageBuilder;
+import org.dbflute.util.Srl;
 import org.lastaflute.di.helper.beans.PropertyDesc;
 import org.lastaflute.web.exception.RequestForwardFailureException;
 import org.lastaflute.web.ruts.NextJourney;
@@ -65,7 +66,11 @@ public class JspHtmlRenderer implements HtmlRenderer {
     }
 
     protected boolean isExportableProperty(PropertyDesc pd) {
-        return !pd.getPropertyType().getName().startsWith("jakarta.servlet");
+        return determineExportablePropertyTypeName(pd.getPropertyType().getName());
+    }
+
+    protected boolean determineExportablePropertyTypeName(String propertyTypeName) { // #jakarta
+        return !Srl.startsWith(propertyTypeName, "javax.servlet", "jakarta.servlet");
     }
 
     protected void doForward(RequestManager requestManager, ActionRuntime runtime, NextJourney journey)

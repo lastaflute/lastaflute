@@ -179,11 +179,14 @@ public class UserMessage implements Serializable {
     }
 
     protected String filterEmbeddedDomainForDisplay(String key) { // copied from SimpleMessageManager
+        final String javaxPackage = "javax.validation.";
         final String jakartaPackage = "jakarta.validation.";
         final String hibernatePackage = "org.hibernate.validator.";
         final String lastaflutePackage = "org.lastaflute.validator.";
         final String realKey;
-        if (key.startsWith(jakartaPackage)) {
+        if (key.startsWith(javaxPackage)) {
+            realKey = Srl.substringFirstRear(key, javaxPackage);
+        } else if (key.startsWith(jakartaPackage)) { // #jakarta
             realKey = Srl.substringFirstRear(key, jakartaPackage);
         } else if (key.startsWith(hibernatePackage)) {
             realKey = Srl.substringFirstRear(key, hibernatePackage);
