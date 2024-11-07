@@ -15,7 +15,7 @@
 	<properties>
 		<dbflute.version>1.2.8</dbflute.version> <!-- about one year old (from now) -->
 		<lasta.di.version>0.9.2</lasta.di.version>
-		<hibernate.version>6.0.23.Final</hibernate.version> <!-- 6.1.x has DefaultConstraintMapping headache -->
+		<hibernate.version>6.2.0.Final</hibernate.version> <!-- 6.1.x has DefaultConstraintMapping headache -->
 		<servlet.version>3.1.0</servlet.version>
 		<gson.version>2.11.0</gson.version>
 		<mailflute.version>0.6.5</mailflute.version>
