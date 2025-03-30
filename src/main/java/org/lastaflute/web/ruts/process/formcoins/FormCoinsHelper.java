@@ -28,7 +28,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -44,6 +46,8 @@ import org.dbflute.util.Srl;
 import org.lastaflute.core.direction.FwAssistantDirector;
 import org.lastaflute.core.json.JsonManager;
 import org.lastaflute.core.json.JsonObjectConvertible;
+import org.lastaflute.core.json.mask.JsonMaskingTape;
+import org.lastaflute.core.json.mask.MaskingTapeResource;
 import org.lastaflute.core.message.UserMessages;
 import org.lastaflute.core.util.ContainerUtil;
 import org.lastaflute.core.util.LaClassificationUtil;
@@ -71,6 +75,7 @@ import org.lastaflute.web.ruts.process.debugchallenge.JsonDebugChallenge;
 import org.lastaflute.web.ruts.process.exception.ActionFormPopulateFailureException;
 import org.lastaflute.web.ruts.process.exception.RequestUndefinedParameterInFormException;
 import org.lastaflute.web.servlet.filter.RequestLoggingFilter.RequestClientErrorException;
+import org.lastaflute.web.servlet.filter.mask.MaskParamSetExtractor;
 import org.lastaflute.web.servlet.request.RequestManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -581,6 +586,9 @@ public class FormCoinsHelper { // keep singleton-able to be simple
     // ===================================================================================
     //                                                                         JSON Assist
     //                                                                         ===========
+    // -----------------------------------------------------
+    //                                           JSON Parser
+    //                                           -----------
     public JsonObjectConvertible chooseJsonObjectConvertible(ActionRuntime runtime, FormMappingOption option) {
         return option.getRequestJsonEngineProvider()
                 .map(provider -> (JsonObjectConvertible) provider.apply(runtime))
@@ -614,6 +622,29 @@ public class FormCoinsHelper { // keep singleton-able to be simple
         final JsonManager jsonManager = requestManager.getJsonManager();
         final Object mappedValue = retryMap.get(propertyName);
         return new JsonDebugChallenge(jsonManager, propertyName, propertyType, mappedValue, elementIndex);
+    }
+
+    // -----------------------------------------------------
+    //                                          JSON Masking
+    //                                          ------------
+    public Supplier<String> prepareMaskedJsonErrorFlushSupplier(String jsonBody) {
+        return () -> { // called in logging filter when error
+            try {
+                // #hope jflute settings from application properties (keeping logging filter) (2025/03/31)
+                final MaskParamSetExtractor extractor = new MaskParamSetExtractor();
+                final Set<String> maskParamSet = extractor.extractLoggingFilterMaskParamSet();
+                if (maskParamSet.isEmpty()) {
+                    return null; // as none display
+                }
+                final MaskingTapeResource resource = new MaskingTapeResource(maskParamSet);
+                final JsonMaskingTape tape = new JsonMaskingTape(requestManager.getJsonManager(), resource);
+                return tape.mask(jsonBody);
+            } catch (RuntimeException continued) { // just in case
+                // cannot show the JSON for security so maybe strict debug
+                logger.info("Failed to mask the JSON Body: json=(none for security)", continued);
+                return null; // as none display
+            }
+        };
     }
 
     // ===================================================================================
