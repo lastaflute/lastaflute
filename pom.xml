@@ -61,13 +61,6 @@
 		<url>git@github.com:lastaflute/lastaflute.git</url>
 	</scm>
 
-	<parent>
-		<!-- http://repo.maven.apache.org/maven2/org/sonatype/oss/oss-parent/9/oss-parent-9.pom -->
-		<groupId>org.sonatype.oss</groupId>
-		<artifactId>oss-parent</artifactId>
-		<version>9</version>
-	</parent>
-
 	<build>
 		<defaultGoal>validate</defaultGoal>
 		<pluginManagement>
@@ -158,9 +151,9 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!-- 'xxx.jar.asc' file can be created by this plug-in you can deploy 
+			<!-- 'xxx.jar.asc' file can be created by this plug-in you can deploy
 				by 'mvn -e clean deploy -Dgpg.keyname=xxx -Dgpg.passphrase="xxx"' -->
-			<plugin>
+            <plugin> <!-- needs to create jar deployed to maven central -->
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
 				<version>1.5</version>
@@ -174,21 +167,17 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin> <!-- new maven central way since 2025/06 -->
+				<groupId>org.sonatype.central</groupId>
+				<artifactId>central-publishing-maven-plugin</artifactId>
+				<version>0.8.0</version>
+				<extensions>true</extensions>
+				<configuration>
+					<publishingServerId>central</publishingServerId>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
-
-	<repositories>
-		<repository>
-			<id>sonatype-oss-public</id>
-			<url>https://oss.sonatype.org/content/groups/public/</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
 
 	<dependencies>
 		<!-- = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = -->
