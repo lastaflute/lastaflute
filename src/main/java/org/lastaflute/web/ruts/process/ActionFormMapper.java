@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.dbflute.jdbc.Classification;
@@ -282,7 +283,9 @@ public class ActionFormMapper { // created per request (since 1.1.2)
 
     protected void keepRequestBodyForErrorFlush(String body) {
         // request body can be read only once so needs to keep it for error logging
-        requestManager.setAttribute(LastaWebKey.REQUEST_BODY_KEY, new WholeShowErrorFlushAttribute(body));
+        final Supplier<String> supplier = coinsHelper.prepareMaskedJsonErrorFlushSupplier(body);
+        final WholeShowErrorFlushAttribute attribute = new WholeShowErrorFlushAttribute(supplier);
+        requestManager.setAttribute(LastaWebKey.REQUEST_BODY_KEY, attribute);
     }
 
     protected void keepRequestBodyForInOutLoggingIfNeeds(String bodyContent, String bodyType) {

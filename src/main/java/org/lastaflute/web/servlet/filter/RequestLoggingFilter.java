@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,7 +112,7 @@ public class RequestLoggingFilter implements Filter {
     protected Pattern subRequestUrlPattern;
     protected String requestCharacterEncoding;
     protected Set<String> maskParamSet;
-    protected String maskedString;
+    protected String maskingString;
 
     // -----------------------------------------------------
     //                                            Customizer
@@ -132,7 +132,7 @@ public class RequestLoggingFilter implements Filter {
         setupSubRequestUrlPatternUrlPattern(filterConfig);
         setupRequestCharacterEncoding(filterConfig);
         setupMaskParamSet(filterConfig);
-        setupMaskedString(filterConfig);
+        setupMaskingString(filterConfig);
     }
 
     protected boolean isBooleanParameter(FilterConfig filterConfig, String name, boolean defaultValue) {
@@ -190,7 +190,7 @@ public class RequestLoggingFilter implements Filter {
         final String value = filterConfig.getInitParameter("maskParamSet");
         if (value != null) {
             final String[] splitAry = value.split(","); // e.g. password,pass
-            maskParamSet = new LinkedHashSet<>();
+            maskParamSet = new LinkedHashSet<>(); // intentionally case sensitive for strict user test
             for (String element : splitAry) {
                 maskParamSet.add(element.trim());
             }
@@ -199,12 +199,17 @@ public class RequestLoggingFilter implements Filter {
         }
     }
 
-    protected void setupMaskedString(FilterConfig filterConfig) {
-        final String value = filterConfig.getInitParameter("maskedString");
+    protected void setupMaskingString(FilterConfig filterConfig) {
+        String value = filterConfig.getInitParameter("maskingString"); // since 1.2.8
         if (value != null) {
-            maskedString = value;
+            maskingString = value;
         } else {
-            maskedString = "********";
+            value = filterConfig.getInitParameter("maskedString"); // for compatible
+            if (value != null) {
+                maskingString = value;
+            } else {
+                maskingString = "********"; // as default
+            }
         }
     }
 
@@ -570,7 +575,7 @@ public class RequestLoggingFilter implements Filter {
                     sb.append(", ");
                 }
                 if (isMaskParam(name)) {
-                    sb.append(maskedString);
+                    sb.append(maskingString);
                 } else {
                     sb.append(values[i]);
                 }
@@ -690,7 +695,22 @@ public class RequestLoggingFilter implements Filter {
 
         @Override
         public String toString() {
-            final String exp = (attribute != null ? attribute.toString().trim() : "null");
+            String exp = null;
+            if (attribute != null) {
+                if (attribute instanceof Supplier<?>) {
+                    try {
+                        final Object supplied = ((Supplier<?>) attribute).get();
+                        exp = supplied != null ? supplied.toString().trim() : null;
+                    } catch (RuntimeException ignored) { // just in case, and no debug here
+                        exp = "(unknown, supplier exception: " + ignored.getClass() + ")";
+                    }
+                } else {
+                    exp = attribute.toString().trim();
+                }
+            }
+            if (exp == null) {
+                exp = "null"; // as none expression
+            }
             return "wholeShow:" + (exp.contains(LF) ? LF : "") + exp;
         }
     }

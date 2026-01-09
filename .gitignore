@@ -8,6 +8,7 @@
 **/.idea/*
 !**/.idea/codeStyles
 !**/.idea/inspectionProfiles
+!**/.idea/checkstyle-idea.xml
 !**/.idea/encodings.xml
 !**/.idea/misc.xml
 !**/.idea/saveactions_settings.xml
