@@ -334,6 +334,12 @@ public class GodHandableAction implements VirtualAction {
         return response;
     }
 
+    protected void showAction(ActionRuntime runtime) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("#flow ...Beginning #action {}", buildActionDisp(runtime));
+        }
+    }
+
     protected Object[] toRequestArgs(OptionalThing<VirtualForm> optForm) {
         final List<Object> paramList = new ArrayList<Object>(4);
         execute.getPathParamArgs().ifPresent(args -> {
@@ -341,12 +347,6 @@ public class GodHandableAction implements VirtualAction {
         });
         optForm.ifPresent(form -> paramList.add(form.getRealForm()));
         return !paramList.isEmpty() ? paramList.toArray(new Object[paramList.size()]) : EMPTY_ARRAY;
-    }
-
-    protected void showAction(ActionRuntime runtime) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("#flow ...Beginning #action {}", buildActionDisp(runtime));
-        }
     }
 
     // -----------------------------------------------------
