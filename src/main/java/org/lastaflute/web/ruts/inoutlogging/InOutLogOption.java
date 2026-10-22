@@ -99,7 +99,7 @@ public class InOutLogOption {
      * (Old Style) <br>
      * Filter the request parameter (whole) expression that contains all parameters. <br>
      * The callback argument is e.g. requestParameter:{sea=mystic, land=oneman}. <br>
-     * If you need to adjust detailedly, you can use filterRequestParameterMap().
+     * If you need to adjust detailedly, you can use filterRequestParameterValue().
      * @param oneArgLambda The filter of request parameter expression, no filter if returns null. (NotNull)
      * @return this. (NotNull)
      */
